@@ -41,68 +41,31 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useState } from "react"
-
-const initialPlans = [
-  {
-    id: "1",
-    name: "Week 42 - Bars Basics",
-    program: "Recreational - Bronze",
-    date: "Oct 14 - Oct 20, 2024",
-    author: "Coach Sarah",
-    status: "Active",
-    theme: "Fall Fun"
-  },
-  {
-    id: "2",
-    name: "Week 42 - Advanced Vaulting",
-    program: "JO - Level 4",
-    date: "Oct 14 - Oct 20, 2024",
-    author: "Coach Mike",
-    status: "Active",
-    theme: "Power & Speed"
-  },
-  {
-    id: "3",
-    name: "Week 43 - Halloween Prep",
-    program: "Preschool",
-    date: "Oct 21 - Oct 27, 2024",
-    author: "Coach Emily",
-    status: "Draft",
-    theme: "Spooky Skills"
-  },
-  {
-    id: "4",
-    name: "Week 41 - Beam Confidence",
-    program: "Recreational - Silver",
-    date: "Oct 07 - Oct 13, 2024",
-    author: "Coach Sarah",
-    status: "Archived",
-    theme: "Balance"
-  }
-]
+import { useLessonPlanStore } from "@/store/lesson-plan-store"
+import { format, parseISO, isValid } from "date-fns"
 
 export default function PlansPage() {
-  const [plans, setPlans] = useState(initialPlans)
+  const { plans, deletePlan, duplicatePlan } = useLessonPlanStore()
   const [planToDelete, setPlanToDelete] = useState<string | null>(null)
 
   const handleDelete = () => {
     if (planToDelete) {
-      setPlans(plans.filter(p => p.id !== planToDelete))
+      deletePlan(planToDelete)
       setPlanToDelete(null)
     }
   }
 
   const handleDuplicate = (id: string) => {
-    const planToDup = plans.find(p => p.id === id)
-    if (planToDup) {
-        const newPlan = {
-            ...planToDup,
-            id: Math.random().toString(36).substr(2, 9),
-            name: `${planToDup.name} (Copy)`,
-            status: "Draft"
-        }
-        setPlans([newPlan, ...plans])
+    duplicatePlan(id)
+  }
+
+  const formatPlanDate = (dateStr: string) => {
+    if (dateStr.includes(" - ")) return dateStr
+    const date = parseISO(dateStr)
+    if (isValid(date)) {
+      return `Week of ${format(date, "MMM dd, yyyy")}`
     }
+    return dateStr
   }
 
   return (
@@ -151,7 +114,7 @@ export default function PlansPage() {
               <div className="grid gap-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4" />
-                  {plan.date}
+                  {formatPlanDate(plan.date)}
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />

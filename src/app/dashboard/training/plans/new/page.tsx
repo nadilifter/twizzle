@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { ChevronLeft, Save, Plus, Image as ImageIcon, Search, CheckCircle2 } from "lucide-react"
+import { ChevronLeft, Save, Plus, Image as ImageIcon, Search, CheckCircle2, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { useLessonPlanStore, Rotation } from "@/store/lesson-plan-store"
 import {
   Dialog,
   DialogContent,
@@ -30,36 +32,109 @@ import {
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 
+const MOCK_SKILLS = [
+    { id: "s1", name: "Forward Roll", level: "Beginner", event: "Floor" },
+    { id: "s2", name: "Cartwheel", level: "Beginner", event: "Floor" },
+    { id: "s3", name: "Handstand", level: "Intermediate", event: "Floor" },
+    { id: "s4", name: "Bridge", level: "Beginner", event: "Floor" },
+    { id: "s5", name: "Pullover", level: "Beginner", event: "Bars" },
+]
+
 export default function NewPlanPage() {
-  // Mock state for rotations to demonstrate interactivity
-  const [rotations, setRotations] = useState([
-    { id: 1, name: "Warmup", content: "" },
-    { id: 2, name: "Vault", content: "" },
-    { id: 3, name: "Bars", content: "" },
-    { id: 4, name: "Beam", content: "" },
-    { id: 5, name: "Floor", content: "" },
-    { id: 6, name: "Conditioning", content: "" },
+  const router = useRouter()
+  const { addPlan } = useLessonPlanStore()
+
+  const [program, setProgram] = useState("")
+  const [date, setDate] = useState("")
+  const [theme, setTheme] = useState("")
+  const [notes, setNotes] = useState("")
+  
+  const [rotations, setRotations] = useState<Rotation[]>([
+    { id: 1, name: "Warmup", description: "", skills: [] },
+    { id: 2, name: "Vault", description: "", skills: [] },
+    { id: 3, name: "Bars", description: "", skills: [] },
+    { id: 4, name: "Beam", description: "", skills: [] },
+    { id: 5, name: "Floor", description: "", skills: [] },
+    { id: 6, name: "Conditioning", description: "", skills: [] },
   ])
 
   const [activeTab, setActiveTab] = useState("Warmup")
   const [newRotationName, setNewRotationName] = useState("")
   const [isAddRotationOpen, setIsAddRotationOpen] = useState(false)
+  const [isSkillSheetOpen, setIsSkillSheetOpen] = useState(false)
+
+  const activeRotationIndex = rotations.findIndex(r => r.name === activeTab)
+  const activeRotation = rotations[activeRotationIndex]
 
   const handleAddRotation = () => {
     if (newRotationName) {
-      setRotations([...rotations, { id: Date.now(), name: newRotationName, content: "" }])
+      const newRotation: Rotation = { 
+          id: Date.now(), 
+          name: newRotationName, 
+          description: "", 
+          skills: [] 
+      }
+      setRotations([...rotations, newRotation])
       setNewRotationName("")
       setIsAddRotationOpen(false)
+      setActiveTab(newRotationName)
       toast.success("Rotation added successfully")
     }
   }
 
+  const updateRotation = (index: number, updates: Partial<Rotation>) => {
+      const newRotations = [...rotations]
+      newRotations[index] = { ...newRotations[index], ...updates }
+      setRotations(newRotations)
+  }
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      if (activeRotationIndex !== -1) {
+          updateRotation(activeRotationIndex, { description: e.target.value })
+      }
+  }
+
+  const toggleSkill = (skillName: string) => {
+      if (activeRotationIndex === -1) return
+      
+      const currentSkills = activeRotation.skills || []
+      const hasSkill = currentSkills.includes(skillName)
+      
+      let newSkills
+      if (hasSkill) {
+          newSkills = currentSkills.filter(s => s !== skillName)
+      } else {
+          newSkills = [...currentSkills, skillName]
+      }
+      
+      updateRotation(activeRotationIndex, { skills: newSkills })
+  }
+
   const handleSaveDraft = () => {
+    // Logic to save draft could be similar to publish but with status 'Draft'
     toast.success("Draft saved successfully")
   }
 
   const handlePublish = () => {
+    if (!program || !date) {
+        toast.error("Please fill in Program and Week/Date")
+        return
+    }
+
+    addPlan({
+        id: Math.random().toString(36).substr(2, 9),
+        name: `Week of ${date} - ${program}`, // Generate a name or add a name field
+        program,
+        date,
+        author: "Current User", // Replace with actual user if available
+        status: "Active",
+        theme: theme || "General",
+        notes,
+        rotations
+    })
+    
     toast.success("Lesson plan published!")
+    router.push("/dashboard/training/plans")
   }
 
   return (
@@ -92,32 +167,47 @@ export default function NewPlanPage() {
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="program">Program</Label>
-                <Select>
+                <Select value={program} onValueChange={setProgram}>
                   <SelectTrigger id="program">
                     <SelectValue placeholder="Select program" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="rec-bronze">Recreational - Bronze</SelectItem>
-                    <SelectItem value="rec-silver">Recreational - Silver</SelectItem>
-                    <SelectItem value="jo-4">JO Level 4</SelectItem>
-                    <SelectItem value="preschool">Preschool</SelectItem>
+                    <SelectItem value="Recreational - Bronze">Recreational - Bronze</SelectItem>
+                    <SelectItem value="Recreational - Silver">Recreational - Silver</SelectItem>
+                    <SelectItem value="JO - Level 4">JO Level 4</SelectItem>
+                    <SelectItem value="Preschool">Preschool</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="grid gap-2">
                 <Label htmlFor="week">Week / Date</Label>
-                <Input id="week" type="date" />
+                <Input 
+                    id="week" 
+                    type="date" 
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="theme">Theme (Optional)</Label>
-                <Input id="theme" placeholder="e.g. Handstands, Safety" />
+                <Input 
+                    id="theme" 
+                    placeholder="e.g. Handstands, Safety" 
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value)}
+                />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="coach-notes">Coach Notes</Label>
-                <Textarea id="coach-notes" placeholder="General focus points..." />
+                <Textarea 
+                    id="coach-notes" 
+                    placeholder="General focus points..." 
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
             </CardContent>
           </Card>
@@ -134,7 +224,7 @@ export default function NewPlanPage() {
                    <Button 
                     key={r.id} 
                     variant={activeTab === r.name ? "secondary" : "ghost"} 
-                    className="justify-start"
+                    className="justify-start w-full"
                     onClick={() => setActiveTab(r.name)}
                    >
                      {r.name}
@@ -142,7 +232,7 @@ export default function NewPlanPage() {
                  ))}
                  <Dialog open={isAddRotationOpen} onOpenChange={setIsAddRotationOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="ghost" className="justify-start text-muted-foreground">
+                        <Button variant="ghost" className="justify-start text-muted-foreground w-full">
                             <Plus className="mr-2 h-4 w-4" /> Add Rotation
                         </Button>
                     </DialogTrigger>
@@ -176,11 +266,12 @@ export default function NewPlanPage() {
 
         {/* Main Content: Rotation Editor */}
         <div className="space-y-6">
+          {activeRotation ? (
           <Card className="h-full flex flex-col">
             <CardHeader className="border-b bg-muted/40">
               <div className="flex items-center justify-between">
-                <CardTitle>{activeTab} Plan</CardTitle>
-                <Sheet>
+                <CardTitle>{activeRotation.name} Plan</CardTitle>
+                <Sheet open={isSkillSheetOpen} onOpenChange={setIsSkillSheetOpen}>
                     <SheetTrigger asChild>
                         <Button variant="outline" size="sm">
                             <Plus className="mr-2 h-4 w-4" />
@@ -189,7 +280,7 @@ export default function NewPlanPage() {
                     </SheetTrigger>
                     <SheetContent className="w-[400px] sm:w-[540px]">
                         <SheetHeader>
-                            <SheetTitle>Add Skills to {activeTab}</SheetTitle>
+                            <SheetTitle>Add Skills to {activeRotation.name}</SheetTitle>
                             <SheetDescription>
                                 Search and select skills to track in this rotation.
                             </SheetDescription>
@@ -200,31 +291,27 @@ export default function NewPlanPage() {
                                 <Input type="search" placeholder="Search skills database..." className="pl-8" />
                             </div>
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 cursor-pointer">
-                                    <div>
-                                        <p className="font-medium text-sm">Forward Roll</p>
-                                        <p className="text-xs text-muted-foreground">Floor • Beginner</p>
+                                {MOCK_SKILLS.map(skill => (
+                                    <div 
+                                        key={skill.id}
+                                        className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 cursor-pointer"
+                                        onClick={() => toggleSkill(skill.name)}
+                                    >
+                                        <div>
+                                            <p className="font-medium text-sm">{skill.name}</p>
+                                            <p className="text-xs text-muted-foreground">{skill.event} • {skill.level}</p>
+                                        </div>
+                                        {activeRotation.skills.includes(skill.name) ? (
+                                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                                        ) : (
+                                            <Plus className="h-4 w-4 text-muted-foreground" />
+                                        )}
                                     </div>
-                                    <Plus className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 cursor-pointer">
-                                    <div>
-                                        <p className="font-medium text-sm">Cartwheel</p>
-                                        <p className="text-xs text-muted-foreground">Floor • Beginner</p>
-                                    </div>
-                                    <Plus className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 cursor-pointer">
-                                    <div>
-                                        <p className="font-medium text-sm">Handstand</p>
-                                        <p className="text-xs text-muted-foreground">Floor • Intermediate</p>
-                                    </div>
-                                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                                </div>
+                                ))}
                             </div>
                         </div>
                         <SheetFooter>
-                            <Button type="submit">Add Selected Skills</Button>
+                            <Button onClick={() => setIsSkillSheetOpen(false)}>Done</Button>
                         </SheetFooter>
                     </SheetContent>
                 </Sheet>
@@ -235,15 +322,35 @@ export default function NewPlanPage() {
                 <Label>Description / Setup</Label>
                 <Textarea 
                   className="min-h-[150px]" 
-                  placeholder={`Describe the station setup and drills for ${activeTab}...`} 
+                  placeholder={`Describe the station setup and drills for ${activeRotation.name}...`} 
+                  value={activeRotation.description}
+                  onChange={handleDescriptionChange}
                 />
               </div>
 
               <div className="grid gap-2">
                 <Label>Specific Skills Tracked</Label>
-                <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No skills selected yet. Click "Add Skill / Drill" to link specific skills from the database.
-                </div>
+                {activeRotation.skills.length === 0 ? (
+                    <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    No skills selected yet. Click "Add Skill / Drill" to link specific skills from the database.
+                    </div>
+                ) : (
+                    <div className="flex flex-wrap gap-2">
+                        {activeRotation.skills.map(skill => (
+                            <Badge key={skill} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1">
+                                {skill}
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-4 w-4 hover:bg-transparent text-muted-foreground hover:text-foreground"
+                                    onClick={() => toggleSkill(skill)}
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            </Badge>
+                        ))}
+                    </div>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -278,6 +385,11 @@ export default function NewPlanPage() {
               </div>
             </CardContent>
           </Card>
+          ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Select a rotation to edit
+              </div>
+          )}
         </div>
       </div>
     </div>
