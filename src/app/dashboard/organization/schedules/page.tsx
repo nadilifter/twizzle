@@ -12,7 +12,8 @@ import {
   Building,
   Briefcase,
   Check,
-  X
+  X,
+  ArrowRight
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -81,9 +82,39 @@ const employees = [
 ]
 
 const facilities = [
-  { id: 1, name: "Main Gym Floor" },
-  { id: 2, name: "Dance Studio" },
-  { id: 3, name: "Party Room" },
+  { 
+    id: 1, 
+    name: "Main Gym Floor",
+    totalHours: 12,
+    blocks: [
+      { name: "Classes", time: "9am-12pm", duration: 3, color: "bg-chart-1" },
+      { name: "Open Gym", time: "2pm-4pm", duration: 2, color: "bg-chart-2" },
+      { name: "Team Practice", time: "5pm-8pm", duration: 3, color: "bg-chart-3" },
+      { name: "Open", time: "8am-9am", duration: 1, color: "bg-muted" },
+      { name: "Open", time: "12pm-2pm", duration: 2, color: "bg-muted" },
+      { name: "Open", time: "4pm-5pm", duration: 1, color: "bg-muted" },
+    ]
+  },
+  { 
+    id: 2, 
+    name: "Dance Studio",
+    totalHours: 8,
+    blocks: [
+      { name: "Morning Classes", time: "9am-11am", duration: 2, color: "bg-chart-1" },
+      { name: "Open", time: "11am-2pm", duration: 3, color: "bg-muted" },
+      { name: "Afternoon Classes", time: "2pm-5pm", duration: 3, color: "bg-chart-2" },
+    ]
+  },
+  { 
+    id: 3, 
+    name: "Party Room",
+    totalHours: 6,
+    blocks: [
+      { name: "Birthday Party", time: "10am-12pm", duration: 2, color: "bg-chart-4" },
+      { name: "Open", time: "12pm-3pm", duration: 3, color: "bg-muted" },
+      { name: "Event", time: "3pm-5pm", duration: 2, color: "bg-chart-5" },
+    ]
+  },
 ]
 
 const roles = [
@@ -396,39 +427,123 @@ export default function SchedulesPage() {
         </TabsContent>
 
         <TabsContent value="facility-availability" className="space-y-4">
-           <div className="grid gap-4 md:grid-cols-1">
-             {facilities.map((facility) => (
-               <Card key={facility.id}>
-                 <CardHeader>
-                   <div className="flex items-center justify-between">
-                     <CardTitle>{facility.name}</CardTitle>
+          <div className="grid gap-6">
+            {facilities.map((facility) => (
+              <Card key={facility.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{facility.name}</CardTitle>
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {facility.totalHours} hrs
+                    </Badge>
+                  </div>
+                  <CardDescription>
+                    Scheduled usage and open blocks.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Visual Bar */}
+                  <div className="h-12 w-full flex rounded-md overflow-hidden mb-4 border">
+                    {facility.blocks.map((block, i) => {
+                      const widthPercent = (block.duration / facility.totalHours) * 100;
+                      return (
+                        <div 
+                          key={i} 
+                          style={{ width: `${widthPercent}%` }} 
+                          className={`${block.color} flex items-center justify-center text-xs font-medium ${block.color === 'bg-muted' ? 'text-slate-700' : 'text-white'} border-r last:border-r-0 hover:opacity-90 transition-opacity`}
+                          title={`${block.name}: ${block.time} (${block.duration}h)`}
+                        >
+                          {widthPercent > 10 ? block.name : ''}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Legend / List */}
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    {facility.blocks.map((block, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${block.color} border border-slate-300`} />
+                        <span className="font-medium">{block.name}</span>
+                        <span className="text-muted-foreground">({block.time})</span>
+                        {i < facility.blocks.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+                <CardFooter className="justify-end border-t pt-4">
+                  <Sheet>
+                    <SheetTrigger asChild>
                       <Button variant="outline" size="sm">Manage Schedule</Button>
-                   </div>
-                   <CardDescription>Scheduled usage and open blocks.</CardDescription>
-                 </CardHeader>
-                 <CardContent>
-                   <div className="relative h-24 w-full bg-secondary/20 rounded-md overflow-hidden flex">
-                      {/* Visual timeline mock */}
-                      <div className="absolute h-full bg-blue-500/20 border-l border-blue-500 flex items-center justify-center text-xs text-blue-700 font-medium" style={{ left: '10%', width: '20%' }}>
-                        Classes (9am-12pm)
+                    </SheetTrigger>
+                    <SheetContent>
+                      <SheetHeader>
+                        <SheetTitle>Manage Schedule - {facility.name}</SheetTitle>
+                        <SheetDescription>
+                          Configure scheduled usage and availability blocks.
+                        </SheetDescription>
+                      </SheetHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label>Schedule Blocks</Label>
+                          <div className="space-y-3">
+                            {facility.blocks.map((block, i) => (
+                              <div key={i} className="flex gap-2 items-end">
+                                <div className="grid gap-1 flex-1">
+                                  <Label className="text-xs">Block Name</Label>
+                                  <Input defaultValue={block.name} />
+                                </div>
+                                <div className="grid gap-1 w-24">
+                                  <Label className="text-xs">Start Time</Label>
+                                  <Input type="time" />
+                                </div>
+                                <div className="grid gap-1 w-24">
+                                  <Label className="text-xs">End Time</Label>
+                                  <Input type="time" />
+                                </div>
+                                <div className="grid gap-1 w-32">
+                                  <Label className="text-xs">Color</Label>
+                                  <Select defaultValue={
+                                    block.color.includes("chart-1") ? "purple" :
+                                    block.color.includes("chart-2") ? "cyan" :
+                                    block.color.includes("chart-3") ? "pink" :
+                                    block.color.includes("chart-4") ? "teal" :
+                                    block.color.includes("chart-5") ? "indigo" : "gray"
+                                  }>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="purple">Purple</SelectItem>
+                                      <SelectItem value="cyan">Cyan</SelectItem>
+                                      <SelectItem value="pink">Pink</SelectItem>
+                                      <SelectItem value="teal">Teal</SelectItem>
+                                      <SelectItem value="indigo">Indigo</SelectItem>
+                                      <SelectItem value="gray">Gray</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Button variant="ghost" size="icon"><X className="h-4 w-4" /></Button>
+                              </div>
+                            ))}
+                            <Button variant="outline" size="sm" className="w-full border-dashed">
+                              <Plus className="mr-2 h-4 w-4" /> Add Block
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="absolute h-full bg-green-500/20 border-l border-green-500 flex items-center justify-center text-xs text-green-700 font-medium" style={{ left: '40%', width: '15%' }}>
-                         Open Gym (2pm-4pm)
-                      </div>
-                       <div className="absolute h-full bg-purple-500/20 border-l border-purple-500 flex items-center justify-center text-xs text-purple-700 font-medium" style={{ left: '60%', width: '25%' }}>
-                         Team Practice (5pm-8pm)
-                      </div>
-                   </div>
-                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                     <span>8 AM</span>
-                     <span>12 PM</span>
-                     <span>4 PM</span>
-                     <span>8 PM</span>
-                   </div>
-                 </CardContent>
-               </Card>
-             ))}
-           </div>
+                      <SheetFooter>
+                        <SheetClose asChild>
+                          <Button type="submit">Save Changes</Button>
+                        </SheetClose>
+                      </SheetFooter>
+                    </SheetContent>
+                  </Sheet>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
