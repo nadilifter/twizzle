@@ -125,7 +125,7 @@ const data: Donation[] = [
   },
 ]
 
-export const columns: ColumnDef<Donation>[] = [
+const columns: ColumnDef<Donation>[] = [
   {
     id: "select",
     header: ({ table }) => (

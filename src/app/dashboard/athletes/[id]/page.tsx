@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { attendanceHistory, medicalRecords } from "@/mock-data/athlete-details"
-import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX } from "lucide-react"
+import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX, User, Mail, CalendarDays, Trophy, TrendingUp, Star } from "lucide-react"
 
 export default function AthleteProfilePage() {
   const params = useParams()

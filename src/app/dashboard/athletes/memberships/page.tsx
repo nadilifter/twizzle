@@ -120,9 +120,9 @@ export default function MembershipsPage() {
     } else {
       // Create
       const newMembership: MembershipTier = {
-        id: Math.random().toString(36).substr(2, 9),
+        ...(formData as MembershipTier),
         activeMembers: 0,
-        ...formData as MembershipTier
+        id: Math.random().toString(36).substr(2, 9),
       }
       setMemberships(prev => [...prev, newMembership])
     }
@@ -297,6 +297,7 @@ export default function MembershipsPage() {
     </div>
   )
 }
+
 
 
 

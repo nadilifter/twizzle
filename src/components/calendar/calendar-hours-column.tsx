@@ -4,7 +4,7 @@ import { HOURS_24, HOUR_HEIGHT } from "./calendar-utils";
 
 interface CalendarHoursColumnProps {
   onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
-  scrollRef: React.RefObject<HTMLDivElement | null>;
+  scrollRef: React.RefObject<HTMLDivElement>;
 }
 
 export function CalendarHoursColumn({

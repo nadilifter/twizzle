@@ -99,7 +99,7 @@ const data: AdCampaign[] = [
   },
 ]
 
-export const columns: ColumnDef<AdCampaign>[] = [
+const columns: ColumnDef<AdCampaign>[] = [
   {
     id: "select",
     header: ({ table }) => (

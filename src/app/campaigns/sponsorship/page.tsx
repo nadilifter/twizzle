@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -49,57 +50,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { MoreHorizontal, Plus, Search } from "lucide-react"
+import { Sponsor, sponsors as data } from "./data"
 
-type Sponsor = {
-  id: string
-  company: string
-  contact: string
-  tier: "Platinum" | "Gold" | "Silver" | "Bronze"
-  amount: number
-  status: "Active" | "Expired" | "Pending"
-  renewalDate: string
-}
-
-const data: Sponsor[] = [
-  {
-    id: "SPN-001",
-    company: "Acme Corp",
-    contact: "John Doe",
-    tier: "Platinum",
-    amount: 10000,
-    status: "Active",
-    renewalDate: "2026-01-01",
-  },
-  {
-    id: "SPN-002",
-    company: "Global Gym Supplies",
-    contact: "Jane Smith",
-    tier: "Gold",
-    amount: 5000,
-    status: "Active",
-    renewalDate: "2025-12-15",
-  },
-  {
-    id: "SPN-003",
-    company: "Local Bakery",
-    contact: "Bob Miller",
-    tier: "Silver",
-    amount: 1000,
-    status: "Expired",
-    renewalDate: "2024-11-01",
-  },
-  {
-    id: "SPN-004",
-    company: "TechStart Inc",
-    contact: "Sarah Connor",
-    tier: "Gold",
-    amount: 5000,
-    status: "Pending",
-    renewalDate: "2025-02-01",
-  },
-]
-
-export const columns: ColumnDef<Sponsor>[] = [
+const columns: ColumnDef<Sponsor>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -122,7 +75,13 @@ export const columns: ColumnDef<Sponsor>[] = [
   {
     accessorKey: "company",
     header: "Company",
-    cell: ({ row }) => <div className="font-medium">{row.getValue("company")}</div>,
+    cell: ({ row }) => (
+      <div className="font-medium hover:underline">
+        <Link href={`/campaigns/sponsorship/${row.original.id}`}>
+          {row.getValue("company")}
+        </Link>
+      </div>
+    ),
   },
   {
     accessorKey: "contact",
@@ -176,6 +135,11 @@ export const columns: ColumnDef<Sponsor>[] = [
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem>
+            <Link href={`/campaigns/sponsorship/${row.original.id}`}>
+              View Details
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem>Edit Details</DropdownMenuItem>
           <DropdownMenuItem>View Agreement</DropdownMenuItem>
           <DropdownMenuItem>Send Renewal Invoice</DropdownMenuItem>

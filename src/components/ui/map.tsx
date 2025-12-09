@@ -429,7 +429,7 @@ function MapLayersControl({
                 <Button
                     type="button"
                     variant="secondary"
-                    size="icon-sm"
+                    size="icon"
                     aria-label="Select layers"
                     title="Select layers"
                     className={cn(
@@ -675,7 +675,7 @@ function MapZoomControl({ className, ...props }: React.ComponentProps<"div">) {
             {...props}>
             <Button
                 type="button"
-                size="icon-sm"
+                size="icon"
                 variant="secondary"
                 aria-label="Zoom in"
                 title="Zoom in"
@@ -686,7 +686,7 @@ function MapZoomControl({ className, ...props }: React.ComponentProps<"div">) {
             </Button>
             <Button
                 type="button"
-                size="icon-sm"
+                size="icon"
                 variant="secondary"
                 aria-label="Zoom out"
                 title="Zoom out"
@@ -754,7 +754,7 @@ function MapLocateControl({
         <>
             <Button
                 type="button"
-                size="icon-sm"
+                size="icon"
                 variant={position ? "default" : "secondary"}
                 onClick={position ? stopLocating : startLocating}
                 disabled={isLocating}
@@ -915,7 +915,7 @@ function MapDrawShapeButton<T extends Draw.Feature>({
     return (
         <Button
             type="button"
-            size="icon-sm"
+            size="icon"
             aria-label={`Draw ${drawMode}`}
             title={`Draw ${drawMode}`}
             className={cn("border", className)}
@@ -1077,7 +1077,7 @@ function MapDrawActionButton<T extends EditToolbar.Edit | EditToolbar.Delete>({
         map: DrawMap,
         featureGroup: L.FeatureGroup
     ) => T
-    controlRef: React.RefObject<T | null>
+    controlRef: React.MutableRefObject<T | null>
 }) {
     const drawContext = useMapDrawContext()
     if (!drawContext)
@@ -1114,7 +1114,7 @@ function MapDrawActionButton<T extends EditToolbar.Edit | EditToolbar.Delete>({
     return (
         <Button
             type="button"
-            size="icon-sm"
+            size="icon"
             aria-label={`${drawAction === "edit" ? "Edit" : "Remove"} shapes`}
             title={`${drawAction === "edit" ? "Edit" : "Remove"} shapes`}
             variant={isActive ? "default" : "secondary"}
@@ -1224,7 +1224,7 @@ function MapDrawUndo({ className, ...props }: React.ComponentProps<"button">) {
     return (
         <Button
             type="button"
-            size="icon-sm"
+            size="icon"
             variant="secondary"
             aria-label={`Undo ${activeMode}`}
             title={`Undo ${activeMode}`}

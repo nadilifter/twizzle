@@ -98,7 +98,7 @@ const data: Order[] = [
   },
 ]
 
-export const columns: ColumnDef<Order>[] = [
+const columns: ColumnDef<Order>[] = [
   {
     id: "select",
     header: ({ table }) => (
