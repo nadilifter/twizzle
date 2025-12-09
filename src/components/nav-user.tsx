@@ -1,10 +1,10 @@
 "use client"
 
 import {
-  BellIcon,
-  CreditCardIcon,
+  Building2Icon,
   LogOutIcon,
   MoreVerticalIcon,
+  UploadIcon,
   UserCircleIcon,
 } from "lucide-react"
 
@@ -90,13 +90,13 @@ export function NavUser({
                 <UserCircleIcon />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCardIcon />
-                Billing
+              <DropdownMenuItem onClick={() => router.push("/switch-organization")}>
+                <Building2Icon />
+                Switch Organization
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <BellIcon />
-                Notifications
+                <UploadIcon />
+                Bulk Upload
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
