@@ -68,7 +68,7 @@ import { Switch } from "@/components/ui/switch"
 
 // --- Permissions Data ---
 
-type PermissionCategory = "General" | "Athletes" | "Training" | "Events" | "Financials" | "Team"
+type PermissionCategory = "General" | "Athletes" | "Training" | "Events" | "Financials" | "Users"
 
 interface PermissionItem {
   id: string
@@ -123,10 +123,10 @@ const PERMISSIONS_DATA: PermissionGroup[] = [
     ]
   },
   {
-    category: "Team",
+    category: "Users",
     items: [
-      { id: "view_team", label: "View Team", description: "See other team members" },
-      { id: "manage_team", label: "Manage Team", description: "Invite and remove team members" },
+      { id: "view_users", label: "View Users", description: "See other users" },
+      { id: "manage_users", label: "Manage Users", description: "Invite and remove users" },
       { id: "manage_roles", label: "Manage Roles", description: "Modify user permissions" },
     ]
   }
@@ -147,7 +147,7 @@ const ROLES: RoleDefinition[] = [
   {
     id: "admin",
     name: "Admin",
-    description: "Full access to all settings, team management, and financials.",
+    description: "Full access to all settings, user management, and financials.",
     defaultPermissions: PERMISSIONS_DATA.flatMap(g => g.items.map(i => i.id))
   },
   {
@@ -159,7 +159,7 @@ const ROLES: RoleDefinition[] = [
       "view_athletes", "edit_athletes", 
       "view_plans", "manage_plans", "assign_plans",
       "view_events", "manage_events",
-      "view_team"
+      "view_users"
     ]
   },
   {
@@ -179,7 +179,7 @@ const ROLES: RoleDefinition[] = [
   }
 ]
 
-interface TeamUser {
+interface User {
   id: string
   name: string
   email: string
@@ -191,7 +191,7 @@ interface TeamUser {
   lastActive: Date
 }
 
-const INITIAL_USERS: TeamUser[] = [
+const INITIAL_USERS: User[] = [
   {
     id: "1",
     name: "Andrew Karzel",
@@ -238,16 +238,16 @@ const INITIAL_USERS: TeamUser[] = [
   },
 ]
 
-export default function TeamPage() {
-  const [users, setUsers] = React.useState<TeamUser[]>(INITIAL_USERS)
+export default function UsersPage() {
+  const [users, setUsers] = React.useState<User[]>(INITIAL_USERS)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState<string>("all")
   
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false)
-  const [editingUser, setEditingUser] = React.useState<TeamUser | null>(null)
-  const [viewingUser, setViewingUser] = React.useState<TeamUser | null>(null)
+  const [editingUser, setEditingUser] = React.useState<User | null>(null)
+  const [viewingUser, setViewingUser] = React.useState<User | null>(null)
   
   // Form State
   const [selectedRole, setSelectedRole] = React.useState<RoleId>("volunteer")
@@ -287,12 +287,12 @@ export default function TeamPage() {
     return matchesSearch && matchesRole
   })
 
-  const handleViewUser = (user: TeamUser) => {
+  const handleViewUser = (user: User) => {
     setViewingUser(user)
     setIsDetailsOpen(true)
   }
 
-  const handleEditUser = (user: TeamUser) => {
+  const handleEditUser = (user: User) => {
     setEditingUser(user)
     setSelectedRole(user.role)
     setSelectedPermissions([...user.permissions])
@@ -328,7 +328,7 @@ export default function TeamPage() {
       } : u))
     } else {
       // Create new
-      const newUser: TeamUser = {
+      const newUser: User = {
         id: Math.random().toString(36).substring(7),
         name,
         email,
@@ -346,9 +346,9 @@ export default function TeamPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Users Management</h1>
         <p className="text-muted-foreground">
-          Manage your team members and configure granular access permissions.
+          Manage your users and configure granular access permissions.
         </p>
       </div>
 
@@ -371,7 +371,7 @@ export default function TeamPage() {
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search team..."
+                  placeholder="Search users..."
                   className="pl-8"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -656,3 +656,4 @@ export default function TeamPage() {
     </div>
   )
 }
+

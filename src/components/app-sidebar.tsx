@@ -232,8 +232,8 @@ const data = {
           url: "/dashboard/settings/billing",
         },
         {
-          title: "Team",
-          url: "/dashboard/settings/team",
+          title: "Users",
+          url: "/dashboard/settings/users",
         },
       ],
     },
