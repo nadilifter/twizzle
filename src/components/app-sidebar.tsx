@@ -178,6 +178,10 @@ const data = {
           url: "/dashboard/financials/payouts",
         },
         {
+          title: "Discounts",
+          url: "/dashboard/financials/discounts",
+        },
+        {
           title: "Transactions",
           url: "/dashboard/financials/transactions",
         },
