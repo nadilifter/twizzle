@@ -94,7 +94,7 @@ export function NavUser({
                 <Building2Icon />
                 Switch Organization
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/bulk-upload")}>
                 <UploadIcon />
                 Bulk Upload
               </DropdownMenuItem>
