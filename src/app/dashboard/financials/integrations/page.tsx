@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function IntegrationsPage() {
   const [qboConnected, setQboConnected] = useState(false)
+  const [xeroConnected, setXeroConnected] = useState(false)
   
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -42,22 +43,22 @@ export default function IntegrationsPage() {
             {!qboConnected ? (
                 <>
                 <div className="text-sm text-muted-foreground">
-                    To set up the theoretical connection, please provide your QuickBooks Online application credentials. 
+                    To set up a connection to QuickBooks Online, submit your application credentials. 
                     You can find these in your Intuit Developer Portal.
                 </div>
                 
                 <div className="grid gap-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="client-id">Client ID</Label>
-                        <Input id="client-id" placeholder="AB123..." />
+                        <Label htmlFor="qbo-client-id">Client ID</Label>
+                        <Input id="qbo-client-id" placeholder="AB123..." />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="client-secret">Client Secret</Label>
-                        <Input id="client-secret" type="password" placeholder="••••••••••••••••" />
+                        <Label htmlFor="qbo-client-secret">Client Secret</Label>
+                        <Input id="qbo-client-secret" type="password" placeholder="••••••••••••••••" />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="company-id">Company ID (Realm ID)</Label>
-                        <Input id="company-id" placeholder="462081..." />
+                        <Label htmlFor="qbo-company-id">Company ID (Realm ID)</Label>
+                        <Input id="qbo-company-id" placeholder="462081..." />
                     </div>
                     
                     <div className="bg-muted/50 p-4 rounded-md space-y-2">
@@ -97,11 +98,8 @@ export default function IntegrationsPage() {
           </CardFooter>
         </Card>
 
-        {/* Xero Integration (Disabled) */}
-        <Card className="opacity-60 grayscale relative">
-             <div className="absolute top-0 right-0 p-4">
-                <Badge variant="secondary">Coming Soon</Badge>
-            </div>
+        {/* Xero Integration */}
+        <Card className="shadow-sm relative overflow-hidden">
           <CardHeader>
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#00B7E2] text-white font-bold text-xl">
@@ -113,19 +111,60 @@ export default function IntegrationsPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-                Integration with Xero is currently under development. Check back later for updates on syncing your financial data with Xero.
-            </p>
+          <CardContent className="grid gap-6">
+            {!xeroConnected ? (
+                <>
+                <div className="text-sm text-muted-foreground">
+                    Connect your Xero account by providing your application credentials from the Xero Developer Portal.
+                </div>
+                
+                <div className="grid gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="xero-client-id">Client ID</Label>
+                        <Input id="xero-client-id" placeholder="ABC123XYZ..." />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="xero-client-secret">Client Secret</Label>
+                        <Input id="xero-client-secret" type="password" placeholder="••••••••••••••••" />
+                    </div>
+                    
+                    <div className="bg-muted/50 p-4 rounded-md space-y-2">
+                         <div className="text-sm font-medium">Callback URL</div>
+                         <div className="flex items-center gap-2">
+                            <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm border flex-1">
+                                https://uplifter.app/api/auth/callback/xero
+                            </code>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                         </div>
+                         <p className="text-xs text-muted-foreground">Add this to your Redirect URIs in Xero Developer Portal.</p>
+                    </div>
+                </div>
+                </>
+            ) : (
+                <Alert className="bg-green-50 border-green-200">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-800">Connected</AlertTitle>
+                    <AlertDescription className="text-green-700">
+                        Your Xero account is successfully linked. Data sync runs every 24 hours.
+                    </AlertDescription>
+                </Alert>
+            )}
           </CardContent>
           <CardFooter>
-            <Button disabled variant="outline" className="w-full">
-                Connect to Xero
-            </Button>
+            {!xeroConnected ? (
+                <Button className="w-full bg-[#00B7E2] hover:bg-[#00B7E2]/90" onClick={() => setXeroConnected(true)}>
+                    Connect to Xero
+                </Button>
+            ) : (
+                <Button variant="outline" className="w-full text-red-600 hover:text-red-600 hover:bg-red-50" onClick={() => setXeroConnected(false)}>
+                    Disconnect
+                </Button>
+            )}
           </CardFooter>
         </Card>
       </div>
     </div>
   )
 }
-
