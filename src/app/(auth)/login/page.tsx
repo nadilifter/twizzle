@@ -1,22 +1,21 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { BeamsUpstream } from "@/components/ui/beams-upstream"
-import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
+import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 
 export default function LoginPage() {
+  const searchParams = useSearchParams()
+  const [email, setEmail] = useState(searchParams.get("email") || "")
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2 bg-background relative overflow-hidden">
-      <BeamsUpstream className="z-0" />
-      <div className="absolute top-4 right-4 z-50">
-        <AnimatedThemeToggler />
-      </div>
-      
-      <main className="flex flex-col items-center justify-center w-full flex-1 px-4 text-center z-10">
+    <>
         <Card className="relative overflow-hidden w-full max-w-[400px]">
           <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
           <CardHeader className="items-center pb-2">
@@ -54,7 +53,7 @@ export default function LoginPage() {
                   viewBox="0 0 24 24"
                   className="h-5 w-5"
                 >
-                   <path
+                  <path
                     fill="currentColor"
                     d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"
                   />
@@ -90,6 +89,8 @@ export default function LoginPage() {
                 type="email"
                 placeholder="m@example.com"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="grid gap-2 text-left">
@@ -103,7 +104,7 @@ export default function LoginPage() {
             </Button>
             <div className="text-center text-sm">
                 <Link
-                    href="/forgot-password"
+                    href={`/forgot-password?email=${encodeURIComponent(email)}`}
                     className="text-muted-foreground underline underline-offset-4"
                 >
                     Forgot your password?
@@ -111,7 +112,7 @@ export default function LoginPage() {
             </div>
             <div className="text-center text-sm">
               Don&apos;t have an account?{" "}
-              <Link href="/signup" className="underline">
+              <Link href={`/signup?email=${encodeURIComponent(email)}`} className="underline">
                 Sign up
               </Link>
             </div>
@@ -122,7 +123,6 @@ export default function LoginPage() {
               Go to Dashboard (Demo)
             </Button>
         </Link>
-      </main>
-    </div>
+    </>
   )
 }
