@@ -12,7 +12,11 @@ cd ~/uplifter || { echo "❌ Error: ~/uplifter directory not found"; exit 1; }
 
 # Pull latest changes from git
 echo "📥 Pulling latest changes from git..."
-git pull origin main
+git fetch origin
+if ! git pull origin main 2>/dev/null; then
+    echo "⚠️  Git pull failed, resetting to origin/main..."
+    git reset --hard origin/main
+fi
 
 # Stop and remove existing container
 echo "🛑 Stopping existing container..."
