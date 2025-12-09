@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle2Icon, AlertCircleIcon, Building2Icon, UniversityIcon, UserIcon, ShieldCheckIcon } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AchSetupDialog } from "@/components/financials/ach-setup-dialog"
 
 export default function OnboardingPage() {
   const isFullyVerified = true // Toggle this to simulate different states
@@ -91,7 +92,7 @@ export default function OnboardingPage() {
                <div className="text-sm text-muted-foreground">
                  Account ID: <span className="font-mono text-foreground">10000928374</span>
                </div>
-               <Button variant="outline">Update Details</Button>
+               <AchSetupDialog trigger={<Button variant="outline">Update Details</Button>} />
             </CardFooter>
           </Card>
         </div>

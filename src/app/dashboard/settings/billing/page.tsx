@@ -1,3 +1,5 @@
+"use client"
+
 import { Check, CreditCard, Download, Package } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -20,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { AddPaymentMethodDialog } from "@/components/financials/add-payment-method-dialog"
 
 export default function BillingPage() {
   return (
@@ -153,9 +156,13 @@ export default function BillingPage() {
             </div>
           </CardContent>
           <CardFooter>
-             <Button variant="ghost" className="w-full justify-start pl-0 text-muted-foreground hover:text-foreground">
-              Edit Payment Methods
-            </Button>
+             <AddPaymentMethodDialog 
+                trigger={
+                    <Button variant="ghost" className="w-full justify-start pl-0 text-muted-foreground hover:text-foreground">
+                      Edit Payment Methods
+                    </Button>
+                }
+             />
           </CardFooter>
         </Card>
          <Card>
