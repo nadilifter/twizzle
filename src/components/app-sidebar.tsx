@@ -181,6 +181,10 @@ const data = {
           title: "Transactions",
           url: "/dashboard/financials/transactions",
         },
+        {
+          title: "Integrations",
+          url: "/dashboard/financials/integrations",
+        },
       ],
     },
     {
