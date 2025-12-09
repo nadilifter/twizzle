@@ -89,7 +89,7 @@ export default function ProgramsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Programs</h1>
           <p className="text-muted-foreground">
-            Manage your gym's training programs and curriculum levels.
+            Manage your gym&apos;s training programs and curriculum levels.
           </p>
         </div>
         <Sheet>

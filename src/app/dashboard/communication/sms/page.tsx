@@ -135,7 +135,7 @@ export default function SMSPage() {
                     htmlFor="marketing"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    Include opt-out link ("Reply STOP to unsubscribe")
+                    Include opt-out link (&quot;Reply STOP to unsubscribe&quot;)
                   </label>
                 </div>
               </div>

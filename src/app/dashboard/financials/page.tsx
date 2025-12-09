@@ -59,7 +59,7 @@ export default function FinancialsPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Financial Overview</h1>
         <p className="text-muted-foreground">
-          Manage your club's financial health, transactions, and Adyen onboarding status.
+          Manage your club&apos;s financial health, transactions, and Adyen onboarding status.
         </p>
       </div>
 

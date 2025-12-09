@@ -127,7 +127,7 @@ export default function OnboardingPage() {
              </CardHeader>
              <CardContent className="text-sm text-muted-foreground">
                <p>
-                 If you're having trouble verifying your account, contact our support team or check the Adyen documentation.
+                 If you&apos;re having trouble verifying your account, contact our support team or check the Adyen documentation.
                </p>
                <Button variant="link" className="px-0 mt-2">
                  Contact Support &rarr;

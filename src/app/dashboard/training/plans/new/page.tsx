@@ -332,7 +332,7 @@ export default function NewPlanPage() {
                 <Label>Specific Skills Tracked</Label>
                 {activeRotation.skills.length === 0 ? (
                     <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-                    No skills selected yet. Click "Add Skill / Drill" to link specific skills from the database.
+                    No skills selected yet. Click &quot;Add Skill / Drill&quot; to link specific skills from the database.
                     </div>
                 ) : (
                     <div className="flex flex-wrap gap-2">

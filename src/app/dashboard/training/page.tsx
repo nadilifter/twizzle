@@ -146,7 +146,7 @@ export default function TrainingPage() {
                     <LayoutList className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium">Preschool - "Under the Sea"</p>
+                    <p className="font-medium">Preschool - &quot;Under the Sea&quot;</p>
                     <p className="text-sm text-muted-foreground">Theme Week</p>
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export default function TrainingPage() {
                   </SheetTrigger>
                   <SheetContent>
                     <SheetHeader>
-                      <SheetTitle>Preschool - "Under the Sea"</SheetTitle>
+                      <SheetTitle>Preschool - &quot;Under the Sea&quot;</SheetTitle>
                       <SheetDescription>
                         Theme Week
                       </SheetDescription>
@@ -173,9 +173,9 @@ export default function TrainingPage() {
                         <div>
                             <h3 className="text-sm font-medium">Stations</h3>
                             <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                <li>"Swim" across the beam (belly crawl)</li>
-                                <li>"Dive" rolls (forward roll over mat)</li>
-                                <li>"Starfish" jumps</li>
+                                <li>&quot;Swim&quot; across the beam (belly crawl)</li>
+                                <li>&quot;Dive&quot; rolls (forward roll over mat)</li>
+                                <li>&quot;Starfish&quot; jumps</li>
                             </ul>
                         </div>
                          <Button className="w-full" asChild>

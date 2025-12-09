@@ -21,7 +21,7 @@ import {
   AlignCenter,
   AlignRight,
 } from "lucide-react";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Message, loggedInUserData } from "./data";
@@ -90,7 +90,7 @@ export default function ChatBottombar({
     },
   });
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (editor && !editor.isEmpty) {
       const newMessage: Message = {
         id: Date.now(),
@@ -101,7 +101,7 @@ export default function ChatBottombar({
       sendMessage(newMessage);
       editor.commands.clearContent();
     }
-  };
+  }, [editor, sendMessage]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -146,7 +146,7 @@ export default function ChatBottombar({
       };
       // Tiptap doesn't attach this listener automatically.
     }
-  }, [editor]);
+  }, [editor, handleSendMessage]);
 
   if (!editor) {
     return null;

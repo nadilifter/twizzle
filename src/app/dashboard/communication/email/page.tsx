@@ -313,7 +313,7 @@ export default function EmailPage() {
                 <div className="rounded-md border bg-white p-4 text-sm text-muted-foreground min-h-[200px]">
                   <p>Hi [First Name],</p>
                   <br/>
-                  <p>This is a preview of the email content for "{selectedEmail.subject}". In a real implementation, this would show the actual HTML email rendered safely.</p>
+                  <p>This is a preview of the email content for &quot;{selectedEmail.subject}&quot;. In a real implementation, this would show the actual HTML email rendered safely.</p>
                   <br/>
                   <p>Best,</p>
                   <p>The Uplifter Team</p>

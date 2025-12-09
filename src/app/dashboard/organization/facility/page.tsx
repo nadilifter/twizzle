@@ -91,7 +91,7 @@ export default function FacilityPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Facility Management</h1>
           <p className="text-muted-foreground">
-            Manage your gym's details, training zones, and equipment inventory.
+            Manage your gym&apos;s details, training zones, and equipment inventory.
           </p>
         </div>
       </div>
@@ -109,7 +109,7 @@ export default function FacilityPage() {
               <CardHeader>
                 <CardTitle>General Information</CardTitle>
                 <CardDescription>
-                  Update your facility's public details and contact information.
+                  Update your facility&apos;s public details and contact information.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

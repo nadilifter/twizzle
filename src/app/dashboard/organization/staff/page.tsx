@@ -139,7 +139,7 @@ export default function StaffPage() {
             <SheetHeader>
               <SheetTitle>Add New Staff Member</SheetTitle>
               <SheetDescription>
-                Create a new staff profile. Click save when you're done.
+                Create a new staff profile. Click save when you&apos;re done.
               </SheetDescription>
             </SheetHeader>
             <div className="grid gap-4 py-4">

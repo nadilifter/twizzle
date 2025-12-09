@@ -16,7 +16,7 @@ export default function EventsPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight">Upcoming Events</h1>
           <p className="text-muted-foreground">
-            Manage your club's schedule, competitions, and social gatherings.
+            Manage your club&apos;s schedule, competitions, and social gatherings.
           </p>
         </div>
         <Button>Create Event</Button>

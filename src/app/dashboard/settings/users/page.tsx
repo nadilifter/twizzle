@@ -480,11 +480,11 @@ export default function UsersPage() {
 
       {/* User Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
             <DialogTitle>Member Details</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 -mx-6 px-6">
+          <ScrollArea className="flex-1 px-6 min-h-0">
             {viewingUser && (
               <div className="flex flex-col gap-6 pb-6">
                 <div className="flex flex-col items-center gap-4 p-6 bg-muted/30 rounded-lg">
@@ -543,18 +543,21 @@ export default function UsersPage() {
                     </div>
                   )}
                 </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button onClick={() => {
-                    setIsDetailsOpen(false)
-                    handleEditUser(viewingUser)
-                  }}>
-                    Edit Profile
-                  </Button>
-                </div>
               </div>
             )}
           </ScrollArea>
+          <div className="px-6 pb-6 pt-4 border-t">
+            {viewingUser && (
+              <div className="flex justify-end">
+                <Button onClick={() => {
+                  setIsDetailsOpen(false)
+                  handleEditUser(viewingUser)
+                }}>
+                  Edit Profile
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

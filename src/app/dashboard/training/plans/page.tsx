@@ -154,7 +154,7 @@ export default function PlansPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the lesson plan "{plan.name}".
+                            This action cannot be undone. This will permanently delete the lesson plan &quot;{plan.name}&quot;.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

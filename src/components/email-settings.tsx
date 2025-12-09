@@ -144,7 +144,7 @@ export function EmailSettings() {
         <CardHeader>
           <CardTitle>Default Sender</CardTitle>
           <CardDescription>
-            Set the default name and email address that will appear in your recipients' inbox.
+            Set the default name and email address that will appear in your recipients&apos; inbox.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -255,7 +255,7 @@ export default function AthletesPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight">Athlete Directory</h1>
           <p className="text-muted-foreground">
-            Manage your club's gymnasts, levels, and group assignments.
+            Manage your club&apos;s gymnasts, levels, and group assignments.
           </p>
         </div>
         <Dialog>

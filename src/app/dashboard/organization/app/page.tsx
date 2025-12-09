@@ -42,7 +42,7 @@ export default function AppPage() {
             <CardHeader>
               <CardTitle>Branding & Identity</CardTitle>
               <CardDescription>
-                Set your app's name, logo, and visual style.
+                Set your app&apos;s name, logo, and visual style.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -166,7 +166,7 @@ export default function AppPage() {
             <CardHeader>
               <CardTitle>Feature Selection</CardTitle>
               <CardDescription>
-                Enable or disable specific features for your organization's app.
+                Enable or disable specific features for your organization&apos;s app.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
