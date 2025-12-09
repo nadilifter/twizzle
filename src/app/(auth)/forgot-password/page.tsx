@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { ChevronLeft } from "lucide-react"
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
   const searchParams = useSearchParams()
   const [email, setEmail] = useState(searchParams.get("email") || "")
 
@@ -62,6 +62,22 @@ export default function ForgotPasswordPage() {
             </Button>
         </Link>
     </>
+  )
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <Card className="relative overflow-hidden w-full max-w-[400px]">
+        <CardHeader className="items-center pb-2">
+          <div className="h-9 w-36 bg-muted animate-pulse mb-2" />
+          <div className="h-8 w-48 bg-muted animate-pulse mb-2" />
+          <div className="h-4 w-64 bg-muted animate-pulse" />
+        </CardHeader>
+      </Card>
+    }>
+      <ForgotPasswordForm />
+    </Suspense>
   )
 }
 
