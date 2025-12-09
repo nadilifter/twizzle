@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 240 81% 63%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    /* Custom Palette - Purple/Cyan Theme */
+    --chart-1: 264 97% 62%;  /* Purple #8A3FFC */
+    --chart-2: 204 86% 49%;  /* Cyan #1192E8 */
+    --chart-3: 310 85% 65%;  /* Pink/Magenta */
+    --chart-4: 180 75% 45%;  /* Teal */
+    --chart-5: 245 50% 50%;  /* Indigo */
+    --chart-6: 264 60% 75%;  /* Light Purple */
+    --chart-7: 204 60% 70%;  /* Light Cyan */
+    --chart-8: 310 60% 80%;  /* Light Pink */
+    --chart-9: 180 50% 70%;  /* Light Teal */
+    --chart-10: 245 40% 70%; /* Light Indigo */
+
+    /* Carbon Analytics - KPIs/Highlights */
+    --chart-analytics-1: 264 97% 62%; /* Purple 60 #8A3FFC */
+    --chart-analytics-2: 265 65% 47%; /* Purple 70 #6929C4 */
+    --chart-analytics-3: 204 86% 49%; /* Cyan 50 #1192E8 */
+    --chart-analytics-4: 205 100% 38%; /* Cyan 60 #0072C3 */
+
+    /* Carbon Sequential - Cyan (Light to Dark) */
+    --chart-seq-1: 200 100% 95%; /* Cyan 10 */
+    --chart-seq-2: 203 100% 86%; /* Cyan 20 */
+    --chart-seq-3: 203 100% 75%; /* Cyan 30 */
+    --chart-seq-4: 203 100% 60%; /* Cyan 40 */
+    --chart-seq-5: 204 86% 49%;  /* Cyan 50 */
+    --chart-seq-6: 205 100% 38%; /* Cyan 60 */
+    --chart-seq-7: 208 100% 30%; /* Cyan 70 */
+    --chart-seq-8: 212 100% 20%; /* Cyan 80 */
+
+    /* Carbon Diverging - Red (Negative) */
+    --chart-div-neg-1: 0 100% 97%;   /* Red 10 */
+    --chart-div-neg-2: 355 100% 92%; /* Red 20 */
+    --chart-div-neg-3: 356 100% 85%; /* Red 30 */
+    --chart-div-neg-4: 357 100% 76%; /* Red 40 */
+    --chart-div-neg-5: 357 95% 64%;  /* Red 50 */
+    --chart-div-neg-6: 355 74% 49%;  /* Red 60 */
+
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 81% 63%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 240 81% 63%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 240 81% 63%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  .theme {
+    --animate-shine: shine var(--duration) infinite linear;
+  }
+  .leaflet-container {
+    @apply !bg-card !font-[inherit];
+  }
+  .leaflet-container a {
+    @apply !text-inherit;
+  }
+  .leaflet-div-icon {
+    @apply !bg-transparent !border-none;
+  }
+  .leaflet-popup-content-wrapper, .leaflet-popup-content, .leaflet-popup-content p {
+    @apply ![all:unset];
+  }
+  .leaflet-popup {
+    @apply !animate-none;
+  }
+  .leaflet-popup-close-button {
+    @apply ring-offset-background focus:ring-ring bg-secondary rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:outline-hidden;
+  }
+  .leaflet-tooltip, .leaflet-draw-tooltip {
+    @apply !bg-foreground !text-background !animate-none !rounded-md !border-none !p-0 !px-3 !py-1.5 !shadow-none;
+  }
+  .leaflet-draw-tooltip:before {
+    @apply bg-foreground !top-1/2 !right-0.5 size-2.5 translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2px] !border-none;
+  }
+  .leaflet-error-draw-tooltip {
+    @apply !bg-destructive !text-white;
+  }
+  .leaflet-error-draw-tooltip:before {
+    @apply bg-destructive;
+  }
+  .leaflet-draw-tooltip-subtext {
+    @apply !text-background;
+  }
+  .leaflet-popup-tip-container, .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before, .leaflet-tooltip-left:before, .leaflet-tooltip-right:before {
+    @apply hidden;
+  }
+  .leaflet-control-attribution {
+    @apply !bg-muted rounded-md !px-[4px] !py-[2px] text-[10px] !leading-none !text-inherit;
+  }
+  .leaflet-draw-guide-dash {
+    @apply rounded-full;
+  }
+  .leaflet-edit-marker-selected {
+    @apply !border-transparent !bg-transparent;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+@theme inline {
+  @keyframes shine {
+  0% {
+    background-position: 0% 0%;
+    }
+  50% {
+    background-position: 100% 100%;
+    }
+  to {
+    background-position: 0% 0%;
+    }
+  }
+}

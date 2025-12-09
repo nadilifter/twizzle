@@ -1,0 +1,68 @@
+import { FeatureRequest } from "./types";
+
+export const initialFeatures: FeatureRequest[] = [
+  {
+    id: "1",
+    title: "Dark Mode Support",
+    description: "It would be great to have a dark mode for late night work.",
+    status: "in-progress",
+    votes: 42,
+    author: "Alice Johnson",
+    createdAt: "2023-10-01",
+    tags: ["UI", "Accessibility"],
+    comments: [
+      {
+        id: "c1",
+        author: "Bob Smith",
+        avatar: "/avatars/02.png",
+        content: "I agree, this is essential.",
+        createdAt: "2023-10-02",
+      },
+    ],
+  },
+  {
+    id: "2",
+    title: "Mobile App",
+    description: "A dedicated mobile app for iOS and Android.",
+    status: "planned",
+    votes: 120,
+    author: "Charlie Brown",
+    createdAt: "2023-09-15",
+    tags: ["Mobile", "Platform"],
+    comments: [],
+  },
+  {
+    id: "3",
+    title: "API Access",
+    description: "Allow us to access our data via API.",
+    status: "under-review",
+    votes: 15,
+    author: "Dave Wilson",
+    createdAt: "2023-10-05",
+    tags: ["Dev", "Integration"],
+    comments: [],
+  },
+  {
+    id: "4",
+    title: "Export to PDF",
+    description: "Export reports to PDF format.",
+    status: "done",
+    votes: 89,
+    author: "Eve Davis",
+    createdAt: "2023-08-20",
+    tags: ["Reporting"],
+    comments: [],
+  },
+    {
+    id: "5",
+    title: "Calendar Integration",
+    description: "Sync events with Google Calendar.",
+    status: "planned",
+    votes: 55,
+    author: "Frank Miller",
+    createdAt: "2023-10-10",
+    tags: ["Integration", "Productivity"],
+    comments: [],
+  },
+];
+
