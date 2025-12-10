@@ -136,7 +136,7 @@ export function FinancialReports() {
                 <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-muted-foreground">Current Ratio</span>
                     <span className="text-2xl font-bold">2.8</span>
-                    <span className="text-xs text-muted-foreground">Healthy (> 1.5)</span>
+                    <span className="text-xs text-muted-foreground">Healthy (&gt; 1.5)</span>
                 </div>
                 <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-muted-foreground">Op. Expense Ratio</span>

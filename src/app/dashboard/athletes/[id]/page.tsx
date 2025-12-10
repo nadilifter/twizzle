@@ -409,7 +409,7 @@ export default function AthleteProfilePage() {
                                <span className="font-medium">{skill.rating}/5</span>
                              </div>
                              {skill.comment && (
-                               <p className="text-xs text-muted-foreground italic">"{skill.comment}"</p>
+                               <p className="text-xs text-muted-foreground italic">&quot;{skill.comment}&quot;</p>
                              )}
                            </div>
                          ))}
