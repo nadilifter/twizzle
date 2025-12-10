@@ -8,6 +8,7 @@ export type Athlete = {
   avatar: string
   email: string
   parent: string
+  familyId?: string
 }
 
 export const athletes: Athlete[] = [
@@ -20,6 +21,7 @@ export const athletes: Athlete[] = [
     avatar: "/avatars/01.png",
     email: "sophia.m@example.com",
     parent: "Sarah Miller",
+    familyId: "FAM-001",
   },
   {
     id: "ATH-002",
@@ -30,6 +32,7 @@ export const athletes: Athlete[] = [
     avatar: "/avatars/02.png",
     email: "olivia.c@example.com",
     parent: "David Chen",
+    familyId: "FAM-002",
   },
   {
     id: "ATH-003",
@@ -40,6 +43,7 @@ export const athletes: Athlete[] = [
     avatar: "/avatars/03.png",
     email: "isa.jones@example.com",
     parent: "Jessica Jones",
+    familyId: "FAM-003",
   },
   {
     id: "ATH-004",
@@ -50,6 +54,7 @@ export const athletes: Athlete[] = [
     avatar: "/avatars/04.png",
     email: "mia.w@example.com",
     parent: "Tom Wilson",
+    familyId: "FAM-004",
   },
   {
     id: "ATH-005",

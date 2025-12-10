@@ -64,6 +64,10 @@ const data = {
           url: "/dashboard/athletes",
         },
         {
+          title: "Families",
+          url: "/dashboard/athletes/families",
+        },
+        {
           title: "Memberships",
           url: "/dashboard/athletes/memberships",
         },
@@ -166,12 +170,20 @@ const data = {
           url: "/dashboard/financials",
         },
         {
-          title: "Ledgers",
-          url: "/dashboard/financials/ledgers",
+          title: "Discounts",
+          url: "/dashboard/financials/discounts",
+        },
+        {
+          title: "Integrations",
+          url: "/dashboard/financials/integrations",
         },
         {
           title: "Invoices",
           url: "/dashboard/financials/invoices",
+        },
+        {
+          title: "Ledgers",
+          url: "/dashboard/financials/ledgers",
         },
         {
           title: "Onboarding",
@@ -182,16 +194,16 @@ const data = {
           url: "/dashboard/financials/payouts",
         },
         {
-          title: "Discounts",
-          url: "/dashboard/financials/discounts",
+          title: "Point of Sale",
+          url: "/dashboard/financials/pos",
+        },
+        {
+          title: "Recurring Billing",
+          url: "/dashboard/financials/recurring",
         },
         {
           title: "Transactions",
           url: "/dashboard/financials/transactions",
-        },
-        {
-          title: "Integrations",
-          url: "/dashboard/financials/integrations",
         },
       ],
     },
