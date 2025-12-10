@@ -8,8 +8,15 @@ import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { attendanceHistory, medicalRecords } from "@/mock-data/athlete-details"
-import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX, User, Mail, CalendarDays, Trophy, TrendingUp, Star } from "lucide-react"
+import { evaluations } from "@/mock-data/evaluations"
+import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX, User, Mail, CalendarDays, Trophy, TrendingUp, Star, FileText, ChevronDown, Plus } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 export default function AthleteProfilePage() {
   const params = useParams()
@@ -108,6 +115,7 @@ export default function AthleteProfilePage() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
           <TabsTrigger value="medical">Medical</TabsTrigger>
         </TabsList>
 
@@ -288,6 +296,134 @@ export default function AthleteProfilePage() {
                )}
              </CardContent>
            </Card>
+        </TabsContent>
+
+        <TabsContent value="evaluations" className="space-y-4">
+           <div className="flex justify-end">
+             <Dialog>
+               <DialogTrigger asChild>
+                 <Button>
+                   <Plus className="mr-2 h-4 w-4" /> New Evaluation
+                 </Button>
+               </DialogTrigger>
+               <DialogContent className="sm:max-w-[425px]">
+                 <DialogHeader>
+                   <DialogTitle>Add New Evaluation</DialogTitle>
+                   <DialogDescription>
+                     Create a new performance evaluation for {athlete.name}.
+                   </DialogDescription>
+                 </DialogHeader>
+                 <div className="grid gap-4 py-4">
+                   <div className="grid grid-cols-4 items-center gap-4">
+                     <Label htmlFor="eval-date" className="text-right">
+                       Date
+                     </Label>
+                     <Input id="eval-date" type="date" className="col-span-3" defaultValue={new Date().toISOString().split('T')[0]} />
+                   </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                     <Label htmlFor="eval-level" className="text-right">
+                       Level
+                     </Label>
+                     <Input id="eval-level" defaultValue={athlete.level} className="col-span-3" />
+                   </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                     <Label htmlFor="eval-score" className="text-right">
+                       Score
+                     </Label>
+                     <div className="col-span-3 flex items-center gap-2">
+                        <Input id="eval-score" type="number" min="0" max="5" step="0.5" defaultValue="0" />
+                        <span className="text-sm text-muted-foreground">/ 5</span>
+                     </div>
+                   </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                     <Label htmlFor="eval-status" className="text-right">
+                       Status
+                     </Label>
+                     <Select defaultValue="satisfactory">
+                       <SelectTrigger className="col-span-3">
+                         <SelectValue placeholder="Select status" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="excellent">Excellent</SelectItem>
+                         <SelectItem value="satisfactory">Satisfactory</SelectItem>
+                         <SelectItem value="retry">Retry</SelectItem>
+                         <SelectItem value="needs-improvement">Needs Improvement</SelectItem>
+                       </SelectContent>
+                     </Select>
+                   </div>
+                   <div className="grid grid-cols-4 items-start gap-4">
+                     <Label htmlFor="eval-notes" className="text-right pt-2">
+                       Notes
+                     </Label>
+                     <Textarea id="eval-notes" className="col-span-3" placeholder="Enter detailed feedback here..." />
+                   </div>
+                 </div>
+                 <DialogFooter>
+                   <Button type="submit">Save Evaluation</Button>
+                 </DialogFooter>
+               </DialogContent>
+             </Dialog>
+           </div>
+           
+           <div className="space-y-4">
+             {isSophia ? evaluations.map((evalItem) => (
+               <Card key={evalItem.id}>
+                 <CardHeader className="pb-3">
+                   <div className="flex items-start justify-between">
+                     <div>
+                       <CardTitle className="text-base font-bold flex items-center gap-2">
+                         <FileText className="h-4 w-4 text-primary" />
+                         {evalItem.date}
+                       </CardTitle>
+                       <CardDescription>{evalItem.level} Evaluation by {evalItem.coach}</CardDescription>
+                     </div>
+                     <Badge variant={evalItem.status === "Excellent" ? "default" : "secondary"}>
+                       {evalItem.status}
+                     </Badge>
+                   </div>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="space-y-4">
+                     <div>
+                       <p className="text-sm font-medium mb-1">Overall Score: {evalItem.overallScore}/5</p>
+                       <Progress value={(evalItem.overallScore / 5) * 100} className="h-2" />
+                     </div>
+                     
+                     <div className="bg-muted/50 p-3 rounded-md text-sm">
+                       <p className="font-medium mb-1">Coach Notes:</p>
+                       <p className="text-muted-foreground">{evalItem.notes}</p>
+                     </div>
+
+                     <Collapsible>
+                       <CollapsibleTrigger asChild>
+                         <Button variant="ghost" size="sm" className="w-full flex justify-between">
+                           <span>View Skills Breakdown</span>
+                           <ChevronDown className="h-4 w-4" />
+                         </Button>
+                       </CollapsibleTrigger>
+                       <CollapsibleContent className="pt-2 space-y-2">
+                         {evalItem.skills.map((skill, idx) => (
+                           <div key={idx} className="flex flex-col gap-1 text-sm border-b pb-2 last:border-0">
+                             <div className="flex justify-between items-center">
+                               <span>{skill.name}</span>
+                               <span className="font-medium">{skill.rating}/5</span>
+                             </div>
+                             {skill.comment && (
+                               <p className="text-xs text-muted-foreground italic">"{skill.comment}"</p>
+                             )}
+                           </div>
+                         ))}
+                       </CollapsibleContent>
+                     </Collapsible>
+                   </div>
+                 </CardContent>
+               </Card>
+             )) : (
+               <div className="text-center py-8 text-muted-foreground">
+                 No evaluations found for this athlete.
+               </div>
+             )}
+           </div>
         </TabsContent>
         
         <TabsContent value="medical" className="space-y-4">
