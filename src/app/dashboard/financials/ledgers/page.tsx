@@ -1,8 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Filter, TrendingUp, DollarSign, CreditCard, Activity } from "lucide-react"
+import { Plus, Search, Filter, TrendingUp, DollarSign, CreditCard, Activity, RefreshCw, CheckCircle2, Settings } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell, Label as RechartsLabel } from "recharts"
+import Link from "next/link"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -37,6 +39,8 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLe
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RoutingRules } from "./routing-rules"
 import { GLCodesTable, GLCode } from "./gl-codes-table"
+import { LedgerTransactions } from "./ledger-transactions"
+import { FinancialReports } from "./financial-reports"
 
 // Mock Data for Charts
 const accountTypeData = [
@@ -121,6 +125,9 @@ export default function LedgersPage() {
     description: "",
     type: "Revenue",
   })
+  
+  const [isSyncing, setIsSyncing] = React.useState(false)
+  const [lastSync, setLastSync] = React.useState<Date | null>(new Date(Date.now() - 3600000)) // 1 hour ago
 
   const handleCreateGLCode = () => {
     if (!newGLCode.code || !newGLCode.description) return
@@ -137,17 +144,53 @@ export default function LedgersPage() {
     setNewGLCode({ code: "", description: "", type: "Revenue" })
     setIsDialogOpen(false)
   }
+  
+  const handleSync = () => {
+    setIsSyncing(true)
+    toast.info("Syncing with QuickBooks Online...")
+    
+    setTimeout(() => {
+        setIsSyncing(false)
+        setLastSync(new Date())
+        toast.success("Sync completed successfully")
+    }, 2000)
+  }
 
   const totalRevenue = accountTypeData.reduce((acc, curr) => acc + curr.amount, 0)
   const totalExpenses = expenseTypeData.reduce((acc, curr) => acc + curr.amount, 0)
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Ledgers & GL Codes</h1>
-        <p className="text-muted-foreground">
-          Manage your general ledger codes, routing rules, and view revenue breakdowns.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">Ledgers & GL Codes</h1>
+          <p className="text-muted-foreground">
+            Manage your general ledger codes, routing rules, and view revenue breakdowns.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end mr-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-emerald-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    QBO Connected
+                </div>
+                {lastSync && (
+                    <span className="text-xs text-muted-foreground">
+                        Last sync: {lastSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                )}
+            </div>
+            <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+                {isSyncing ? "Syncing..." : "Sync Now"}
+            </Button>
+            <Button variant="ghost" size="icon" asChild>
+                <Link href="/dashboard/financials/integrations">
+                    <Settings className="h-4 w-4" />
+                    <span className="sr-only">Integration Settings</span>
+                </Link>
+            </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -192,6 +235,8 @@ export default function LedgersPage() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="reports">Financial Reports</TabsTrigger>
           <TabsTrigger value="rules">Routing Rules</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
@@ -459,6 +504,12 @@ export default function LedgersPage() {
               </Card>
             </div>
           </div>
+        </TabsContent>
+        <TabsContent value="transactions">
+            <LedgerTransactions />
+        </TabsContent>
+        <TabsContent value="reports">
+            <FinancialReports />
         </TabsContent>
         <TabsContent value="rules">
           <RoutingRules glCodes={glCodes} />

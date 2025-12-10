@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus } from "lucide-react"
+import { ArrowUpDown, ChevronDown, Download, MoreHorizontal, Plus, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -35,6 +35,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
 
 export interface GLCode {
   id: string
@@ -181,6 +184,10 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
     pageIndex: 0,
     pageSize: 10,
   })
+  
+  // CSV Import State
+  const [isImportOpen, setIsImportOpen] = React.useState(false)
+  const [csvContent, setCsvContent] = React.useState("")
 
   const table = useReactTable({
     data,
@@ -203,6 +210,41 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
     },
   })
 
+  const handleExportCSV = () => {
+    // Generate CSV content
+    const headers = ["ID", "Code", "Description", "Type", "Status"]
+    const rows = data.map(item => 
+      [item.id, item.code, item.description, item.type, item.status].join(",")
+    )
+    const csvString = [headers.join(","), ...rows].join("\n")
+    
+    // Create download link
+    const blob = new Blob([csvString], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "gl_codes_export.csv"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast.success("GL Codes exported successfully")
+  }
+
+  const handleImportCSV = () => {
+    if (!csvContent) {
+        toast.error("Please enter CSV content")
+        return
+    }
+    
+    // In a real app, we would parse this and update the state/backend
+    console.log("Importing CSV:", csvContent)
+    
+    toast.success("GL Codes imported successfully (Simulation)")
+    setCsvContent("")
+    setIsImportOpen(false)
+  }
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between py-4">
@@ -215,9 +257,18 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+            </Button>
+            
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="ml-auto">
+                <Button variant="outline" size="sm" className="ml-auto">
                 Columns <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
@@ -323,7 +374,29 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
           </Button>
         </div>
       </div>
+
+      <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Import GL Codes</DialogTitle>
+                <DialogDescription>
+                    Paste your CSV content below. The format should be: Code, Description, Type, Status.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Textarea 
+                    placeholder="4001,Day Pass Sales,Revenue,Active"
+                    className="h-[200px] font-mono text-xs"
+                    value={csvContent}
+                    onChange={(e) => setCsvContent(e.target.value)}
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button>
+                <Button onClick={handleImportCSV}>Import</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-
