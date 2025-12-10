@@ -166,6 +166,10 @@ const data = {
           url: "/dashboard/financials",
         },
         {
+          title: "Ledgers",
+          url: "/dashboard/financials/ledgers",
+        },
+        {
           title: "Invoices",
           url: "/dashboard/financials/invoices",
         },
