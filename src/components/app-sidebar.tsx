@@ -118,6 +118,10 @@ const data = {
       url: "/dashboard/communication",
       items: [
         {
+          title: "Announcements",
+          url: "/dashboard/communication/announcements",
+        },
+        {
           title: "Chat",
           url: "/dashboard/communication/chat",
         },
