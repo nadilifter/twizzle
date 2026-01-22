@@ -7,6 +7,7 @@ import { db } from "./db";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as NextAuthOptions["adapter"],
+  debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "jwt",
   },
@@ -22,6 +23,14 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            allowDangerousEmailAccountLinking: true,
+            authorization: {
+              params: {
+                prompt: "consent",
+                access_type: "offline",
+                response_type: "code",
+              },
+            },
           }),
         ]
       : []),

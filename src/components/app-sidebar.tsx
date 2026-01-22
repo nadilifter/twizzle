@@ -4,6 +4,7 @@ import * as React from "react"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { ChevronRight, LifeBuoy, Send } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -29,13 +30,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-// This is sample data.
+// Navigation data
 const data = {
-  user: {
-    name: "Andrew Karzel",
-    email: "andrewkarzel@uplifterinc.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -279,6 +275,14 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { isMobile } = useSidebar()
+  const { data: session } = useSession()
+
+  // Get user data from session
+  const user = {
+    name: session?.user?.name || "User",
+    email: session?.user?.email || "",
+    avatar: session?.user?.image || null,
+  }
 
   return (
     <Sidebar {...props}>
@@ -343,7 +347,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
+import { signIn, getCsrfToken } from "next-auth/react"
 import { toast } from "sonner"
 
 export function LoginForm() {
@@ -18,6 +18,13 @@ export function LoginForm() {
   const [email, setEmail] = useState(searchParams.get("email") || "")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [csrfToken, setCsrfToken] = useState<string>("")
+
+  useEffect(() => {
+    getCsrfToken().then((token) => {
+      if (token) setCsrfToken(token)
+    })
+  }, [])
   
   // Check for OAuth errors in URL params
   const urlError = searchParams.get("error")
@@ -27,6 +34,15 @@ export function LoginForm() {
     }
     if (urlError === "OAuthAccountNotLinked") {
       return "This email is already associated with a different sign-in method."
+    }
+    if (urlError === "google") {
+      return "Google sign-in failed. Please check that the redirect URI is configured correctly in Google Cloud Console."
+    }
+    if (urlError === "OAuthCallback") {
+      return "OAuth callback error. Please try again."
+    }
+    if (urlError) {
+      return `Sign-in error: ${urlError}`
     }
     return null
   }
@@ -67,12 +83,27 @@ export function LoginForm() {
     }
   }
 
-  const handleOAuthSignIn = (provider: string) => {
-    signIn(provider, { callbackUrl: "/dashboard" })
+  const handleGoogleSignIn = () => {
+    setIsLoading(true)
+    setError(null)
+    // Submit the hidden Google form
+    const form = document.getElementById('google-signin-form') as HTMLFormElement
+    if (form) form.submit()
   }
 
   return (
     <>
+        {/* Hidden form for Google OAuth */}
+        <form 
+          id="google-signin-form"
+          action="/api/auth/signin/google" 
+          method="POST"
+          style={{ display: 'none' }}
+        >
+          <input type="hidden" name="csrfToken" value={csrfToken} />
+          <input type="hidden" name="callbackUrl" value="/dashboard" />
+        </form>
+
         <Card className="relative overflow-hidden w-full max-w-[400px]">
           <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
           <CardHeader className="items-center pb-2">
@@ -92,7 +123,7 @@ export function LoginForm() {
           <CardContent className="grid gap-4">
             <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid grid-cols-3 gap-3">
-              <Button type="button" variant="outline" className="w-full" onClick={() => handleOAuthSignIn("google")} disabled={isLoading}>
+              <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || !csrfToken}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
