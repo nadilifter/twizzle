@@ -6,6 +6,15 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
+    // Handle root path redirects
+    if (path === "/") {
+      if (token) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      } else {
+        return NextResponse.redirect(new URL("/login", req.url));
+      }
+    }
+
     // If no token and trying to access protected routes, redirect to login
     if (!token && path.startsWith("/dashboard")) {
       return NextResponse.redirect(new URL("/login", req.url));

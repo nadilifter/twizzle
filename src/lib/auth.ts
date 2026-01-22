@@ -77,8 +77,47 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      if (user) {
+    async signIn({ user, account }) {
+      // For OAuth providers (like Google), only allow existing users
+      if (account?.provider === "google") {
+        const existingUser = await db.user.findUnique({
+          where: { email: user.email! },
+        });
+
+        if (!existingUser) {
+          // User doesn't exist - reject sign-in
+          return "/login?error=NoAccount";
+        }
+
+        // Update last active for OAuth users
+        await db.user.update({
+          where: { id: existingUser.id },
+          data: { lastActiveAt: new Date() },
+        });
+      }
+
+      return true;
+    },
+    async jwt({ token, user, account, trigger, session }) {
+      // For OAuth sign-in, fetch full user data from database
+      if (account?.provider === "google" && user?.email) {
+        const dbUser = await db.user.findUnique({
+          where: { email: user.email },
+          include: {
+            organization: true,
+            permissions: true,
+          },
+        });
+
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+          token.organizationId = dbUser.organizationId;
+          token.organizationName = dbUser.organization.name;
+          token.permissions = dbUser.permissions.map((p) => p.permission);
+        }
+      } else if (user) {
+        // For credentials sign-in, user object already has all data
         token.id = user.id;
         token.role = user.role;
         token.organizationId = user.organizationId;

@@ -18,7 +18,19 @@ export function LoginForm() {
   const [email, setEmail] = useState(searchParams.get("email") || "")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  
+  // Check for OAuth errors in URL params
+  const urlError = searchParams.get("error")
+  const getInitialError = () => {
+    if (urlError === "NoAccount") {
+      return "No account found with this email. Please contact your administrator to create an account."
+    }
+    if (urlError === "OAuthAccountNotLinked") {
+      return "This email is already associated with a different sign-in method."
+    }
+    return null
+  }
+  const [error, setError] = useState<string | null>(getInitialError())
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -184,11 +196,6 @@ export function LoginForm() {
             </form>
           </CardContent>
         </Card>
-        <Link href="/dashboard" className="w-full max-w-[400px] mt-4">
-            <Button variant="outline" className="w-full">
-              Go to Dashboard (Demo)
-            </Button>
-        </Link>
     </>
   )
 }

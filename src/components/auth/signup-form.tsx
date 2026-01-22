@@ -118,11 +118,6 @@ export function SignupForm() {
             </div>
           </CardContent>
         </Card>
-        <Link href="/dashboard" className="w-full max-w-[400px] mt-4">
-            <Button variant="outline" className="w-full">
-              Go to Dashboard (Demo)
-            </Button>
-        </Link>
     </>
   )
 }
