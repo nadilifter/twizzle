@@ -1,0 +1,620 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// PHASE 1: Foundation - Organization & Users
+// ============================================
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  families    Family[]
+  programs    Program[]
+  events      Event[]
+  invoices    Invoice[]
+  skills      Skill[]
+  lessonPlans LessonPlan[]
+  announcements Announcement[]
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  passwordHash   String?
+  avatar         String?
+  role           Role     @default(COACH)
+  status         UserStatus @default(ACTIVE)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lastActiveAt   DateTime?
+
+  // Relations
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions   UserPermission[]
+  lessonPlans   LessonPlan[]
+  evaluations   Evaluation[]
+  events        Event[]      @relation("EventCoach")
+  sessions      Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPermission {
+  id         String @id @default(cuid())
+  userId     String
+  permission String // e.g., "athletes.read", "financials.write"
+  
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, permission])
+}
+
+enum Role {
+  ADMIN
+  COACH
+  VOLUNTEER
+  ACCOUNTANT
+  CUSTOM
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  INACTIVE
+}
+
+// ============================================
+// PHASE 2: Core Entities - Athletes & Families
+// ============================================
+
+model Family {
+  id             String   @id @default(cuid())
+  name           String
+  primaryContact String
+  email          String
+  phone          String
+  address        String?
+  balance        Decimal  @default(0) @db.Decimal(10, 2)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  athletes       Athlete[]
+  paymentMethods PaymentMethod[]
+  invoices       Invoice[]
+  payments       Payment[]
+}
+
+model Athlete {
+  id        String       @id @default(cuid())
+  name      String
+  email     String?
+  level     String
+  group     String
+  status    AthleteStatus @default(ACTIVE)
+  avatar    String?
+  birthDate DateTime?
+  familyId  String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  family      Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+  attendances Attendance[]
+  evaluations Evaluation[]
+  lineItems   LineItem[]
+}
+
+enum AthleteStatus {
+  ACTIVE
+  INACTIVE
+  TRIAL
+  GRADUATED
+}
+
+model PaymentMethod {
+  id        String  @id @default(cuid())
+  familyId  String
+  type      PaymentMethodType
+  last4     String
+  expiry    String?
+  brand     String?
+  isDefault Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  family    Family  @relation(fields: [familyId], references: [id], onDelete: Cascade)
+}
+
+enum PaymentMethodType {
+  CARD
+  BANK
+}
+
+// ============================================
+// PHASE 2: Programs & Memberships
+// ============================================
+
+model Program {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  level          String
+  status         ProgramStatus @default(ACTIVE)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events       Event[]
+  lessonPlans  LessonPlan[]
+  enrollments  Enrollment[]
+  lineItems    LineItem[]
+  membershipTiers MembershipTier[]
+}
+
+enum ProgramStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+model MembershipTier {
+  id          String   @id @default(cuid())
+  programId   String
+  name        String
+  price       Decimal  @db.Decimal(10, 2)
+  interval    BillingInterval
+  description String?
+  features    String[] // Array of feature strings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+  SESSION
+}
+
+model Enrollment {
+  id                String    @id @default(cuid())
+  athleteId         String
+  programId         String
+  membershipTierId  String?
+  startDate         DateTime
+  endDate           DateTime?
+  status            EnrollmentStatus @default(ACTIVE)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  athlete        Athlete        @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  program        Program        @relation(fields: [programId], references: [id], onDelete: Cascade)
+  membershipTier MembershipTier? @relation(fields: [membershipTierId], references: [id])
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+  COMPLETED
+}
+
+// ============================================
+// PHASE 3: Events & Attendance
+// ============================================
+
+model Event {
+  id             String    @id @default(cuid())
+  title          String
+  date           DateTime
+  startTime      String
+  endTime        String
+  type           EventType @default(CLASS)
+  description    String?
+  meetingLink    String?
+  location       Json?     // { lat, lng, address, name }
+  details        Json?     // { whatToBring, whatToExpect, requirements }
+  programId      String?
+  coachId        String?
+  organizationId String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program      Program?     @relation(fields: [programId], references: [id])
+  coach        User?        @relation("EventCoach", fields: [coachId], references: [id])
+  attendances  Attendance[]
+  lineItems    LineItem[]
+}
+
+enum EventType {
+  CLASS
+  CAMP
+  PARTY
+  COMPETITION
+  MEETING
+  OTHER
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  athleteId String
+  eventId   String
+  status    AttendanceStatus @default(PRESENT)
+  checkedIn DateTime?
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  athlete   Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([athleteId, eventId])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+// ============================================
+// PHASE 4: Financial System
+// ============================================
+
+model Invoice {
+  id             String        @id @default(cuid())
+  reference      String        @unique
+  familyId       String
+  status         InvoiceStatus @default(DRAFT)
+  dueDate        DateTime
+  subtotal       Decimal       @db.Decimal(10, 2)
+  tax            Decimal       @default(0) @db.Decimal(10, 2)
+  total          Decimal       @db.Decimal(10, 2)
+  notes          String?
+  organizationId String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family       Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  lineItems    LineItem[]
+  payments     Payment[]
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+  PARTIAL
+}
+
+model LineItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+  total       Decimal @db.Decimal(10, 2)
+  programId   String? // What program is this for?
+  eventId     String? // What specific event?
+  athleteId   String? // Which athlete?
+  discountId  String? // Applied discount
+  createdAt   DateTime @default(now())
+
+  // Relations
+  invoice  Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  program  Program? @relation(fields: [programId], references: [id])
+  event    Event?   @relation(fields: [eventId], references: [id])
+  athlete  Athlete? @relation(fields: [athleteId], references: [id])
+  discount Discount? @relation(fields: [discountId], references: [id])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  invoiceId     String?
+  familyId      String
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentType
+  status        PaymentStatus @default(PENDING)
+  transactionId String?
+  processedAt   DateTime?
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  family  Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+}
+
+enum PaymentType {
+  CARD
+  BANK
+  CASH
+  CHECK
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Discount {
+  id           String       @id @default(cuid())
+  name         String
+  code         String       @unique
+  type         DiscountType
+  amount       Decimal      @db.Decimal(10, 2)
+  validFrom    DateTime
+  validTo      DateTime?
+  userScope    UserScope    @default(ALL)
+  productScope ProductScope @default(ALL)
+  usageLimit   Int?
+  usageCount   Int          @default(0)
+  status       DiscountStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  lineItems    LineItem[]
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum UserScope {
+  ALL
+  NEW_USERS
+  MEMBERS
+  VIP
+}
+
+enum ProductScope {
+  ALL
+  MERCHANDISE
+  EVENTS
+  MEMBERSHIP
+}
+
+enum DiscountStatus {
+  ACTIVE
+  EXPIRED
+  SCHEDULED
+  DRAFT
+}
+
+model GLCode {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  description String
+  type        GLCodeType
+  status      GLCodeStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  ledgerEntries LedgerEntry[]
+}
+
+enum GLCodeType {
+  REVENUE
+  EXPENSE
+  LIABILITY
+  ASSET
+  EQUITY
+}
+
+enum GLCodeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model LedgerEntry {
+  id          String            @id @default(cuid())
+  date        DateTime
+  description String
+  glCodeId    String
+  reference   String?
+  debit       Decimal?          @db.Decimal(10, 2)
+  credit      Decimal?          @db.Decimal(10, 2)
+  status      LedgerEntryStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+
+  // Relations
+  glCode GLCode @relation(fields: [glCodeId], references: [id])
+}
+
+enum LedgerEntryStatus {
+  POSTED
+  PENDING
+}
+
+// ============================================
+// PHASE 5: Training & Evaluations
+// ============================================
+
+model Skill {
+  id             String   @id @default(cuid())
+  name           String
+  category       String   // e.g., "Vault", "Bars", "Beam", "Floor"
+  level          String?
+  description    String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  evaluationSkills EvaluationSkill[]
+  rotationSkills   RotationSkill[]
+}
+
+model LessonPlan {
+  id             String           @id @default(cuid())
+  name           String
+  programId      String
+  date           DateTime?
+  authorId       String
+  status         LessonPlanStatus @default(DRAFT)
+  theme          String?
+  notes          String?
+  organizationId String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program      Program      @relation(fields: [programId], references: [id])
+  author       User         @relation(fields: [authorId], references: [id])
+  rotations    Rotation[]
+}
+
+enum LessonPlanStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+model Rotation {
+  id           String   @id @default(cuid())
+  lessonPlanId String
+  name         String
+  description  String?
+  order        Int      @default(0)
+  media        String[] // Array of media URLs
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  lessonPlan LessonPlan      @relation(fields: [lessonPlanId], references: [id], onDelete: Cascade)
+  skills     RotationSkill[]
+}
+
+model RotationSkill {
+  id         String @id @default(cuid())
+  rotationId String
+  skillId    String
+
+  // Relations
+  rotation Rotation @relation(fields: [rotationId], references: [id], onDelete: Cascade)
+  skill    Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([rotationId, skillId])
+}
+
+model Evaluation {
+  id           String           @id @default(cuid())
+  athleteId    String
+  coachId      String
+  date         DateTime
+  level        String
+  overallScore Decimal          @db.Decimal(3, 1)
+  status       EvaluationStatus
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  athlete      Athlete           @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  coach        User              @relation(fields: [coachId], references: [id])
+  skillRatings EvaluationSkill[]
+}
+
+enum EvaluationStatus {
+  PASS
+  RETRY
+  EXCELLENT
+  SATISFACTORY
+}
+
+model EvaluationSkill {
+  id           String  @id @default(cuid())
+  evaluationId String
+  skillId      String
+  rating       Int     // 1-5
+  comment      String?
+
+  // Relations
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  skill      Skill      @relation(fields: [skillId], references: [id])
+
+  @@unique([evaluationId, skillId])
+}
+
+// ============================================
+// PHASE 6: Communication
+// ============================================
+
+model Announcement {
+  id             String              @id @default(cuid())
+  title          String
+  content        String
+  targetScope    AnnouncementScope   @default(ALL)
+  targetProgramId String?
+  targetEventId  String?
+  status         AnnouncementStatus  @default(DRAFT)
+  publishedAt    DateTime?
+  organizationId String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+enum AnnouncementScope {
+  ALL
+  PROGRAM
+  EVENT
+  FAMILY
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}

@@ -8,11 +8,56 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
+import { toast } from "sonner"
 
 export function LoginForm() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [email, setEmail] = useState(searchParams.get("email") || "")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        // Clear password on failed attempt
+        setPassword("")
+        // Show user-friendly error message
+        const errorMessage = result.error === "CredentialsSignin" 
+          ? "Invalid email or password. Please try again."
+          : result.error
+        setError(errorMessage)
+        toast.error(errorMessage)
+      } else {
+        router.push("/dashboard")
+        router.refresh()
+      }
+    } catch {
+      setPassword("")
+      const errorMessage = "An error occurred. Please try again."
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOAuthSignIn = (provider: string) => {
+    signIn(provider, { callbackUrl: "/dashboard" })
+  }
 
   return (
     <>
@@ -33,8 +78,9 @@ export function LoginForm() {
           </CardHeader>
           
           <CardContent className="grid gap-4">
+            <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid grid-cols-3 gap-3">
-              <Button variant="outline" className="w-full">
+              <Button type="button" variant="outline" className="w-full" onClick={() => handleOAuthSignIn("google")} disabled={isLoading}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -47,7 +93,7 @@ export function LoginForm() {
                 </svg>
                 <span className="sr-only">Login with Google</span>
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button type="button" variant="outline" className="w-full" disabled={isLoading}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -60,7 +106,7 @@ export function LoginForm() {
                 </svg>
                 <span className="sr-only">Login with Microsoft</span>
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button type="button" variant="outline" className="w-full" disabled={isLoading}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -90,17 +136,36 @@ export function LoginForm() {
                 placeholder="m@example.com"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  if (error) setError(null)
+                }}
+                disabled={isLoading}
               />
             </div>
             <div className="grid gap-2 text-left">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
               </div>
-              <Input id="password" type="password" required />
+              <Input 
+                id="password" 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (error) setError(null)
+                }}
+                disabled={isLoading}
+              />
             </div>
-            <Button type="submit" className="w-full">
-              Login
+            {error && (
+              <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
             <div className="text-center text-sm">
                 <Link
@@ -116,6 +181,7 @@ export function LoginForm() {
                 Sign up
               </Link>
             </div>
+            </form>
           </CardContent>
         </Card>
         <Link href="/dashboard" className="w-full max-w-[400px] mt-4">
