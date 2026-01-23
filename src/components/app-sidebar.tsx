@@ -4,6 +4,7 @@ import * as React from "react"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { ChevronRight, LifeBuoy, Send } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -29,13 +30,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-// This is sample data.
+// Navigation data
 const data = {
-  user: {
-    name: "Andrew Karzel",
-    email: "andrewkarzel@uplifterinc.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -279,6 +275,16 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { isMobile } = useSidebar()
+  const { data: session, status } = useSession()
+
+  // Get user data from session
+  const user = session?.user ? {
+    name: session.user.name || "User",
+    email: session.user.email || "",
+    avatar: session.user.image || null,
+  } : null
+
+  const isLoading = status === "loading"
 
   return (
     <Sidebar {...props}>
@@ -343,7 +349,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        {isLoading || !user ? (
+          <div className="flex items-center gap-2 px-2 py-2">
+            <div className="h-8 w-8 rounded-lg bg-sidebar-accent animate-pulse" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-4 w-24 rounded bg-sidebar-accent animate-pulse" />
+              <div className="h-3 w-32 rounded bg-sidebar-accent animate-pulse" />
+            </div>
+          </div>
+        ) : (
+          <NavUser user={user} />
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

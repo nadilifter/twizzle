@@ -1,0 +1,187 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
+
+const rotationSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  order: z.number().int().default(0),
+  media: z.array(z.string()).optional(),
+  skillIds: z.array(z.string()).optional(),
+});
+
+const createLessonPlanSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  programId: z.string().min(1, "Program is required"),
+  date: z.string().optional().nullable(),
+  status: z.enum(["ACTIVE", "DRAFT", "ARCHIVED"]).default("DRAFT"),
+  theme: z.string().optional(),
+  notes: z.string().optional(),
+  rotations: z.array(rotationSchema).optional(),
+});
+
+// GET /api/lesson-plans
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search") || "";
+    const programId = searchParams.get("programId");
+    const status = searchParams.get("status");
+    const authorId = searchParams.get("authorId");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = parseInt(searchParams.get("offset") || "0");
+
+    const where = {
+      organizationId: session.user.organizationId,
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: "insensitive" as const } },
+          { theme: { contains: search, mode: "insensitive" as const } },
+        ],
+      }),
+      ...(programId && { programId }),
+      ...(status && { status: status as "ACTIVE" | "DRAFT" | "ARCHIVED" }),
+      ...(authorId && { authorId }),
+    };
+
+    const [lessonPlans, total] = await Promise.all([
+      db.lessonPlan.findMany({
+        where,
+        include: {
+          program: {
+            select: {
+              id: true,
+              name: true,
+              level: true,
+            },
+          },
+          author: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            },
+          },
+          rotations: {
+            include: {
+              skills: {
+                include: {
+                  skill: true,
+                },
+              },
+            },
+            orderBy: { order: "asc" },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      db.lessonPlan.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      data: lessonPlans,
+      total,
+      limit,
+      offset,
+    });
+  } catch (error) {
+    console.error("Error fetching lesson plans:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch lesson plans" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/lesson-plans
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (
+      !session.user.permissions.includes("*") &&
+      !session.user.permissions.includes("training.create")
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const validatedData = createLessonPlanSchema.parse(body);
+
+    // Verify program
+    const program = await db.program.findFirst({
+      where: {
+        id: validatedData.programId,
+        organizationId: session.user.organizationId,
+      },
+    });
+
+    if (!program) {
+      return NextResponse.json({ error: "Program not found" }, { status: 404 });
+    }
+
+    const lessonPlan = await db.lessonPlan.create({
+      data: {
+        name: validatedData.name,
+        programId: validatedData.programId,
+        date: validatedData.date ? new Date(validatedData.date) : null,
+        authorId: session.user.id,
+        status: validatedData.status,
+        theme: validatedData.theme,
+        notes: validatedData.notes,
+        organizationId: session.user.organizationId,
+        rotations: validatedData.rotations ? {
+          create: validatedData.rotations.map((rotation, index) => ({
+            name: rotation.name,
+            description: rotation.description,
+            order: rotation.order ?? index,
+            media: rotation.media || [],
+            skills: rotation.skillIds ? {
+              create: rotation.skillIds.map((skillId) => ({
+                skillId,
+              })),
+            } : undefined,
+          })),
+        } : undefined,
+      },
+      include: {
+        program: true,
+        author: true,
+        rotations: {
+          include: {
+            skills: {
+              include: {
+                skill: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(lessonPlan);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors[0].message },
+        { status: 400 }
+      );
+    }
+    console.error("Error creating lesson plan:", error);
+    return NextResponse.json(
+      { error: "Failed to create lesson plan" },
+      { status: 500 }
+    );
+  }
+}
