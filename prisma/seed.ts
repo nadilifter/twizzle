@@ -485,6 +485,94 @@ async function main() {
 
   console.log("Created sample invoice");
 
+  // Create sample discounts
+  const discounts = await Promise.all([
+    prisma.discount.upsert({
+      where: { id: "discount-1" },
+      update: {},
+      create: {
+        id: "discount-1",
+        name: "New Member Discount",
+        code: "WELCOME10",
+        type: "PERCENTAGE",
+        amount: 10,
+        validFrom: new Date("2024-01-01"),
+        validTo: new Date("2026-12-31"),
+        userScope: "NEW_USERS",
+        productScope: "ALL",
+        status: "ACTIVE",
+      },
+    }),
+    prisma.discount.upsert({
+      where: { id: "discount-2" },
+      update: {},
+      create: {
+        id: "discount-2",
+        name: "Summer Camp Early Bird",
+        code: "SUMMERCAMP25",
+        type: "FIXED_AMOUNT",
+        amount: 25,
+        validFrom: new Date("2024-03-01"),
+        validTo: new Date("2024-06-01"),
+        userScope: "ALL",
+        productScope: "EVENTS",
+        usageLimit: 50,
+        status: "EXPIRED",
+      },
+    }),
+    prisma.discount.upsert({
+      where: { id: "discount-3" },
+      update: {},
+      create: {
+        id: "discount-3",
+        name: "VIP Member Discount",
+        code: "VIP15",
+        type: "PERCENTAGE",
+        amount: 15,
+        validFrom: new Date("2024-01-01"),
+        userScope: "VIP",
+        productScope: "ALL",
+        status: "ACTIVE",
+      },
+    }),
+    prisma.discount.upsert({
+      where: { id: "discount-4" },
+      update: {},
+      create: {
+        id: "discount-4",
+        name: "Refer a Friend",
+        code: "REFER20",
+        type: "FIXED_AMOUNT",
+        amount: 20,
+        validFrom: new Date("2024-01-01"),
+        validTo: new Date("2025-12-31"),
+        userScope: "MEMBERS",
+        productScope: "MEMBERSHIP",
+        usageLimit: 100,
+        usageCount: 23,
+        status: "ACTIVE",
+      },
+    }),
+    prisma.discount.upsert({
+      where: { id: "discount-5" },
+      update: {},
+      create: {
+        id: "discount-5",
+        name: "Spring Sale 2025",
+        code: "SPRING2025",
+        type: "PERCENTAGE",
+        amount: 20,
+        validFrom: new Date("2025-03-01"),
+        validTo: new Date("2025-04-30"),
+        userScope: "ALL",
+        productScope: "ALL",
+        status: "SCHEDULED",
+      },
+    }),
+  ]);
+
+  console.log("Created discounts:", discounts.length);
+
   console.log("Seeding complete!");
 }
 

@@ -55,8 +55,15 @@ import {
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { MoreHorizontal, Plus, Search, Calendar as CalendarIcon, Wand2 } from "lucide-react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
+
+// Format date consistently to avoid hydration mismatch (always use UTC)
+function formatDateString(dateStr: string): string {
+  // Parse as ISO and format consistently using date-fns
+  const date = parseISO(dateStr)
+  return format(date, "M/d/yyyy")
+}
 
 type DiscountType = "PERCENTAGE" | "FIXED_AMOUNT"
 
@@ -205,8 +212,8 @@ export default function DiscountsPage() {
       accessorKey: "validity",
       header: "Validity",
       cell: ({ row }) => {
-        const from = new Date(row.original.validFrom).toLocaleDateString()
-        const to = row.original.validTo ? new Date(row.original.validTo).toLocaleDateString() : "Indefinite"
+        const from = formatDateString(row.original.validFrom)
+        const to = row.original.validTo ? formatDateString(row.original.validTo) : "Indefinite"
         return (
           <div className="text-xs text-muted-foreground">
             {from} - {to}

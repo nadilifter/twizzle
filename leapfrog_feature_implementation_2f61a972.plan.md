@@ -4,37 +4,43 @@ overview: Implement a phased backend and feature development plan for the Leapfr
 todos:
   - id: phase1-db
     content: Set up Prisma with PostgreSQL and create initial Organization/User schema
-    status: in_progress
+    status: completed
   - id: phase1-auth
     content: Implement NextAuth.js with credentials and organization-scoped sessions
-    status: pending
+    status: completed
   - id: phase1-rbac
     content: Build role-based access control middleware and connect to users page
-    status: pending
+    status: completed
   - id: phase2-athletes
     content: Create Athletes and Families CRUD API and connect to dashboard pages
-    status: pending
+    status: completed
   - id: phase2-programs
     content: Create Programs and Memberships API with enrollment tracking
-    status: pending
+    status: completed
   - id: phase3-events
     content: Build Events API with Program/Coach relationships and calendar integration
-    status: pending
+    status: completed
   - id: phase3-attendance
     content: Implement Attendance tracking linked to Athletes and Events
-    status: pending
+    status: completed
   - id: phase4-invoices
     content: Build Invoice system with LineItems referencing Programs, Events, and Athletes
-    status: pending
+    status: completed
   - id: phase4-payments
     content: Implement Payment processing with transaction history
+    status: completed
+  - id: phase4-discounts
+    content: Create Discounts API with code validation and usage tracking
+    status: completed
+  - id: phase4-ledger
+    content: Build GLCode and Ledger Entry API for accounting
     status: pending
   - id: phase5-training
     content: Connect Lesson Plans, Skills, and Evaluations to database
-    status: pending
+    status: completed
   - id: phase6-communication
     content: Build Announcements and notification system with entity targeting
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -42,7 +48,20 @@ isProject: false
 
 ## Current State
 
-The frontend is well-prepared with 50+ UI components and 30+ dashboard pages using mock data. No backend exists yet—no database, API routes, or authentication. All data lives in `src/mock-data/` files.
+**Backend Implementation Complete:**
+- ✅ Full Prisma schema with all entities (Phases 1-6)
+- ✅ NextAuth.js authentication (credentials + Google OAuth)
+- ✅ RBAC permissions system
+- ✅ Complete CRUD APIs for: Users, Athletes, Families, Programs, Events, Invoices
+- ✅ Supporting APIs: Attendance, Enrollments, Payments, Skills, Evaluations, Lesson Plans, Announcements, Discounts
+- ✅ Seed data with demo organization, users, programs, families, athletes, events, invoices, skills, and discounts
+
+**Remaining:**
+- ⏳ GLCode/Ledger API (Phase 4.4)
+- ⏳ Connect frontend pages to real API endpoints (replace mock data)
+- ⏳ Add missing [id] routes for: Attendance, Enrollments, Payments, Skills, Evaluations, Lesson Plans, Announcements
+
+The frontend is well-prepared with 50+ UI components and 30+ dashboard pages using mock data. Backend APIs are ready—dashboard pages need to be connected to API endpoints.
 
 ## Entity Relationship Model
 

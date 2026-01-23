@@ -173,8 +173,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Financial overview uses sample metrics",
   },
   "/dashboard/financials/discounts": {
-    status: "demo",
-    description: "Discount management uses sample data",
+    status: "live",
+    description: "Discount management with validation API",
+    apiRoutes: ["/api/discounts"],
   },
   "/dashboard/financials/integrations": {
     status: "demo",
