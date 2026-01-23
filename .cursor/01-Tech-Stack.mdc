@@ -1,0 +1,12 @@
+---
+description: Technology stack mandates and framework choices
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "package.json"]
+---
+# 01-Tech-Stack
+
+## Mandates
+
+- **Primary Framework**: Use Next.js 14+ with the App Router.
+- **Components**: All UI must be built using `shadcn/ui` and `Tailwind CSS`.
+- **Language**: Strictly use TypeScript for all new code.
+- **DB/ORM**: Use Prisma or Drizzle (select one) for all database operations with PostgreSQL.

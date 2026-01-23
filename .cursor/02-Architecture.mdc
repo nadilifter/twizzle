@@ -1,0 +1,11 @@
+---
+description: Architectural principles and separation of concerns
+globs: ["**/*"]
+---
+# 02-Architecture
+
+## Mandates
+
+- **Structure**: Use a Monorepo for code-sharing between the core SaaS app and white-label/customer sites.
+- **Core Principle**: Enforce strict separation of concerns (frontend/backend).
+- **Logic Placement**: Keep all business logic and external API calls (especially Stripe) in Server Components or dedicated API Routes/Server Actions.

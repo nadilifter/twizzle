@@ -1,0 +1,11 @@
+---
+description: Security, authentication, and scalability requirements
+globs: ["**/*.ts", "**/*.tsx", ".env*"]
+---
+# 03-Scalability-Security
+
+## Mandates
+
+- **Transactions**: All Stripe payment logic and webhook handlers must be robust, idempotent, and secure.
+- **Authentication**: All user state must be managed via an external provider (Auth.js/Clerk).
+- **Environment**: All configuration must be manageable via environment variables (.env).
