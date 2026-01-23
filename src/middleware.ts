@@ -20,6 +20,20 @@ export default withAuth(
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
+    // If authenticated but no organization selected
+    // And not already on the switch page or onboarding
+    // And not an API route
+    if (
+        token && 
+        !token.organizationId && 
+        !path.startsWith("/switch-organization") && 
+        !path.startsWith("/onboarding") &&
+        !path.startsWith("/api") &&
+        !path.startsWith("/_next")
+    ) {
+        return NextResponse.redirect(new URL("/switch-organization", req.url));
+    }
+
     // Allow access if authenticated
     return NextResponse.next();
   },
