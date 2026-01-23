@@ -74,9 +74,13 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Super admins bypass permission checks
+    const permissions = session.user.permissions ?? [];
+    const isSuperAdmin = session.user.isSuperAdmin === true;
     if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("families.edit")
+      !isSuperAdmin &&
+      !permissions.includes("*") &&
+      !permissions.includes("families.edit")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -131,9 +135,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Super admins bypass permission checks
+    const permissions = session.user.permissions ?? [];
+    const isSuperAdmin = session.user.isSuperAdmin === true;
     if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("families.delete")
+      !isSuperAdmin &&
+      !permissions.includes("*") &&
+      !permissions.includes("families.delete")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

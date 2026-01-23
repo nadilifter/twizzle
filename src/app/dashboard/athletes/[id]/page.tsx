@@ -1,7 +1,6 @@
 "use client"
 
-import { useParams } from "next/navigation"
-import { athletes } from "@/mock-data/athletes"
+import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
@@ -13,37 +12,115 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { attendanceHistory, medicalRecords } from "@/mock-data/athlete-details"
-import { evaluations } from "@/mock-data/evaluations"
-import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX, User, Mail, CalendarDays, Trophy, TrendingUp, Star, FileText, ChevronDown, Plus } from "lucide-react"
+import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX, User, Mail, CalendarDays, Trophy, TrendingUp, Star, FileText, ChevronDown, Plus, Loader2, AlertCircle, ArrowLeft } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { useAthlete } from "@/hooks/use-athletes"
+import Link from "next/link"
+
+// Transform status for display
+function formatStatus(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+}
+
+// Format date for display
+function formatDate(dateString: string | null): string {
+  if (!dateString) return "N/A"
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
+}
+
+// Format attendance status for display
+function formatAttendanceStatus(status: string): string {
+  const map: Record<string, string> = {
+    PRESENT: "Present",
+    ABSENT: "Absent",
+    LATE: "Late",
+    EXCUSED: "Excused",
+  }
+  return map[status] ?? status
+}
 
 export default function AthleteProfilePage() {
   const params = useParams()
-  const athlete = athletes.find(a => a.id === params.id)
+  const router = useRouter()
+  const athleteId = typeof params.id === "string" ? params.id : null
   
-  // Only show detailed mock data for Sophia Miller for now, or fallback if needed
-  const isSophia = athlete?.id === "ATH-001"
-  const history = isSophia ? attendanceHistory : []
-  const medical = isSophia ? medicalRecords : { conditions: [], allergies: [], emergencyContacts: [], insurance: { provider: "", policyNumber: "", groupNumber: "" }, lastPhysical: "" }
+  const { athlete, isLoading, error, fetchAthlete } = useAthlete(athleteId)
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full p-6">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">Loading athlete profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h1 className="text-2xl font-bold">Error Loading Profile</h1>
+        <p className="text-muted-foreground">{error}</p>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
+          <Button onClick={() => fetchAthlete()}>Try Again</Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Not found state
   if (!athlete) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6">
         <h1 className="text-2xl font-bold">Athlete Not Found</h1>
         <p className="text-muted-foreground">The athlete you are looking for does not exist.</p>
-        <Button className="mt-4" variant="outline" onClick={() => window.history.back()}>Go Back</Button>
+        <Button className="mt-4" variant="outline" asChild>
+          <Link href="/dashboard/athletes">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Athletes
+          </Link>
+        </Button>
       </div>
     )
   }
 
+  // Calculate stats from real data
+  const totalAttendances = athlete.attendances?.length ?? 0
+  const presentCount = athlete.attendances?.filter(a => a.status === "PRESENT" || a.status === "LATE").length ?? 0
+  const attendanceRate = totalAttendances > 0 ? Math.round((presentCount / totalAttendances) * 100) : 0
+  
+  const evaluationsCount = athlete.evaluations?.length ?? 0
+  const latestEvaluation = athlete.evaluations?.[0]
+
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* Back button */}
+      <div>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/dashboard/athletes">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Athletes
+          </Link>
+        </Button>
+      </div>
+
       {/* Header Section */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col md:flex-row gap-6 items-start">
           <Avatar className="h-24 w-24 border-4 border-background shadow-sm">
-            <AvatarImage src={athlete.avatar} alt={athlete.name} />
+            <AvatarImage src={athlete.avatar ?? undefined} alt={athlete.name} />
             <AvatarFallback>{athlete.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
           </Avatar>
           <div className="space-y-1">
@@ -52,16 +129,30 @@ export default function AthleteProfilePage() {
               <Badge variant="secondary" className="rounded-md">{athlete.level}</Badge>
               <span>•</span>
               <span className="flex items-center gap-1"><User className="h-4 w-4" /> {athlete.group}</span>
+              <span>•</span>
+              <Badge variant={athlete.status === "ACTIVE" ? "default" : "secondary"}>
+                {formatStatus(athlete.status)}
+              </Badge>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground pt-1">
-              <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {athlete.email}</span>
-              <span className="flex items-center gap-1"><User className="h-3 w-3" /> Parent: {athlete.parent}</span>
+              {athlete.email && (
+                <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {athlete.email}</span>
+              )}
+              <span className="flex items-center gap-1">
+                <User className="h-3 w-3" /> Parent: {athlete.family?.primaryContact ?? "N/A"}
+              </span>
             </div>
+            {athlete.birthDate && (
+              <p className="text-sm text-muted-foreground">
+                <CalendarDays className="h-3 w-3 inline mr-1" />
+                Born: {formatDate(athlete.birthDate)}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
-            <Button variant="outline">Edit Profile</Button>
-            <Button>Contact</Button>
+          <Button variant="outline">Edit Profile</Button>
+          <Button>Contact</Button>
         </div>
       </div>
 
@@ -73,442 +164,417 @@ export default function AthleteProfilePage() {
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">92%</div>
-            <p className="text-xs text-muted-foreground">+2% from last month</p>
+            <div className="text-2xl font-bold">{attendanceRate}%</div>
+            <p className="text-xs text-muted-foreground">
+              {presentCount} of {totalAttendances} sessions
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Skills Mastered</CardTitle>
+            <CardTitle className="text-sm font-medium">Evaluations</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">14</div>
-            <p className="text-xs text-muted-foreground">3 new this month</p>
+            <div className="text-2xl font-bold">{evaluationsCount}</div>
+            <p className="text-xs text-muted-foreground">
+              {latestEvaluation ? `Latest: ${formatDate(latestEvaluation.date)}` : "No evaluations yet"}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Current Level Progress</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Programs</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">78%</div>
-            <Progress value={78} className="mt-2 h-2" />
+            <div className="text-2xl font-bold">
+              {athlete.enrollments?.filter(e => e.status === "ACTIVE").length ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {athlete.enrollments?.length ?? 0} total enrollments
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Next Event</CardTitle>
+            <CardTitle className="text-sm font-medium">Family Balance</CardTitle>
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Regionals</div>
-            <p className="text-xs text-muted-foreground">In 14 days</p>
+            <div className="text-2xl font-bold">
+              ${Number(athlete.family?.balance ?? 0).toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {athlete.lineItems?.length ?? 0} recent charges
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="performance" className="space-y-4">
+      <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="enrollments">Programs</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
-          <TabsTrigger value="medical">Medical</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Family Information</CardTitle>
+                <CardDescription>Contact and billing information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Family Name</p>
+                    <p className="font-medium">{athlete.family?.name ?? "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Primary Contact</p>
+                    <p className="font-medium">{athlete.family?.primaryContact ?? "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Email</p>
+                    <p className="font-medium">{athlete.family?.email ?? "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                    <p className="font-medium">{athlete.family?.phone ?? "N/A"}</p>
+                  </div>
+                </div>
+                {athlete.family?.address && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Address</p>
+                    <p className="font-medium">{athlete.family.address}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Active Enrollments</CardTitle>
+                <CardDescription>Current program memberships</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {athlete.enrollments && athlete.enrollments.length > 0 ? (
+                  <div className="space-y-3">
+                    {athlete.enrollments.filter(e => e.status === "ACTIVE").map((enrollment) => (
+                      <div key={enrollment.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                        <div>
+                          <p className="font-medium">{enrollment.program?.name ?? "Unknown Program"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Started {formatDate(enrollment.startDate)}
+                          </p>
+                        </div>
+                        <Badge variant="default">Active</Badge>
+                      </div>
+                    ))}
+                    {athlete.enrollments.filter(e => e.status === "ACTIVE").length === 0 && (
+                      <p className="text-muted-foreground text-center py-4">No active enrollments</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No enrollments found</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="enrollments" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest updates for {athlete.name}</CardDescription>
+              <CardTitle>Program Enrollments</CardTitle>
+              <CardDescription>All program memberships for this athlete</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                 <div className="flex items-center gap-4">
-                   <div className="bg-primary/10 p-2 rounded-full"><Trophy className="h-4 w-4 text-primary" /></div>
-                   <div>
-                     <p className="font-medium">Mastered Full Turn on Beam</p>
-                     <p className="text-sm text-muted-foreground">2 days ago</p>
-                   </div>
-                 </div>
-                 <div className="flex items-center gap-4">
-                   <div className="bg-primary/10 p-2 rounded-full"><CalendarDays className="h-4 w-4 text-primary" /></div>
-                   <div>
-                     <p className="font-medium">Attended Elite Squad Training</p>
-                     <p className="text-sm text-muted-foreground">Yesterday</p>
-                   </div>
-                 </div>
-              </div>
+              {athlete.enrollments && athlete.enrollments.length > 0 ? (
+                <div className="space-y-4">
+                  {athlete.enrollments.map((enrollment) => (
+                    <div key={enrollment.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-4">
+                        <div className="bg-primary/10 p-2 rounded-full">
+                          <Trophy className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{enrollment.program?.name ?? "Unknown Program"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(enrollment.startDate)} - {enrollment.endDate ? formatDate(enrollment.endDate) : "Ongoing"}
+                          </p>
+                          {enrollment.membershipTier && (
+                            <p className="text-sm text-muted-foreground">
+                              Tier: {enrollment.membershipTier.name} (${enrollment.membershipTier.price})
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={enrollment.status === "ACTIVE" ? "default" : "secondary"}>
+                        {formatStatus(enrollment.status)}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">No enrollments found for this athlete.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="performance" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-[250px_1fr]">
-             <Card className="h-fit">
-                <CardHeader>
-                  <CardTitle>Level Status</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                   <div className="flex flex-col items-center justify-center py-4">
-                      <div className="relative flex items-center justify-center h-32 w-32 rounded-full border-4 border-primary">
-                        <span className="text-2xl font-bold">78%</span>
-                      </div>
-                      <p className="mt-4 font-medium">{athlete.level}</p>
-                      <p className="text-sm text-muted-foreground">In Progress</p>
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between text-sm">
-                       <span>Vault</span>
-                       <span className="font-bold">80%</span>
-                     </div>
-                     <Progress value={80} />
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between text-sm">
-                       <span>Bars</span>
-                       <span className="font-bold">65%</span>
-                     </div>
-                     <Progress value={65} />
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between text-sm">
-                       <span>Beam</span>
-                       <span className="font-bold">90%</span>
-                     </div>
-                     <Progress value={90} />
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between text-sm">
-                       <span>Floor</span>
-                       <span className="font-bold">75%</span>
-                     </div>
-                     <Progress value={75} />
-                   </div>
-                </CardContent>
-             </Card>
-
-             <div className="flex-1">
-              <Tabs defaultValue="beam" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="vault">Vault</TabsTrigger>
-                  <TabsTrigger value="bars">Uneven Bars</TabsTrigger>
-                  <TabsTrigger value="beam">Balance Beam</TabsTrigger>
-                  <TabsTrigger value="floor">Floor Exercise</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="beam" className="space-y-4 mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Balance Beam Skills</CardTitle>
-                      <CardDescription>{athlete.level} Requirements</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Switch Split Leap</span>
-                          <span className="text-sm text-muted-foreground">Mastered</span>
-                        </div>
-                        <Progress value={100} className="bg-secondary" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Back Handspring Series</span>
-                          <span className="text-sm text-muted-foreground">In Progress</span>
-                        </div>
-                        <Progress value={65} className="bg-secondary" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Full Turn</span>
-                          <span className="text-sm text-muted-foreground">Mastered</span>
-                        </div>
-                        <Progress value={100} className="bg-secondary" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Aerial Cartwheel</span>
-                          <span className="text-sm text-muted-foreground">Learning</span>
-                        </div>
-                        <Progress value={30} className="bg-secondary" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="floor" className="space-y-4 mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Floor Exercise Skills</CardTitle>
-                      <CardDescription>{athlete.level} Requirements</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground">Select Balance Beam tab to see example data.</p>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="vault" className="mt-4"><Card><CardContent className="pt-6">Vault skills tracking...</CardContent></Card></TabsContent>
-                <TabsContent value="bars" className="mt-4"><Card><CardContent className="pt-6">Bars skills tracking...</CardContent></Card></TabsContent>
-              </Tabs>
-             </div>
-          </div>
-        </TabsContent>
-
         <TabsContent value="attendance" className="space-y-4">
-           <Card>
-             <CardHeader>
-               <CardTitle>Attendance History</CardTitle>
-               <CardDescription>Recent class attendance records</CardDescription>
-             </CardHeader>
-             <CardContent>
-               {history.length > 0 ? (
-                 <div className="space-y-4">
-                   {history.map((record) => (
-                     <div key={record.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                       <div className="flex items-center gap-4">
-                         <div className={`p-2 rounded-full ${record.status === 'Present' ? 'bg-green-100' : 'bg-red-100'}`}>
-                           {record.status === 'Present' ? (
-                             <CalendarCheck className={`h-4 w-4 ${record.status === 'Present' ? 'text-green-600' : 'text-red-600'}`} />
-                           ) : (
-                             <CalendarX className="h-4 w-4 text-red-600" />
-                           )}
-                         </div>
-                         <div>
-                           <p className="font-medium">{record.class}</p>
-                           <p className="text-sm text-muted-foreground">{record.date} • {record.time}</p>
-                         </div>
-                       </div>
-                       <Badge variant={record.status === 'Present' ? 'default' : 'destructive'}>
-                         {record.status}
-                       </Badge>
-                     </div>
-                   ))}
-                 </div>
-               ) : (
-                 <p className="text-muted-foreground text-center py-4">No attendance records found.</p>
-               )}
-             </CardContent>
-           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Attendance History</CardTitle>
+              <CardDescription>Recent class attendance records</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {athlete.attendances && athlete.attendances.length > 0 ? (
+                <div className="space-y-4">
+                  {athlete.attendances.map((record) => (
+                    <div key={record.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-full ${
+                          record.status === "PRESENT" || record.status === "LATE" 
+                            ? "bg-green-100" 
+                            : "bg-red-100"
+                        }`}>
+                          {record.status === "PRESENT" || record.status === "LATE" ? (
+                            <CalendarCheck className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <CalendarX className="h-4 w-4 text-red-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">{record.event?.title ?? "Unknown Event"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(record.event?.date ?? null)}
+                            {record.checkedIn && ` • Checked in at ${new Date(record.checkedIn).toLocaleTimeString()}`}
+                          </p>
+                          {record.notes && (
+                            <p className="text-sm text-muted-foreground italic">{record.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={
+                        record.status === "PRESENT" ? "default" : 
+                        record.status === "LATE" ? "secondary" : "destructive"
+                      }>
+                        {formatAttendanceStatus(record.status)}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">No attendance records found.</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="evaluations" className="space-y-4">
-           <div className="flex justify-end">
-             <Dialog>
-               <DialogTrigger asChild>
-                 <Button>
-                   <Plus className="mr-2 h-4 w-4" /> New Evaluation
-                 </Button>
-               </DialogTrigger>
-               <DialogContent className="sm:max-w-[425px]">
-                 <DialogHeader>
-                   <DialogTitle>Add New Evaluation</DialogTitle>
-                   <DialogDescription>
-                     Create a new performance evaluation for {athlete.name}.
-                   </DialogDescription>
-                 </DialogHeader>
-                 <div className="grid gap-4 py-4">
-                   <div className="grid grid-cols-4 items-center gap-4">
-                     <Label htmlFor="eval-date" className="text-right">
-                       Date
-                     </Label>
-                     <Input id="eval-date" type="date" className="col-span-3" defaultValue={new Date().toISOString().split('T')[0]} />
-                   </div>
-                   <div className="grid grid-cols-4 items-center gap-4">
-                     <Label htmlFor="eval-level" className="text-right">
-                       Level
-                     </Label>
-                     <Input id="eval-level" defaultValue={athlete.level} className="col-span-3" />
-                   </div>
-                   <div className="grid grid-cols-4 items-center gap-4">
-                     <Label htmlFor="eval-score" className="text-right">
-                       Score
-                     </Label>
-                     <div className="col-span-3 flex items-center gap-2">
-                        <Input id="eval-score" type="number" min="0" max="5" step="0.5" defaultValue="0" />
-                        <span className="text-sm text-muted-foreground">/ 5</span>
-                     </div>
-                   </div>
-                   <div className="grid grid-cols-4 items-center gap-4">
-                     <Label htmlFor="eval-status" className="text-right">
-                       Status
-                     </Label>
-                     <Select defaultValue="satisfactory">
-                       <SelectTrigger className="col-span-3">
-                         <SelectValue placeholder="Select status" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="excellent">Excellent</SelectItem>
-                         <SelectItem value="satisfactory">Satisfactory</SelectItem>
-                         <SelectItem value="retry">Retry</SelectItem>
-                         <SelectItem value="needs-improvement">Needs Improvement</SelectItem>
-                       </SelectContent>
-                     </Select>
-                   </div>
-                   <div className="grid grid-cols-4 items-start gap-4">
-                     <Label htmlFor="eval-notes" className="text-right pt-2">
-                       Notes
-                     </Label>
-                     <Textarea id="eval-notes" className="col-span-3" placeholder="Enter detailed feedback here..." />
-                   </div>
-                 </div>
-                 <DialogFooter>
-                   <Button type="submit">Save Evaluation</Button>
-                 </DialogFooter>
-               </DialogContent>
-             </Dialog>
-           </div>
-           
-           <div className="space-y-4">
-             {isSophia ? evaluations.map((evalItem) => (
-               <Card key={evalItem.id}>
-                 <CardHeader className="pb-3">
-                   <div className="flex items-start justify-between">
-                     <div>
-                       <CardTitle className="text-base font-bold flex items-center gap-2">
-                         <FileText className="h-4 w-4 text-primary" />
-                         {evalItem.date}
-                       </CardTitle>
-                       <CardDescription>{evalItem.level} Evaluation by {evalItem.coach}</CardDescription>
-                     </div>
-                     <Badge variant={evalItem.status === "Excellent" ? "default" : "secondary"}>
-                       {evalItem.status}
-                     </Badge>
-                   </div>
-                 </CardHeader>
-                 <CardContent>
-                   <div className="space-y-4">
-                     <div>
-                       <p className="text-sm font-medium mb-1">Overall Score: {evalItem.overallScore}/5</p>
-                       <Progress value={(evalItem.overallScore / 5) * 100} className="h-2" />
-                     </div>
-                     
-                     <div className="bg-muted/50 p-3 rounded-md text-sm">
-                       <p className="font-medium mb-1">Coach Notes:</p>
-                       <p className="text-muted-foreground">{evalItem.notes}</p>
-                     </div>
+          <div className="flex justify-end">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> New Evaluation
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Add New Evaluation</DialogTitle>
+                  <DialogDescription>
+                    Create a new performance evaluation for {athlete.name}.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="eval-date" className="text-right">Date</Label>
+                    <Input id="eval-date" type="date" className="col-span-3" defaultValue={new Date().toISOString().split("T")[0]} />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="eval-level" className="text-right">Level</Label>
+                    <Input id="eval-level" defaultValue={athlete.level} className="col-span-3" />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="eval-score" className="text-right">Score</Label>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Input id="eval-score" type="number" min="0" max="5" step="0.5" defaultValue="0" />
+                      <span className="text-sm text-muted-foreground">/ 5</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="eval-status" className="text-right">Status</Label>
+                    <Select defaultValue="SATISFACTORY">
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="EXCELLENT">Excellent</SelectItem>
+                        <SelectItem value="SATISFACTORY">Satisfactory</SelectItem>
+                        <SelectItem value="PASS">Pass</SelectItem>
+                        <SelectItem value="RETRY">Retry</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="eval-notes" className="text-right pt-2">Notes</Label>
+                    <Textarea id="eval-notes" className="col-span-3" placeholder="Enter detailed feedback here..." />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Save Evaluation</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          <div className="space-y-4">
+            {athlete.evaluations && athlete.evaluations.length > 0 ? (
+              athlete.evaluations.map((evaluation) => (
+                <Card key={evaluation.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-base font-bold flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          {formatDate(evaluation.date)}
+                        </CardTitle>
+                        <CardDescription>
+                          {evaluation.level} Evaluation by {evaluation.coach?.name ?? "Unknown Coach"}
+                        </CardDescription>
+                      </div>
+                      <Badge variant={evaluation.status === "EXCELLENT" ? "default" : "secondary"}>
+                        {formatStatus(evaluation.status)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-medium mb-1">Overall Score: {evaluation.overallScore}/5</p>
+                        <Progress value={(Number(evaluation.overallScore) / 5) * 100} className="h-2" />
+                      </div>
+                      
+                      {evaluation.notes && (
+                        <div className="bg-muted/50 p-3 rounded-md text-sm">
+                          <p className="font-medium mb-1">Coach Notes:</p>
+                          <p className="text-muted-foreground">{evaluation.notes}</p>
+                        </div>
+                      )}
 
-                     <Collapsible>
-                       <CollapsibleTrigger asChild>
-                         <Button variant="ghost" size="sm" className="w-full flex justify-between">
-                           <span>View Skills Breakdown</span>
-                           <ChevronDown className="h-4 w-4" />
-                         </Button>
-                       </CollapsibleTrigger>
-                       <CollapsibleContent className="pt-2 space-y-2">
-                         {evalItem.skills.map((skill, idx) => (
-                           <div key={idx} className="flex flex-col gap-1 text-sm border-b pb-2 last:border-0">
-                             <div className="flex justify-between items-center">
-                               <span>{skill.name}</span>
-                               <span className="font-medium">{skill.rating}/5</span>
-                             </div>
-                             {skill.comment && (
-                               <p className="text-xs text-muted-foreground italic">&quot;{skill.comment}&quot;</p>
-                             )}
-                           </div>
-                         ))}
-                       </CollapsibleContent>
-                     </Collapsible>
-                   </div>
-                 </CardContent>
-               </Card>
-             )) : (
-               <div className="text-center py-8 text-muted-foreground">
-                 No evaluations found for this athlete.
-               </div>
-             )}
-           </div>
-        </TabsContent>
-        
-        <TabsContent value="medical" className="space-y-4">
-           <div className="grid gap-4 md:grid-cols-2">
-             <Card>
-               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                 <CardTitle className="text-base font-medium">Emergency Contacts</CardTitle>
-                 <PhoneIcon className="h-4 w-4 text-muted-foreground" />
-               </CardHeader>
-               <CardContent className="pt-4">
-                 {medical.emergencyContacts.length > 0 ? (
-                   <div className="space-y-4">
-                     {medical.emergencyContacts.map((contact, index) => (
-                       <div key={index} className="flex justify-between items-center">
-                         <div>
-                           <p className="font-medium">{contact.name}</p>
-                           <p className="text-sm text-muted-foreground">{contact.relation}</p>
-                         </div>
-                         <div className="text-right">
-                           <p className="font-medium">{contact.phone}</p>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 ) : (
-                   <p className="text-sm text-muted-foreground">No contacts listed.</p>
-                 )}
-               </CardContent>
-             </Card>
-
-             <Card>
-               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                 <CardTitle className="text-base font-medium">Medical Alerts</CardTitle>
-                 <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-               </CardHeader>
-               <CardContent className="pt-4 space-y-4">
-                 <div>
-                   <span className="text-sm font-medium text-muted-foreground mb-1 block">Conditions</span>
-                   {medical.conditions.length > 0 ? (
-                     <div className="flex flex-wrap gap-2">
-                       {medical.conditions.map((c, i) => <Badge key={i} variant="outline">{c}</Badge>)}
-                     </div>
-                   ) : <span className="text-sm">None</span>}
-                 </div>
-                 <div>
-                   <span className="text-sm font-medium text-muted-foreground mb-1 block">Allergies</span>
-                   {medical.allergies.length > 0 ? (
-                     <div className="flex flex-wrap gap-2">
-                       {medical.allergies.map((a, i) => <Badge key={i} variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">{a}</Badge>)}
-                     </div>
-                   ) : <span className="text-sm">None</span>}
-                 </div>
-               </CardContent>
-             </Card>
-
-             <Card className="md:col-span-2">
-               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                 <CardTitle className="text-base font-medium">Insurance & Records</CardTitle>
-                 <FileHeart className="h-4 w-4 text-muted-foreground" />
-               </CardHeader>
-               <CardContent className="pt-4">
-                 <div className="grid md:grid-cols-2 gap-6">
-                   <div>
-                     <h4 className="font-medium mb-2 text-sm">Insurance Information</h4>
-                     <dl className="space-y-1 text-sm">
-                       <div className="flex justify-between"><dt className="text-muted-foreground">Provider:</dt><dd>{medical.insurance.provider || "N/A"}</dd></div>
-                       <div className="flex justify-between"><dt className="text-muted-foreground">Policy #:</dt><dd>{medical.insurance.policyNumber || "N/A"}</dd></div>
-                       <div className="flex justify-between"><dt className="text-muted-foreground">Group #:</dt><dd>{medical.insurance.groupNumber || "N/A"}</dd></div>
-                     </dl>
-                   </div>
-                   <div>
-                     <h4 className="font-medium mb-2 text-sm">Last Physical Exam</h4>
-                     <p className="text-2xl font-bold">{medical.lastPhysical || "N/A"}</p>
-                     <p className="text-xs text-muted-foreground text-green-600 flex items-center mt-1">
-                       <CalendarCheck className="h-3 w-3 mr-1" /> Valid until Aug 2024
-                     </p>
-                   </div>
-                 </div>
-               </CardContent>
-             </Card>
-           </div>
+                      {evaluation.skillRatings && evaluation.skillRatings.length > 0 && (
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="w-full flex justify-between">
+                              <span>View Skills Breakdown ({evaluation.skillRatings.length} skills)</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pt-2 space-y-2">
+                            {evaluation.skillRatings.map((skillRating) => (
+                              <div key={skillRating.id} className="flex flex-col gap-1 text-sm border-b pb-2 last:border-0">
+                                <div className="flex justify-between items-center">
+                                  <span>{skillRating.skill?.name ?? "Unknown Skill"}</span>
+                                  <span className="font-medium">{skillRating.rating}/5</span>
+                                </div>
+                                {skillRating.comment && (
+                                  <p className="text-xs text-muted-foreground italic">&quot;{skillRating.comment}&quot;</p>
+                                )}
+                              </div>
+                            ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No evaluations found for this athlete.
+              </div>
+            )}
+          </div>
         </TabsContent>
 
+        <TabsContent value="billing" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Methods</CardTitle>
+                <CardDescription>Family payment methods on file</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {athlete.family?.paymentMethods && athlete.family.paymentMethods.length > 0 ? (
+                  <div className="space-y-3">
+                    {athlete.family.paymentMethods.map((method) => (
+                      <div key={method.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-muted p-2 rounded">
+                            <PhoneIcon className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium">
+                              {method.brand ?? method.type} •••• {method.last4}
+                            </p>
+                            {method.expiry && (
+                              <p className="text-sm text-muted-foreground">Expires {method.expiry}</p>
+                            )}
+                          </div>
+                        </div>
+                        {method.isDefault && <Badge variant="secondary">Default</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No payment methods on file</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Charges</CardTitle>
+                <CardDescription>Recent invoice line items for this athlete</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {athlete.lineItems && athlete.lineItems.length > 0 ? (
+                  <div className="space-y-3">
+                    {athlete.lineItems.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                        <div>
+                          <p className="font-medium">{item.description}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Invoice #{item.invoice?.reference ?? "N/A"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${Number(item.total).toFixed(2)}</p>
+                          <Badge 
+                            variant={item.invoice?.status === "PAID" ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {item.invoice?.status ?? "N/A"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No recent charges</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   )
 }
-

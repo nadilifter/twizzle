@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const updateAthleteSchema = z.object({
@@ -116,9 +117,13 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Super admins bypass permission checks
+    const permissions = session.user.permissions ?? [];
+    const isSuperAdmin = session.user.isSuperAdmin === true;
     if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("athletes.edit")
+      !isSuperAdmin &&
+      !permissions.includes("*") &&
+      !permissions.includes("athletes.edit")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -153,11 +158,16 @@ export async function PATCH(
       }
     }
 
+    // Handle birthDate separately to use noon UTC for date-only fields
+    const { birthDate, ...otherData } = validatedData;
     const athlete = await db.athlete.update({
       where: { id },
       data: {
-        ...validatedData,
-        birthDate: validatedData.birthDate ? new Date(validatedData.birthDate) : undefined,
+        ...otherData,
+        // Only update birthDate if explicitly provided (null to clear, string to set)
+        ...(birthDate !== undefined && {
+          birthDate: birthDate === null ? null : parseDateOnly(birthDate),
+        }),
       },
       include: {
         family: true,
@@ -196,9 +206,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Super admins bypass permission checks
+    const permissions = session.user.permissions ?? [];
+    const isSuperAdmin = session.user.isSuperAdmin === true;
     if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("athletes.delete")
+      !isSuperAdmin &&
+      !permissions.includes("*") &&
+      !permissions.includes("athletes.delete")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

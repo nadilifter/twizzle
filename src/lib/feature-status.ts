@@ -66,8 +66,8 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
 
   // Athletes Section
   "/dashboard/athletes": {
-    status: "demo",
-    description: "Athletes directory uses mock data. API ready at /api/athletes",
+    status: "live",
+    description: "Athletes directory with full CRUD operations",
     apiRoutes: ["/api/athletes"],
   },
   "/dashboard/athletes/attendance": {
@@ -76,8 +76,8 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/attendance"],
   },
   "/dashboard/athletes/families": {
-    status: "demo",
-    description: "Families directory uses mock data. API ready at /api/families",
+    status: "live",
+    description: "Families directory with full CRUD operations",
     apiRoutes: ["/api/families"],
   },
   "/dashboard/athletes/memberships": {

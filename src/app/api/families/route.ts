@@ -19,6 +19,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Require an organization to be selected
+    if (!session.user.organizationId) {
+      return NextResponse.json({
+        data: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        message: "Please select an organization first"
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const limit = parseInt(searchParams.get("limit") || "50");
@@ -83,9 +94,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Require an organization to be selected
+    if (!session.user.organizationId) {
+      return NextResponse.json(
+        { error: "Please select an organization first" },
+        { status: 400 }
+      );
+    }
+
+    // Super admins bypass permission checks
+    const permissions = session.user.permissions ?? [];
+    const isSuperAdmin = session.user.isSuperAdmin === true;
     if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("families.create")
+      !isSuperAdmin &&
+      !permissions.includes("*") &&
+      !permissions.includes("families.create")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
