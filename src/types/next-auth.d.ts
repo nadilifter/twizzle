@@ -6,9 +6,10 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
-      organizationId: string;
+      organizationId: string; // Keep as string for now, we'll ensure it's set or handle empty
       organizationName: string;
       permissions: string[];
+      isSuperAdmin: boolean;
     } & DefaultSession["user"];
   }
 
@@ -17,6 +18,7 @@ declare module "next-auth" {
     organizationId: string;
     organizationName: string;
     permissions: string[];
+    isSuperAdmin: boolean;
   }
 }
 
@@ -27,5 +29,6 @@ declare module "next-auth/jwt" {
     organizationId: string;
     organizationName: string;
     permissions: string[];
+    isSuperAdmin: boolean;
   }
 }

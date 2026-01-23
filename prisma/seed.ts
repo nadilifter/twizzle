@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding database...");
 
-  // Create organization
+  // 1. Create "Demo Gymnastics Club" Organization
   const org = await prisma.organization.upsert({
     where: { slug: "demo-gym" },
     update: {},
@@ -18,9 +18,78 @@ async function main() {
 
   console.log("Created organization:", org.name);
 
-  // Create admin user
+  // Common password
   const hashedPassword = await bcrypt.hash("password123", 12);
-  
+
+  // 2. Create "Uplifter" Organization
+  const uplifterOrg = await prisma.organization.upsert({
+    where: { slug: "uplifter" },
+    update: {},
+    create: {
+      name: "Uplifter",
+      slug: "uplifter",
+    },
+  });
+  console.log("Created organization:", uplifterOrg.name);
+
+  // 3. Create Andrew Karzel user for Uplifter
+  const andrewUser = await prisma.user.upsert({
+    where: { email: "andrewkarzel@uplifterinc.com" },
+    update: {},
+    create: {
+      email: "andrewkarzel@uplifterinc.com",
+      name: "Andrew Karzel",
+      passwordHash: hashedPassword,
+      role: "ADMIN",
+      status: "ACTIVE",
+      organizationId: uplifterOrg.id,
+      isSuperAdmin: true,
+      memberships: {
+        create: {
+          organizationId: uplifterOrg.id,
+          role: "ADMIN",
+        },
+      },
+      permissions: {
+        create: [{ permission: "*" }],
+      },
+    },
+  });
+  console.log("Created user:", andrewUser.email);
+
+  // Ensure memberships exist if user was already created
+  await prisma.organizationMember.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: uplifterOrg.id,
+        userId: andrewUser.id,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: uplifterOrg.id,
+      userId: andrewUser.id,
+      role: "ADMIN",
+    },
+  });
+
+  // Also add Andrew to Demo Gym for testing switching
+  await prisma.organizationMember.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: org.id,
+        userId: andrewUser.id,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: org.id,
+      userId: andrewUser.id,
+      role: "ADMIN",
+    },
+  });
+
+  // 4. Create Demo Admin User
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@demo.com" },
     update: {},
@@ -31,15 +100,36 @@ async function main() {
       role: "ADMIN",
       status: "ACTIVE",
       organizationId: org.id,
+      memberships: {
+        create: {
+          organizationId: org.id,
+          role: "ADMIN",
+        },
+      },
       permissions: {
         create: [{ permission: "*" }],
       },
     },
   });
 
+  await prisma.organizationMember.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: org.id,
+        userId: adminUser.id,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: org.id,
+      userId: adminUser.id,
+      role: "ADMIN",
+    },
+  });
+
   console.log("Created admin user:", adminUser.email);
 
-  // Create coach user
+  // 5. Create Demo Coach User
   const coachUser = await prisma.user.upsert({
     where: { email: "coach@demo.com" },
     update: {},
@@ -50,6 +140,12 @@ async function main() {
       role: "COACH",
       status: "ACTIVE",
       organizationId: org.id,
+      memberships: {
+        create: {
+          organizationId: org.id,
+          role: "COACH",
+        },
+      },
       permissions: {
         create: [
           { permission: "dashboard.view" },
@@ -63,6 +159,21 @@ async function main() {
           { permission: "events.edit" },
         ],
       },
+    },
+  });
+
+  await prisma.organizationMember.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: org.id,
+        userId: coachUser.id,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: org.id,
+      userId: coachUser.id,
+      role: "COACH",
     },
   });
 
