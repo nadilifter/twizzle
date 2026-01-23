@@ -300,7 +300,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                <Collapsible
                   key="Admin"
                   asChild
-                  defaultOpen={isMobile ? pathname.startsWith("/admin") : false}
+                  defaultOpen={isMobile ? pathname.startsWith("/admin") : true}
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>

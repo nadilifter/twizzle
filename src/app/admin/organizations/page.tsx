@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import Link from "next/link"
 import {
   Table,
   TableBody,
@@ -40,10 +41,31 @@ export default async function AdminOrganizationsPage() {
             <TableBody>
               {organizations.map((org) => (
                 <TableRow key={org.id}>
-                  <TableCell className="font-medium">{org.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link 
+                      href={`/admin/organizations/${org.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {org.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>{org.slug}</TableCell>
-                  <TableCell>{org._count.members}</TableCell>
-                  <TableCell>{org._count.invoices}</TableCell>
+                  <TableCell>
+                    <Link 
+                      href={`/admin/organizations/${org.id}/members`}
+                      className="text-primary hover:underline"
+                    >
+                      {org._count.members}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link 
+                      href={`/admin/organizations/${org.id}/invoices`}
+                      className="text-primary hover:underline"
+                    >
+                      {org._count.invoices}
+                    </Link>
+                  </TableCell>
                   <TableCell>{org.createdAt.toLocaleDateString()}</TableCell>
                 </TableRow>
               ))}
