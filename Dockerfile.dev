@@ -2,20 +2,27 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install dependencies needed for Prisma and development
+RUN apk add --no-cache libc6-compat openssl
+
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy package files
+# Copy package files and prisma schema (needed for postinstall prisma generate)
 COPY package.json pnpm-lock.yaml ./
+COPY prisma ./prisma
 
-# Install dependencies
+# Install dependencies (this also runs postinstall which generates Prisma client)
 RUN pnpm install
 
-# Copy source code
+# Copy the rest of the source code (will be overwritten by volume mount)
 COPY . .
 
 # Expose port
 EXPOSE 3000
 
-# Start development server
-CMD ["pnpm", "dev"]
+# Create entrypoint script in /usr/local/bin (outside volume mount)
+RUN printf '#!/bin/sh\nset -e\necho "Waiting for database..."\nsleep 2\necho "Pushing database schema..."\ncd /app && pnpm prisma db push --skip-generate\necho "Starting development server..."\nexec pnpm dev\n' > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+
+# Start development server with migrations
+CMD ["/usr/local/bin/entrypoint.sh"]

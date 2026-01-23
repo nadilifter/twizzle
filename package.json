@@ -11,7 +11,10 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "secrets:decrypt": "./scripts/secrets-decrypt.sh",
+    "secrets:encrypt": "./scripts/secrets-encrypt.sh",
+    "secrets:edit": "./scripts/secrets-edit.sh"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

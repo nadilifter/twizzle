@@ -1,0 +1,20 @@
+# SOPS + age configuration for encrypting secrets
+# Documentation: https://github.com/getsops/sops
+#
+# Team members' age public keys (add new team members here):
+# - andrew: age1e0tvgeha98njjn7c6wgnr5cc3ggh06y3m3xckexrm33up6z82a6s97fld7
+#
+# Usage:
+#   pnpm secrets:decrypt  - Decrypt .env.enc to .env
+#   pnpm secrets:encrypt  - Encrypt .env to .env.enc
+#   pnpm secrets:edit     - Edit .env.enc in-place
+#
+# To add a new team member:
+#   1. Have them run: age-keygen -o ~/.config/sops/age/keys.txt
+#   2. They share their PUBLIC key (starts with "age1...")
+#   3. Add their public key to AGE_RECIPIENTS in scripts/secrets-encrypt.sh
+#   4. Re-encrypt: pnpm secrets:encrypt
+
+creation_rules:
+  - path_regex: \.env\.enc$
+    age: age1e0tvgeha98njjn7c6wgnr5cc3ggh06y3m3xckexrm33up6z82a6s97fld7
