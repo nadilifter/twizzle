@@ -44,8 +44,11 @@ export function OrganizationSwitcher() {
             console.error("Failed to fetch organizations", error)
         }
     }
-    fetchOrgs()
-  }, [])
+    // Only fetch if authenticated
+    if (session?.user) {
+        fetchOrgs()
+    }
+  }, [session?.user]) // Depend on session.user
 
   const activeOrg = React.useMemo(() => {
     if (!session?.user?.organizationId) return organizations[0]
@@ -60,7 +63,8 @@ export function OrganizationSwitcher() {
       router.refresh()
   }
 
-  if (!activeOrg) {
+  // Handle loading state
+  if (!session || organizations.length === 0) {
       return (
         <SidebarMenu>
           <SidebarMenuItem>
@@ -76,6 +80,10 @@ export function OrganizationSwitcher() {
           </SidebarMenuItem>
         </SidebarMenu>
       )
+  }
+
+  if (!activeOrg) {
+      return null // Or some other fallback
   }
 
   return (

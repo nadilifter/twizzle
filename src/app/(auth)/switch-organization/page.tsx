@@ -3,8 +3,8 @@
 import * as React from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Check, ChevronsUpDown, Building2, Loader2 } from "lucide-react"
-import { useSession } from "next-auth/react"
+import { Check, ChevronsUpDown, Building2, Loader2, LogOut } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -34,7 +34,7 @@ type Organization = {
 
 function SwitchOrganizationForm() {
   const router = useRouter()
-  const { update } = useSession()
+  const { data: session, update } = useSession()
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(false)
@@ -54,8 +54,15 @@ function SwitchOrganizationForm() {
             setFetching(false)
         }
     }
-    fetchOrgs()
-  }, [])
+    
+    // Fetch only when session is loaded
+    if (session?.user) {
+        fetchOrgs()
+    } else if (session === null) {
+        // Not authenticated, redirect will happen by middleware or we just stop fetching
+        setFetching(false)
+    }
+  }, [session]) // Depend on session
 
   React.useEffect(() => {
     if (buttonRef.current) {
@@ -80,6 +87,10 @@ function SwitchOrganizationForm() {
     // Route to dashboard after selection
     router.push("/dashboard")
     router.refresh()
+  }
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: "/login" })
   }
 
   if (isLoading || fetching) {
@@ -175,8 +186,27 @@ function SwitchOrganizationForm() {
               </PopoverContent>
             </Popover>
           </div>
-          <div className="text-center text-sm text-muted-foreground">
-            You will be redirected to the dashboard after selecting an organization.
+          
+          <div className="flex flex-col gap-2">
+            <div className="text-center text-sm text-muted-foreground">
+                You will be redirected to the dashboard after selecting an organization.
+            </div>
+            
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                    Or
+                </span>
+                </div>
+            </div>
+
+            <Button variant="ghost" onClick={handleSignOut} className="w-full">
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+            </Button>
           </div>
         </CardContent>
       </Card>

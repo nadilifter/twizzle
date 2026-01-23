@@ -70,7 +70,9 @@ export function LoginForm() {
         setError(errorMessage)
         toast.error(errorMessage)
       } else {
-        router.push("/dashboard")
+        // Redirect to root - middleware will handle routing to
+        // /switch-organization (if multi-org) or /dashboard (if single org)
+        router.push("/")
         router.refresh()
       }
     } catch {
@@ -101,7 +103,7 @@ export function LoginForm() {
           style={{ display: 'none' }}
         >
           <input type="hidden" name="csrfToken" value={csrfToken} />
-          <input type="hidden" name="callbackUrl" value="/dashboard" />
+          <input type="hidden" name="callbackUrl" value="/" />
         </form>
 
         <Card className="relative overflow-hidden w-full max-w-[400px]">

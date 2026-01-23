@@ -35,7 +35,10 @@ async function main() {
   // 3. Create Andrew Karzel user for Uplifter
   const andrewUser = await prisma.user.upsert({
     where: { email: "andrewkarzel@uplifterinc.com" },
-    update: {},
+    update: {
+      isSuperAdmin: true,
+      // Don't try to update memberships here, do it after
+    },
     create: {
       email: "andrewkarzel@uplifterinc.com",
       name: "Andrew Karzel",
@@ -44,20 +47,14 @@ async function main() {
       status: "ACTIVE",
       organizationId: uplifterOrg.id,
       isSuperAdmin: true,
-      memberships: {
-        create: {
-          organizationId: uplifterOrg.id,
-          role: "ADMIN",
-        },
-      },
       permissions: {
         create: [{ permission: "*" }],
       },
     },
   });
   console.log("Created user:", andrewUser.email);
-
-  // Ensure memberships exist if user was already created
+  
+  // Ensure memberships exist
   await prisma.organizationMember.upsert({
     where: {
       organizationId_userId: {
@@ -65,11 +62,12 @@ async function main() {
         userId: andrewUser.id,
       },
     },
-    update: {},
+    update: { role: "ADMIN", status: "ACTIVE" },
     create: {
       organizationId: uplifterOrg.id,
       userId: andrewUser.id,
       role: "ADMIN",
+      status: "ACTIVE"
     },
   });
 
@@ -81,18 +79,21 @@ async function main() {
         userId: andrewUser.id,
       },
     },
-    update: {},
+    update: { role: "ADMIN", status: "ACTIVE" },
     create: {
       organizationId: org.id,
       userId: andrewUser.id,
       role: "ADMIN",
+      status: "ACTIVE"
     },
   });
 
   // 4. Create Demo Admin User
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@demo.com" },
-    update: {},
+    update: {
+        organizationId: org.id
+    },
     create: {
       email: "admin@demo.com",
       name: "Admin User",
@@ -100,12 +101,6 @@ async function main() {
       role: "ADMIN",
       status: "ACTIVE",
       organizationId: org.id,
-      memberships: {
-        create: {
-          organizationId: org.id,
-          role: "ADMIN",
-        },
-      },
       permissions: {
         create: [{ permission: "*" }],
       },
@@ -119,11 +114,12 @@ async function main() {
         userId: adminUser.id,
       },
     },
-    update: {},
+    update: { role: "ADMIN", status: "ACTIVE" },
     create: {
       organizationId: org.id,
       userId: adminUser.id,
       role: "ADMIN",
+      status: "ACTIVE"
     },
   });
 
@@ -132,7 +128,9 @@ async function main() {
   // 5. Create Demo Coach User
   const coachUser = await prisma.user.upsert({
     where: { email: "coach@demo.com" },
-    update: {},
+    update: {
+        organizationId: org.id
+    },
     create: {
       email: "coach@demo.com",
       name: "Sarah Coach",
@@ -140,12 +138,6 @@ async function main() {
       role: "COACH",
       status: "ACTIVE",
       organizationId: org.id,
-      memberships: {
-        create: {
-          organizationId: org.id,
-          role: "COACH",
-        },
-      },
       permissions: {
         create: [
           { permission: "dashboard.view" },
@@ -169,11 +161,12 @@ async function main() {
         userId: coachUser.id,
       },
     },
-    update: {},
+    update: { role: "COACH", status: "ACTIVE" },
     create: {
       organizationId: org.id,
       userId: coachUser.id,
       role: "COACH",
+      status: "ACTIVE"
     },
   });
 
