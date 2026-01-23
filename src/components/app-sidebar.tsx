@@ -3,11 +3,12 @@
 import * as React from "react"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { ChevronRight, LifeBuoy, Send } from "lucide-react"
+import { ChevronRight, LifeBuoy, Send, ShieldCheck } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
+import { OrganizationSwitcher } from "@/components/organization-switcher"
 import {
   Collapsible,
   CollapsibleContent,
@@ -18,7 +19,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -283,37 +283,63 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     email: session.user.email || "",
     avatar: session.user.image || null,
   } : null
+  
+  const isSuperAdmin = session?.user?.isSuperAdmin
 
   const isLoading = status === "loading"
 
   return (
     <Sidebar {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Image 
-                    src="/favicon.ico" 
-                    alt="Uplifter Logo" 
-                    width={24} 
-                    height={24} 
-                    className="size-5"
-                  />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Uplifter</span>
-                  <span className="">v0.0.1</span>
-                </div>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <OrganizationSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
+            {isSuperAdmin && (
+               <Collapsible
+                  key="Admin"
+                  asChild
+                  defaultOpen={isMobile ? pathname.startsWith("/admin") : false}
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Super Admin">
+                        <ShieldCheck className="size-4" />
+                        <span className="font-medium">Super Admin</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === "/admin"}>
+                              <a href="/admin">
+                                <span>Overview</span>
+                              </a>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === "/admin/organizations"}>
+                              <a href="/admin/organizations">
+                                <span>Organizations</span>
+                              </a>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === "/admin/users"}>
+                              <a href="/admin/users">
+                                <span>Users</span>
+                              </a>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+            )}
+
             {data.navMain.map((item) => (
               <Collapsible
                 key={item.title}
@@ -365,4 +391,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

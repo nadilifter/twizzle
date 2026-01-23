@@ -4,6 +4,7 @@ import * as React from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Check, ChevronsUpDown, Building2, Loader2 } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -22,53 +23,66 @@ import {
 } from "@/components/ui/popover"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
+import { getUserOrganizations } from "@/app/actions/organization"
 
-const organizations = [
-  {
-    value: "downtown-athletic-club",
-    label: "Downtown Athletic Club",
-  },
-  {
-    value: "riverside-fitness",
-    label: "Riverside Fitness",
-  },
-  {
-    value: "mountain-view-gym",
-    label: "Mountain View Gym",
-  },
-  {
-    value: "ocean-side-sports",
-    label: "Ocean Side Sports",
-  },
-  {
-    value: "city-center-wellness",
-    label: "City Center Wellness",
-  },
-]
+type Organization = {
+  id: string
+  name: string
+  slug: string
+  logo: string | null
+}
 
 function SwitchOrganizationForm() {
   const router = useRouter()
+  const { update } = useSession()
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(false)
+  const [organizations, setOrganizations] = React.useState<Organization[]>([])
+  const [fetching, setFetching] = React.useState(true)
   const buttonRef = React.useRef<HTMLButtonElement>(null)
   const [popoverWidth, setPopoverWidth] = React.useState<number | undefined>(undefined)
+
+  React.useEffect(() => {
+    const fetchOrgs = async () => {
+        try {
+            const orgs = await getUserOrganizations()
+            setOrganizations(orgs)
+        } catch (error) {
+            console.error("Failed to fetch organizations", error)
+        } finally {
+            setFetching(false)
+        }
+    }
+    fetchOrgs()
+  }, [])
 
   React.useEffect(() => {
     if (buttonRef.current) {
       setPopoverWidth(buttonRef.current.offsetWidth)
     }
-  }, [])
+  }, [fetching])
 
-  const handleSelect = (selectedValue: string) => {
-    setValue(selectedValue === value ? "" : selectedValue)
+  const handleSelect = async (orgId: string) => {
+    const selectedOrg = organizations.find(o => o.id === orgId)
+    if (!selectedOrg) return
+
+    setValue(orgId)
     setOpen(false)
     setIsLoading(true)
+    
+    // Update session
+    await update({ 
+        organizationId: selectedOrg.id, 
+        organizationName: selectedOrg.name 
+    })
+    
     // Route to dashboard after selection
     router.push("/dashboard")
+    router.refresh()
   }
 
-  if (isLoading) {
+  if (isLoading || fetching) {
     return (
       <Card className="relative overflow-hidden w-full max-w-[400px]">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
@@ -80,9 +94,11 @@ function SwitchOrganizationForm() {
             height={36}
             className="h-9 w-auto mb-2 dark:brightness-0 dark:invert"
           />
-          <h1 className="text-2xl font-bold">Switching Organization</h1>
+          <h1 className="text-2xl font-bold">
+            {fetching ? "Loading Organizations..." : "Switching Organization"}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Please wait while we redirect you...
+            Please wait...
           </p>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-8">
@@ -122,7 +138,7 @@ function SwitchOrganizationForm() {
                   className="w-full justify-between"
                 >
                   {value
-                    ? organizations.find((org) => org.value === value)?.label
+                    ? organizations.find((org) => org.id === value)?.name
                     : "Select organization..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -139,16 +155,16 @@ function SwitchOrganizationForm() {
                     <CommandGroup>
                       {organizations.map((organization) => (
                         <CommandItem
-                          key={organization.value}
-                          value={organization.value}
-                          onSelect={handleSelect}
+                          key={organization.id}
+                          value={organization.name} // CommandItem value is used for search filtering usually by label
+                          onSelect={() => handleSelect(organization.id)}
                         >
                           <Building2 className="mr-2 h-4 w-4" />
-                          {organization.label}
+                          {organization.name}
                           <Check
                             className={cn(
                               "ml-auto h-4 w-4",
-                              value === organization.value ? "opacity-100" : "opacity-0"
+                              value === organization.id ? "opacity-100" : "opacity-0"
                             )}
                           />
                         </CommandItem>
@@ -173,4 +189,3 @@ export default function SwitchOrganizationPage() {
     <SwitchOrganizationForm />
   )
 }
-

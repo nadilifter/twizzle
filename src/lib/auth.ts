@@ -50,6 +50,11 @@ export const authOptions: NextAuthOptions = {
           include: {
             organization: true,
             permissions: true,
+            memberships: {
+              include: {
+                organization: true
+              }
+            }
           },
         });
 
@@ -72,15 +77,32 @@ export const authOptions: NextAuthOptions = {
           data: { lastActiveAt: new Date() },
         });
 
+        // Determine organization to use
+        let organizationId = user.organizationId;
+        let organizationName = user.organization?.name;
+        
+        // Logic for organization selection
+        // If user has memberships but current organizationId is invalid or user needs to choose
+        // We will default to the first one IF there's only one.
+        // If there are multiple, we might want to force selection, but for now let's keep the legacy behavior 
+        // if organizationId is set.
+        
+        // If user has no current organizationId, try to set one from memberships
+        if (!organizationId && user.memberships.length > 0) {
+            organizationId = user.memberships[0].organizationId;
+            organizationName = user.memberships[0].organization.name;
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           image: user.avatar,
-          role: user.role,
-          organizationId: user.organizationId,
-          organizationName: user.organization.name,
+          role: user.role, // This should probably be the role in the organization, but for now keep platform role
+          organizationId: organizationId || "", // Handle null
+          organizationName: organizationName || "",
           permissions: user.permissions.map((p) => p.permission),
+          isSuperAdmin: user.isSuperAdmin,
         };
       },
     }),
@@ -115,15 +137,35 @@ export const authOptions: NextAuthOptions = {
           include: {
             organization: true,
             permissions: true,
+            memberships: {
+                include: {
+                    organization: true
+                }
+            }
           },
         });
 
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role;
-          token.organizationId = dbUser.organizationId;
-          token.organizationName = dbUser.organization.name;
+          token.isSuperAdmin = dbUser.isSuperAdmin;
           token.permissions = dbUser.permissions.map((p) => p.permission);
+          
+          // Org Logic
+          if (dbUser.organizationId) {
+             token.organizationId = dbUser.organizationId;
+             token.organizationName = dbUser.organization?.name || "";
+          } else if (dbUser.memberships.length > 0) {
+             // If only 1, default to it. If > 1, leaving empty might trigger selection
+             if (dbUser.memberships.length === 1) {
+                 token.organizationId = dbUser.memberships[0].organizationId;
+                 token.organizationName = dbUser.memberships[0].organization.name;
+             } else {
+                 // Multiple memberships and no default -> Force selection
+                 token.organizationId = "";
+                 token.organizationName = "";
+             }
+          }
         }
       } else if (user) {
         // For credentials sign-in, user object already has all data
@@ -132,6 +174,7 @@ export const authOptions: NextAuthOptions = {
         token.organizationId = user.organizationId;
         token.organizationName = user.organizationName;
         token.permissions = user.permissions;
+        token.isSuperAdmin = user.isSuperAdmin;
       }
 
       // Handle session updates (e.g., switching organizations)
@@ -149,6 +192,7 @@ export const authOptions: NextAuthOptions = {
         session.user.organizationId = token.organizationId as string;
         session.user.organizationName = token.organizationName as string;
         session.user.permissions = token.permissions as string[];
+        session.user.isSuperAdmin = token.isSuperAdmin as boolean;
       }
       return session;
     },
