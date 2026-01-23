@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { DemoDataBanner } from "@/components/demo-data-banner"
 import { getAuthSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
 
@@ -23,6 +24,7 @@ export default async function AdminLayout({
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           {children}
         </div>
+        <DemoDataBanner />
       </SidebarInset>
     </SidebarProvider>
   )

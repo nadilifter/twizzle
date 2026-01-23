@@ -3,7 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { ChevronRight, LifeBuoy, Send, ShieldCheck } from "lucide-react"
+import { ChevronRight, LifeBuoy, Send, ShieldCheck, FlaskConical, Zap } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 import { NavSecondary } from "@/components/nav-secondary"
@@ -29,6 +29,81 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { getFeatureStatus, type FeatureStatus } from "@/lib/feature-status"
+import { cn } from "@/lib/utils"
+
+// Status indicator component for nav items
+function FeatureStatusIndicator({ url }: { url: string }) {
+  const config = getFeatureStatus(url)
+  
+  if (!config) return null
+  
+  if (config.status === "live") {
+    return (
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="ml-auto">
+              <Zap className="h-3 w-3 text-emerald-500" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-[200px]">
+            <p className="font-medium text-xs">Live Feature</p>
+            <p className="text-xs text-muted-foreground">
+              {config.description || "Connected to backend services"}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+  
+  if (config.status === "demo") {
+    return (
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="ml-auto">
+              <FlaskConical className="h-3 w-3 text-amber-500" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-[200px]">
+            <p className="font-medium text-xs">Demo Data</p>
+            <p className="text-xs text-muted-foreground">
+              {config.description || "Using sample data for preview"}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+  
+  // Partial status
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="ml-auto flex gap-0.5">
+            <Zap className="h-3 w-3 text-emerald-500" />
+            <FlaskConical className="h-3 w-3 text-amber-500" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-[200px]">
+          <p className="font-medium text-xs">Partial Implementation</p>
+          <p className="text-xs text-muted-foreground">
+            {config.description || "Some features use real data, others are demo"}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
 
 // Navigation data
 const data = {
@@ -359,8 +434,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {item.items?.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                            <a href={subItem.url}>
+                            <a href={subItem.url} className="flex items-center justify-between w-full">
                               <span>{subItem.title}</span>
+                              <FeatureStatusIndicator url={subItem.url} />
                             </a>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

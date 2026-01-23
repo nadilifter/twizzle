@@ -200,7 +200,7 @@ const INITIAL_USERS: User[] = [
     role: "admin",
     permissions: ROLES.find(r => r.id === "admin")?.defaultPermissions || [],
     status: "active",
-    joinedDate: new Date("2023-01-15"),
+    joinedDate: new Date("2023-01-15T12:00:00"),
     lastActive: new Date()
   },
   {
@@ -211,7 +211,7 @@ const INITIAL_USERS: User[] = [
     role: "coach",
     permissions: ROLES.find(r => r.id === "coach")?.defaultPermissions || [],
     status: "active",
-    joinedDate: new Date("2023-03-10"),
+    joinedDate: new Date("2023-03-10T12:00:00"),
     lastActive: new Date(Date.now() - 1000 * 60 * 30) // 30 mins ago
   },
   {
@@ -222,7 +222,7 @@ const INITIAL_USERS: User[] = [
     role: "accountant",
     permissions: ROLES.find(r => r.id === "accountant")?.defaultPermissions || [],
     status: "active",
-    joinedDate: new Date("2023-06-22"),
+    joinedDate: new Date("2023-06-22T12:00:00"),
     lastActive: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 day ago
   },
   {
@@ -233,8 +233,8 @@ const INITIAL_USERS: User[] = [
     role: "volunteer",
     permissions: ROLES.find(r => r.id === "volunteer")?.defaultPermissions || [],
     status: "invited",
-    joinedDate: new Date("2024-01-05"),
-    lastActive: new Date("2024-01-05")
+    joinedDate: new Date("2024-01-05T12:00:00"),
+    lastActive: new Date("2024-01-05T12:00:00")
   },
 ]
 
