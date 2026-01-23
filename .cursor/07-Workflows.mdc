@@ -1,0 +1,19 @@
+---
+description: Automated workflows and project commands
+globs: ["**/*"]
+---
+# Project Commands (Automated Workflows)
+
+These commands accelerate repetitive tasks.
+
+- **/new:feature-branch**: Creates a new branch, updates the changelog, and creates a basic task list based on the prompt.
+  - *Example*: `/new:feature-branch Integrate new usage-based pricing tier`
+
+- **/new:shadcn-component**: Creates a new `shadcn/ui` component in the shared library, ensuring it's ready for white-label styling.
+  - *Example*: `/new:shadcn-component BillingInfoCard with Stripe data display`
+
+- **/new:stripe-webhook**: Scaffolds a new, secure, idempotent Next.js Server Action/Route to handle a specific Stripe webhook event.
+  - *Example*: `/new:stripe-webhook customer.subscription.updated`
+
+- **/monorepo:share-types**: Ensures that new data types related to the current file are exported and available in the shared package.
+  - *Example*: `/monorepo:share-types UserBillingProfile`

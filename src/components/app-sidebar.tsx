@@ -34,7 +34,7 @@ const data = {
   user: {
     name: "Andrew Karzel",
     email: "andrewkarzel@uplifterinc.com",
-    avatar: "/avatars/shadcn.jpg",
+    avatar: "/avatars/01.png",
   },
   navMain: [
     {

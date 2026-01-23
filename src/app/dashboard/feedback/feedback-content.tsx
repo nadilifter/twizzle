@@ -53,7 +53,7 @@ export function FeedbackContent() {
               {
                 id: Math.random().toString(36).substr(2, 9),
                 author: "Current User",
-                avatar: "/avatars/shadcn.jpg", // Mock avatar
+                avatar: "/avatars/01.png", // Mock avatar
                 content,
                 createdAt: new Date().toISOString(),
               },
@@ -75,7 +75,7 @@ export function FeedbackContent() {
                     {
                         id: Math.random().toString(36).substr(2, 9),
                         author: "Current User",
-                        avatar: "/avatars/shadcn.jpg",
+                        avatar: "/avatars/01.png",
                         content,
                         createdAt: new Date().toISOString(),
                     }

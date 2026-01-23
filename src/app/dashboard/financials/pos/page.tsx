@@ -7,8 +7,11 @@ import {
   Plus, 
   Minus, 
   Search,
-  ScanBarcode
+  ScanBarcode,
+  CreditCard,
+  Banknote
 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +33,7 @@ export default function PointOfSalePage() {
   const [cart, setCart] = React.useState<CartItem[]>([])
   const [searchTerm, setSearchTerm] = React.useState("")
   const [categoryFilter, setCategoryFilter] = React.useState("all")
+  const [paymentMethod, setPaymentMethod] = React.useState<'card' | 'cash'>('card')
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -39,6 +43,10 @@ export default function PointOfSalePage() {
   })
 
   const addToCart = (product: Product) => {
+    toast.success(`Added ${product.name} to cart`, {
+      description: `${product.name} has been added to your current order.`,
+      duration: 1500,
+    })
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id)
       if (existing) {
@@ -72,8 +80,40 @@ export default function PointOfSalePage() {
 
   const handleCheckout = () => {
     if (cart.length === 0) return
-    alert(`Processing payment for $${total.toFixed(2)}`)
+
+    // Simulate Adyen Payment Flow
+    const promise = new Promise((resolve) => setTimeout(resolve, 2000));
+
+    toast.promise(promise, {
+      loading: paymentMethod === 'card' ? 'Processing payment with Adyen...' : 'Processing Cash Payment...',
+      success: (data) => {
+        setCart([])
+        return `Payment Successful for $${total.toFixed(2)}`;
+      },
+      error: 'Error',
+      description: paymentMethod === 'card' 
+        ? `Transaction ID: ADY-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+        : 'Cash payment recorded.',
+      action: {
+        label: 'View Receipt',
+        onClick: () => console.log('View Receipt'),
+      },
+    });
+  }
+
+  const handleScanBarcode = () => {
+    toast.info("Scanner Active", {
+      description: "Ready to scan product barcode...",
+      icon: <ScanBarcode className="h-4 w-4" />,
+    })
+  }
+
+  const clearCart = () => {
+    if (cart.length === 0) return
     setCart([])
+    toast("Cart Cleared", {
+      description: "All items have been removed from the current order.",
+    })
   }
 
   return (
@@ -84,7 +124,7 @@ export default function PointOfSalePage() {
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold tracking-tight">Point of Sale</h1>
             <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" onClick={handleScanBarcode}>
                     <ScanBarcode className="h-4 w-4" />
                 </Button>
             </div>
@@ -144,11 +184,17 @@ export default function PointOfSalePage() {
 
       {/* Shopping Cart (Right) */}
       <div className="w-[400px] border-l bg-muted/10 flex flex-col h-full">
-        <div className="p-6 border-b bg-background">
+        <div className="p-6 border-b bg-background flex justify-between items-center">
           <h2 className="font-semibold flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
             Current Order
           </h2>
+          {cart.length > 0 && (
+             <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear
+             </Button>
+          )}
         </div>
         
         <ScrollArea className="flex-1 p-6">
@@ -186,6 +232,17 @@ export default function PointOfSalePage() {
                            <Plus className="h-3 w-3" />
                        </Button>
                     </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            removeFromCart(item.id)
+                        }}
+                    >
+                        <Trash2 className="h-3 w-3" />
+                    </Button>
                  </div>
               </div>
             ))}
@@ -199,6 +256,25 @@ export default function PointOfSalePage() {
         </ScrollArea>
 
         <div className="p-6 bg-background border-t space-y-4 mt-auto">
+           <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant={paymentMethod === 'card' ? 'default' : 'outline'} 
+                className="w-full"
+                onClick={() => setPaymentMethod('card')}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Card
+              </Button>
+              <Button 
+                variant={paymentMethod === 'cash' ? 'default' : 'outline'} 
+                className="w-full"
+                onClick={() => setPaymentMethod('cash')}
+              >
+                <Banknote className="mr-2 h-4 w-4" />
+                Cash
+              </Button>
+           </div>
+           
            <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
