@@ -194,9 +194,9 @@ interface User {
 const INITIAL_USERS: User[] = [
   {
     id: "1",
-    name: "Andrew Karzel",
-    email: "andrewkarzel@uplifterinc.com",
-    avatar: "/avatars/01.png",
+    name: "Sarah Miller",
+    email: "sarah.miller@example.com",
+    avatar: "/avatars/02.png",
     role: "admin",
     permissions: ROLES.find(r => r.id === "admin")?.defaultPermissions || [],
     status: "active",
@@ -205,9 +205,9 @@ const INITIAL_USERS: User[] = [
   },
   {
     id: "2",
-    name: "Sarah Miller",
-    email: "sarah.miller@example.com",
-    avatar: "/avatars/02.png",
+    name: "Mike Johnson",
+    email: "mike.johnson@example.com",
+    avatar: "/avatars/01.png",
     role: "coach",
     permissions: ROLES.find(r => r.id === "coach")?.defaultPermissions || [],
     status: "active",
@@ -444,10 +444,10 @@ export default function UsersPage() {
                           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Invited</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground" suppressHydrationWarning>
                         {format(user.joinedDate, "MMM d, yyyy")}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground" suppressHydrationWarning>
                         {format(user.lastActive, "MMM d, h:mm a")}
                       </TableCell>
                       <TableCell className="text-right">

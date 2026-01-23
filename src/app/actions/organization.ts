@@ -14,6 +14,25 @@ export async function getUserOrganizations() {
       throw new Error("Unauthorized")
     }
 
+    // Super admins have access to ALL organizations
+    if (session.user.isSuperAdmin) {
+      console.log("getUserOrganizations: Super admin - returning all organizations")
+      const allOrganizations = await db.organization.findMany({
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          logo: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      })
+      console.log(`getUserOrganizations: Found ${allOrganizations.length} organizations for super admin`)
+      return allOrganizations
+    }
+
+    // Regular users only see organizations they're members of
     const memberships = await db.organizationMember.findMany({
       where: {
         userId: session.user.id,
@@ -44,6 +63,11 @@ export async function verifyOrganizationMembership(organizationId: string) {
     const session = await getAuthSession()
     if (!session?.user?.id) {
       return false
+    }
+    
+    // Super admins have access to all organizations
+    if (session.user.isSuperAdmin) {
+      return true
     }
   
     const membership = await db.organizationMember.findUnique({

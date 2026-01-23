@@ -22,6 +22,12 @@ export async function GET() {
     const users = await db.user.findMany({
       where: {
         organizationId: session.user.organizationId,
+        // Exclude Uplifter staff (super admins) from organization user lists
+        NOT: {
+          email: {
+            endsWith: "@uplifterinc.com",
+          },
+        },
       },
       include: {
         permissions: true,

@@ -119,14 +119,60 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       try {
-        // For OAuth providers (like Google), only allow existing users
+        // For OAuth providers (like Google)
         if (account?.provider === "google") {
-          const existingUser = await db.user.findUnique({
-            where: { email: user.email! },
+          const email = user.email!;
+          const isUplifterEmail = email.endsWith("@uplifterinc.com");
+          
+          let existingUser = await db.user.findUnique({
+            where: { email },
           });
 
-          if (!existingUser) {
+          // Auto-create super admin users for @uplifterinc.com emails
+          if (!existingUser && isUplifterEmail) {
+            console.log(`Creating super admin for Uplifter email: ${email}`);
+            existingUser = await db.user.create({
+              data: {
+                email,
+                name: user.name || email.split("@")[0],
+                avatar: user.image,
+                role: "ADMIN",
+                status: "ACTIVE",
+                isSuperAdmin: true,
+              },
+            });
+            
+            // Create wildcard permission for super admins
+            await db.userPermission.create({
+              data: {
+                userId: existingUser.id,
+                permission: "*",
+              },
+            });
+          } else if (!existingUser) {
+            // Non-uplifter emails must have an existing account
             return "/login?error=NoAccount";
+          } else if (isUplifterEmail && !existingUser.isSuperAdmin) {
+            // Ensure existing uplifter users are marked as super admins
+            await db.user.update({
+              where: { id: existingUser.id },
+              data: { isSuperAdmin: true },
+            });
+            
+            // Ensure they have wildcard permission
+            await db.userPermission.upsert({
+              where: {
+                userId_permission: {
+                  userId: existingUser.id,
+                  permission: "*",
+                },
+              },
+              create: {
+                userId: existingUser.id,
+                permission: "*",
+              },
+              update: {},
+            });
           }
 
           await db.user.update({
@@ -143,9 +189,9 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user, account, trigger, session }) {
       try {
-        // Initial sign in
-        if (user) {
-          console.log("JWT callback: Initial sign in for user:", user.email, user.id);
+        // Initial sign in with credentials provider
+        if (user && account?.provider === "credentials") {
+          console.log("JWT callback: Credentials sign in for user:", user.email, user.id);
           token.id = user.id;
           token.role = user.role;
           token.organizationId = user.organizationId;
@@ -154,10 +200,46 @@ export const authOptions: NextAuthOptions = {
           token.isSuperAdmin = user.isSuperAdmin;
         }
         
-        // OAuth sign-in specifically (redundant with above if we ensure user object is populated, but keeping for safety)
+        // OAuth sign-in - fetch user data from database
         if (account?.provider === "google" && user?.email) {
-           // ... logic ...
-           // Note: In NextAuth v4, user object in jwt callback is the one returned from authorize or profile callback
+          console.log("JWT callback: Google sign in for user:", user.email);
+          
+          const dbUser = await db.user.findUnique({
+            where: { email: user.email },
+            include: {
+              organization: true,
+              permissions: true,
+              memberships: {
+                include: {
+                  organization: true
+                }
+              }
+            },
+          });
+          
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+            token.isSuperAdmin = dbUser.isSuperAdmin;
+            token.permissions = dbUser.permissions.map((p) => p.permission);
+            
+            // Super admins don't need a specific organization - they can access all
+            // But we can default to their saved org if they have one
+            let organizationId = dbUser.organizationId;
+            let organizationName = dbUser.organization?.name;
+            
+            if (!organizationId && dbUser.memberships.length === 1) {
+              organizationId = dbUser.memberships[0].organizationId;
+              organizationName = dbUser.memberships[0].organization.name;
+            } else if (!organizationId && dbUser.memberships.length > 1) {
+              organizationId = "";
+              organizationName = "";
+            }
+            
+            // Super admins can proceed without organization - they'll select one
+            token.organizationId = organizationId || "";
+            token.organizationName = organizationName || "";
+          }
         }
 
         // Handle session updates (e.g., switching organizations)
