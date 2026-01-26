@@ -115,6 +115,39 @@ export default function WebsitePage() {
   const progress = (completedCount / requirements.length) * 100;
   const isReady = completedCount === requirements.length;
 
+  const handlePublishToggle = async () => {
+    const newStatus = !config.isPublished;
+    
+    // Validate before publishing
+    if (newStatus) {
+        if (subdomainStatus === 'taken' || subdomainStatus === 'invalid' || subdomainStatus === 'error') {
+            toast.error("Please fix subdomain issues before going live");
+            return;
+        }
+    }
+
+    updateConfig("isPublished", newStatus); // Optimistic update
+    
+    setSaving(true);
+    try {
+      const res = await fetch("/api/organization/website", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...config, isPublished: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      const data = await res.json();
+      setConfig(data);
+      toast.success(newStatus ? "Site is now live!" : "Site unpublished");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update site status");
+      updateConfig("isPublished", !newStatus); // Revert
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <div className="p-8">Loading configuration...</div>;
 
   return (
@@ -137,8 +170,8 @@ export default function WebsitePage() {
             </Button>
              <Button 
                 variant={config.isPublished ? "outline" : "default"}
-                onClick={() => updateConfig("isPublished", !config.isPublished)}
-                disabled={!isReady}
+                onClick={handlePublishToggle}
+                disabled={!isReady || saving}
              >
                 {config.isPublished ? "Unpublish" : "Go Live"}
              </Button>
