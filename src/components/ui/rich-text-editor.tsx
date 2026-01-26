@@ -46,6 +46,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
   const [linkUrl, setLinkUrl] = useState("");
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Placeholder.configure({
