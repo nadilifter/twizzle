@@ -2,9 +2,7 @@
 description: Standard operating procedures for development workflows
 globs: ["**/*"]
 ---
-# 09-SOP
-
-## Mandates
+# 09-SOP## Mandates
 
 - **Blocking Issues**: Whenever you are stuck on a feature implementation, **STOP** and refactor. Use **GrepMCP** to search GitHub for working code samples and proven patterns to unblock yourself.
 

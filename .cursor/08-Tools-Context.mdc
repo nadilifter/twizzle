@@ -12,9 +12,7 @@ globs: ["**/*"]
 - **Postman / Thunder Client**: API testing.
 
 ## Model Context Protocol (MCP)
-Usage of MCP is crucial for providing up-to-date context.
-
-- **GitHub/GitLab MCP Server**: Connects repository for real-time context.
+Usage of MCP is crucial for providing up-to-date context.- **GitHub/GitLab MCP Server**: Connects repository for real-time context.
 - **Filesystem MCP Server**: Provides access to relevant files (architecture, rules, config).
 - **Memory/Context Portal MCP**: Stores/retrieves long-term context about architecture and decisions.
 - **GrepMCP**: A powerful search tool that helps find working code samples and implementation patterns from external GitHub repositories. Use this when you are stuck or need reference implementations.

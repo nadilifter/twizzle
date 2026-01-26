@@ -2,9 +2,7 @@
 description: DevOps, containerization, and environment mandates
 globs: ["Dockerfile", "docker-compose.yml", ".github/**/*"]
 ---
-# 06-DevOps
-
-## Mandates
+# 06-DevOps## Mandates
 
 - **Containerization**: All services must be Dockerized. Ensure `Dockerfile` and `docker-compose.yml` are maintained and optimized.
 - **OS**: Assume a WSL/Linux environment for all development, scripting, and deployment tasks.

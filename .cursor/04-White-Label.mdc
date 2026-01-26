@@ -2,9 +2,7 @@
 description: White-labeling and localization requirements
 globs: ["apps/**/*", "packages/ui/**/*"]
 ---
-# 04-White-Label
-
-## Mandates
+# 04-White-Label## Mandates
 
 - **Design**: Design all components for easy theme/style overrides using CSS variables defined by `shadcn/ui`/`Tailwind`.
 - **Localization**: Ensure all user-facing strings are wrapped for i18n/localization support.

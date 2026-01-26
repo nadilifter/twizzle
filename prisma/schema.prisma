@@ -32,6 +32,7 @@ model Organization {
   skills      Skill[]
   lessonPlans LessonPlan[]
   announcements Announcement[]
+  websiteConfig WebsiteConfig?
 }
 
 model OrganizationMember {
@@ -669,4 +670,47 @@ enum AnnouncementStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+// ============================================
+// PHASE 7: Website Builder
+// ============================================
+
+model WebsiteConfig {
+  id                String   @id @default(cuid())
+  organizationId    String   @unique
+  
+  // Theming
+  primaryColor      String?  @default("#000000")
+  secondaryColor    String?  @default("#ffffff")
+  
+  // Assets
+  logo              String?
+  favicon           String?
+  
+  // Content
+  heroImage         String?
+  heroHeadline      String?
+  heroSubheadline   String?
+  heroText          String?  @db.Text
+  
+  // Visibility
+  showCalendar      Boolean  @default(true)
+  showRegistration  Boolean  @default(true)
+  showLogin         Boolean  @default(true)
+  showContact       Boolean  @default(true)
+  
+  // Domain
+  domain            String?  @unique
+  subdomain         String?  @unique // prefix to uplifterinc.com
+  emailSenderDomain String?
+  
+  // Status
+  isPublished       Boolean  @default(false)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }

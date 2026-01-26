@@ -4,9 +4,7 @@ globs: ["**/*"]
 ---
 # 05-External-Priority
 
-## Mandates
-
-- **Integration**: Prioritize the use of external, production-grade tools over custom-built internal solutions.
+## Mandates- **Integration**: Prioritize the use of external, production-grade tools over custom-built internal solutions.
   - Hosting: Vercel / Cloudflare
   - Error Tracking: Sentry
   - Email: Resend
