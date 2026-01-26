@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,12 +12,16 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, AlertCircle, Check } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function WebsitePage() {
   const [config, setConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [checkingSubdomain, setCheckingSubdomain] = useState(false);
+  const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'available' | 'taken' | 'invalid'>('idle');
+  const [domainType, setDomainType] = useState<"subdomain" | "custom">("subdomain");
 
   // Fetch config on mount
   useEffect(() => {
@@ -25,6 +29,9 @@ export default function WebsitePage() {
       .then((res) => res.json())
       .then((data) => {
         setConfig(data);
+        if (data.domain) {
+            setDomainType("custom");
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -35,6 +42,11 @@ export default function WebsitePage() {
   }, []);
 
   const handleSave = async () => {
+    if (subdomainStatus === 'taken' || subdomainStatus === 'invalid') {
+        toast.error("Please fix subdomain issues before saving");
+        return;
+    }
+
     setSaving(true);
     try {
       const res = await fetch("/api/organization/website", {
@@ -57,15 +69,41 @@ export default function WebsitePage() {
     setConfig((prev: any) => ({ ...prev, [key]: value }));
   };
 
+  // Debounced subdomain check
+  useEffect(() => {
+    const checkSubdomain = async () => {
+        if (!config.subdomain) {
+            setSubdomainStatus('idle');
+            return;
+        }
+        setCheckingSubdomain(true);
+        try {
+            const res = await fetch(`/api/organization/website/check-subdomain?subdomain=${config.subdomain}`);
+            const data = await res.json();
+            if (data.available) {
+                setSubdomainStatus('available');
+            } else {
+                setSubdomainStatus(data.reason === 'Invalid format' ? 'invalid' : 'taken');
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setCheckingSubdomain(false);
+        }
+    };
+
+    const timer = setTimeout(checkSubdomain, 500);
+    return () => clearTimeout(timer);
+  }, [config.subdomain]);
+
   // Progress Calculation
   const requirements = [
     { label: "Add a logo", done: !!config.logo },
-    { label: "Set primary color", done: !!config.primaryColor && config.primaryColor !== "#000000" }, // Assuming default is black, but user might want black. Maybe just check if it exists? The default in DB is #000000. Let's just check if it's there.
-    { label: "Set subdomain", done: !!config.subdomain },
+    { label: "Set primary color", done: !!config.primaryColor && config.primaryColor !== "#000000" }, 
+    { label: "Set subdomain", done: !!config.subdomain && subdomainStatus === 'available' },
     { label: "Add hero image", done: !!config.heroImage },
   ];
-  // Adjust logic: primaryColor always exists due to default. Maybe check if they touched it? Hard to track. 
-  // Let's just assume if it's not empty string it's done.
+  
   const completedCount = requirements.filter(r => r.done).length;
   const progress = (completedCount / requirements.length) * 100;
   const isReady = completedCount === requirements.length;
@@ -240,29 +278,83 @@ export default function WebsitePage() {
                     <CardDescription>Configure your website address.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="grid gap-2">
-                        <Label>Subdomain</Label>
-                        <div className="flex items-center gap-2">
-                            <Input 
-                                value={config.subdomain || ""} 
-                                onChange={(e) => updateConfig("subdomain", e.target.value)}
-                                placeholder="my-gym" 
-                                className="max-w-[200px]"
-                            />
-                            <span className="text-muted-foreground">.uplifterinc.com</span>
+                    <RadioGroup value={domainType} onValueChange={(val: "subdomain" | "custom") => setDomainType(val)}>
+                        <div className="flex items-start space-x-2">
+                            <RadioGroupItem value="subdomain" id="subdomain" className="mt-1" />
+                            <div className="grid gap-2 flex-1">
+                                <Label htmlFor="subdomain">Use Uplifter Subdomain</Label>
+                                <p className="text-sm text-muted-foreground">Get a free subdomain on uplifterinc.com (e.g., mygym.uplifterinc.com).</p>
+                                
+                                <div className="mt-2">
+                                     <div className="flex items-center gap-2">
+                                        <div className="relative flex-1 max-w-[250px]">
+                                            <Input 
+                                                value={config.subdomain || ""} 
+                                                onChange={(e) => updateConfig("subdomain", e.target.value)}
+                                                placeholder="my-gym" 
+                                                className={subdomainStatus === 'taken' || subdomainStatus === 'invalid' ? 'border-red-500 pr-8' : 'pr-8'}
+                                                disabled={domainType === 'custom'}
+                                            />
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                {checkingSubdomain ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                                ) : subdomainStatus === 'available' ? (
+                                                    <Check className="w-4 h-4 text-green-500" />
+                                                ) : subdomainStatus === 'taken' || subdomainStatus === 'invalid' ? (
+                                                    <AlertCircle className="w-4 h-4 text-red-500" />
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                        <span className="text-muted-foreground">.uplifterinc.com</span>
+                                    </div>
+                                    {subdomainStatus === 'taken' && (
+                                        <p className="text-xs text-red-500 mt-1">This subdomain is already taken.</p>
+                                    )}
+                                    {subdomainStatus === 'invalid' && (
+                                        <p className="text-xs text-red-500 mt-1">Only lowercase letters, numbers, and hyphens allowed.</p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">This will be your primary address if you don't have a custom domain.</p>
-                    </div>
-
-                     <div className="grid gap-2">
-                        <Label>Custom Domain (Optional)</Label>
-                        <Input 
-                             value={config.domain || ""} 
-                             onChange={(e) => updateConfig("domain", e.target.value)}
-                             placeholder="www.mygym.com" 
-                        />
-                        <p className="text-sm text-muted-foreground">Requires DNS configuration. Contact support for assistance.</p>
-                    </div>
+                        
+                        <div className="flex items-start space-x-2 mt-4">
+                             <RadioGroupItem value="custom" id="custom" className="mt-1" />
+                             <div className="grid gap-2 flex-1">
+                                <Label htmlFor="custom">Use Custom Domain</Label>
+                                <p className="text-sm text-muted-foreground">Use your own domain name (e.g., www.mygym.com).</p>
+                                
+                                {domainType === "custom" && (
+                                    <div className="mt-2 space-y-4 border rounded-md p-4 bg-muted/50">
+                                        <div className="grid gap-2">
+                                            <Label>Your Domain Name</Label>
+                                            <Input 
+                                                value={config.domain || ""} 
+                                                onChange={(e) => updateConfig("domain", e.target.value)}
+                                                placeholder="www.mygym.com" 
+                                            />
+                                        </div>
+                                        
+                                        <div className="space-y-2 text-sm">
+                                            <p className="font-medium">DNS Configuration Instructions:</p>
+                                            <ol className="list-decimal pl-4 space-y-2 text-muted-foreground">
+                                                <li>Log in to your domain registrar (GoDaddy, Namecheap, etc.).</li>
+                                                <li>Navigate to DNS Management for your domain.</li>
+                                                <li>Create a new CNAME record:
+                                                    <ul className="list-disc pl-4 mt-1">
+                                                        <li><strong>Type:</strong> CNAME</li>
+                                                        <li><strong>Name:</strong> www (or your chosen subdomain)</li>
+                                                        <li><strong>Value/Target:</strong> domains.uplifterinc.com</li>
+                                                    </ul>
+                                                </li>
+                                                <li>If using the root domain (e.g., mygym.com), check if your registrar supports CNAME flattening or ALIAS records. If not, use 'www' as the primary address.</li>
+                                            </ol>
+                                            <p className="text-xs text-muted-foreground mt-2">Note: DNS changes can take up to 48 hours to propagate.</p>
+                                        </div>
+                                    </div>
+                                )}
+                             </div>
+                        </div>
+                    </RadioGroup>
                 </CardContent>
             </Card>
         </TabsContent>

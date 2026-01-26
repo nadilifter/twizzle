@@ -28,7 +28,9 @@ export default async function SiteLayout({
   children: React.ReactNode;
   params: { slug: string };
 }) {
-  const subdomain = params.slug;
+  const subdomain = params?.slug;
+
+  if (!subdomain) return notFound();
 
   const config = await db.websiteConfig.findUnique({
     where: { subdomain: subdomain },
