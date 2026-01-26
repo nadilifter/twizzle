@@ -20,7 +20,7 @@ export default function WebsitePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [checkingSubdomain, setCheckingSubdomain] = useState(false);
-  const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'available' | 'taken' | 'invalid'>('idle');
+  const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'available' | 'taken' | 'invalid' | 'error'>('idle');
   const [domainType, setDomainType] = useState<"subdomain" | "custom">("subdomain");
 
   // Fetch config on mount
@@ -42,7 +42,7 @@ export default function WebsitePage() {
   }, []);
 
   const handleSave = async () => {
-    if (subdomainStatus === 'taken' || subdomainStatus === 'invalid') {
+    if (subdomainStatus === 'taken' || subdomainStatus === 'invalid' || subdomainStatus === 'error') {
         toast.error("Please fix subdomain issues before saving");
         return;
     }
@@ -79,6 +79,12 @@ export default function WebsitePage() {
         setCheckingSubdomain(true);
         try {
             const res = await fetch(`/api/organization/website/check-subdomain?subdomain=${config.subdomain}`);
+            if (!res.ok) {
+                // Handle API errors gracefully
+                setSubdomainStatus('error');
+                console.error("API Error checking subdomain");
+                return;
+            }
             const data = await res.json();
             if (data.available) {
                 setSubdomainStatus('available');
@@ -87,6 +93,7 @@ export default function WebsitePage() {
             }
         } catch (error) {
             console.error(error);
+            setSubdomainStatus('error');
         } finally {
             setCheckingSubdomain(false);
         }
@@ -292,7 +299,7 @@ export default function WebsitePage() {
                                                 value={config.subdomain || ""} 
                                                 onChange={(e) => updateConfig("subdomain", e.target.value)}
                                                 placeholder="my-gym" 
-                                                className={subdomainStatus === 'taken' || subdomainStatus === 'invalid' ? 'border-red-500 pr-8' : 'pr-8'}
+                                                className={subdomainStatus === 'taken' || subdomainStatus === 'invalid' || subdomainStatus === 'error' ? 'border-red-500 pr-8' : 'pr-8'}
                                                 disabled={domainType === 'custom'}
                                             />
                                             <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -300,7 +307,7 @@ export default function WebsitePage() {
                                                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                                                 ) : subdomainStatus === 'available' ? (
                                                     <Check className="w-4 h-4 text-green-500" />
-                                                ) : subdomainStatus === 'taken' || subdomainStatus === 'invalid' ? (
+                                                ) : subdomainStatus === 'taken' || subdomainStatus === 'invalid' || subdomainStatus === 'error' ? (
                                                     <AlertCircle className="w-4 h-4 text-red-500" />
                                                 ) : null}
                                             </div>
@@ -312,6 +319,9 @@ export default function WebsitePage() {
                                     )}
                                     {subdomainStatus === 'invalid' && (
                                         <p className="text-xs text-red-500 mt-1">Only lowercase letters, numbers, and hyphens allowed.</p>
+                                    )}
+                                     {subdomainStatus === 'error' && (
+                                        <p className="text-xs text-red-500 mt-1">Error checking subdomain availability.</p>
                                     )}
                                 </div>
                             </div>
