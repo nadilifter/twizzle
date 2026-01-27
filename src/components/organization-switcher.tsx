@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import { ChevronsUpDown, Plus, Check, Building2 } from "lucide-react"
 
 import {
@@ -32,7 +31,6 @@ type Organization = {
 export function OrganizationSwitcher() {
   const { isMobile } = useSidebar()
   const { data: session, update } = useSession()
-  const router = useRouter()
   const [organizations, setOrganizations] = React.useState<Organization[]>([])
   
   React.useEffect(() => {
@@ -60,7 +58,8 @@ export function OrganizationSwitcher() {
           organizationId: org.id,
           organizationName: org.name
       })
-      router.refresh()
+      // Full page reload to ensure all data is fresh
+      window.location.reload()
   }
 
   // Handle loading state

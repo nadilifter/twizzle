@@ -1,21 +1,44 @@
 "use client"
 
+import * as React from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { ArrowUpRight, TrendingUp } from "lucide-react"
+import { TrendingUp, TrendingDown, Loader2 } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell, Label } from "recharts"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
+import { toast } from "sonner"
 
-const revenueData = [
-  { month: "June", revenue: 32000 },
-  { month: "July", revenue: 35000 },
-  { month: "August", revenue: 38000 },
-  { month: "September", revenue: 42000 },
-  { month: "October", revenue: 41000 },
-  { month: "November", revenue: 45231 },
-]
+interface FinancialOverview {
+  revenue: {
+    current: number
+    previous: number
+    changePercent: string
+    transactionCount: number
+    byMonth: Array<{ month: string; revenue: number }>
+    breakdown: Array<{ category: string; amount: number }>
+  }
+  payouts: {
+    pending: number
+    pendingCount: number
+    nextScheduled: string | null
+  }
+  subscriptions: {
+    active: number
+  }
+  invoices: {
+    outstanding: number
+    outstandingCount: number
+    byStatus: Array<{ status: string; count: number; total: number }>
+  }
+  transactions: {
+    settledThisMonth: number
+    settledCount: number
+  }
+  adyenStatus: {
+    status: string
+    verificationComplete: boolean
+  }
+}
 
 const revenueConfig = {
   revenue: {
@@ -24,36 +47,67 @@ const revenueConfig = {
   },
 } satisfies ChartConfig
 
-const breakdownData = [
-  { category: "membership", amount: 28500, fill: "var(--color-membership)" },
-  { category: "merchandise", amount: 8200, fill: "var(--color-merchandise)" },
-  { category: "events", amount: 5400, fill: "var(--color-events)" },
-  { category: "lessons", amount: 3131, fill: "var(--color-lessons)" },
-]
-
 const breakdownConfig = {
-  amount: {
-    label: "Amount",
-  },
-  membership: {
-    label: "Membership",
-    color: "hsl(var(--chart-1))",
-  },
-  merchandise: {
-    label: "Merchandise",
-    color: "hsl(var(--chart-2))",
-  },
-  events: {
-    label: "Events",
-    color: "hsl(var(--chart-3))",
-  },
-  lessons: {
-    label: "Private Lessons",
-    color: "hsl(var(--chart-4))",
-  },
+  amount: { label: "Amount" },
+  membership: { label: "Membership", color: "hsl(var(--chart-1))" },
+  merchandise: { label: "Merchandise", color: "hsl(var(--chart-2))" },
+  events: { label: "Events", color: "hsl(var(--chart-3))" },
+  lessons: { label: "Private Lessons", color: "hsl(var(--chart-4))" },
 } satisfies ChartConfig
 
 export default function FinancialsPage() {
+  const [data, setData] = React.useState<FinancialOverview | null>(null)
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    async function fetchOverview() {
+      try {
+        const response = await fetch("/api/financials/overview")
+        if (!response.ok) throw new Error("Failed to fetch financial overview")
+        
+        const overview = await response.json()
+        setData(overview)
+      } catch (error) {
+        console.error("Error fetching financial overview:", error)
+        toast.error("Failed to load financial data")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOverview()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  // Prepare chart data
+  const revenueData = data?.revenue.byMonth.length 
+    ? data.revenue.byMonth 
+    : [
+        { month: "Jun", revenue: 0 },
+        { month: "Jul", revenue: 0 },
+        { month: "Aug", revenue: 0 },
+        { month: "Sep", revenue: 0 },
+        { month: "Oct", revenue: 0 },
+        { month: "Nov", revenue: 0 },
+      ]
+
+  const breakdownData = data?.revenue.breakdown.map((item) => ({
+    category: item.category,
+    amount: item.amount,
+    fill: `var(--color-${item.category})`,
+  })) || []
+
+  const totalRevenue = data?.revenue.current || 0
+  const revenueChange = parseFloat(data?.revenue.changePercent || "0")
+  const isPositiveChange = revenueChange >= 0
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
@@ -81,9 +135,10 @@ export default function FinancialsPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$45,231.89</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+            <div className="text-2xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <p className={`text-xs ${isPositiveChange ? "text-green-600" : "text-red-600"} flex items-center`}>
+              {isPositiveChange ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+              {isPositiveChange ? "+" : ""}{revenueChange}% from last month
             </p>
           </CardContent>
         </Card>
@@ -105,9 +160,9 @@ export default function FinancialsPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$2,350.00</div>
+            <div className="text-2xl font-bold">${(data?.payouts.pending || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground">
-              Scheduled for Friday
+              {data?.payouts.nextScheduled || `${data?.payouts.pendingCount || 0} pending`}
             </p>
           </CardContent>
         </Card>
@@ -128,15 +183,17 @@ export default function FinancialsPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600 flex items-center gap-2">
-              Active
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
+            <div className={`text-2xl font-bold ${data?.adyenStatus.status === "active" ? "text-green-600" : "text-yellow-600"} flex items-center gap-2`}>
+              {data?.adyenStatus.status === "active" ? "Active" : "Pending"}
+              {data?.adyenStatus.status === "active" && (
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Account verification complete
+              {data?.adyenStatus.verificationComplete ? "Account verification complete" : "Verification pending"}
             </p>
           </CardContent>
         </Card>
@@ -159,9 +216,9 @@ export default function FinancialsPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+573</div>
+            <div className="text-2xl font-bold">{data?.subscriptions.active || 0}</div>
             <p className="text-xs text-muted-foreground">
-              +201 since last hour
+              Recurring charges
             </p>
           </CardContent>
         </Card>
@@ -197,7 +254,7 @@ export default function FinancialsPage() {
           <CardHeader>
             <CardTitle>Revenue Breakdown</CardTitle>
             <CardDescription>
-              Revenue distribution by category for November.
+              Revenue distribution by category.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 pb-0">
@@ -234,7 +291,7 @@ export default function FinancialsPage() {
                               y={viewBox.cy}
                               className="fill-foreground text-3xl font-bold"
                             >
-                              $45.2k
+                              ${(totalRevenue / 1000).toFixed(1)}k
                             </tspan>
                             <tspan
                               x={viewBox.cx}
@@ -250,15 +307,16 @@ export default function FinancialsPage() {
                   />
                 </Pie>
                 <ChartLegend
-                    content={<ChartLegendContent nameKey="category" />}
-                    className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                  content={<ChartLegendContent nameKey="category" />}
+                  className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
                 />
               </PieChart>
             </ChartContainer>
           </CardContent>
           <CardFooter className="flex-col gap-2 text-sm">
             <div className="flex items-center gap-2 font-medium leading-none">
-              Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+              {isPositiveChange ? "Trending up" : "Trending down"} by {Math.abs(revenueChange)}% this month
+              {isPositiveChange ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
             </div>
             <div className="leading-none text-muted-foreground">
               Showing total revenue distribution for the current period

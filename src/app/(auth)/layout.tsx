@@ -1,4 +1,4 @@
-import { BeamsUpstream } from "@/components/ui/beams-upstream"
+import { GradientBackground } from "@/components/ui/gradient-background"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 
 export default function AuthLayout({
@@ -8,7 +8,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-2 bg-background relative overflow-hidden">
-      <BeamsUpstream className="z-0" />
+      <GradientBackground className="z-0" />
       <div className="absolute top-4 right-4 z-50">
         <AnimatedThemeToggler />
       </div>

@@ -1,0 +1,364 @@
+"use client"
+
+import { Suspense, useEffect, useState, useCallback } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useSession } from "next-auth/react"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Search, Trash2, Plus, Minus, ScanBarcode, Package, Loader2, ShoppingCart } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { useCart } from "@/components/sites/cart-context"
+import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
+import Link from "next/link"
+import { toast } from "sonner"
+import { verifyOrganizationMembership } from "@/app/actions/organization"
+
+type Product = {
+  id: string
+  name: string
+  description: string | null
+  sku: string | null
+  category: string
+  price: number
+  imageUrl: string | null
+  maxInventory: number | null
+  currentInventory: number | null
+  isActive: boolean
+}
+
+const TAX_RATE = 0.13 // 13% tax
+
+// Wrapper component to handle Suspense for useSearchParams
+export default function POSPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <POSPageContent />
+    </Suspense>
+  )
+}
+
+function POSPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { data: session } = useSession()
+  const orgIdParam = searchParams.get("orgId")
+  
+  // Handle org switching when orgId param differs from session org
+  useEffect(() => {
+    const handleOrgSwitch = async () => {
+      if (orgIdParam && session?.user?.organizationId && orgIdParam !== session.user.organizationId) {
+        // User clicked a link for a different org - verify access and redirect to switch
+        const hasAccess = await verifyOrganizationMembership(orgIdParam)
+        if (hasAccess) {
+          router.push(`/pos/select-organization?preselect=${encodeURIComponent(orgIdParam)}`)
+        }
+        // If no access, stay on current org (just clear the param)
+        else {
+          router.replace("/pos")
+        }
+      }
+    }
+    
+    handleOrgSwitch()
+  }, [orgIdParam, session?.user?.organizationId, router])
+  
+  const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<string[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>("All")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  
+  const { items, addItem, removeItem, updateQuantity, clearCart, subtotal, totalItems } = useCart()
+
+  // Fetch products
+  const fetchProducts = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch("/api/products?activeOnly=true")
+      if (!response.ok) throw new Error("Failed to fetch products")
+      const data = await response.json()
+      setProducts(data.data || [])
+      if (data.categories?.length > 0) {
+        setCategories(["All", ...data.categories])
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error)
+      toast.error("Failed to load products")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
+
+  // Filter products
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory
+    const matchesSearch = searchQuery === "" || 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesCategory && matchesSearch
+  })
+
+  // Add to cart
+  const handleAddToCart = (product: Product) => {
+    // Check inventory
+    if (product.currentInventory !== null && product.currentInventory <= 0) {
+      toast.error("This product is out of stock")
+      return
+    }
+
+    // Check if adding more would exceed inventory
+    const existingItem = items.find(item => item.referenceId === product.id)
+    if (product.currentInventory !== null && existingItem) {
+      if (existingItem.quantity >= product.currentInventory) {
+        toast.error(`Only ${product.currentInventory} available in stock`)
+        return
+      }
+    }
+
+    addItem({
+      referenceId: product.id,
+      type: "item",
+      name: product.name,
+      price: Number(product.price),
+      quantity: 1,
+      details: {
+        sku: product.sku,
+        category: product.category,
+      },
+    })
+  }
+
+  // Get stock status for display
+  const getStockStatus = (product: Product) => {
+    if (product.maxInventory === null && product.currentInventory === null) {
+      return null // Unlimited, don't show badge
+    }
+    if (product.currentInventory === 0) {
+      return { label: "Out of Stock", variant: "destructive" as const }
+    }
+    if (product.currentInventory !== null && product.currentInventory <= 5) {
+      return { label: `${product.currentInventory} left`, variant: "secondary" as const }
+    }
+    return null
+  }
+
+  const tax = subtotal * TAX_RATE
+  const total = subtotal + tax
+
+  return (
+    <div className="flex h-full bg-background">
+      {/* Left: Product Grid */}
+      <div className="flex-1 flex flex-col border-r">
+        <div className="p-4 border-b flex gap-2 bg-background">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search products..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" size="icon" disabled title="Barcode scanner (coming soon)">
+            <ScanBarcode className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Categories */}
+        <div className="flex gap-2 p-2 overflow-x-auto border-b bg-muted/30">
+          {categories.map((category) => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setSelectedCategory(category)}
+            >
+              {category}
+            </Button>
+          ))}
+        </div>
+
+        <ScrollArea className="flex-1 p-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+              <Package className="h-12 w-12 mb-4" />
+              <p>No products found</p>
+              {products.length === 0 && (
+                <p className="text-sm mt-2">
+                  Add products in the{" "}
+                  <Link href="/dashboard/organization/store" className="text-primary underline">
+                    Store settings
+                  </Link>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {filteredProducts.map((product) => {
+                const stockStatus = getStockStatus(product)
+                const isOutOfStock = product.currentInventory !== null && product.currentInventory <= 0
+                
+                return (
+                  <Button
+                    key={product.id}
+                    variant="outline"
+                    className={`h-auto aspect-square flex flex-col gap-2 whitespace-normal p-3 hover:border-primary hover:bg-accent/50 relative transition-colors ${
+                      isOutOfStock ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    onClick={() => handleAddToCart(product)}
+                    disabled={isOutOfStock}
+                  >
+                    {stockStatus && (
+                      <Badge
+                        variant={stockStatus.variant}
+                        className="absolute top-2 right-2 text-[10px]"
+                      >
+                        {stockStatus.label}
+                      </Badge>
+                    )}
+                    {product.imageUrl ? (
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        width={48}
+                        height={48}
+                        className="rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                        <Package className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <span className="font-medium text-center leading-tight text-sm">{product.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      ${Number(product.price).toFixed(2)}
+                    </span>
+                  </Button>
+                )
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+
+      {/* Right: Cart */}
+      <div className="w-[360px] flex flex-col bg-muted/30 border-l">
+        <div className="p-4 border-b bg-background flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            <span className="font-semibold">Current Order</span>
+            {totalItems > 0 && (
+              <Badge variant="secondary">{totalItems}</Badge>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={clearCart}
+            disabled={items.length === 0}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Clear
+          </Button>
+        </div>
+
+        <ScrollArea className="flex-1 p-4">
+          {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+              <ShoppingCart className="h-12 w-12 mb-4 opacity-30" />
+              <p>No items in cart</p>
+              <p className="text-sm">Click a product to add it</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex justify-between items-start p-3 bg-background rounded-lg border shadow-sm"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{item.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      ${item.price.toFixed(2)} each
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="font-semibold">${(item.price * item.quantity).toFixed(2)}</div>
+                    <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 rounded-sm hover:bg-background"
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="text-xs font-mono w-5 text-center">{item.quantity}</span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 rounded-sm hover:bg-background"
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+        
+        <div className="p-4 bg-background border-t space-y-4">
+          <div className="space-y-1.5 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Subtotal</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Tax ({(TAX_RATE * 100).toFixed(0)}%)</span>
+              <span>${tax.toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="flex justify-between text-xl font-bold pt-2 border-t">
+            <span>Total</span>
+            <span>${total.toFixed(2)}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              className="h-11"
+              disabled={items.length === 0}
+              asChild
+            >
+              <Link href="/pos/payment?method=cash">Cash</Link>
+            </Button>
+            <Button
+              className="h-11"
+              disabled={items.length === 0}
+              asChild
+            >
+              <Link href="/pos/payment?method=card">Card</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

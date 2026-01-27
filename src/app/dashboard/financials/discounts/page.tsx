@@ -54,13 +54,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { MoreHorizontal, Plus, Search, Calendar as CalendarIcon, Wand2 } from "lucide-react"
+import { MoreHorizontal, Plus, Search, Calendar as CalendarIcon, Wand2, Loader2 } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
-// Format date consistently to avoid hydration mismatch (always use UTC)
 function formatDateString(dateStr: string): string {
-  // Parse as ISO and format consistently using date-fns
   const date = parseISO(dateStr)
   return format(date, "M/d/yyyy")
 }
@@ -74,67 +73,17 @@ type Discount = {
   type: DiscountType
   amount: number
   validFrom: string
-  validTo?: string
+  validTo?: string | null
   userScope: "ALL" | "NEW_USERS" | "MEMBERS" | "VIP"
   productScope: "ALL" | "MERCHANDISE" | "EVENTS" | "MEMBERSHIP"
   status: "ACTIVE" | "EXPIRED" | "SCHEDULED" | "DRAFT"
   usageCount: number
+  usageLimit?: number | null
 }
 
-const data: Discount[] = [
-  {
-    id: "DSC-001",
-    name: "Summer Sale 2025",
-    code: "SUMMER25",
-    type: "PERCENTAGE",
-    amount: 15,
-    validFrom: "2025-06-01",
-    validTo: "2025-08-31",
-    userScope: "ALL",
-    productScope: "ALL",
-    status: "SCHEDULED",
-    usageCount: 0,
-  },
-  {
-    id: "DSC-002",
-    name: "New Member Welcome",
-    code: "WELCOME10",
-    type: "FIXED_AMOUNT",
-    amount: 10,
-    validFrom: "2024-01-01",
-    userScope: "NEW_USERS",
-    productScope: "MEMBERSHIP",
-    status: "ACTIVE",
-    usageCount: 145,
-  },
-  {
-    id: "DSC-003",
-    name: "Black Friday",
-    code: "BF2024",
-    type: "PERCENTAGE",
-    amount: 25,
-    validFrom: "2024-11-29",
-    validTo: "2024-11-30",
-    userScope: "ALL",
-    productScope: "MERCHANDISE",
-    status: "EXPIRED",
-    usageCount: 890,
-  },
-  {
-    id: "DSC-004",
-    name: "VIP Discount",
-    code: "VIPONLY",
-    type: "PERCENTAGE",
-    amount: 20,
-    validFrom: "2024-01-01",
-    userScope: "VIP",
-    productScope: "EVENTS",
-    status: "ACTIVE",
-    usageCount: 34,
-  },
-]
-
 export default function DiscountsPage() {
+  const [discounts, setDiscounts] = React.useState<Discount[]>([])
+  const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = React.useState({})
@@ -142,9 +91,36 @@ export default function DiscountsPage() {
   
   // Dialog state
   const [open, setOpen] = React.useState(false)
+  const [saving, setSaving] = React.useState(false)
   const [dateFrom, setDateFrom] = React.useState<Date>()
   const [dateTo, setDateTo] = React.useState<Date>()
-  const [generatedCode, setGeneratedCode] = React.useState("")
+  const [formData, setFormData] = React.useState({
+    name: "",
+    code: "",
+    type: "PERCENTAGE" as DiscountType,
+    amount: "",
+    userScope: "ALL",
+    productScope: "ALL",
+  })
+
+  const fetchDiscounts = React.useCallback(async () => {
+    try {
+      const response = await fetch("/api/discounts")
+      if (!response.ok) throw new Error("Failed to fetch discounts")
+      
+      const data = await response.json()
+      setDiscounts(data.data || [])
+    } catch (error) {
+      console.error("Error fetching discounts:", error)
+      toast.error("Failed to load discounts")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    fetchDiscounts()
+  }, [fetchDiscounts])
 
   const generateCode = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -152,7 +128,79 @@ export default function DiscountsPage() {
     for (let i = 0; i < 8; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length))
     }
-    setGeneratedCode(result)
+    setFormData((prev) => ({ ...prev, code: result }))
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      code: "",
+      type: "PERCENTAGE",
+      amount: "",
+      userScope: "ALL",
+      productScope: "ALL",
+    })
+    setDateFrom(undefined)
+    setDateTo(undefined)
+  }
+
+  const handleCreateDiscount = async () => {
+    if (!formData.name || !formData.code || !formData.amount || !dateFrom) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      const response = await fetch("/api/discounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          code: formData.code.toUpperCase(),
+          type: formData.type,
+          amount: parseFloat(formData.amount),
+          validFrom: dateFrom.toISOString(),
+          validTo: dateTo?.toISOString(),
+          userScope: formData.userScope,
+          productScope: formData.productScope,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to create discount")
+      }
+
+      toast.success("Discount created successfully")
+      setOpen(false)
+      resetForm()
+      fetchDiscounts()
+    } catch (error) {
+      console.error("Error creating discount:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to create discount")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeactivate = async (id: string) => {
+    try {
+      const response = await fetch(`/api/discounts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "EXPIRED" }),
+      })
+
+      if (!response.ok) throw new Error("Failed to deactivate discount")
+
+      toast.success("Discount deactivated")
+      fetchDiscounts()
+    } catch (error) {
+      console.error("Error deactivating discount:", error)
+      toast.error("Failed to deactivate discount")
+    }
   }
 
   const columns: ColumnDef<Discount>[] = [
@@ -193,7 +241,7 @@ export default function DiscountsPage() {
         const amount = row.original.amount
         return (
           <div className="font-medium">
-            {type === "PERCENTAGE" ? `${amount}%` : `$${amount.toFixed(2)}`}
+            {type === "PERCENTAGE" ? `${amount}%` : `$${Number(amount).toFixed(2)}`}
           </div>
         )
       },
@@ -203,8 +251,8 @@ export default function DiscountsPage() {
       header: "Scope",
       cell: ({ row }) => (
         <div className="flex flex-col gap-1 text-xs">
-          <span className="text-muted-foreground">User: <span className="foreground font-medium text-foreground">{row.original.userScope}</span></span>
-          <span className="text-muted-foreground">Product: <span className="foreground font-medium text-foreground">{row.original.productScope}</span></span>
+          <span className="text-muted-foreground">User: <span className="font-medium text-foreground">{row.original.userScope}</span></span>
+          <span className="text-muted-foreground">Product: <span className="font-medium text-foreground">{row.original.productScope}</span></span>
         </div>
       ),
     },
@@ -225,7 +273,10 @@ export default function DiscountsPage() {
       accessorKey: "usageCount",
       header: "Uses",
       cell: ({ row }) => (
-         <div className="text-center">{row.getValue("usageCount")}</div>
+        <div className="text-center">
+          {row.getValue("usageCount")}
+          {row.original.usageLimit && <span className="text-muted-foreground">/{row.original.usageLimit}</span>}
+        </div>
       ),
     },
     {
@@ -252,9 +303,15 @@ export default function DiscountsPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem>View Details</DropdownMenuItem>
-            <DropdownMenuItem>Edit Discount</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Deactivate</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(row.original.code)}>
+              Copy Code
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => handleDeactivate(row.original.id)}
+            >
+              Deactivate
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -262,7 +319,7 @@ export default function DiscountsPage() {
   ]
 
   const table = useReactTable({
-    data,
+    data: discounts,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -279,6 +336,14 @@ export default function DiscountsPage() {
       pagination,
     },
   })
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -306,7 +371,12 @@ export default function DiscountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Campaign Name</Label>
-                  <Input id="name" placeholder="e.g. Summer Sale" />
+                  <Input 
+                    id="name" 
+                    placeholder="e.g. Summer Sale"
+                    value={formData.name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="code">Code</Label>
@@ -314,8 +384,8 @@ export default function DiscountsPage() {
                     <Input 
                       id="code" 
                       placeholder="SUMMER25" 
-                      value={generatedCode} 
-                      onChange={(e) => setGeneratedCode(e.target.value.toUpperCase())}
+                      value={formData.code} 
+                      onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
                     />
                     <Button variant="outline" size="icon" onClick={generateCode} title="Generate Code">
                       <Wand2 className="h-4 w-4" />
@@ -327,7 +397,10 @@ export default function DiscountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="type">Discount Type</Label>
-                  <Select defaultValue="PERCENTAGE">
+                  <Select 
+                    value={formData.type} 
+                    onValueChange={(v) => setFormData((prev) => ({ ...prev, type: v as DiscountType }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -339,12 +412,18 @@ export default function DiscountsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount</Label>
-                  <Input id="amount" type="number" placeholder="0" />
+                  <Input 
+                    id="amount" 
+                    type="number" 
+                    placeholder="0"
+                    value={formData.amount}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, amount: e.target.value }))}
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label>Valid From</Label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -399,7 +478,10 @@ export default function DiscountsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="userScope">User Scope</Label>
-                  <Select defaultValue="ALL">
+                  <Select 
+                    value={formData.userScope} 
+                    onValueChange={(v) => setFormData((prev) => ({ ...prev, userScope: v }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select users" />
                     </SelectTrigger>
@@ -413,7 +495,10 @@ export default function DiscountsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="productScope">Product Scope</Label>
-                  <Select defaultValue="ALL">
+                  <Select 
+                    value={formData.productScope} 
+                    onValueChange={(v) => setFormData((prev) => ({ ...prev, productScope: v }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select products" />
                     </SelectTrigger>
@@ -428,7 +513,13 @@ export default function DiscountsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" onClick={() => setOpen(false)}>Create Discount</Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateDiscount} disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Create Discount
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -472,23 +563,26 @@ export default function DiscountsPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">No results.</TableCell>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No discounts found. Create your first discount to get started.
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
       
-       <div className="flex items-center justify-end space-x-2">
-         <div className="flex-1 text-sm text-muted-foreground">
+      <div className="flex items-center justify-end space-x-2">
+        <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
-        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Previous</Button>
-        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</Button>
+        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+          Previous
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+          Next
+        </Button>
       </div>
     </div>
   )
 }
-
-
-

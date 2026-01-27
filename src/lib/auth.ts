@@ -3,13 +3,45 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { db } from "./db";
+
+/**
+ * Creates a signed bridge token for cross-domain session transfer
+ * Used when OAuth completes on localhost:3000 but session needs to be on uplifterinc.localhost
+ */
+function createBridgeToken(email: string, secret: string): string {
+  const exp = Date.now() + 60 * 1000; // 60 seconds
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(`${email}:${exp}`)
+    .digest("base64url");
+
+  const tokenData = { email, exp, signature };
+  return Buffer.from(JSON.stringify(tokenData)).toString("base64url");
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as NextAuthOptions["adapter"],
   debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "jwt",
+  },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        // In production, share cookies across all subdomains
+        // In development, don't set domain - let NextAuth default to request host
+        // This allows OAuth to work on localhost:3000 while session-bridge
+        // sets the correct domain for uplifterinc.localhost subdomains
+        ...(process.env.NODE_ENV === "production" && { domain: ".uplifterinc.com" })
+      }
+    }
   },
   pages: {
     signIn: "/login",
@@ -272,6 +304,66 @@ export const authOptions: NextAuthOptions = {
         console.error("Session error:", error);
         return session;
       }
+    },
+    async redirect({ url, baseUrl }) {
+      // Handle cross-domain OAuth redirect
+      // When OAuth completes on localhost:3000 but the callbackUrl is for uplifterinc.localhost,
+      // we need to redirect through the session bridge to set the cookie on the correct domain
+      
+      const isLocalhost = baseUrl.includes("localhost:3000") && !baseUrl.includes("uplifterinc.localhost");
+      const callbackIsUplifterSubdomain = url.includes("uplifterinc.localhost");
+      
+      if (isLocalhost && callbackIsUplifterSubdomain) {
+        // Extract the original callback URL
+        // The URL might be the full callback URL or contain a callbackUrl param
+        let finalCallback = url;
+        
+        try {
+          const urlObj = new URL(url);
+          // If there's a nested callbackUrl param, use that as the final destination
+          const nestedCallback = urlObj.searchParams.get("callbackUrl");
+          if (nestedCallback) {
+            finalCallback = nestedCallback;
+          }
+        } catch {
+          // URL parsing failed, use as-is
+        }
+        
+        // We need to get the user's email to create the bridge token
+        // This is set by the jwt callback and stored in a temporary way
+        // Since we can't access the token here directly, we'll use a different approach:
+        // Store the email in a query param that we set during the Google signin
+        
+        // For now, redirect to the session bridge with the callback URL
+        // The bridge will need to get the email from somewhere else
+        // Actually, we need to modify this approach...
+        
+        // The redirect callback doesn't have access to the user info
+        // So we need a different approach: create a custom callback route
+        console.log("Redirect callback: Detected cross-domain OAuth, redirecting to bridge");
+        console.log("Redirect callback: baseUrl=", baseUrl, "url=", url);
+        
+        // Since we can't create the bridge token here (no access to user email),
+        // we'll redirect to a special endpoint that will handle the bridge
+        const bridgeUrl = new URL("/api/auth/oauth-bridge", "http://localhost:3000");
+        bridgeUrl.searchParams.set("callbackUrl", finalCallback);
+        return bridgeUrl.toString();
+      }
+      
+      // Default redirect behavior
+      // Allows relative callback URLs
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      // Allow callback URLs to uplifterinc.localhost subdomains (trusted)
+      else if (url.includes("uplifterinc.localhost") || url.includes("uplifterinc.com")) {
+        return url;
+      }
+      return baseUrl;
     },
   },
 };

@@ -71,8 +71,13 @@ const config: Config = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+		backgroundImage: {
+			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+		},
 		animation: {
 			shine: "shine var(--duration) infinite linear",
+			'gradient-shift': "gradient-shift 15s ease-in-out infinite",
+			'gradient-shift-alt': "gradient-shift-alt 12s ease-in-out infinite",
 		},
 		keyframes: {
 			shine: {
@@ -84,6 +89,26 @@ const config: Config = {
 				},
 				to: {
 					"background-position": "0% 0%",
+				},
+			},
+			'gradient-shift': {
+				"0%, 100%": {
+					transform: "translate(0%, 0%) scale(1)",
+					opacity: "0.3",
+				},
+				"50%": {
+					transform: "translate(10%, 10%) scale(1.1)",
+					opacity: "0.5",
+				},
+			},
+			'gradient-shift-alt': {
+				"0%, 100%": {
+					transform: "translate(0%, 0%) scale(1)",
+					opacity: "0.2",
+				},
+				"50%": {
+					transform: "translate(-10%, -5%) scale(1.05)",
+					opacity: "0.4",
 				},
 			},
 		}

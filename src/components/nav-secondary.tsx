@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { LucideIcon } from "lucide-react"
+import { ExternalLink, LucideIcon } from "lucide-react"
 
 import {
   SidebarGroup,
@@ -19,6 +19,7 @@ export function NavSecondary({
     title: string
     url: string
     icon: LucideIcon
+    external?: boolean
   }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
@@ -28,9 +29,13 @@ export function NavSecondary({
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
-                <a href={item.url}>
+                <a 
+                  href={item.url}
+                  {...(item.external && { target: "_blank", rel: "noopener noreferrer" })}
+                >
                   <item.icon />
                   <span>{item.title}</span>
+                  {item.external && <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />}
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>

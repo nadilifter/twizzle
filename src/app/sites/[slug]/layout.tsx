@@ -119,47 +119,26 @@ export default async function SiteLayout({
         
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">
-                <Link href="/" className="flex items-center gap-3">
-                    {config.logo ? (
-                        <Image 
-                            src={config.logo} 
-                            alt={config.organization.name} 
-                            width={50} 
-                            height={43} 
-                            className="object-contain" 
-                        />
-                    ) : null}
-                    <div className="flex flex-col">
-                        <span className="text-lg font-bold tracking-tight text-foreground">
-                            {config.organization.name}
-                        </span>
-                        {config.heroSubheadline && (
-                            <span className="text-xs font-medium text-muted-foreground hidden sm:block">
-                                {config.heroSubheadline.length > 40 
-                                    ? config.heroSubheadline.substring(0, 40) + '...' 
-                                    : config.heroSubheadline}
-                            </span>
-                        )}
-                    </div>
+                <Link href="/" className="flex items-center">
+                    <Image 
+                        src={config.logo || config.favicon || "/favicon.ico"} 
+                        alt={config.organization.name} 
+                        width={40} 
+                        height={40} 
+                        className="object-contain h-10 w-auto" 
+                    />
                 </Link>
                 <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-                    <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Home</Link>
-                    {config.showCalendar && <Link href="/calendar" className="text-muted-foreground hover:text-primary transition-colors">Calendar</Link>}
-                    {config.showRegistration && <Link href="/register" className="text-muted-foreground hover:text-primary transition-colors">Register</Link>}
-                    {config.showContact && <Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Contact</Link>}
+                    <Link href="/" className="text-foreground/80 hover:text-primary transition-colors">Home</Link>
+                    {config.showCalendar && <Link href="/calendar" className="text-foreground/80 hover:text-primary transition-colors">Calendar</Link>}
+                    {config.showRegistration && <Link href="/register" className="text-foreground/80 hover:text-primary transition-colors">Register</Link>}
+                    {config.showContact && <Link href="/contact" className="text-foreground/80 hover:text-primary transition-colors">Contact</Link>}
                 </nav>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 text-sm">
                     <ThemeToggle />
-                    {config.showLogin && (
-                        <Button asChild variant="ghost" size="sm">
-                             <a href="/login">Coach Login</a>
-                        </Button>
-                    )}
-                    {config.showRegistration && (
-                        <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            <Link href="/register">Join Now</Link>
-                        </Button>
-                    )}
+                    <Button asChild size="sm" className="text-sm font-medium">
+                        <Link href={`/login?callbackUrl=${encodeURIComponent(`/sites/${subdomain}/`)}`}>Login</Link>
+                    </Button>
                 </div>
             </div>
         </header>

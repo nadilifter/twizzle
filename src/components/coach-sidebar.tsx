@@ -1,0 +1,126 @@
+"use client"
+
+import * as React from "react"
+import { usePathname } from "next/navigation"
+import { 
+  ClipboardCheck,
+  LayoutDashboard, 
+  UserCheck,
+  Star,
+  Camera,
+  CalendarDays,
+} from "lucide-react"
+import { useSession } from "next-auth/react"
+
+import { NavUser } from "@/components/nav-user"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from "@/components/ui/sidebar"
+
+// Coach navigation data
+const navItems = [
+  {
+    title: "Overview",
+    url: "/coach",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Attendance",
+    url: "/coach/attendance",
+    icon: ClipboardCheck,
+  },
+  {
+    title: "Evaluations",
+    url: "/coach/evaluations",
+    icon: Star,
+  },
+  {
+    title: "Schedule",
+    url: "/coach/schedule",
+    icon: CalendarDays,
+  },
+  {
+    title: "Media",
+    url: "/coach/media",
+    icon: Camera,
+  },
+]
+
+export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+  const { data: session, status } = useSession()
+
+  // Get user data from session
+  const user = session?.user ? {
+    name: session.user.name || "User",
+    email: session.user.email || "",
+    avatar: session.user.image || null,
+  } : null
+
+  const isLoading = status === "loading"
+
+  return (
+    <Sidebar {...props}>
+      <SidebarHeader className="border-b">
+        <div className="flex items-center gap-2 px-2 py-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <UserCheck className="h-4 w-4" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">Coach Portal</span>
+            <span className="text-xs text-muted-foreground">Uplifter</span>
+          </div>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const isActive = item.url === "/coach" 
+                  ? pathname === "/coach"
+                  : pathname.startsWith(item.url)
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <a href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        {isLoading || !user ? (
+          <div className="flex items-center gap-2 px-2 py-2">
+            <div className="h-8 w-8 rounded-lg bg-sidebar-accent animate-pulse" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-4 w-24 rounded bg-sidebar-accent animate-pulse" />
+              <div className="h-3 w-32 rounded bg-sidebar-accent animate-pulse" />
+            </div>
+          </div>
+        ) : (
+          <NavUser user={user} showOrganizationOptions={false} />
+        )}
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  )
+}

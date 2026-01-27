@@ -81,3 +81,17 @@ export async function verifyOrganizationMembership(organizationId: string) {
   
     return !!membership && membership.status === "ACTIVE"
   }
+
+export async function getOrganizationWebsiteSubdomain(organizationId: string) {
+  try {
+    const websiteConfig = await db.websiteConfig.findUnique({
+      where: { organizationId },
+      select: { subdomain: true, isPublished: true },
+    })
+    
+    return websiteConfig?.isPublished ? websiteConfig.subdomain : null
+  } catch (error) {
+    console.error("getOrganizationWebsiteSubdomain: Error", error)
+    return null
+  }
+}

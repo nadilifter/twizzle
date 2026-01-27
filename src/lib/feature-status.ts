@@ -38,8 +38,8 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/auth"],
   },
   "/dashboard/settings/users": {
-    status: "demo",
-    description: "User management uses mock data (Admin Users is live)",
+    status: "live",
+    description: "User management with full CRUD and permissions",
     apiRoutes: ["/api/users"],
   },
   
@@ -97,7 +97,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/lesson-plans"],
   },
   "/dashboard/training/programs": {
-    status: "demo",
+    status: "live",
     description: "Programs list uses mock data. API ready at /api/programs",
     apiRoutes: ["/api/programs"],
   },
@@ -162,6 +162,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "demo",
     description: "Staff management uses sample data",
   },
+  "/dashboard/organization/store": {
+    status: "live",
+    description: "Product catalog and inventory management",
+    apiRoutes: ["/api/products"],
+  },
   "/dashboard/organization/website": {
     status: "live",
     description: "Website builder with CMS capabilities",
@@ -169,8 +174,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
 
   // Financials Section
   "/dashboard/financials": {
-    status: "demo",
-    description: "Financial overview uses sample metrics",
+    status: "live",
+    description: "Financial overview with real-time metrics",
+    apiRoutes: ["/api/financials/overview"],
   },
   "/dashboard/financials/discounts": {
     status: "live",
@@ -182,34 +188,33 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Integration settings preview",
   },
   "/dashboard/financials/invoices": {
-    status: "demo",
-    description: "Invoices use mock data. API ready at /api/invoices",
+    status: "live",
+    description: "Invoice management with full CRUD",
     apiRoutes: ["/api/invoices"],
   },
   "/dashboard/financials/ledgers": {
-    status: "demo",
-    description: "Ledger and GL codes use sample data",
+    status: "live",
+    description: "General ledger and GL codes management",
+    apiRoutes: ["/api/ledgers", "/api/ledgers/entries"],
   },
   "/dashboard/financials/onboarding": {
     status: "demo",
     description: "Payment onboarding preview",
   },
   "/dashboard/financials/payouts": {
-    status: "demo",
-    description: "Payouts use sample data",
-  },
-  "/dashboard/financials/pos": {
-    status: "demo",
-    description: "Point of sale uses sample data",
+    status: "live",
+    description: "Payout tracking and settlement history",
+    apiRoutes: ["/api/payouts"],
   },
   "/dashboard/financials/recurring": {
-    status: "demo",
-    description: "Recurring billing uses sample data",
+    status: "live",
+    description: "Recurring billing management",
+    apiRoutes: ["/api/recurring"],
   },
   "/dashboard/financials/transactions": {
-    status: "demo",
-    description: "Transactions use mock data. API ready at /api/payments",
-    apiRoutes: ["/api/payments"],
+    status: "live",
+    description: "Transaction history from Adyen",
+    apiRoutes: ["/api/transactions"],
   },
 
   // Forms Section
@@ -254,8 +259,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "General settings use sample data",
   },
   "/dashboard/settings/billing": {
-    status: "demo",
-    description: "Billing settings preview",
+    status: "live",
+    description: "Subscription billing with plan management",
+    apiRoutes: ["/api/organization/subscription"],
   },
 
   // Bulk Upload

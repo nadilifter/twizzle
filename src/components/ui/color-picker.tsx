@@ -6,12 +6,16 @@ interface ColorPickerProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  required?: boolean;
 }
 
-export function ColorPicker({ label, value, onChange }: ColorPickerProps) {
+export function ColorPicker({ label, value, onChange, required = false }: ColorPickerProps) {
   return (
     <div className="flex flex-col gap-2">
-      <Label>{label}</Label>
+      <Label>
+        {label}
+        {required && <span className="text-destructive ml-1">*</span>}
+      </Label>
       <div className="flex items-center gap-2">
         <div 
             className="w-10 h-10 rounded-full border shadow-sm" 

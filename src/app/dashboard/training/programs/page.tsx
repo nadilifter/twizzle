@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { usePrograms } from "@/hooks/use-programs"
 import { toast } from "sonner"
+import { ProgramConfiguration } from "./program-configuration"
 
 export default function ProgramsPage() {
   const { programs, isLoading, error, fetchPrograms, createProgram, updateProgram } = usePrograms()
@@ -119,7 +120,7 @@ export default function ProgramsPage() {
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="level">Level</Label>
+                        <Label htmlFor="level">Level (Optional)</Label>
                         <Input 
                           id="level" 
                           placeholder="e.g. Bronze" 
@@ -158,6 +159,21 @@ export default function ProgramsPage() {
           <p>{error}</p>
         </div>
       )}
+
+      <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <SheetContent className="sm:max-w-2xl p-0">
+            {selectedProgram ? (
+                <ProgramConfiguration 
+                    program={selectedProgram} 
+                    onClose={() => setIsEditOpen(false)} 
+                />
+            ) : (
+                <div className="p-6">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                </div>
+            )}
+        </SheetContent>
+      </Sheet>
 
       {!isLoading && !error && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -15,15 +15,35 @@ import { toast } from "sonner"
 export function LoginForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const callbackUrl = searchParams.get("callbackUrl") || "/"
   const [email, setEmail] = useState(searchParams.get("email") || "")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [csrfToken, setCsrfToken] = useState<string>("")
+  const [googleCsrfToken, setGoogleCsrfToken] = useState<string>("")
 
   useEffect(() => {
+    // Get CSRF token for current domain (credentials login)
     getCsrfToken().then((token) => {
       if (token) setCsrfToken(token)
     })
+    
+    // Get CSRF token from localhost:3000 for Google OAuth
+    // This is needed because Google OAuth must go through localhost:3000
+    fetch("http://localhost:3000/api/auth/csrf", {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.csrfToken) setGoogleCsrfToken(data.csrfToken)
+      })
+      .catch((err) => {
+        console.error("Failed to fetch Google CSRF token:", err)
+        // Fallback to regular token (may work if same secret is used)
+        getCsrfToken().then((token) => {
+          if (token) setGoogleCsrfToken(token)
+        })
+      })
   }, [])
   
   // Check for OAuth errors in URL params
@@ -40,6 +60,12 @@ export function LoginForm() {
     }
     if (urlError === "OAuthCallback") {
       return "OAuth callback error. Please try again."
+    }
+    if (urlError === "BridgeTokenMissing" || urlError === "BridgeTokenExpired" || urlError === "BridgeTokenInvalid") {
+      return "Session transfer failed. Please try signing in again."
+    }
+    if (urlError === "OAuthSessionMissing" || urlError === "OAuthBridgeError" || urlError === "BridgeError") {
+      return "OAuth session error. Please try signing in again."
     }
     if (urlError) {
       return `Sign-in error: ${urlError}`
@@ -95,15 +121,16 @@ export function LoginForm() {
 
   return (
     <>
-        {/* Hidden form for Google OAuth */}
+        {/* Hidden form for Google OAuth - Posts to localhost:3000 for Google's authorized origins */}
         <form 
           id="google-signin-form"
-          action="/api/auth/signin/google" 
+          action="http://localhost:3000/api/auth/signin/google" 
           method="POST"
           style={{ display: 'none' }}
         >
-          <input type="hidden" name="csrfToken" value={csrfToken} />
-          <input type="hidden" name="callbackUrl" value="/" />
+          <input type="hidden" name="csrfToken" value={googleCsrfToken} />
+          {/* callbackUrl is the final destination - auth.ts redirect callback handles bridge routing */}
+          <input type="hidden" name="callbackUrl" value={callbackUrl} />
         </form>
 
         <Card className="relative overflow-hidden w-full max-w-[400px]">
@@ -125,7 +152,7 @@ export function LoginForm() {
           <CardContent className="grid gap-4">
             <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid grid-cols-3 gap-3">
-              <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || !csrfToken}>
+              <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || !googleCsrfToken}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"

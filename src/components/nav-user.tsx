@@ -33,12 +33,14 @@ import { signOut } from "next-auth/react"
 
 export function NavUser({
   user,
+  showOrganizationOptions = true,
 }: {
   user: {
     name: string
     email: string
     avatar?: string | null
   }
+  showOrganizationOptions?: boolean
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
@@ -105,14 +107,18 @@ export function NavUser({
                 <UserCircleIcon />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/switch-organization")}>
-                <Building2Icon />
-                Switch Organization
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/dashboard/bulk-upload")}>
-                <UploadIcon />
-                Bulk Upload
-              </DropdownMenuItem>
+              {showOrganizationOptions && (
+                <>
+                  <DropdownMenuItem onClick={() => router.push("/switch-organization")}>
+                    <Building2Icon />
+                    Switch Organization
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/dashboard/bulk-upload")}>
+                    <UploadIcon />
+                    Bulk Upload
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>

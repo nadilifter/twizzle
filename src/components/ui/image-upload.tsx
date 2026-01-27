@@ -10,9 +10,10 @@ interface ImageUploadProps {
   value?: string | null;
   onChange: (url: string | null) => void;
   type: "logo" | "favicon" | "hero";
+  required?: boolean;
 }
 
-export function ImageUpload({ label, value, onChange, type }: ImageUploadProps) {
+export function ImageUpload({ label, value, onChange, type, required = false }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -45,7 +46,10 @@ export function ImageUpload({ label, value, onChange, type }: ImageUploadProps) 
 
   return (
     <div className="flex flex-col gap-2">
-      <Label>{label}</Label>
+      <Label>
+        {label}
+        {required ? <span className="text-destructive ml-1">*</span> : <span className="text-muted-foreground ml-1 text-xs font-normal">(Optional)</span>}
+      </Label>
       <div className="flex items-start gap-4">
         {value ? (
           <div className="relative group">

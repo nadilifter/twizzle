@@ -9,8 +9,7 @@ import {
   Shield, 
   Mail,
   Check,
-  Calendar,
-  Clock
+  Loader2
 } from "lucide-react"
 
 import {
@@ -34,14 +33,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -54,7 +51,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -65,82 +61,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-
-// --- Permissions Data ---
-
-type PermissionCategory = "General" | "Athletes" | "Training" | "Events" | "Financials" | "Users"
-
-interface PermissionItem {
-  id: string
-  label: string
-  description: string
-}
-
-interface PermissionGroup {
-  category: PermissionCategory
-  items: PermissionItem[]
-}
-
-const PERMISSIONS_DATA: PermissionGroup[] = [
-  {
-    category: "General",
-    items: [
-      { id: "view_dashboard", label: "View Dashboard", description: "Access to the main dashboard overview" },
-      { id: "view_settings", label: "View Settings", description: "Access to view club settings" },
-    ]
-  },
-  {
-    category: "Athletes",
-    items: [
-      { id: "view_athletes", label: "View Profiles", description: "View athlete contact info and details" },
-      { id: "edit_athletes", label: "Edit Profiles", description: "Modify athlete details and medical info" },
-      { id: "delete_athletes", label: "Delete Profiles", description: "Remove athletes from the system" },
-      { id: "view_medical", label: "View Medical Records", description: "Access sensitive medical information" },
-    ]
-  },
-  {
-    category: "Training",
-    items: [
-      { id: "view_plans", label: "View Plans", description: "View training plans and assignments" },
-      { id: "manage_plans", label: "Manage Plans", description: "Create and edit training plans" },
-      { id: "assign_plans", label: "Assign Plans", description: "Assign plans to athletes" },
-    ]
-  },
-  {
-    category: "Events",
-    items: [
-      { id: "view_events", label: "View Events", description: "View club calendar and events" },
-      { id: "manage_events", label: "Manage Events", description: "Create and edit events" },
-      { id: "manage_registrations", label: "Manage Registrations", description: "Handle event sign-ups" },
-    ]
-  },
-  {
-    category: "Financials",
-    items: [
-      { id: "view_financials", label: "View Financials", description: "Access financial overview and reports" },
-      { id: "manage_invoices", label: "Manage Invoices", description: "Create and send invoices to members" },
-      { id: "process_payments", label: "Process Payments", description: "Record and refund payments" },
-    ]
-  },
-  {
-    category: "Users",
-    items: [
-      { id: "view_users", label: "View Users", description: "See other users" },
-      { id: "manage_users", label: "Manage Users", description: "Invite and remove users" },
-      { id: "manage_roles", label: "Manage Roles", description: "Modify user permissions" },
-    ]
-  }
-]
+import { toast } from "sonner"
+import { PERMISSION_GROUPS, ROLE_PERMISSIONS } from "@/lib/permissions"
 
 // --- Roles ---
-
 type RoleId = "admin" | "coach" | "volunteer" | "accountant" | "custom"
 
 interface RoleDefinition {
   id: RoleId
   name: string
   description: string
-  defaultPermissions: string[]
 }
 
 const ROLES: RoleDefinition[] = [
@@ -148,34 +78,21 @@ const ROLES: RoleDefinition[] = [
     id: "admin",
     name: "Admin",
     description: "Full access to all settings, user management, and financials.",
-    defaultPermissions: PERMISSIONS_DATA.flatMap(g => g.items.map(i => i.id))
   },
   {
     id: "coach",
     name: "Coach",
     description: "Can manage athletes, training plans, and view events.",
-    defaultPermissions: [
-      "view_dashboard", 
-      "view_athletes", "edit_athletes", 
-      "view_plans", "manage_plans", "assign_plans",
-      "view_events", "manage_events",
-      "view_users"
-    ]
   },
   {
     id: "accountant",
     name: "Accountant",
     description: "Access to financial overview, transactions, and reports.",
-    defaultPermissions: [
-      "view_dashboard",
-      "view_financials", "manage_invoices", "process_payments"
-    ]
   },
   {
     id: "volunteer",
     name: "Volunteer",
     description: "Limited access to view event schedules and attendance.",
-    defaultPermissions: ["view_events"]
   }
 ]
 
@@ -184,62 +101,16 @@ interface User {
   name: string
   email: string
   avatar?: string
-  role: RoleId // Primary role for quick classification
-  permissions: string[] // Granular permissions
+  role: RoleId
+  permissions: string[]
   status: "active" | "invited"
-  joinedDate: Date
-  lastActive: Date
+  joinedDate: string
+  lastActive: string
 }
 
-const INITIAL_USERS: User[] = [
-  {
-    id: "1",
-    name: "Sarah Miller",
-    email: "sarah.miller@example.com",
-    avatar: "/avatars/02.png",
-    role: "admin",
-    permissions: ROLES.find(r => r.id === "admin")?.defaultPermissions || [],
-    status: "active",
-    joinedDate: new Date("2023-01-15T12:00:00"),
-    lastActive: new Date()
-  },
-  {
-    id: "2",
-    name: "Mike Johnson",
-    email: "mike.johnson@example.com",
-    avatar: "/avatars/01.png",
-    role: "coach",
-    permissions: ROLES.find(r => r.id === "coach")?.defaultPermissions || [],
-    status: "active",
-    joinedDate: new Date("2023-03-10T12:00:00"),
-    lastActive: new Date(Date.now() - 1000 * 60 * 30) // 30 mins ago
-  },
-  {
-    id: "3",
-    name: "James Chen",
-    email: "james.c@example.com",
-    avatar: "/avatars/03.png",
-    role: "accountant",
-    permissions: ROLES.find(r => r.id === "accountant")?.defaultPermissions || [],
-    status: "active",
-    joinedDate: new Date("2023-06-22T12:00:00"),
-    lastActive: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 day ago
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    email: "emily.d@example.com",
-    avatar: "/avatars/04.png",
-    role: "volunteer",
-    permissions: ROLES.find(r => r.id === "volunteer")?.defaultPermissions || [],
-    status: "invited",
-    joinedDate: new Date("2024-01-05T12:00:00"),
-    lastActive: new Date("2024-01-05T12:00:00")
-  },
-]
-
 export default function UsersPage() {
-  const [users, setUsers] = React.useState<User[]>(INITIAL_USERS)
+  const [users, setUsers] = React.useState<User[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState<string>("all")
   
@@ -248,35 +119,47 @@ export default function UsersPage() {
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false)
   const [editingUser, setEditingUser] = React.useState<User | null>(null)
   const [viewingUser, setViewingUser] = React.useState<User | null>(null)
+  const [isSaving, setIsSaving] = React.useState(false)
   
   // Form State
   const [selectedRole, setSelectedRole] = React.useState<RoleId>("volunteer")
   const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([])
 
+  // Fetch users on mount
+  React.useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch("/api/users")
+      if (!response.ok) throw new Error("Failed to fetch users")
+      const data = await response.json()
+      setUsers(data)
+    } catch (error) {
+      toast.error("Failed to load users. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Update permissions when role changes
   const handleRoleChange = (roleId: RoleId) => {
     setSelectedRole(roleId)
     if (roleId !== "custom") {
-      const role = ROLES.find(r => r.id === roleId)
-      if (role) {
-        setSelectedPermissions([...role.defaultPermissions])
-      }
+      const roleKey = roleId.toUpperCase()
+      const permissions = ROLE_PERMISSIONS[roleKey] || []
+      setSelectedPermissions([...permissions])
     }
   }
 
   const togglePermission = (permId: string) => {
-    setSelectedPermissions(prev => {
-      const next = prev.includes(permId) 
+    setSelectedPermissions(prev => 
+      prev.includes(permId) 
         ? prev.filter(p => p !== permId)
         : [...prev, permId]
-      
-      // If we modify permissions manually, check if it still matches the selected role
-      // If not, we could switch to 'custom', or just keep the role label as is but it acts as a 'base'.
-      // For simplicity, let's switch to custom if it diverges? Or just leave it.
-      // Let's stick to the prompt's granular nature.
-      
-      return next
-    })
+    )
   }
 
   // Computed
@@ -302,45 +185,96 @@ export default function UsersPage() {
   const handleAddUser = () => {
     setEditingUser(null)
     setSelectedRole("volunteer")
-    const defaultRole = ROLES.find(r => r.id === "volunteer")
-    setSelectedPermissions(defaultRole ? [...defaultRole.defaultPermissions] : [])
+    const roleKey = "VOLUNTEER"
+    const permissions = ROLE_PERMISSIONS[roleKey] || []
+    setSelectedPermissions([...permissions])
     setIsDialogOpen(true)
   }
 
-  const handleSaveUser = (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSaving(true)
+    
     const formData = new FormData(e.target as HTMLFormElement)
     const name = formData.get("name") as string
     const email = formData.get("email") as string
 
-    // Determine if role should be custom based on permissions? 
-    // For now we just trust the selectedRole dropdown or "custom" if implemented.
-    // Let's keep the selectedRole as the label.
+    try {
+      if (editingUser) {
+        // Update existing user
+        const response = await fetch(`/api/users/${editingUser.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            email,
+            role: selectedRole.toUpperCase(),
+            permissions: selectedPermissions,
+          }),
+        })
 
-    if (editingUser) {
-      // Update existing
-      setUsers(users.map(u => u.id === editingUser.id ? { 
-        ...u, 
-        name, 
-        email, 
-        role: selectedRole,
-        permissions: selectedPermissions 
-      } : u))
-    } else {
-      // Create new
-      const newUser: User = {
-        id: Math.random().toString(36).substring(7),
-        name,
-        email,
-        role: selectedRole,
-        permissions: selectedPermissions,
-        status: "invited",
-        joinedDate: new Date(),
-        lastActive: new Date()
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || "Failed to update user")
+        }
+
+        const updatedUser = await response.json()
+        setUsers(users.map(u => u.id === editingUser.id ? updatedUser : u))
+        
+        toast.success(`${name}'s profile has been updated.`)
+      } else {
+        // Create new user
+        const response = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            email,
+            role: selectedRole.toUpperCase(),
+            permissions: selectedPermissions,
+          }),
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || "Failed to create user")
+        }
+
+        const newUser = await response.json()
+        setUsers([newUser, ...users])
+        
+        toast.success(`An invitation has been sent to ${email}.`)
       }
-      setUsers([...users, newUser])
+
+      setIsDialogOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong")
+    } finally {
+      setIsSaving(false)
     }
-    setIsDialogOpen(false)
+  }
+
+  const handleRemoveUser = async (user: User) => {
+    if (!confirm(`Are you sure you want to remove ${user.name}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to remove user")
+      }
+
+      setUsers(users.filter(u => u.id !== user.id))
+      
+      toast.success(`${user.name} has been removed from the organization.`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove user")
+    }
   }
 
   return (
@@ -355,14 +289,14 @@ export default function UsersPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div className="flex flex-col gap-1">
-            <CardTitle>Members</CardTitle>
+            <CardTitle>Users</CardTitle>
             <CardDescription>
               View and manage users who have access to the platform.
             </CardDescription>
           </div>
           <Button onClick={handleAddUser}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Member
+            Add User
           </Button>
         </CardHeader>
         <CardContent>
@@ -395,7 +329,7 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Member</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Joined</TableHead>
@@ -404,10 +338,16 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.length === 0 ? (
+                {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                      No members found.
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No users found.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -445,10 +385,10 @@ export default function UsersPage() {
                         )}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground" suppressHydrationWarning>
-                        {format(user.joinedDate, "MMM d, yyyy")}
+                        {format(new Date(user.joinedDate), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground" suppressHydrationWarning>
-                        {format(user.lastActive, "MMM d, h:mm a")}
+                        {format(new Date(user.lastActive), "MMM d, h:mm a")}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -463,8 +403,11 @@ export default function UsersPage() {
                             <DropdownMenuItem onClick={() => handleEditUser(user)}>
                               Edit Permissions
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              Remove Member
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleRemoveUser(user)}
+                            >
+                              Remove User
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -482,7 +425,7 @@ export default function UsersPage() {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
-            <DialogTitle>Member Details</DialogTitle>
+            <DialogTitle>User Details</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1 px-6 min-h-0">
             {viewingUser && (
@@ -501,8 +444,8 @@ export default function UsersPage() {
                       <span className="text-sm">{viewingUser.email}</span>
                     </div>
                     <div className="pt-2">
-                       <Badge variant="secondary" className="mr-2">
-                         {ROLES.find(r => r.id === viewingUser.role)?.name}
+                       <Badge variant="secondary" className="mr-2 capitalize">
+                         {ROLES.find(r => r.id === viewingUser.role)?.name || viewingUser.role}
                        </Badge>
                       {viewingUser.status === "active" ? (
                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active Account</Badge>
@@ -519,8 +462,8 @@ export default function UsersPage() {
                     Access & Permissions
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {PERMISSIONS_DATA.map(group => {
-                       const userHasInGroup = group.items.filter(i => viewingUser.permissions.includes(i.id))
+                     {PERMISSION_GROUPS.map(group => {
+                       const userHasInGroup = group.items.filter(i => viewingUser.permissions.includes(i.id) || viewingUser.permissions.includes("*"))
                        if (userHasInGroup.length === 0) return null
                        return (
                          <div key={group.category} className="rounded-lg border p-4 space-y-3">
@@ -566,7 +509,7 @@ export default function UsersPage() {
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 gap-0">
           <form onSubmit={handleSaveUser} className="flex flex-col h-full overflow-hidden">
             <DialogHeader className="p-6 pb-2">
-              <DialogTitle>{editingUser ? "Edit Member" : "Add New Member"}</DialogTitle>
+              <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
               <DialogDescription>
                 Configure user details and granular permissions.
               </DialogDescription>
@@ -607,12 +550,12 @@ export default function UsersPage() {
 
                   <div className="space-y-4">
                     <Label className="text-base">Granular Permissions</Label>
-                    {PERMISSIONS_DATA.map((group) => (
+                    {PERMISSION_GROUPS.map((group) => (
                       <div key={group.category} className="space-y-3">
                         <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{group.category}</h4>
                         <div className="grid grid-cols-1 gap-2">
                           {group.items.map((perm) => {
-                            const isChecked = selectedPermissions.includes(perm.id)
+                            const isChecked = selectedPermissions.includes(perm.id) || selectedPermissions.includes("*")
                             return (
                               <div 
                                 key={perm.id} 
@@ -633,6 +576,7 @@ export default function UsersPage() {
                                   id={`perm-${perm.id}`}
                                   checked={isChecked}
                                   onCheckedChange={() => togglePermission(perm.id)}
+                                  disabled={selectedPermissions.includes("*") && perm.id !== "*"}
                                 />
                               </div>
                             )
@@ -649,8 +593,9 @@ export default function UsersPage() {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingUser ? "Save Changes" : "Invite Member"}
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingUser ? "Save Changes" : "Invite User"}
               </Button>
             </DialogFooter>
           </form>
@@ -659,4 +604,3 @@ export default function UsersPage() {
     </div>
   )
 }
-

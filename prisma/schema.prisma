@@ -37,12 +37,24 @@ model Organization {
   websiteConfig WebsiteConfig?
 
   // Financials
-  discounts     Discount[]
-  glCodes       GLCode[]
-  ledgerEntries LedgerEntry[]
+  discounts       Discount[]
+  glCodes         GLCode[]
+  ledgerEntries   LedgerEntry[]
+  transactions    Transaction[]
+  payouts         Payout[]
+  recurringCharges RecurringCharge[]
   
   // Athletes (Direct relation for easier querying)
   athletes      Athlete[]
+  
+  // Platform Subscription
+  subscription  OrganizationSubscription?
+  
+  // POS Products
+  products      Product[]
+  
+  // Media
+  media         Media[]
 }
 
 model OrganizationMember {
@@ -89,6 +101,7 @@ model User {
   events        Event[]      @relation("EventCoach")
   sessions      Session[]
   accounts      Account[]
+  media         Media[]
 }
 
 model Session {
@@ -143,6 +156,8 @@ enum Role {
   VOLUNTEER
   ACCOUNTANT
   CUSTOM
+  PARENT
+  STAFF
 }
 
 enum UserStatus {
@@ -168,13 +183,17 @@ model Family {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   // athletes       Athlete[] // Deprecated, use guardians
-  guardians      AthleteGuardian[]
-  paymentMethods PaymentMethod[]
-  invoices       Invoice[]
-  payments       Payment[]
-  enrollments    Enrollment[] // Enrollments paid/managed by this family
+  guardians        AthleteGuardian[]
+  paymentMethods   PaymentMethod[]
+  invoices         Invoice[]
+  payments         Payment[]
+  enrollments      Enrollment[] // Enrollments paid/managed by this family
+  recurringCharges RecurringCharge[]
+
+  // Auth Link
+  userId         String?   @unique
 }
 
 model Athlete {
@@ -191,17 +210,20 @@ model Athlete {
   // New fields for refactor
   customId       String?  // Club-specific ID (e.g. Member ID)
   organizationId String?  // Direct organization link
+  medicalDetails Json?    // { allergies: [], conditions: [], emergencyContact: {} }
   
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
   // Relations
-  organization Organization? @relation(fields: [organizationId], references: [id])
-  enrollments Enrollment[]
-  attendances Attendance[]
-  evaluations Evaluation[]
-  lineItems   LineItem[]
-  memberships AthleteMembership[]
+  organization     Organization? @relation(fields: [organizationId], references: [id])
+  enrollments      Enrollment[]
+  attendances      Attendance[]
+  evaluations      Evaluation[]
+  lineItems        LineItem[]
+  memberships      AthleteMembership[]
+  media            Media[]
+  recurringCharges RecurringCharge[]
   
   // Multi-family support
   guardians   AthleteGuardian[]
@@ -240,7 +262,8 @@ model PaymentMethod {
   createdAt DateTime @default(now())
 
   // Relations
-  family    Family  @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  family           Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  recurringCharges RecurringCharge[]
 }
 
 enum PaymentMethodType {
@@ -430,6 +453,7 @@ model Event {
   coach        User?        @relation("EventCoach", fields: [coachId], references: [id])
   attendances  Attendance[]
   lineItems    LineItem[]
+  media        Media[]
 }
 
 enum EventType {
@@ -528,13 +552,14 @@ model Payment {
   amount        Decimal       @db.Decimal(10, 2)
   method        PaymentType
   status        PaymentStatus @default(PENDING)
-  transactionId String?
+  transactionId String?       // Legacy field, keeping for backwards compatibility
   processedAt   DateTime?
   createdAt     DateTime      @default(now())
 
   // Relations
-  invoice Invoice? @relation(fields: [invoiceId], references: [id])
-  family  Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  invoice     Invoice?     @relation(fields: [invoiceId], references: [id])
+  family      Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  transaction Transaction? // Linked Adyen transaction
 }
 
 enum PaymentType {
@@ -647,6 +672,122 @@ model LedgerEntry {
 enum LedgerEntryStatus {
   POSTED
   PENDING
+}
+
+// ============================================
+// Adyen Transaction Tracking
+// ============================================
+
+model Transaction {
+  id              String            @id @default(cuid())
+  organizationId  String
+  paymentId       String?           @unique
+  pspReference    String            @unique // Adyen PSP reference
+  merchantRef     String?           // Our internal reference
+  type            TransactionType
+  amount          Decimal           @db.Decimal(10, 2)
+  currency        String            @default("USD")
+  status          TransactionStatus
+  method          String?           // visa, mastercard, applepay, etc.
+  description     String?
+  metadata        Json?
+  settledAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payment      Payment?     @relation(fields: [paymentId], references: [id])
+
+  @@index([organizationId])
+  @@index([pspReference])
+}
+
+enum TransactionType {
+  PAYMENT
+  REFUND
+  CHARGEBACK
+  CAPTURE
+  CANCEL
+}
+
+enum TransactionStatus {
+  AUTHORISED
+  CAPTURED
+  SETTLED
+  REFUSED
+  CANCELLED
+  ERROR
+  PENDING
+}
+
+// ============================================
+// Payouts (Settlement from Adyen)
+// ============================================
+
+model Payout {
+  id             String       @id @default(cuid())
+  organizationId String
+  reference      String       @unique // Adyen payout reference
+  amount         Decimal      @db.Decimal(10, 2)
+  fees           Decimal      @default(0) @db.Decimal(10, 2)
+  net            Decimal      @db.Decimal(10, 2)
+  currency       String       @default("USD")
+  status         PayoutStatus
+  bankAccount    String?      // Last 4 digits
+  scheduledAt    DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+enum PayoutStatus {
+  PENDING
+  SCHEDULED
+  PAID
+  FAILED
+}
+
+// ============================================
+// Recurring Billing
+// ============================================
+
+model RecurringCharge {
+  id              String          @id @default(cuid())
+  organizationId  String
+  familyId        String
+  athleteId       String?
+  description     String
+  amount          Decimal         @db.Decimal(10, 2)
+  frequency       BillingInterval // MONTHLY, YEARLY, SESSION
+  nextChargeDate  DateTime
+  lastChargedAt   DateTime?
+  status          RecurringStatus
+  paymentMethodId String?
+  failureCount    Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family        Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  athlete       Athlete?       @relation(fields: [athleteId], references: [id])
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([organizationId])
+  @@index([familyId])
+  @@index([nextChargeDate])
+}
+
+enum RecurringStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+  FAILED
 }
 
 // ============================================
@@ -839,6 +980,128 @@ model WebsiteConfig {
 }
 
 // ============================================
+// POS Products & Inventory
+// ============================================
+
+model Product {
+  id               String   @id @default(cuid())
+  organizationId   String
+  name             String
+  description      String?
+  sku              String?
+  category         String   @default("General")
+  price            Decimal  @db.Decimal(10, 2)
+  imageUrl         String?
+  maxInventory     Int?     // null = unlimited
+  currentInventory Int?     // null = unlimited
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stockMovements  StockMovement[]
+
+  @@unique([organizationId, sku])
+  @@index([organizationId])
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  productId   String
+  type        StockMovementType
+  quantity    Int               // positive for additions, negative for sales
+  previousQty Int
+  newQty      Int
+  referenceId String?           // invoiceId, orderId, etc.
+  notes       String?
+  createdBy   String?
+  createdAt   DateTime          @default(now())
+
+  // Relations
+  product     Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+enum StockMovementType {
+  SALE
+  RESTOCK
+  ADJUSTMENT
+  RETURN
+}
+
+// ============================================
+// PHASE 8: Feedback & Feature Requests
+// ============================================
+
+model FeatureRequest {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  status      FeatureStatus @default(OPEN)
+  votes       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String?   // Author
+  
+  comments    FeatureComment[]
+}
+
+enum FeatureStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CLOSED
+}
+
+model FeatureComment {
+  id               String         @id @default(cuid())
+  featureRequestId String
+  content          String
+  userId           String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  
+  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+}
+
+
+// ============================================
+// Media
+// ============================================
+
+model Media {
+  id             String    @id @default(cuid())
+  url            String
+  type           MediaType
+  title          String?
+  description    String?
+  athleteId      String?
+  eventId        String?
+  uploadedById   String
+  organizationId String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  athlete      Athlete?      @relation(fields: [athleteId], references: [id], onDelete: SetNull)
+  event        Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  uploadedBy   User          @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([athleteId])
+  @@index([eventId])
+  @@index([uploadedById])
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+// ============================================
 // Reserved Domains/Prefixes
 // ============================================
 
@@ -855,4 +1118,92 @@ model ReservedDomain {
 enum ReservedDomainType {
   EXACT   // Exact match (e.g., "admin" blocks only "admin")
   PREFIX  // Prefix match (e.g., "test-" blocks "test-anything")
+}
+
+// ============================================
+// Platform Subscription & Billing
+// ============================================
+
+model SubscriptionPlan {
+  id                String   @id @default(cuid())
+  name              String   // e.g., "Free", "Starter", "Gold", "Platinum"
+  slug              String   @unique // URL-friendly identifier
+  description       String?
+  
+  // Pricing
+  monthlyPrice      Decimal  @db.Decimal(10, 2)
+  yearlyPrice       Decimal? @db.Decimal(10, 2) // Optional yearly discount
+  transactionFee    Decimal  @db.Decimal(5, 4) // e.g., 0.029 for 2.9%
+  perTransactionFee Decimal  @db.Decimal(10, 2) // e.g., 0.30 for $0.30
+  
+  // Limits
+  maxAthletes       Int?     // null = unlimited
+  maxUsers          Int?     // null = unlimited
+  maxEvents         Int?     // null = unlimited
+  
+  // Features (stored as JSON for flexibility)
+  features          Json     // Array of feature strings
+  
+  // Display
+  isPopular         Boolean  @default(false)
+  displayOrder      Int      @default(0)
+  
+  // Status
+  isActive          Boolean  @default(true)
+  isPublic          Boolean  @default(true) // Can orgs self-select this plan?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  subscriptions     OrganizationSubscription[]
+}
+
+model OrganizationSubscription {
+  id                String             @id @default(cuid())
+  organizationId    String             @unique
+  planId            String
+  
+  // Billing
+  status            SubscriptionStatus @default(ACTIVE)
+  billingCycle      BillingCycle       @default(MONTHLY)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  
+  // Payment info (stored tokens, not actual card data)
+  stripeCustomerId  String?
+  stripeSubscriptionId String?
+  
+  // Admin controls
+  isLocked          Boolean  @default(false) // If true, org cannot change plan
+  lockedReason      String?  // Why it's locked (shown to org admins)
+  lockedBy          String?  // Super admin who locked it
+  lockedAt          DateTime?
+  
+  // Trial
+  trialEndsAt       DateTime?
+  
+  // Cancellation
+  cancelAtPeriodEnd Boolean  @default(false)
+  cancelledAt       DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan              SubscriptionPlan @relation(fields: [planId], references: [id])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELLED
+  PAUSED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
 }

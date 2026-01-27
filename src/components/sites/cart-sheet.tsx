@@ -117,7 +117,7 @@ export function CartSheet() {
             </div>
             <SheetFooter>
                 <Button className="w-full" asChild onClick={() => setIsOpen(false)}>
-                  <Link href={`/sites/${slug}/checkout`}>
+                  <Link href={slug ? `/sites/${slug}/checkout` : '/checkout'}>
                     Checkout
                   </Link>
                 </Button>

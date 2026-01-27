@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -11,39 +12,95 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DownloadIcon, LandmarkIcon, ArrowUpRightIcon } from "lucide-react"
+import { DownloadIcon, LandmarkIcon, ArrowUpRightIcon, Loader2 } from "lucide-react"
+import { format } from "date-fns"
+import { toast } from "sonner"
 
-const payouts = [
-  {
-    id: "PO-9921",
-    date: "2025-11-24",
-    amount: "$4,250.00",
-    fees: "$124.50",
-    net: "$4,125.50",
-    status: "Paid",
-    bankAccount: "**** 9876",
-  },
-  {
-    id: "PO-9920",
-    date: "2025-11-17",
-    amount: "$3,800.00",
-    fees: "$110.20",
-    net: "$3,689.80",
-    status: "Paid",
-    bankAccount: "**** 9876",
-  },
-  {
-    id: "PO-9919",
-    date: "2025-11-10",
-    amount: "$5,100.00",
-    fees: "$145.80",
-    net: "$4,954.20",
-    status: "Paid",
-    bankAccount: "**** 9876",
-  },
-]
+interface Payout {
+  id: string
+  reference: string
+  amount: number
+  fees: number
+  net: number
+  currency: string
+  status: "PENDING" | "SCHEDULED" | "PAID" | "FAILED"
+  bankAccount: string | null
+  scheduledAt: string | null
+  paidAt: string | null
+  createdAt: string
+}
+
+interface PayoutStats {
+  pendingAmount: number
+  pendingCount: number
+  paidYTD: number
+  nextPayout: Payout | null
+  unsettledAmount: number
+  unsettledCount: number
+}
+
+const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  PENDING: "outline",
+  SCHEDULED: "secondary",
+  PAID: "default",
+  FAILED: "destructive",
+}
 
 export default function PayoutsPage() {
+  const [payouts, setPayouts] = React.useState<Payout[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [stats, setStats] = React.useState<PayoutStats>({
+    pendingAmount: 0,
+    pendingCount: 0,
+    paidYTD: 0,
+    nextPayout: null,
+    unsettledAmount: 0,
+    unsettledCount: 0,
+  })
+
+  const fetchPayouts = React.useCallback(async () => {
+    try {
+      const response = await fetch("/api/payouts")
+      if (!response.ok) throw new Error("Failed to fetch payouts")
+
+      const data = await response.json()
+      setPayouts(data.data)
+      setStats(data.stats)
+    } catch (error) {
+      console.error("Error fetching payouts:", error)
+      toast.error("Failed to load payouts")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    fetchPayouts()
+  }, [fetchPayouts])
+
+  const handleExport = () => {
+    const headers = ["Date", "Batch ID", "Bank Account", "Status", "Gross", "Fees", "Net"]
+    const rows = payouts.map((po) => [
+      po.paidAt ? format(new Date(po.paidAt), "yyyy-MM-dd") : format(new Date(po.createdAt), "yyyy-MM-dd"),
+      po.reference,
+      po.bankAccount || "",
+      po.status,
+      `$${Number(po.amount).toFixed(2)}`,
+      `-$${Number(po.fees).toFixed(2)}`,
+      `$${Number(po.net).toFixed(2)}`,
+    ])
+
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `payouts-${format(new Date(), "yyyy-MM-dd")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Payouts exported")
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
@@ -59,8 +116,14 @@ export default function PayoutsPage() {
             <CardTitle className="text-sm font-medium opacity-80">Next Estimated Payout</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">$2,350.00</div>
-            <p className="text-xs opacity-80 mt-1">Scheduled for Friday, Nov 29</p>
+            <div className="text-3xl font-bold">
+              ${Number(stats.unsettledAmount).toFixed(2)}
+            </div>
+            <p className="text-xs opacity-80 mt-1">
+              {stats.nextPayout?.scheduledAt 
+                ? `Scheduled for ${format(new Date(stats.nextPayout.scheduledAt), "EEEE, MMM d")}`
+                : `From ${stats.unsettledCount} pending transaction${stats.unsettledCount !== 1 ? "s" : ""}`}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -68,8 +131,10 @@ export default function PayoutsPage() {
             <CardTitle className="text-sm font-medium">Pending Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">$2,350.00</div>
-            <p className="text-xs text-muted-foreground mt-1">From 15 recent transactions</p>
+            <div className="text-3xl font-bold">${Number(stats.pendingAmount).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.pendingCount} scheduled payout{stats.pendingCount !== 1 ? "s" : ""}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -77,10 +142,10 @@ export default function PayoutsPage() {
             <CardTitle className="text-sm font-medium">Total Paid (YTD)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">$142,890.00</div>
+            <div className="text-3xl font-bold">${Number(stats.paidYTD).toFixed(2)}</div>
             <div className="flex items-center text-xs text-green-600 mt-1">
               <ArrowUpRightIcon className="mr-1 h-3 w-3" />
-              +12% vs last year
+              Year to date
             </div>
           </CardContent>
         </Card>
@@ -90,7 +155,7 @@ export default function PayoutsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Settlement History</CardTitle>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={payouts.length === 0}>
               <DownloadIcon className="mr-2 h-4 w-4" />
               Download Report
             </Button>
@@ -100,47 +165,59 @@ export default function PayoutsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Batch ID</TableHead>
-                <TableHead>Bank Account</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Gross Amount</TableHead>
-                <TableHead className="text-right">Fees</TableHead>
-                <TableHead className="text-right">Net Payout</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payouts.map((po) => (
-                <TableRow key={po.id}>
-                  <TableCell>{po.date}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {po.id}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <LandmarkIcon className="h-3 w-3 text-muted-foreground" />
-                      {po.bankAccount}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      {po.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{po.amount}</TableCell>
-                  <TableCell className="text-right text-red-600">-{po.fees}</TableCell>
-                  <TableCell className="text-right font-bold">{po.net}</TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : payouts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No payouts yet. Payouts will appear here once settlements are processed.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Batch ID</TableHead>
+                  <TableHead>Bank Account</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Gross Amount</TableHead>
+                  <TableHead className="text-right">Fees</TableHead>
+                  <TableHead className="text-right">Net Payout</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {payouts.map((po) => (
+                  <TableRow key={po.id}>
+                    <TableCell>
+                      {po.paidAt 
+                        ? format(new Date(po.paidAt), "MMM d, yyyy")
+                        : format(new Date(po.createdAt), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {po.reference}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <LandmarkIcon className="h-3 w-3 text-muted-foreground" />
+                        {po.bankAccount ? `****${po.bankAccount}` : "—"}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusColors[po.status] || "outline"}>
+                        {po.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">${Number(po.amount).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-red-600">-${Number(po.fees).toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-bold">${Number(po.net).toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
   )
 }
-
-

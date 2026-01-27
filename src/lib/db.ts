@@ -28,6 +28,7 @@ const TENANT_MODELS = [
   "Discount",
   "GLCode",
   "LedgerEntry",
+  "Product",
 ] as const;
 
 // Helper type for models that have organizationId

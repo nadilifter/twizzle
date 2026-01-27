@@ -105,10 +105,8 @@ export default function WebsitePage() {
 
   // Progress Calculation
   const requirements = [
-    { label: "Add a logo", done: !!config.logo },
     { label: "Set primary color", done: !!config.primaryColor && config.primaryColor !== "#000000" }, 
     { label: "Set subdomain", done: !!config.subdomain && subdomainStatus === 'available' },
-    { label: "Add hero image", done: !!config.heroImage },
   ];
   
   const completedCount = requirements.filter(r => r.done).length;
@@ -196,7 +194,8 @@ export default function WebsitePage() {
                     <ColorPicker 
                         label="Primary Color" 
                         value={config.primaryColor || "#000000"} 
-                        onChange={(val) => updateConfig("primaryColor", val)} 
+                        onChange={(val) => updateConfig("primaryColor", val)}
+                        required 
                     />
                     <ColorPicker 
                         label="Secondary Color" 
@@ -322,7 +321,7 @@ export default function WebsitePage() {
                         <div className="flex items-start space-x-2">
                             <RadioGroupItem value="subdomain" id="subdomain" className="mt-1" />
                             <div className="grid gap-2 flex-1">
-                                <Label htmlFor="subdomain">Use Uplifter Subdomain</Label>
+                                <Label htmlFor="subdomain">Use Uplifter Subdomain<span className="text-destructive ml-1">*</span></Label>
                                 <p className="text-sm text-muted-foreground">Get a free subdomain on uplifterinc.com (e.g., mygym.uplifterinc.com).</p>
                                 
                                 <div className="mt-2">

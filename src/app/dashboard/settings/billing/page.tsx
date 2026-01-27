@@ -1,6 +1,5 @@
-"use client"
-
-import { Check, CreditCard, Download, Package } from "lucide-react"
+import { Check, CreditCard, Download, AlertCircle, Lock } from "lucide-react"
+import { redirect } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import {
   Table,
@@ -22,9 +20,78 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { AddPaymentMethodDialog } from "@/components/financials/add-payment-method-dialog"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import { getAuthSession } from "@/lib/auth"
+import { db } from "@/lib/db"
+import { PlanSelector } from "./plan-selector"
 
-export default function BillingPage() {
+export default async function BillingPage() {
+  const session = await getAuthSession()
+  
+  if (!session?.user?.organizationId) {
+    redirect("/login")
+  }
+
+  // Fetch organization with subscription
+  const organization = await db.organization.findUnique({
+    where: { id: session.user.organizationId },
+    include: {
+      _count: {
+        select: {
+          invoices: true,
+          families: true,
+          athletes: true,
+          members: true,
+          events: true,
+        }
+      },
+      invoices: {
+        where: { status: "PAID" },
+        select: { total: true },
+        take: 100,
+      },
+      subscription: {
+        include: {
+          plan: true
+        }
+      }
+    },
+  })
+
+  if (!organization) {
+    redirect("/login")
+  }
+
+  // Fetch available plans
+  const availablePlans = await db.subscriptionPlan.findMany({
+    where: {
+      isActive: true,
+      isPublic: true,
+    },
+    orderBy: { displayOrder: "asc" }
+  })
+
+  // Calculate some basic metrics
+  const totalRevenue = organization.invoices.reduce((sum, inv) => sum + Number(inv.total), 0)
+  
+  const currentPlan = organization.subscription?.plan
+  const subscription = organization.subscription
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount)
+  }
+
+  const formatPercent = (amount: number) => {
+    return `${(amount * 100).toFixed(1)}%`
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
@@ -36,6 +103,26 @@ export default function BillingPage() {
         </div>
       </div>
 
+      {subscription?.isLocked && (
+        <Alert>
+          <Lock className="h-4 w-4" />
+          <AlertTitle>Subscription Locked</AlertTitle>
+          <AlertDescription>
+            {subscription.lockedReason || "Your subscription has been locked by an administrator. Contact support if you need to make changes."}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!subscription && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No Subscription</AlertTitle>
+          <AlertDescription>
+            Your organization does not have an active subscription. During the beta period, all features are available. Select a plan below to get started.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Current Plan Card */}
         <Card className="lg:col-span-2">
@@ -43,83 +130,139 @@ export default function BillingPage() {
             <div className="grid gap-1">
               <CardTitle>Current Plan</CardTitle>
               <CardDescription>
-                You are currently on the <span className="font-medium text-foreground">Gold</span> plan.
+                {currentPlan ? (
+                  <>
+                    {organization.name} is on the <span className="font-medium text-foreground">{currentPlan.name}</span> plan.
+                  </>
+                ) : (
+                  <>No plan selected. Using beta access.</>
+                )}
               </CardDescription>
             </div>
-            <Badge variant="secondary" className="text-sm">
-              Gold
-            </Badge>
+            {currentPlan && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-sm">
+                  {currentPlan.name}
+                </Badge>
+                {subscription?.isLocked && (
+                  <Badge variant="outline" className="gap-1">
+                    <Lock className="h-3 w-3" />
+                  </Badge>
+                )}
+              </div>
+            )}
           </CardHeader>
           <CardContent className="grid gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold">$49</span>
-                <span className="text-muted-foreground">/month</span>
+            {currentPlan ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold">{formatCurrency(Number(currentPlan.monthlyPrice))}</span>
+                    <span className="text-muted-foreground">/{subscription?.billingCycle.toLowerCase()}</span>
+                  </div>
+                  {subscription && (
+                    <div className="text-sm text-muted-foreground">
+                      Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="grid gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary" />
+                    <span>
+                      Transaction Fee: <strong>
+                        {formatPercent(Number(currentPlan.transactionFee))} + {formatCurrency(Number(currentPlan.perTransactionFee))}
+                      </strong> per transaction
+                    </span>
+                  </div>
+                  {(currentPlan.features as string[]).map((feature, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Select a plan below to see pricing and features.</p>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Renews on Dec 1, 2025
-              </div>
-            </div>
-            
-            <div className="grid gap-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-primary" />
-                <span>Transaction Fee: <strong>2.9% + $0.30</strong> per transaction</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-primary" />
-                <span>Full Club Management Suite</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-primary" />
-                <span>Advanced Website & Branding</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-primary" />
-                <span>Enhanced Financial Reporting</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-primary" />
-                <span>Priority Support (Email + Chat)</span>
-              </div>
-            </div>
+            )}
           </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full sm:w-auto">Change Plan</Button>
-          </CardFooter>
+          {!subscription?.isLocked && (
+            <CardFooter>
+              <PlanSelector 
+                currentPlanId={subscription?.planId || null}
+                plans={availablePlans.map(p => ({
+                  id: p.id,
+                  name: p.name,
+                  slug: p.slug,
+                  monthlyPrice: Number(p.monthlyPrice),
+                  yearlyPrice: p.yearlyPrice ? Number(p.yearlyPrice) : null,
+                  transactionFee: Number(p.transactionFee),
+                  perTransactionFee: Number(p.perTransactionFee),
+                  maxAthletes: p.maxAthletes,
+                  maxUsers: p.maxUsers,
+                  maxEvents: p.maxEvents,
+                  features: p.features as string[],
+                  isPopular: p.isPopular,
+                }))}
+                currentUsage={{
+                  athletes: organization._count.athletes,
+                  users: organization._count.members,
+                  events: organization._count.events,
+                }}
+                billingCycle={subscription?.billingCycle || "MONTHLY"}
+              />
+            </CardFooter>
+          )}
         </Card>
 
-        {/* Current Month Costs Summary */}
+        {/* Organization Stats */}
         <Card>
           <CardHeader>
-            <CardTitle>Current Period</CardTitle>
-            <CardDescription>Estimated costs for this billing cycle</CardDescription>
+            <CardTitle>Organization Stats</CardTitle>
+            <CardDescription>Your current usage</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium">Platform Subscription</span>
-              <span>$49.00</span>
+              <span className="text-sm font-medium">Athletes</span>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{organization._count.athletes}</span>
+                {currentPlan?.maxAthletes && (
+                  <span className="text-sm text-muted-foreground"> / {currentPlan.maxAthletes}</span>
+                )}
+              </div>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium">Transaction Fees</span>
-              <span>$124.50</span>
+              <span className="text-sm font-medium">Users</span>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{organization._count.members}</span>
+                {currentPlan?.maxUsers && (
+                  <span className="text-sm text-muted-foreground"> / {currentPlan.maxUsers}</span>
+                )}
+              </div>
             </div>
-             <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium">Usage Fees (SMS/Email)</span>
-              <span>$23.45</span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-medium">Events</span>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{organization._count.events}</span>
+                {currentPlan?.maxEvents && (
+                  <span className="text-sm text-muted-foreground"> / {currentPlan.maxEvents}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-medium">Families</span>
+              <span className="text-2xl font-bold">{organization._count.families}</span>
             </div>
             <Separator />
-            <div className="flex items-baseline justify-between font-bold">
-              <span>Total Estimated</span>
-              <span>$196.95</span>
-            </div>
-            <div className="rounded-lg bg-muted p-2 text-xs text-muted-foreground">
-              Billing period: Nov 1 - Nov 30
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-medium">Total Collected</span>
+              <span className="font-bold text-green-600">{formatCurrency(totalRevenue)}</span>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button className="w-full">Pay Now</Button>
-          </CardFooter>
         </Card>
       </div>
 
@@ -127,120 +270,118 @@ export default function BillingPage() {
          <Card>
           <CardHeader>
             <CardTitle>Payment Methods</CardTitle>
-            <CardDescription>Manage your payment details</CardDescription>
+            <CardDescription>Manage your payment details for subscription billing</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="rounded-md border p-2">
-                  <CreditCard className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="font-medium">Visa ending in 4242</p>
-                  <p className="text-sm text-muted-foreground">Expiry 12/28</p>
-                </div>
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <div className="text-center">
+                <CreditCard className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="font-medium">No payment method required</p>
+                <p className="text-sm">During the beta period, all features are free.</p>
               </div>
-              <Badge variant="outline">Default</Badge>
-            </div>
-             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="rounded-md border p-2">
-                  <CreditCard className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="font-medium">Mastercard ending in 8888</p>
-                  <p className="text-sm text-muted-foreground">Expiry 10/26</p>
-                </div>
-              </div>
-              <Badge variant="secondary">Backup</Badge>
             </div>
           </CardContent>
           <CardFooter>
-             <AddPaymentMethodDialog 
-                trigger={
-                    <Button variant="ghost" className="w-full justify-start pl-0 text-muted-foreground hover:text-foreground">
-                      Edit Payment Methods
-                    </Button>
-                }
-             />
-          </CardFooter>
-        </Card>
-         <Card>
-          <CardHeader>
-            <CardTitle>Billing History</CardTitle>
-            <CardDescription>View your recent invoices</CardDescription>
-          </CardHeader>
-           <CardContent className="grid gap-4">
-            <div className="flex items-center justify-between">
-               <div className="flex items-center gap-4">
-                 <div className="rounded-full bg-primary/10 p-2">
-                   <Download className="h-4 w-4 text-primary" />
-                 </div>
-                 <div>
-                   <p className="font-medium">Invoice #1024</p>
-                   <p className="text-xs text-muted-foreground">Oct 1, 2025</p>
-                 </div>
-               </div>
-               <span className="font-medium">$185.00</span>
-             </div>
-              <div className="flex items-center justify-between">
-               <div className="flex items-center gap-4">
-                 <div className="rounded-full bg-primary/10 p-2">
-                   <Download className="h-4 w-4 text-primary" />
-                 </div>
-                 <div>
-                   <p className="font-medium">Invoice #1023</p>
-                   <p className="text-xs text-muted-foreground">Sep 1, 2025</p>
-                 </div>
-               </div>
-               <span className="font-medium">$172.50</span>
-             </div>
-           </CardContent>
-            <CardFooter>
-             <Button variant="ghost" className="w-full justify-start pl-0 text-muted-foreground hover:text-foreground">
-              View All Invoices
+            <Button variant="ghost" className="w-full" disabled>
+              Add Payment Method (Coming Soon)
             </Button>
           </CardFooter>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing History</CardTitle>
+            <CardDescription>Your platform subscription invoices</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <div className="text-center">
+                <Download className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="font-medium">No invoices yet</p>
+                <p className="text-sm">Billing history will appear here once subscription billing begins.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Detailed Usage Breakdown */}
+      {/* Available Plans Comparison */}
       <Card>
         <CardHeader>
-          <CardTitle>Usage & Fees Breakdown</CardTitle>
+          <CardTitle>Available Plans</CardTitle>
           <CardDescription>
-            Detailed view of your incurred charges for the current period.
+            Compare features and choose the right plan for your organization
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Rate</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Transaction Fee</TableHead>
+                <TableHead>Limits</TableHead>
+                <TableHead className="text-right">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Transaction Processing</TableCell>
-                <TableCell>2.9% + $0.30</TableCell>
-                <TableCell>$3,827.59 (45 transactions)</TableCell>
-                <TableCell className="text-right">$124.50</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">SMS Notifications</TableCell>
-                <TableCell>$0.01 / msg</TableCell>
-                <TableCell>1,500 msgs</TableCell>
-                <TableCell className="text-right">$15.00</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Email Campaigns</TableCell>
-                <TableCell>$0.001 / email</TableCell>
-                <TableCell>8,450 emails</TableCell>
-                <TableCell className="text-right">$8.45</TableCell>
-              </TableRow>
+              {availablePlans.map((plan) => (
+                <TableRow key={plan.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {plan.name}
+                      {plan.isPopular && (
+                        <Badge variant="secondary">Popular</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {Number(plan.monthlyPrice) === 0 ? "Free" : `${formatCurrency(Number(plan.monthlyPrice))}/mo`}
+                  </TableCell>
+                  <TableCell>
+                    {formatPercent(Number(plan.transactionFee))} + {formatCurrency(Number(plan.perTransactionFee))}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">
+                      {plan.maxAthletes ? `${plan.maxAthletes} athletes` : "Unlimited"}
+                      {plan.maxUsers ? `, ${plan.maxUsers} users` : ""}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {subscription?.planId === plan.id ? (
+                      <Badge>Current Plan</Badge>
+                    ) : subscription?.isLocked ? (
+                      <Badge variant="outline">Locked</Badge>
+                    ) : (
+                      <PlanSelector
+                        currentPlanId={subscription?.planId || null}
+                        plans={[{
+                          id: plan.id,
+                          name: plan.name,
+                          slug: plan.slug,
+                          monthlyPrice: Number(plan.monthlyPrice),
+                          yearlyPrice: plan.yearlyPrice ? Number(plan.yearlyPrice) : null,
+                          transactionFee: Number(plan.transactionFee),
+                          perTransactionFee: Number(plan.perTransactionFee),
+                          maxAthletes: plan.maxAthletes,
+                          maxUsers: plan.maxUsers,
+                          maxEvents: plan.maxEvents,
+                          features: plan.features as string[],
+                          isPopular: plan.isPopular,
+                        }]}
+                        currentUsage={{
+                          athletes: organization._count.athletes,
+                          users: organization._count.members,
+                          events: organization._count.events,
+                        }}
+                        billingCycle={subscription?.billingCycle || "MONTHLY"}
+                        variant="compact"
+                        targetPlanId={plan.id}
+                      />
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </CardContent>

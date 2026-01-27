@@ -3,7 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { ChevronRight, LifeBuoy, Send, ShieldCheck, FlaskConical, Zap } from "lucide-react"
+import { ChevronRight, LifeBuoy, Send, FlaskConical, Zap, CalendarCheck, ShoppingCart, UserCheck, Globe } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 import { NavSecondary } from "@/components/nav-secondary"
@@ -37,6 +37,32 @@ import {
 } from "@/components/ui/tooltip"
 import { getFeatureStatus, type FeatureStatus } from "@/lib/feature-status"
 import { cn } from "@/lib/utils"
+import { getOrganizationWebsiteSubdomain } from "@/app/actions/organization"
+
+// Helper to construct subdomain URLs for the access point system
+function getAccessPointUrl(subdomain: string, organizationId?: string): string {
+  if (typeof window === 'undefined') return `/${subdomain}`
+  
+  const { hostname, port, protocol } = window.location
+  
+  // Extract base domain (e.g., from "admin.uplifterinc.localhost" get "uplifterinc.localhost")
+  const parts = hostname.split('.')
+  if (parts.length >= 3) {
+    // Replace the first subdomain with the new one
+    parts[0] = subdomain
+    const newHostname = parts.join('.')
+    const baseUrl = `${protocol}//${newHostname}${port ? ':' + port : ''}`
+    
+    // Add organizationId as query param if provided
+    if (organizationId) {
+      return `${baseUrl}?orgId=${encodeURIComponent(organizationId)}`
+    }
+    return baseUrl
+  }
+  
+  // Fallback to relative path if we can't parse the hostname
+  return `/${subdomain}`
+}
 
 // Status indicator component for nav items
 function FeatureStatusIndicator({ url }: { url: string }) {
@@ -176,6 +202,7 @@ const data = {
         */
       ],
     },
+    /*
     {
       title: "Events",
       url: "/dashboard/events",
@@ -190,6 +217,7 @@ const data = {
         },
       ],
     },
+    */
     /*
     {
       title: "Communication",
@@ -239,6 +267,10 @@ const data = {
           url: "/dashboard/organization/staff",
         },
         {
+          title: "Store",
+          url: "/dashboard/organization/store",
+        },
+        {
           title: "Website",
           url: "/dashboard/organization/website",
         },
@@ -275,10 +307,6 @@ const data = {
         {
           title: "Payouts",
           url: "/dashboard/financials/payouts",
-        },
-        {
-          title: "Point of Sale",
-          url: "/dashboard/financials/pos",
         },
         {
           title: "Recurring Billing",
@@ -345,7 +373,28 @@ const data = {
       ],
     },
   ],
-  navSecondary: [
+  // Access point links - subdomain field is used to construct full URLs
+  navSecondaryAccessPoints: [
+    /*
+    {
+      title: "Events Portal",
+      subdomain: "events",
+      icon: CalendarCheck,
+    },
+    */
+    {
+      title: "Point of Sale",
+      subdomain: "pos",
+      icon: ShoppingCart,
+    },
+    {
+      title: "Coach Portal",
+      subdomain: "coach",
+      icon: UserCheck,
+    },
+  ],
+  // External and static links
+  navSecondaryStatic: [
     {
       title: "Support",
       url: "https://www.uplifterinc.com/contact-us",
@@ -353,7 +402,7 @@ const data = {
     },
     {
       title: "Feedback",
-      url: "/dashboard/feedback",
+      subdomain: "feedback",
       icon: Send,
     },
   ],
@@ -370,10 +419,51 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     email: session.user.email || "",
     avatar: session.user.image || null,
   } : null
-  
-  const isSuperAdmin = session?.user?.isSuperAdmin
 
   const isLoading = status === "loading"
+
+  // Compute navSecondary items with proper subdomain URLs
+  // Use useState + useEffect to ensure URLs are computed on the client where window is available
+  const [navSecondary, setNavSecondary] = React.useState<{ title: string; url: string; icon: typeof ShoppingCart; external?: boolean }[]>([])
+  
+  React.useEffect(() => {
+    const organizationId = session?.user?.organizationId
+    
+    const computeNavSecondary = async () => {
+      const items: { title: string; url: string; icon: typeof ShoppingCart; external?: boolean }[] = []
+      
+      // Add marketing site link if organization has a published website
+      if (organizationId) {
+        const websiteSubdomain = await getOrganizationWebsiteSubdomain(organizationId)
+        if (websiteSubdomain) {
+          items.push({
+            title: "Marketing Site",
+            url: getAccessPointUrl(websiteSubdomain),
+            icon: Globe,
+            external: true,
+          })
+        }
+      }
+      
+      // Add access point items (POS, Coach Portal, etc.)
+      const accessPointItems = data.navSecondaryAccessPoints.map(item => ({
+        title: item.title,
+        // Pass organizationId for portals that need it (like POS)
+        url: getAccessPointUrl(item.subdomain, organizationId || undefined),
+        icon: item.icon,
+      }))
+      
+      const staticItems = data.navSecondaryStatic.map(item => ({
+        title: item.title,
+        url: item.url ?? getAccessPointUrl(item.subdomain!),
+        icon: item.icon,
+      }))
+      
+      setNavSecondary([...items, ...accessPointItems, ...staticItems])
+    }
+    
+    computeNavSecondary()
+  }, [session?.user?.organizationId])
 
   return (
     <Sidebar {...props}>
@@ -383,57 +473,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {isSuperAdmin && (
-               <Collapsible
-                  key="Admin"
-                  asChild
-                  defaultOpen={isMobile ? pathname.startsWith("/admin") : true}
-                  className="group/collapsible"
-                >
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Super Admin">
-                        <ShieldCheck className="size-4" />
-                        <span className="font-medium">Super Admin</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === "/admin"}>
-                              <a href="/admin">
-                                <span>Overview</span>
-                              </a>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === "/admin/organizations"}>
-                              <a href="/admin/organizations">
-                                <span>Organizations</span>
-                              </a>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton asChild isActive={pathname === "/admin/users"}>
-                              <a href="/admin/users">
-                                <span>Users</span>
-                              </a>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton asChild isActive={pathname.startsWith("/admin/domains")}>
-                              <a href="/admin/domains">
-                                <span>Domains</span>
-                              </a>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-            )}
-
             {data.navMain.map((item) => (
               <Collapsible
                 key={item.title}
@@ -467,7 +506,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             ))}
           </SidebarMenu>
         </SidebarGroup>
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         {isLoading || !user ? (

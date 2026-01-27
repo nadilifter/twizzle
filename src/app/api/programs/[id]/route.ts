@@ -129,6 +129,13 @@ export async function PATCH(
       data: validatedData,
       include: {
         membershipTiers: true,
+        _count: {
+          select: {
+            enrollments: true,
+            events: true,
+            lessonPlans: true,
+          },
+        },
       },
     });
 

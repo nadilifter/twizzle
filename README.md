@@ -133,6 +133,35 @@ pnpm dev
 pnpm build
 ```
 
+### Local Subdomain Development
+
+To develop locally with the multi-portal architecture, you must update your `/etc/hosts` file (Linux/macOS) or `hosts` file (Windows) to map the subdomains to localhost.
+
+**Add these lines:**
+```
+127.0.0.1   uplifterinc.localhost
+127.0.0.1   admin.uplifterinc.localhost
+127.0.0.1   superadmin.uplifterinc.localhost
+127.0.0.1   coach.uplifterinc.localhost
+127.0.0.1   athletes.uplifterinc.localhost
+127.0.0.1   pos.uplifterinc.localhost
+127.0.0.1   feedback.uplifterinc.localhost
+127.0.0.1   events.uplifterinc.localhost
+127.0.0.1   demo-gym.uplifterinc.localhost
+127.0.0.1   londonwestern.uplifterinc.localhost
+```
+
+**Access Points:**
+-   **Super Admin**: `http://superadmin.uplifterinc.localhost:3000`
+-   **Business Dashboard**: `http://admin.uplifterinc.localhost:3000`
+-   **Coach Portal**: `http://coach.uplifterinc.localhost:3000`
+-   **Athlete Portal**: `http://athletes.uplifterinc.localhost:3000`
+-   **POS**: `http://pos.uplifterinc.localhost:3000`
+-   **Feedback**: `http://feedback.uplifterinc.localhost:3000`
+-   **Events Portal**: `http://events.uplifterinc.localhost:3000` - Day-of-event operations (QR check-in, athlete search, schedule)
+-   **Tenant Site 1**: `http://demo-gym.uplifterinc.localhost:3000`
+-   **Tenant Site 2**: `http://londonwestern.uplifterinc.localhost:3000`
+
 Turborepo task filtering should be used sparingly and intentionally. Default workflows should remain simple.
 
 ---
