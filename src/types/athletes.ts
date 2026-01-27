@@ -12,9 +12,19 @@ export interface Athlete {
   status: AthleteStatus;
   avatar: string | null;
   birthDate: string | null;
-  familyId: string;
+  // familyId is deprecated/removed in schema, but may be present in older API responses or forms
+  familyId?: string | null; 
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AthleteGuardian {
+  id: string;
+  athleteId: string;
+  familyId: string;
+  relationship: string | null;
+  isPrimary: boolean;
+  family: FamilySummary;
 }
 
 // Family summary for athlete list views
@@ -45,6 +55,7 @@ export interface EnrollmentWithProgram {
 
 // Athlete with related data for list views
 export interface AthleteWithRelations extends Athlete {
+  guardians: AthleteGuardian[];
   family: FamilySummary;
   enrollments: EnrollmentWithProgram[];
   _count: {

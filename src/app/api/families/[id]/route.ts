@@ -29,11 +29,15 @@ export async function GET(
         organizationId: session.user.organizationId,
       },
       include: {
-        athletes: {
+        guardians: {
           include: {
-            enrollments: {
+            athlete: {
               include: {
-                program: true,
+                enrollments: {
+                  include: {
+                    program: true,
+                  },
+                },
               },
             },
           },
@@ -53,7 +57,12 @@ export async function GET(
       return NextResponse.json({ error: "Family not found" }, { status: 404 });
     }
 
-    return NextResponse.json(family);
+    const transformedFamily = {
+      ...family,
+      athletes: family.guardians.map(g => g.athlete),
+    };
+
+    return NextResponse.json(transformedFamily);
   } catch (error) {
     console.error("Error fetching family:", error);
     return NextResponse.json(
@@ -104,11 +113,20 @@ export async function PATCH(
       where: { id },
       data: validatedData,
       include: {
-        athletes: true,
+        guardians: {
+          include: {
+            athlete: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(family);
+    const transformedFamily = {
+      ...family,
+      athletes: family.guardians.map(g => g.athlete),
+    };
+
+    return NextResponse.json(transformedFamily);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

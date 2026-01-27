@@ -43,8 +43,12 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     const where = {
-      family: {
-        organizationId: session.user.organizationId,
+      guardians: {
+        some: {
+          family: {
+            organizationId: session.user.organizationId,
+          },
+        },
       },
       ...(search && {
         OR: [
@@ -55,19 +59,29 @@ export async function GET(request: NextRequest) {
       ...(status && { status: status as "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED" }),
       ...(level && { level }),
       ...(group && { group }),
-      ...(familyId && { familyId }),
+      ...(familyId && {
+        guardians: {
+          some: {
+            familyId,
+          },
+        },
+      }),
     };
 
     const [athletes, total] = await Promise.all([
       db.athlete.findMany({
         where,
         include: {
-          family: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              primaryContact: true,
+          guardians: {
+            include: {
+              family: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  primaryContact: true,
+                },
+              },
             },
           },
           enrollments: {
@@ -97,10 +111,16 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform for frontend compatibility - keep status as-is (uppercase from DB)
-    const transformedAthletes = athletes.map((athlete) => ({
-      ...athlete,
-      parent: athlete.family.primaryContact,
-    }));
+    const transformedAthletes = athletes.map((athlete) => {
+      const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
+      const family = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown" };
+      
+      return {
+        ...athlete,
+        family,
+        parent: family.primaryContact,
+      };
+    });
 
     return NextResponse.json({
       data: transformedAthletes,
@@ -171,15 +191,25 @@ export async function POST(request: NextRequest) {
         status: validatedData.status,
         // Use parseDateOnly to set noon UTC, avoiding timezone date shifts
         birthDate: parseDateOnly(validatedData.birthDate),
-        familyId: validatedData.familyId,
+        guardians: {
+          create: {
+            familyId: validatedData.familyId,
+            relationship: "Primary",
+            isPrimary: true,
+          },
+        },
       },
       include: {
-        family: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            primaryContact: true,
+        guardians: {
+          include: {
+            family: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                primaryContact: true,
+              },
+            },
           },
         },
         enrollments: {
@@ -204,9 +234,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Transform to match GET response format
+    const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
+    const createdFamily = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown" };
+
     const transformedAthlete = {
       ...athlete,
-      parent: athlete.family.primaryContact,
+      family: createdFamily,
+      parent: createdFamily.primaryContact,
     };
 
     return NextResponse.json(transformedAthlete);

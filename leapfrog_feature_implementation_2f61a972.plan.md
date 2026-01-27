@@ -11,6 +11,9 @@ todos:
   - id: phase1-rbac
     content: Build role-based access control middleware and connect to users page
     status: completed
+  - id: infra-multitenancy
+    content: Implement secure multi-tenancy with Prisma Client Extensions (getScopedDb)
+    status: completed
   - id: phase2-athletes
     content: Create Athletes and Families CRUD API and connect to dashboard pages
     status: completed
@@ -22,6 +25,12 @@ todos:
     status: completed
   - id: phase3-attendance
     content: Implement Attendance tracking linked to Athletes and Events
+    status: completed
+  - id: phase3-registration
+    content: Add event registration functionality
+    status: completed
+  - id: phase3-review
+    content: Review and update completion indicators for all pages
     status: completed
   - id: phase4-invoices
     content: Build Invoice system with LineItems referencing Programs, Events, and Athletes
@@ -50,6 +59,7 @@ isProject: false
 
 **Backend Implementation Complete:**
 - ✅ Full Prisma schema with all entities (Phases 1-6)
+- ✅ Secure Multi-tenancy Architecture (Shared Schema + Row-Level Isolation)
 - ✅ NextAuth.js authentication (credentials + Google OAuth)
 - ✅ RBAC permissions system
 - ✅ Complete CRUD APIs for: Users, Athletes, Families, Programs, Events, Invoices
@@ -58,7 +68,11 @@ isProject: false
 
 **Remaining:**
 - ⏳ GLCode/Ledger API (Phase 4.4)
-- ⏳ Connect frontend pages to real API endpoints (replace mock data)
+- ⏳ Connect frontend pages to real API endpoints:
+  - ✅ Core Entities (Athletes, Families, Programs, Memberships)
+  - ⏳ Operations (Events, Attendance)
+  - ⏳ Financials (Invoices, Payments)
+  - ⏳ Training (Evaluations, Skills)
 - ⏳ Add missing [id] routes for: Attendance, Enrollments, Payments, Skills, Evaluations, Lesson Plans, Announcements
 
 The frontend is well-prepared with 50+ UI components and 30+ dashboard pages using mock data. Backend APIs are ready—dashboard pages need to be connected to API endpoints.
@@ -347,12 +361,15 @@ Connect [discounts page](src/app/dashboard/financials/discounts/page.tsx) to inv
 
 **Interplay**: Discounts apply to Invoices with scoping by:
 
+- **Organization** (Tenancy isolation enforced)
 - User type (new users, members, VIP)
 - Product scope (merchandise, events, membership)
 
 ### 4.4 General Ledger
 
 Connect [ledger pages](src/app/dashboard/financials/ledgers/) for accounting integration.
+
+**Status**: Schema models `GLCode` and `LedgerEntry` are created and tenant-scoped. API implementation is pending.
 
 ---
 

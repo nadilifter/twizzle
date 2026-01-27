@@ -9,7 +9,9 @@ import {
   Mail, 
   Phone, 
   CreditCard,
-  Users
+  Users,
+  Loader2,
+  AlertCircle
 } from "lucide-react"
 import Link from "next/link"
 
@@ -33,16 +35,21 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { families, Family } from "@/mock-data/families"
+import { useFamilies } from "@/hooks/use-families"
 
 export default function FamiliesPage() {
   const [searchTerm, setSearchTerm] = React.useState("")
   
-  const filteredFamilies = families.filter(family => 
-    family.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    family.primaryContact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    family.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const { families, isLoading, error, fetchFamilies } = useFamilies()
+
+  // Debounced search effect
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchFamilies({ search: searchTerm })
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm, fetchFamilies])
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -76,85 +83,110 @@ export default function FamiliesPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Family Name</TableHead>
-              <TableHead>Primary Contact</TableHead>
-              <TableHead>Contact Info</TableHead>
-              <TableHead>Athletes</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredFamilies.map((family) => (
-              <TableRow key={family.id}>
-                <TableCell className="font-medium">
-                  <Link href={`/dashboard/athletes/families/${family.id}`} className="hover:underline">
-                    {family.name}
-                  </Link>
-                </TableCell>
-                <TableCell>{family.primaryContact}</TableCell>
-                <TableCell>
-                  <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" /> {family.email}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" /> {family.phone}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{family.athletes.length}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Badge 
-                    variant={family.balance > 0 ? "destructive" : family.balance < 0 ? "secondary" : "outline"}
-                    className={family.balance > 0 ? "" : family.balance < 0 ? "text-green-600 border-green-200 bg-green-50" : ""}
-                  >
-                    ${Math.abs(family.balance).toFixed(2)} {family.balance < 0 ? "CR" : ""}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/athletes/families/${family.id}`}>
-                          View Details
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>Edit Family</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>Create Invoice</DropdownMenuItem>
-                      <DropdownMenuItem>Process Payment</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredFamilies.length === 0 && (
+      {/* Loading State */}
+      {isLoading && families.length === 0 && (
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">Loading families...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && families.length === 0 && (
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-2 text-destructive">
+            <AlertCircle className="h-8 w-8" />
+            <p>Failed to load families</p>
+            <Button variant="outline" onClick={() => fetchFamilies()}>
+              Try Again
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {(!isLoading || families.length > 0) && !error && (
+        <div className="rounded-md border bg-card">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  No families found.
-                </TableCell>
+                <TableHead>Family Name</TableHead>
+                <TableHead>Primary Contact</TableHead>
+                <TableHead>Contact Info</TableHead>
+                <TableHead>Athletes</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {families.map((family) => (
+                <TableRow key={family.id}>
+                  <TableCell className="font-medium">
+                    <Link href={`/dashboard/athletes/families/${family.id}`} className="hover:underline">
+                      {family.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{family.primaryContact}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" /> {family.email}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" /> {family.phone}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span>{family.athletes.length}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge 
+                      variant={Number(family.balance) > 0 ? "destructive" : Number(family.balance) < 0 ? "secondary" : "outline"}
+                      className={Number(family.balance) > 0 ? "" : Number(family.balance) < 0 ? "text-green-600 border-green-200 bg-green-50" : ""}
+                    >
+                      ${Math.abs(Number(family.balance)).toFixed(2)} {Number(family.balance) < 0 ? "CR" : ""}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/athletes/families/${family.id}`}>
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>Edit Family</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>Create Invoice</DropdownMenuItem>
+                        <DropdownMenuItem>Process Payment</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {families.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    No families found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   )
 }

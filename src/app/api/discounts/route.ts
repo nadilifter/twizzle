@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const createDiscountSchema = z.object({
@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const scopedDb = getScopedDb(session.user.organizationId);
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [discounts, total] = await Promise.all([
-      db.discount.findMany({
+      scopedDb.discount.findMany({
         where,
         include: {
           _count: {
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      db.discount.count({ where }),
+      scopedDb.discount.count({ where }),
     ]);
 
     // Transform for frontend and add computed fields
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const discount = await db.discount.create({
+    const discount = await scopedDb.discount.create({
       data: {
         name: validatedData.name,
         code: validatedData.code,

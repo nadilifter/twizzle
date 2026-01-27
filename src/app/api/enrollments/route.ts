@@ -10,6 +10,7 @@ const createEnrollmentSchema = z.object({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional().nullable(),
   status: z.enum(["ACTIVE", "PAUSED", "CANCELLED", "COMPLETED"]).default("ACTIVE"),
+  familyId: z.string().optional(),
 });
 
 // GET /api/enrollments
@@ -108,14 +109,32 @@ export async function POST(request: NextRequest) {
     const athlete = await db.athlete.findFirst({
       where: {
         id: validatedData.athleteId,
-        family: {
-          organizationId: session.user.organizationId,
+        guardians: {
+          some: {
+            family: {
+              organizationId: session.user.organizationId,
+            },
+          },
         },
+      },
+      include: {
+        guardians: true,
       },
     });
 
     if (!athlete) {
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
+    }
+
+    // Determine familyId (payer)
+    let familyId = validatedData.familyId;
+    if (!familyId) {
+      const primary = athlete.guardians.find(g => g.isPrimary) || athlete.guardians[0];
+      familyId = primary?.familyId;
+    }
+
+    if (!familyId) {
+      return NextResponse.json({ error: "No family found for athlete" }, { status: 400 });
     }
 
     // Verify program belongs to the organization
@@ -154,11 +173,13 @@ export async function POST(request: NextRequest) {
         startDate: new Date(validatedData.startDate),
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
         status: validatedData.status,
+        familyId: familyId,
       },
       include: {
         athlete: true,
         program: true,
         membershipTier: true,
+        family: true,
       },
     });
 

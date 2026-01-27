@@ -38,8 +38,8 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/auth"],
   },
   "/dashboard/settings/users": {
-    status: "live",
-    description: "User management with RBAC",
+    status: "demo",
+    description: "User management uses mock data (Admin Users is live)",
     apiRoutes: ["/api/users"],
   },
   
@@ -81,9 +81,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/families"],
   },
   "/dashboard/athletes/memberships": {
-    status: "demo",
-    description: "Membership management uses mock data",
-    apiRoutes: ["/api/enrollments"],
+    status: "live",
+    description: "Membership management with group instances",
+    apiRoutes: ["/api/memberships"],
   },
 
   // Training Section
@@ -163,8 +163,8 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Staff management uses sample data",
   },
   "/dashboard/organization/website": {
-    status: "demo",
-    description: "Website builder uses sample content",
+    status: "live",
+    description: "Website builder with CMS capabilities",
   },
 
   // Financials Section

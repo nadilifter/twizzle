@@ -116,10 +116,12 @@ const data = {
           title: "Overview",
           url: "/dashboard",
         },
+        /*
         {
           title: "Analytics",
           url: "/dashboard/analytics",
         },
+        */
       ],
     },
     {
@@ -148,6 +150,7 @@ const data = {
       title: "Training",
       url: "/dashboard/training",
       items: [
+        /*
         {
           title: "Overview",
           url: "/dashboard/training",
@@ -156,10 +159,12 @@ const data = {
           title: "Plans",
           url: "/dashboard/training/plans",
         },
+        */
         {
           title: "Programs",
           url: "/dashboard/training/programs",
         },
+        /*
         {
           title: "Rotations",
           url: "/dashboard/training/rotations",
@@ -168,6 +173,7 @@ const data = {
           title: "Skills",
           url: "/dashboard/training/skills",
         },
+        */
       ],
     },
     {
@@ -184,6 +190,7 @@ const data = {
         },
       ],
     },
+    /*
     {
       title: "Communication",
       url: "/dashboard/communication",
@@ -210,6 +217,7 @@ const data = {
         },
       ],
     },
+    */
     {
       title: "My Organization",
       url: "/dashboard/organization",
@@ -282,6 +290,7 @@ const data = {
         },
       ],
     },
+    /*
     {
       title: "Forms",
       url: "/dashboard/forms",
@@ -296,6 +305,8 @@ const data = {
         },
       ],
     },
+    */
+    /*
     {
       title: "Campaigns",
       url: "/campaigns",
@@ -318,6 +329,7 @@ const data = {
         },
       ],
     },
+    */
     {
       title: "Settings",
       url: "/dashboard/settings",
@@ -406,6 +418,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <SidebarMenuSubButton asChild isActive={pathname === "/admin/users"}>
                               <a href="/admin/users">
                                 <span>Users</span>
+                              </a>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton asChild isActive={pathname.startsWith("/admin/domains")}>
+                              <a href="/admin/domains">
+                                <span>Domains</span>
                               </a>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>

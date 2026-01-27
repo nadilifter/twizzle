@@ -1,21 +1,40 @@
 "use client";
 
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { useCalendarStore } from "@/store/calendar-store";
-import { Event } from "@/mock-data/events";
-import { useEffect, useRef, useState } from "react";
+import { EventWithRelations } from "@/types/events";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarWeekHeader } from "./calendar-week-header";
 import { CalendarHoursColumn } from "./calendar-hours-column";
 import { CalendarDayColumn } from "./calendar-day-column";
 import { INITIAL_SCROLL_OFFSET } from "./calendar-utils";
+import { useEvents } from "@/hooks/use-events";
 
 export function CalendarView() {
   const router = useRouter();
-  const { goToNextWeek, goToPreviousWeek, getWeekDays, getCurrentWeekEvents } =
-    useCalendarStore();
-  const weekDays = getWeekDays();
-  const events = getCurrentWeekEvents();
+  const { currentWeekStart, goToNextWeek, goToPreviousWeek } = useCalendarStore();
+  
+  const weekDays = useMemo(() => {
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        days.push(addDays(currentWeekStart, i));
+      }
+      return days;
+  }, [currentWeekStart]);
+
+  const startDate = format(weekDays[0], "yyyy-MM-dd");
+  const endDate = format(weekDays[6], "yyyy-MM-dd");
+
+  const { events, fetchEvents } = useEvents({ 
+      initialParams: { startDate, endDate },
+      autoFetch: false 
+  });
+
+  useEffect(() => {
+      fetchEvents({ startDate, endDate });
+  }, [startDate, endDate, fetchEvents]);
+
   const hoursScrollRef = useRef<HTMLDivElement>(null);
   const daysScrollRefs = useRef<(HTMLDivElement | null)[]>([]);
   const hasScrolledRef = useRef(false);
@@ -31,10 +50,10 @@ export function CalendarView() {
     return () => clearInterval(interval);
   }, []);
 
-  const eventsByDay: Record<string, Event[]> = {};
+  const eventsByDay: Record<string, EventWithRelations[]> = {};
   weekDays.forEach((day) => {
     const dayStr = format(day, "yyyy-MM-dd");
-    eventsByDay[dayStr] = events.filter((e) => e.date === dayStr);
+    eventsByDay[dayStr] = events.filter((e) => e.date.split('T')[0] === dayStr);
   });
 
   const isTodayInWeek = weekDays.some(
@@ -81,7 +100,7 @@ export function CalendarView() {
       });
     };
 
-  const handleEventClick = (event: Event) => {
+  const handleEventClick = (event: EventWithRelations) => {
     router.push(`/dashboard/events/${event.id}`);
   };
 

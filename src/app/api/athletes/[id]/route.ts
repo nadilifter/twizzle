@@ -29,14 +29,22 @@ export async function GET(
     const athlete = await db.athlete.findFirst({
       where: {
         id,
-        family: {
-          organizationId: session.user.organizationId,
+        guardians: {
+          some: {
+            family: {
+              organizationId: session.user.organizationId,
+            },
+          },
         },
       },
       include: {
-        family: {
+        guardians: {
           include: {
-            paymentMethods: true,
+            family: {
+              include: {
+                paymentMethods: true,
+              },
+            },
           },
         },
         enrollments: {
@@ -66,7 +74,7 @@ export async function GET(
               select: {
                 id: true,
                 name: true,
-              },
+                69|              },
             },
             skillRatings: {
               include: {
@@ -96,7 +104,14 @@ export async function GET(
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
-    return NextResponse.json(athlete);
+    // Transform for frontend
+    const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
+    const family = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown", phone: "", address: null, balance: 0, paymentMethods: [] };
+
+    return NextResponse.json({
+      ...athlete,
+      family,
+    });
   } catch (error) {
     console.error("Error fetching athlete:", error);
     return NextResponse.json(
@@ -135,9 +150,16 @@ export async function PATCH(
     const existing = await db.athlete.findFirst({
       where: {
         id,
-        family: {
-          organizationId: session.user.organizationId,
+        guardians: {
+          some: {
+            family: {
+              organizationId: session.user.organizationId,
+            },
+          },
         },
+      },
+      include: {
+        guardians: true,
       },
     });
 
@@ -145,8 +167,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
-    // If changing family, verify new family belongs to org
-    if (validatedData.familyId && validatedData.familyId !== existing.familyId) {
+    // If changing family, verify new family belongs to org and update guardians
+    if (validatedData.familyId) {
       const family = await db.family.findFirst({
         where: {
           id: validatedData.familyId,
@@ -156,10 +178,50 @@ export async function PATCH(
       if (!family) {
         return NextResponse.json({ error: "Family not found" }, { status: 404 });
       }
+
+      // Check if this family is already a guardian
+      const existingGuardian = existing.guardians.find(g => g.familyId === validatedData.familyId);
+      
+      if (existingGuardian) {
+        // Set as primary, unset others
+        await db.$transaction([
+          db.athleteGuardian.updateMany({
+            where: { athleteId: id, isPrimary: true },
+            data: { isPrimary: false },
+          }),
+          db.athleteGuardian.update({
+            where: { id: existingGuardian.id },
+            data: { isPrimary: true },
+          }),
+        ]);
+      } else {
+        // Update the current primary to the new family (replace it)
+        // Or add as new primary?
+        // "Edit Athlete" usually means correcting the record.
+        // If we want to ADD a family, we should probably have a separate UI.
+        // For now, let's assume we are replacing the primary guardian link.
+        const currentPrimary = existing.guardians.find(g => g.isPrimary) || existing.guardians[0];
+        if (currentPrimary) {
+           await db.athleteGuardian.update({
+             where: { id: currentPrimary.id },
+             data: { familyId: validatedData.familyId },
+           });
+        } else {
+           // Create new if none exists
+           await db.athleteGuardian.create({
+             data: {
+               athleteId: id,
+               familyId: validatedData.familyId,
+               isPrimary: true,
+               relationship: "Primary",
+             }
+           });
+        }
+      }
     }
 
     // Handle birthDate separately to use noon UTC for date-only fields
-    const { birthDate, ...otherData } = validatedData;
+    const { birthDate, familyId, ...otherData } = validatedData;
     const athlete = await db.athlete.update({
       where: { id },
       data: {
@@ -170,7 +232,11 @@ export async function PATCH(
         }),
       },
       include: {
-        family: true,
+        guardians: {
+          include: {
+            family: true,
+          },
+        },
         enrollments: {
           include: {
             program: true,
@@ -179,7 +245,14 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json(athlete);
+    // Transform for frontend
+    const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
+    const family = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown" };
+
+    return NextResponse.json({
+      ...athlete,
+      family,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -222,8 +295,12 @@ export async function DELETE(
     const existing = await db.athlete.findFirst({
       where: {
         id,
-        family: {
-          organizationId: session.user.organizationId,
+        guardians: {
+          some: {
+            family: {
+              organizationId: session.user.organizationId,
+            },
+          },
         },
       },
     });

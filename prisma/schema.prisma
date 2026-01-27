@@ -23,6 +23,8 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Relations
+  membershipTiers MembershipTier[] // Legacy, to be removed
+  membershipGroups MembershipGroup[]
   members     OrganizationMember[]
   users       User[] // Legacy relation, keep for now but rely on members
   families    Family[]
@@ -33,6 +35,14 @@ model Organization {
   lessonPlans LessonPlan[]
   announcements Announcement[]
   websiteConfig WebsiteConfig?
+
+  // Financials
+  discounts     Discount[]
+  glCodes       GLCode[]
+  ledgerEntries LedgerEntry[]
+  
+  // Athletes (Direct relation for easier querying)
+  athletes      Athlete[]
 }
 
 model OrganizationMember {
@@ -159,10 +169,12 @@ model Family {
 
   // Relations
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  athletes       Athlete[]
+  // athletes       Athlete[] // Deprecated, use guardians
+  guardians      AthleteGuardian[]
   paymentMethods PaymentMethod[]
   invoices       Invoice[]
   payments       Payment[]
+  enrollments    Enrollment[] // Enrollments paid/managed by this family
 }
 
 model Athlete {
@@ -174,16 +186,40 @@ model Athlete {
   status    AthleteStatus @default(ACTIVE)
   avatar    String?
   birthDate DateTime?
-  familyId  String
+  familyId  String? // Deprecated: Use guardians relation
+  
+  // New fields for refactor
+  customId       String?  // Club-specific ID (e.g. Member ID)
+  organizationId String?  // Direct organization link
+  
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
   // Relations
-  family      Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id])
   enrollments Enrollment[]
   attendances Attendance[]
   evaluations Evaluation[]
   lineItems   LineItem[]
+  memberships AthleteMembership[]
+  
+  // Multi-family support
+  guardians   AthleteGuardian[]
+}
+
+model AthleteGuardian {
+  id           String   @id @default(cuid())
+  athleteId    String
+  familyId     String
+  relationship String?  // e.g. "Parent", "Guardian", "Grandparent"
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  athlete      Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  family       Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([athleteId, familyId])
 }
 
 enum AthleteStatus {
@@ -232,7 +268,7 @@ model Program {
   lessonPlans  LessonPlan[]
   enrollments  Enrollment[]
   lineItems    LineItem[]
-  membershipTiers MembershipTier[]
+  membershipTiers MembershipTier[] // Legacy
 }
 
 enum ProgramStatus {
@@ -241,20 +277,95 @@ enum ProgramStatus {
   ARCHIVED
 }
 
+// Legacy - to be deprecated
 model MembershipTier {
   id          String   @id @default(cuid())
-  programId   String
+  programId   String?
   name        String
   price       Decimal  @db.Decimal(10, 2)
   interval    BillingInterval
   description String?
   features    String[] // Array of feature strings
+  organizationId String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program     Program?  @relation(fields: [programId], references: [id], onDelete: Cascade)
   enrollments Enrollment[]
+}
+
+// New Membership Structure
+model MembershipGroup {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   // e.g., "Annual Membership"
+  description    String?
+  programTypes   String[] // Relevant program types
+  
+  // Logic & Defaults
+  allowAutoRenew Boolean  @default(false)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  instances      MembershipInstance[]
+}
+
+model MembershipInstance {
+  id                String   @id @default(cuid())
+  membershipGroupId String
+  name              String   // e.g., "FY25"
+  
+  // Billing
+  price             Decimal  @db.Decimal(10, 2)
+  billingInterval   BillingInterval
+  
+  // Validity
+  startDate         DateTime
+  endDate           DateTime
+  
+  // Renewal Logic
+  autoRenewDate     DateTime? // When to trigger creation of next instance (if handled by system)
+  
+  status            MembershipStatus @default(ACTIVE)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  group             MembershipGroup @relation(fields: [membershipGroupId], references: [id], onDelete: Cascade)
+  athleteMemberships AthleteMembership[]
+  requiredForEvents Event[]
+}
+
+model AthleteMembership {
+  id                   String   @id @default(cuid())
+  athleteId            String
+  membershipInstanceId String
+  
+  startDate            DateTime
+  endDate              DateTime?
+  status               MembershipStatus @default(ACTIVE)
+  
+  // Auto-renewal for the athlete
+  autoRenew            Boolean @default(false)
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  athlete              Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  instance             MembershipInstance @relation(fields: [membershipInstanceId], references: [id], onDelete: Cascade)
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  ARCHIVED
 }
 
 enum BillingInterval {
@@ -267,7 +378,8 @@ model Enrollment {
   id                String    @id @default(cuid())
   athleteId         String
   programId         String
-  membershipTierId  String?
+  membershipTierId  String?   // Legacy
+  familyId          String?   // The family responsible for this enrollment
   startDate         DateTime
   endDate           DateTime?
   status            EnrollmentStatus @default(ACTIVE)
@@ -278,6 +390,7 @@ model Enrollment {
   athlete        Athlete        @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   program        Program        @relation(fields: [programId], references: [id], onDelete: Cascade)
   membershipTier MembershipTier? @relation(fields: [membershipTierId], references: [id])
+  family         Family?        @relation(fields: [familyId], references: [id])
 }
 
 enum EnrollmentStatus {
@@ -300,10 +413,13 @@ model Event {
   type           EventType @default(CLASS)
   description    String?
   meetingLink    String?
+  timezone       String?
+  capacity       Int?
   location       Json?     // { lat, lng, address, name }
   details        Json?     // { whatToBring, whatToExpect, requirements }
   programId      String?
   coachId        String?
+  requiredMemberships MembershipInstance[]
   organizationId String
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -343,6 +459,7 @@ model Attendance {
 }
 
 enum AttendanceStatus {
+  REGISTERED
   PRESENT
   ABSENT
   LATE
@@ -447,10 +564,12 @@ model Discount {
   usageLimit   Int?
   usageCount   Int          @default(0)
   status       DiscountStatus @default(ACTIVE)
+  organizationId String
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
   // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   lineItems    LineItem[]
 }
 
@@ -486,10 +605,12 @@ model GLCode {
   description String
   type        GLCodeType
   status      GLCodeStatus @default(ACTIVE)
+  organizationId String
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ledgerEntries LedgerEntry[]
 }
 
@@ -515,9 +636,11 @@ model LedgerEntry {
   debit       Decimal?          @db.Decimal(10, 2)
   credit      Decimal?          @db.Decimal(10, 2)
   status      LedgerEntryStatus @default(PENDING)
+  organizationId String
   createdAt   DateTime          @default(now())
 
   // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   glCode GLCode @relation(fields: [glCodeId], references: [id])
 }
 
@@ -713,4 +836,23 @@ model WebsiteConfig {
 
   // Relations
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// Reserved Domains/Prefixes
+// ============================================
+
+model ReservedDomain {
+  id          String             @id @default(cuid())
+  pattern     String             @unique // The reserved domain or prefix pattern
+  type        ReservedDomainType @default(EXACT)
+  reason      String?            // Why this is reserved (e.g., "Brand protection", "System use")
+  createdBy   String?            // User ID who created this reservation
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+enum ReservedDomainType {
+  EXACT   // Exact match (e.g., "admin" blocks only "admin")
+  PREFIX  // Prefix match (e.g., "test-" blocks "test-anything")
 }

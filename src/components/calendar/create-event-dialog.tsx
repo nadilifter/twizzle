@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCalendarStore } from "@/store/calendar-store";
 import { cn } from "@/lib/utils";
-import { Event } from "@/mock-data/events";
+import { useEvents } from "@/hooks/use-events";
+import { useUsers } from "@/hooks/use-users";
+import { useMemberships } from "@/hooks/use-memberships";
+import { toast } from "sonner";
 
 interface CreateEventDialogProps {
   open: boolean;
@@ -33,54 +44,87 @@ export function CreateEventDialog({
   open,
   onOpenChange,
 }: CreateEventDialogProps) {
-  const { addEvent, goToDate } = useCalendarStore();
+  const { goToDate } = useCalendarStore();
+  const { createEvent, isCreating } = useEvents({ autoFetch: false });
+  const { users: coaches } = useUsers({ role: "COACH" });
+  const { memberships } = useMemberships({ initialParams: { include: "instances" } });
+
   const [title, setTitle] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
   const [timezone, setTimezone] = useState("");
-  const [participants, setParticipants] = useState("");
+  const [capacity, setCapacity] = useState("");
+  const [coachId, setCoachId] = useState<string>("none");
+  const [requiredMembershipIds, setRequiredMembershipIds] = useState<string[]>([]);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title || !date || !startTime || !endTime) {
       return;
     }
 
-    const participantsList = participants
-      .split(",")
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0);
+    const dateTimeString = `${format(date, "yyyy-MM-dd")}T${startTime}`;
+    const eventDate = new Date(dateTimeString);
+    const now = new Date();
+    // Reset seconds/milliseconds for fair comparison
+    now.setSeconds(0, 0);
 
-    const newEvent: Omit<Event, "id"> = {
+    if (eventDate < now) {
+        toast.error("Event date and time must be in the future");
+        return;
+    }
+
+    const result = await createEvent({
       title,
       date: format(date, "yyyy-MM-dd"),
       startTime,
       endTime,
-      participants: participantsList.length > 0 ? participantsList : ["user1"],
-      meetingLink: meetingLink || undefined,
-      timezone: timezone || undefined,
-    };
+      meetingLink: meetingLink || null,
+      description: null,
+      type: "CLASS", // Default type
+      timezone: timezone || null,
+      capacity: capacity ? parseInt(capacity) : undefined,
+      coachId: coachId === "none" ? null : coachId,
+      requiredMembershipInstanceIds: requiredMembershipIds.length > 0 ? requiredMembershipIds : undefined,
+    });
 
-    addEvent(newEvent);
-    goToDate(date);
+    if (result) {
+        goToDate(date);
+        setTitle("");
+        setDate(new Date());
+        setStartTime("");
+        setEndTime("");
+        setMeetingLink("");
+        setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+        setCapacity("");
+        setCoachId("none");
+        setRequiredMembershipIds([]);
+        onOpenChange(false);
+        toast.success("Event created successfully");
+        // Trigger a refresh if possible, or reload
+        window.location.reload(); 
+    }
+  };
 
-    setTitle("");
-    setDate(new Date());
-    setStartTime("");
-    setEndTime("");
-    setMeetingLink("");
-    setTimezone("");
-    setParticipants("");
-    onOpenChange(false);
+  const toggleMembership = (instanceId: string) => {
+    setRequiredMembershipIds(prev => 
+      prev.includes(instanceId) 
+        ? prev.filter(id => id !== instanceId)
+        : [...prev, instanceId]
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Event</DialogTitle>
           <DialogDescription>
@@ -161,16 +205,81 @@ export function CreateEventDialog({
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="grid gap-2">
+                <Label htmlFor="capacity">Capacity (Optional)</Label>
+                <Input
+                  id="capacity"
+                  type="number"
+                  min="1"
+                  placeholder="Unlimited"
+                  value={capacity}
+                  onChange={(e) => setCapacity(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Input
+                  id="timezone"
+                  placeholder="GMT+7 Pontianak"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="participants">
-                Participants (comma-separated)
-              </Label>
-              <Input
-                id="participants"
-                placeholder="user1, user2, user3"
-                value={participants}
-                onChange={(e) => setParticipants(e.target.value)}
-              />
+              <Label htmlFor="coach">Instructor (Optional)</Label>
+              <Select value={coachId} onValueChange={setCoachId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select instructor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {coaches.map((coach) => (
+                    <SelectItem key={coach.id} value={coach.id}>
+                      {coach.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Required Memberships (Optional)</Label>
+              <div className="border rounded-md p-4 max-h-40 overflow-y-auto space-y-4">
+                {memberships.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No memberships found.</p>
+                ) : (
+                  memberships.map((group) => (
+                    <div key={group.id} className="space-y-2">
+                      <p className="text-sm font-semibold sticky top-0 bg-background pb-1">{group.name}</p>
+                      {group.instances && group.instances.length > 0 ? (
+                        <div className="ml-2 space-y-2">
+                           {group.instances.map(instance => (
+                             <div key={instance.id} className="flex items-center space-x-2">
+                               <Checkbox 
+                                  id={instance.id} 
+                                  checked={requiredMembershipIds.includes(instance.id)}
+                                  onCheckedChange={() => toggleMembership(instance.id)}
+                               />
+                               <label
+                                  htmlFor={instance.id}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {instance.name}
+                                </label>
+                             </div>
+                           ))}
+                        </div>
+                      ) : (
+                        <p className="ml-2 text-xs text-muted-foreground">No instances</p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             <div className="grid gap-2">
@@ -184,15 +293,6 @@ export function CreateEventDialog({
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="timezone">Timezone (optional)</Label>
-              <Input
-                id="timezone"
-                placeholder="GMT+7 Pontianak"
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -202,7 +302,9 @@ export function CreateEventDialog({
             >
               Cancel
             </Button>
-            <Button type="submit">Create Event</Button>
+            <Button type="submit" disabled={isCreating}>
+              {isCreating ? "Creating..." : "Create Event"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -175,7 +175,7 @@ export default function AthletesPage() {
       level: athlete.level,
       group: athlete.group,
       status: athlete.status as AthleteStatus,
-      familyId: athlete.familyId,
+      familyId: athlete.family?.id || "",
     })
     setIsEditDialogOpen(true)
   }, [])

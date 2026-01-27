@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const createProgramSchema = z.object({
@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
+    const scopedDb = getScopedDb(session.user.organizationId);
 
     const where = {
-      organizationId: session.user.organizationId,
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" as const } },
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     };
 
     const [programs, total] = await Promise.all([
-      db.program.findMany({
+      scopedDb.program.findMany({
         where,
         include: {
           _count: {
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      db.program.count({ where }),
+      scopedDb.program.count({ where }),
     ]);
 
     return NextResponse.json({
@@ -87,14 +87,21 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createProgramSchema.parse(body);
+    const scopedDb = getScopedDb(session.user.organizationId);
 
-    const program = await db.program.create({
+    const program = await scopedDb.program.create({
       data: {
         ...validatedData,
-        organizationId: session.user.organizationId,
       },
       include: {
         membershipTiers: true,
+        _count: {
+          select: {
+            enrollments: true,
+            events: true,
+            lessonPlans: true,
+          },
+        },
       },
     });
 

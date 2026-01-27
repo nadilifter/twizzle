@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCalendarStore } from "@/store/calendar-store";
-import { getTodayEvents } from "@/mock-data/events";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,13 +26,13 @@ import { SchedulePopover } from "./schedule-popover";
 
 export function CalendarHeader() {
   const { currentWeekStart } = useCalendarStore();
-  const todayEvents = getTodayEvents();
-  const meetingsCount = todayEvents.filter(
-    (e) =>
-      e.title.toLowerCase().includes("call") ||
-      e.title.toLowerCase().includes("meeting")
-  ).length;
-  const eventsCount = todayEvents.length - meetingsCount;
+  // const todayEvents = getTodayEvents();
+  // const meetingsCount = todayEvents.filter(
+  //   (e) =>
+  //     e.title.toLowerCase().includes("call") ||
+  //     e.title.toLowerCase().includes("meeting")
+  // ).length;
+  // const eventsCount = todayEvents.length - meetingsCount;
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   return (
@@ -50,11 +49,11 @@ export function CalendarHeader() {
                 <h1 className="text-sm md:text-base lg:text-lg font-semibold text-foreground truncate mb-0 md:mb-1">
                   {format(currentWeekStart, "MMMM dd, yyyy")}
                 </h1>
-                <p className="hidden md:block text-xs text-muted-foreground">
+                {/* <p className="hidden md:block text-xs text-muted-foreground">
                   You have {meetingsCount} meeting
                   {meetingsCount !== 1 ? "s" : ""} and {eventsCount} event
                   {eventsCount !== 1 ? "s" : ""} today.
-                </p>
+                </p> */}
               </div>
             </div>
 

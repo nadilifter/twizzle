@@ -2,11 +2,11 @@
 
 import { ExternalLink } from "lucide-react";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { Event } from "@/mock-data/events";
+import { EventWithRelations } from "@/types/events";
 import { getEventDuration } from "./calendar-utils";
 
 interface EventCardProps {
-  event: Event;
+  event: EventWithRelations;
   style: React.CSSProperties;
   onClick?: () => void;
 }

@@ -121,9 +121,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const permissions = session.user.permissions || [];
     if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("events.edit")
+      !permissions.includes("*") &&
+      !permissions.includes("events.edit")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -182,9 +183,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const permissions = session.user.permissions || [];
     if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("events.delete")
+      !permissions.includes("*") &&
+      !permissions.includes("events.delete")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

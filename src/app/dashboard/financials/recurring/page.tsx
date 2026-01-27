@@ -7,7 +7,8 @@ import {
   AlertCircle, 
   Play, 
   Search, 
-  Filter 
+  Filter,
+  Loader2
 } from "lucide-react"
 import Link from "next/link"
 
@@ -37,25 +38,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { athletes } from "@/mock-data/athletes"
-
-// Generate mock charges based on athletes
-const UPCOMING_CHARGES = athletes.slice(0, 10).map((athlete, i) => ({
-  id: `CHG-${1000 + i}`,
-  athleteId: athlete.id,
-  athleteName: athlete.name,
-  description: `Monthly Tuition - ${athlete.level}`,
-  amount: athlete.level.includes("Elite") ? 350.00 : athlete.level.includes("Level") ? 185.00 : 120.00,
-  date: "2023-12-01",
-  status: i === 2 ? "failed" : "scheduled", // Mock one failure
-  method: i % 3 === 0 ? "Bank Transfer" : "Visa •••• 4242"
-}))
+import { useAthletes } from "@/hooks/use-athletes"
 
 export default function RecurringBillingPage() {
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [searchTerm, setSearchTerm] = React.useState("")
+  
+  const { athletes, isLoading } = useAthletes()
 
-  const filteredCharges = UPCOMING_CHARGES.filter(charge => {
+  // Generate mock charges based on fetched athletes
+  // In a real implementation, this would fetch from a /api/billing/recurring endpoint
+  const upcomingCharges = React.useMemo(() => {
+    if (!athletes || athletes.length === 0) return []
+    
+    return athletes.slice(0, 10).map((athlete, i) => ({
+      id: `CHG-${1000 + i}`,
+      athleteId: athlete.id,
+      athleteName: athlete.name,
+      description: `Monthly Tuition - ${athlete.level}`,
+      amount: athlete.level.includes("Elite") ? 350.00 : athlete.level.includes("Level") ? 185.00 : 120.00,
+      date: new Date().toISOString().split('T')[0], // Today or start of month
+      status: i === 2 ? "failed" : "scheduled", // Mock one failure
+      method: i % 3 === 0 ? "Bank Transfer" : "Visa •••• 4242"
+    }))
+  }, [athletes])
+
+  const filteredCharges = upcomingCharges.filter(charge => {
     const matchesSearch = charge.athleteName.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || charge.status === statusFilter
     return matchesSearch && matchesStatus
@@ -94,7 +102,7 @@ export default function RecurringBillingPage() {
           <CardContent>
             <div className="text-2xl font-bold">${totalAmount.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              For Dec 1, 2023
+              For {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </p>
           </CardContent>
         </Card>
@@ -119,7 +127,7 @@ export default function RecurringBillingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-               {UPCOMING_CHARGES.filter(c => c.status === 'failed').length}
+               {upcomingCharges.filter(c => c.status === 'failed').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Requires attention
@@ -166,7 +174,16 @@ export default function RecurringBillingPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCharges.map((charge) => (
+            {isLoading && filteredCharges.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading billing data...
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : filteredCharges.map((charge) => (
               <TableRow key={charge.id}>
                 <TableCell className="font-medium">{charge.athleteName}</TableCell>
                 <TableCell>{charge.description}</TableCell>
@@ -186,7 +203,7 @@ export default function RecurringBillingPage() {
                 <TableCell className="text-right">${charge.amount.toFixed(2)}</TableCell>
               </TableRow>
             ))}
-             {filteredCharges.length === 0 && (
+             {!isLoading && filteredCharges.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
                   No scheduled charges found.

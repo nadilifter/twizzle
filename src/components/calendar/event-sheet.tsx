@@ -25,12 +25,12 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { Event } from "@/mock-data/events";
+import { EventWithRelations } from "@/types/events";
 import { useState } from "react";
 import { Kbd } from "@/components/ui/kbd";
 
 interface EventSheetProps {
-  event: Event | null;
+  event: EventWithRelations | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

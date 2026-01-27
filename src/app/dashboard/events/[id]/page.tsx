@@ -1,13 +1,36 @@
-import { getEventById } from "@/mock-data/events";
+"use client"
+
 import { notFound } from "next/navigation";
 import { Map, MapMarker, MapPopup, MapTileLayer, MapZoomControl } from "@/components/ui/map";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, User, Info, CheckCircle2, ClipboardList, HelpCircle } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, User, Info, CheckCircle2, ClipboardList, HelpCircle, Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
+import { useEvent } from "@/hooks/use-events";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useAthletes } from "@/hooks/use-athletes";
+import { useAttendance } from "@/hooks/use-attendance";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface EventPageProps {
   params: {
@@ -24,10 +47,48 @@ function getInitials(name: string) {
 }
 
 export default function EventPage({ params }: EventPageProps) {
-  const event = getEventById(params.id);
+  const { event, isLoading, error, fetchEvent } = useEvent(params.id);
+  const { athletes } = useAthletes(); // To populate the "Add Attendee" dropdown
+  const { markAttendance, isUpdating } = useAttendance();
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string>("");
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
-  if (!event) {
-    notFound();
+  const handleRegister = async () => {
+    if (!selectedAthleteId || !event) return;
+
+    const result = await markAttendance({
+      athleteId: selectedAthleteId,
+      eventId: event.id,
+      status: "REGISTERED", // Using the new status
+    });
+
+    if (result) {
+      toast.success("Athlete registered successfully");
+      setIsRegisterOpen(false);
+      setSelectedAthleteId("");
+      fetchEvent(); // Refresh event data to show new attendee
+    } else {
+        toast.error("Failed to register athlete");
+    }
+  };
+
+  if (isLoading) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+    )
+  }
+
+  if (error || !event) {
+    return (
+        <div className="container mx-auto py-8 px-4 text-center">
+            <h1 className="text-2xl font-bold mb-4">Event Not Found</h1>
+            <Button asChild>
+                <Link href="/dashboard/events">Back to Events</Link>
+            </Button>
+        </div>
+    )
   }
 
   return (
@@ -62,7 +123,6 @@ export default function EventPage({ params }: EventPageProps) {
                 <Clock className="h-5 w-5 text-primary" />
                 <span className="font-medium text-foreground">
                   {event.startTime} - {event.endTime}
-                  {event.timezone ? ` (${event.timezone})` : ""}
                 </span>
               </div>
             </div>
@@ -71,13 +131,13 @@ export default function EventPage({ params }: EventPageProps) {
           {/* Location Map */}
           {event.location ? (
              <div className="h-[400px] w-full rounded-xl border overflow-hidden relative z-0 shadow-sm">
-              <Map center={[event.location.lat, event.location.lng]} zoom={15}>
+              <Map center={[event.location.lat || 0, event.location.lng || 0]} zoom={15}>
                 <MapTileLayer
                   url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 />
                 <MapZoomControl />
-                <MapMarker position={[event.location.lat, event.location.lng]}>
+                <MapMarker position={[event.location.lat || 0, event.location.lng || 0]}>
                   <MapPopup>
                     <div className="p-2">
                       <h3 className="font-bold">{event.location.name || event.title}</h3>
@@ -99,7 +159,7 @@ export default function EventPage({ params }: EventPageProps) {
               <div>
                 <h2 className="text-2xl font-bold tracking-tight mb-4">About this event</h2>
                 <p className="text-muted-foreground leading-relaxed text-lg">
-                    {event.description || `Join us for ${event.title}. This event will take place on ${format(new Date(event.date), "MMMM d")} from ${event.startTime} to ${event.endTime}.`}
+                    {event.description || `Join us for ${event.title}.`}
                 </p>
               </div>
 
@@ -172,25 +232,75 @@ export default function EventPage({ params }: EventPageProps) {
                         <Users className="h-5 w-5 text-muted-foreground" />
                         <h2 className="font-semibold text-lg">Attendees</h2>
                     </div>
-                    <Badge variant="outline" className="text-xs">{event.participants.length}</Badge>
+                    <Badge variant="outline" className="text-xs">{event.attendances?.length || 0}</Badge>
                 </div>
                 <Separator className="mb-4" />
-                <div className="space-y-4">
-                    {event.participants.length > 0 ? (
+                
+                {/* Add Attendee Dialog */}
+                <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="w-full mb-4">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Register Athlete
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Register Athlete</DialogTitle>
+                            <DialogDescription>
+                                Select an athlete to register for this event.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Label htmlFor="athlete-select">Athlete</Label>
+                            <Select value={selectedAthleteId} onValueChange={setSelectedAthleteId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select athlete..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {athletes.map(athlete => (
+                                        <SelectItem key={athlete.id} value={athlete.id}>
+                                            {athlete.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsRegisterOpen(false)}>Cancel</Button>
+                            <Button onClick={handleRegister} disabled={isUpdating || !selectedAthleteId}>
+                                {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Register
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                    {event.attendances && event.attendances.length > 0 ? (
                         <div className="flex flex-col gap-3">
-                            {event.participants.map((participant, index) => (
-                                <div key={index} className="flex items-center gap-3">
-                                    <Avatar className="h-8 w-8 border">
-                                        <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-                                            {getInitials(participant)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-sm font-medium">{participant}</span>
+                            {event.attendances.map((attendance) => (
+                                <div key={attendance.id} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-8 w-8 border">
+                                            <AvatarImage src={attendance.athlete.avatar || undefined} />
+                                            <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                                                {getInitials(attendance.athlete.name)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium">{attendance.athlete.name}</span>
+                                            <span className="text-xs text-muted-foreground capitalize">{attendance.status.toLowerCase()}</span>
+                                        </div>
+                                    </div>
+                                    <Badge variant={attendance.status === 'REGISTERED' ? 'secondary' : 'outline'}>
+                                        {attendance.status === 'REGISTERED' ? 'Signed Up' : attendance.status}
+                                    </Badge>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <p className="text-sm text-muted-foreground italic">No confirmed attendees yet.</p>
+                        <p className="text-sm text-muted-foreground italic text-center py-4">No confirmed attendees yet.</p>
                     )}
                 </div>
             </div>
@@ -207,12 +317,13 @@ export default function EventPage({ params }: EventPageProps) {
                         <Separator className="mb-4" />
                         <div className="flex items-center gap-4">
                             <Avatar className="h-12 w-12 border-2 border-primary/20">
+                                <AvatarImage src={event.coach.avatar || undefined} />
                                 <AvatarFallback className="text-lg font-semibold bg-primary text-primary-foreground">
-                                    {getInitials(event.coach)}
+                                    {getInitials(event.coach.name)}
                                 </AvatarFallback>
                             </Avatar>
                             <div>
-                                <p className="font-semibold text-base">{event.coach}</p>
+                                <p className="font-semibold text-base">{event.coach.name}</p>
                                 <p className="text-sm text-muted-foreground">Coach / Instructor</p>
                             </div>
                         </div>

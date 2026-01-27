@@ -3,55 +3,167 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Users, Calendar, MapPin, Trophy } from "lucide-react";
+import { ProgramList } from "@/components/sites/program-list";
+import { InfoSection } from "@/components/sites/info-section";
 
 export default async function SitePage({ params }: { params: { slug: string } }) {
   const config = await db.websiteConfig.findUnique({
     where: { subdomain: params.slug },
+    include: { organization: true },
   });
 
   if (!config) return notFound();
 
-  return (
-    <div className="flex flex-col">
-       {/* Hero Section */}
-       <section className="relative w-full h-[600px] flex items-center justify-center text-white overflow-hidden">
-            {config.heroImage ? (
-                <Image 
-                    src={config.heroImage} 
-                    alt="Hero" 
-                    fill 
-                    className="object-cover absolute inset-0 z-0 brightness-50"
-                    priority
-                />
-            ) : (
-                <div className="absolute inset-0 bg-slate-900 z-0" />
-            )}
-            
-            <div className="relative z-10 container mx-auto px-4 text-center space-y-6">
-                <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-                    {config.heroHeadline || "Welcome"}
-                </h1>
-                <p className="text-xl md:text-2xl text-slate-200 max-w-2xl mx-auto">
-                    {config.heroSubheadline || ""}
-                </p>
-                {config.showRegistration && (
-                    <Button asChild size="lg" className="text-lg px-8 py-6 rounded-full" style={{ backgroundColor: config.primaryColor || '#000', color: '#fff' }}>
-                        <Link href={`/sites/${params.slug}/register`}>Get Started</Link>
-                    </Button>
-                )}
-            </div>
-       </section>
+  const primaryColor = config.primaryColor || "#000000";
 
-       {/* Introduction Text */}
-       {config.heroText && (
-         <section className="py-20 container mx-auto px-4">
-             <div 
-                className="prose prose-lg mx-auto" 
+  // Fetch active programs for this organization
+  const programs = await db.program.findMany({
+    where: {
+      organizationId: config.organizationId,
+      status: "ACTIVE",
+    },
+    include: {
+      membershipTiers: true,
+    },
+  });
+
+  return (
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section 
+        className="relative py-20 text-white"
+        style={{
+          background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
+        }}
+      >
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          />
+        </div>
+
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 md:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <Badge
+              variant="secondary"
+              className="mb-6 bg-white/20 text-white backdrop-blur-sm border-white/20"
+            >
+              <Trophy className="mr-1.5 h-3.5 w-3.5" />
+              Registration Now Open
+            </Badge>
+
+            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+              {config.heroHeadline || "Welcome to"}
+              <span 
+                className="block mt-2"
+                style={{ 
+                  color: config.secondaryColor && config.secondaryColor !== "#ffffff" 
+                    ? config.secondaryColor 
+                    : "rgba(255,255,255,0.9)" 
+                }}
+              >
+                {config.organization.name}
+              </span>
+            </h1>
+
+            <p className="mb-8 text-lg text-white/80 sm:text-xl">
+              {config.heroSubheadline || `Join ${config.organization.name} and be part of our community. We offer programs for all ages and skill levels.`}
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-white/70">
+              <div className="flex items-center gap-1.5">
+                <Users className="h-4 w-4" />
+                <span>All Ages Welcome</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                <span>Year-Round Programs</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-4 w-4" />
+                <span>Join Today</span>
+              </div>
+            </div>
+
+            {config.showRegistration && (
+              <div className="mt-8">
+                <Button
+                  asChild
+                  size="lg"
+                  variant="secondary"
+                  className="gap-2 text-base"
+                >
+                  <a href="#programs">
+                    View Programs
+                    <span aria-hidden="true">↓</span>
+                  </a>
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Hero Image / Featured Image */}
+      {config.heroImage && (
+        <section className="py-16 bg-background">
+          <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
+            <div className="relative w-full aspect-video rounded-xl border bg-card/50 backdrop-blur shadow-2xl overflow-hidden ring-1 ring-black/5 group">
+              <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent z-10 pointer-events-none" />
+              <Image 
+                src={config.heroImage} 
+                alt={`${config.organization.name} featured image`}
+                fill 
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                priority
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Hero Text / Additional Content */}
+      {config.heroText && (
+        <section className="py-16 bg-muted/30">
+          <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
+            <div className="max-w-3xl mx-auto bg-card rounded-2xl p-8 md:p-12 shadow-sm border">
+              <div 
+                className="prose prose-lg prose-slate mx-auto" 
                 dangerouslySetInnerHTML={{ __html: config.heroText }} 
-             />
-         </section>
-       )}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Programs Section */}
+      {config.showRegistration && (
+        <section id="programs" className="mx-auto w-full max-w-6xl px-4 py-16 md:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold tracking-tight">
+              Programs & Registration
+            </h2>
+            <p className="mx-auto max-w-2xl text-muted-foreground">
+              Select a program below to begin your registration. Membership includes access to 
+              facilities, equipment, and participation in all scheduled activities.
+            </p>
+          </div>
+
+          <ProgramList 
+            programs={programs} 
+            slug={params.slug} 
+          />
+        </section>
+      )}
+
+      {/* Info Section */}
+      <InfoSection organizationName={config.organization.name} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const createFamilySchema = z.object({
@@ -34,9 +34,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
+    const scopedDb = getScopedDb(session.user.organizationId);
 
     const where = {
-      organizationId: session.user.organizationId,
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" as const } },
@@ -47,14 +47,18 @@ export async function GET(request: NextRequest) {
     };
 
     const [families, total] = await Promise.all([
-      db.family.findMany({
+      scopedDb.family.findMany({
         where,
         include: {
-          athletes: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
+          guardians: {
+            include: {
+              athlete: {
+                select: {
+                  id: true,
+                  name: true,
+                  status: true,
+                },
+              },
             },
           },
           _count: {
@@ -68,11 +72,16 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      db.family.count({ where }),
+      scopedDb.family.count({ where }),
     ]);
 
+    const transformedFamilies = families.map(f => ({
+      ...f,
+      athletes: f.guardians.map(g => g.athlete),
+    }));
+
     return NextResponse.json({
-      data: families,
+      data: transformedFamilies,
       total,
       limit,
       offset,
@@ -115,18 +124,18 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createFamilySchema.parse(body);
+    const scopedDb = getScopedDb(session.user.organizationId);
 
-    const family = await db.family.create({
+    const family = await scopedDb.family.create({
       data: {
         ...validatedData,
-        organizationId: session.user.organizationId,
-      },
-      include: {
-        athletes: true,
       },
     });
 
-    return NextResponse.json(family);
+    return NextResponse.json({
+      ...family,
+      athletes: [],
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

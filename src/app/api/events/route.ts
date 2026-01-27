@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb, db } from "@/lib/db";
 import { z } from "zod";
 
 const createEventSchema = z.object({
@@ -11,6 +11,8 @@ const createEventSchema = z.object({
   type: z.enum(["CLASS", "CAMP", "PARTY", "COMPETITION", "MEETING", "OTHER"]).default("CLASS"),
   description: z.string().optional(),
   meetingLink: z.string().optional(),
+  timezone: z.string().optional(),
+  capacity: z.number().int().positive().optional(),
   location: z.object({
     lat: z.number().optional(),
     lng: z.number().optional(),
@@ -24,6 +26,20 @@ const createEventSchema = z.object({
   }).optional(),
   programId: z.string().optional().nullable(),
   coachId: z.string().optional().nullable(),
+  requiredMembershipInstanceIds: z.array(z.string()).optional(),
+}).refine((data) => {
+  // Combine date and startTime to check if it's in the future
+  // Assuming date is YYYY-MM-DD and startTime is HH:MM
+  const dateTimeString = `${data.date}T${data.startTime}`;
+  const eventDate = new Date(dateTimeString);
+  const now = new Date();
+  // Reset seconds/milliseconds for fair comparison
+  now.setSeconds(0, 0);
+  
+  return eventDate >= now;
+}, {
+  message: "Event date and time must be in the future",
+  path: ["date"],
 });
 
 // GET /api/events
@@ -43,8 +59,13 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
-
-    const where = {
+    
+    // Ensure organizationId is present
+    if (!session.user.organizationId) {
+        return NextResponse.json({ data: [], total: 0, limit, offset });
+    }
+    
+    const where: any = {
       organizationId: session.user.organizationId,
       ...(search && {
         OR: [
@@ -86,6 +107,17 @@ export async function GET(request: NextRequest) {
               attendances: true,
             },
           },
+          requiredMemberships: {
+            select: {
+              id: true,
+              name: true,
+              group: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
         },
         orderBy: { date: "asc" },
         take: limit,
@@ -125,15 +157,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const permissions = session.user.permissions || [];
     if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("events.create")
+      !permissions.includes("*") &&
+      !permissions.includes("events.create")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
-    const validatedData = createEventSchema.parse(body);
+    console.log("POST /api/events body:", JSON.stringify(body, null, 2));
+    
+    let validatedData;
+    try {
+        validatedData = createEventSchema.parse(body);
+    } catch (zodError) {
+        console.error("Zod validation error:", zodError);
+        if (zodError instanceof z.ZodError) {
+            return NextResponse.json(
+                { error: zodError.errors[0]?.message || "Validation error" },
+                { status: 400 }
+            );
+        }
+        throw zodError;
+    }
+
+    // Use raw db to avoid scopedDb issues
+    // const scopedDb = getScopedDb(session.user.organizationId);
 
     // Verify program if provided
     if (validatedData.programId) {
@@ -160,9 +210,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Coach not found" }, { status: 404 });
       }
     }
-
-    const event = await db.event.create({
-      data: {
+    
+    const data: any = {
         title: validatedData.title,
         date: new Date(validatedData.date),
         startTime: validatedData.startTime,
@@ -174,25 +223,65 @@ export async function POST(request: NextRequest) {
         details: validatedData.details,
         programId: validatedData.programId,
         coachId: validatedData.coachId,
+        timezone: validatedData.timezone,
+        capacity: validatedData.capacity,
         organizationId: session.user.organizationId,
-      },
+    };
+
+    if (validatedData.requiredMembershipInstanceIds && validatedData.requiredMembershipInstanceIds.length > 0) {
+        data.requiredMemberships = {
+            connect: validatedData.requiredMembershipInstanceIds.map(id => ({ id }))
+        };
+    }
+    
+    console.log("Creating event with data:", JSON.stringify(data, null, 2));
+
+    const event = await db.event.create({
+      data,
       include: {
-        program: true,
-        coach: true,
+        program: {
+            select: {
+              id: true,
+              name: true,
+              level: true,
+            },
+        },
+        coach: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            },
+        },
+        requiredMemberships: {
+            select: {
+              id: true,
+              name: true,
+              group: {
+                select: {
+                  name: true
+                }
+              }
+            }
+        }
       },
     });
 
     return NextResponse.json(event);
   } catch (error) {
+    console.error("Error creating event:", error);
+    // Log the full error to help debugging
+    console.log(JSON.stringify(error, null, 2));
+    
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: error.errors[0]?.message || "Validation failed" },
         { status: 400 }
       );
     }
-    console.error("Error creating event:", error);
+    
     return NextResponse.json(
-      { error: "Failed to create event" },
+      { error: "Failed to create event", details: (error as Error).message },
       { status: 500 }
     );
   }
