@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { TrendingDownIcon, TrendingUpIcon, UsersIcon, CalendarIcon, Loader2Icon } from "lucide-react";
+import { TrendingDownIcon, TrendingUpIcon, UsersIcon, CalendarIcon, UserPlusIcon, TrendingUpDownIcon, Loader2Icon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useVisitorMetrics } from "@/hooks/use-visitor-metrics";
+import { useEnrollmentMetrics } from "@/hooks/use-enrollment-metrics";
 
 // Helper to format date as YYYY-MM-DD
 function formatDate(date: Date): string {
@@ -34,48 +35,8 @@ export function SectionCards() {
     <div className="grid gap-4 px-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 lg:px-6 *:data-[slot=card]:shadow-xs *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
       <TodayVisitorsCard />
       <TotalVisitorsCard />
-      <Card>
-        <CardHeader className="relative">
-          <CardDescription>New Customers</CardDescription>
-          <CardTitle className="text-3xl font-semibold tabular-nums">
-            1,234
-          </CardTitle>
-          <div className="absolute right-4 top-4">
-            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
-              <TrendingDownIcon className="size-3" />
-              -20%
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Down 20% this period <TrendingDownIcon className="size-4" />
-          </div>
-          <div className="text-muted-foreground">
-            Acquisition needs attention
-          </div>
-        </CardFooter>
-      </Card>
-      <Card>
-        <CardHeader className="relative">
-          <CardDescription>Growth Rate</CardDescription>
-          <CardTitle className="text-3xl font-semibold tabular-nums">
-            4.5%
-          </CardTitle>
-          <div className="absolute right-4 top-4">
-            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
-              <TrendingUpIcon className="size-3" />
-              +4.5%
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Steady performance <TrendingUpIcon className="size-4" />
-          </div>
-          <div className="text-muted-foreground">Meets growth projections</div>
-        </CardFooter>
-      </Card>
+      <NewEnrollmentsCard />
+      <GrowthRateCard />
     </div>
   );
 }
@@ -232,6 +193,142 @@ function TotalVisitorsCard() {
         </div>
         <div className="text-muted-foreground">
           {loading ? "Calculating..." : `~${dailyAverage.toLocaleString()} daily avg (last 30 days)`}
+        </div>
+      </CardFooter>
+    </Card>
+  );
+}
+
+/**
+ * New enrollments card - shows new enrollments with period-over-period comparison
+ */
+function NewEnrollmentsCard() {
+  const { data, loading, error } = useEnrollmentMetrics();
+
+  const newCount = data?.newThisPeriod ?? 0;
+  const percentChange = data?.percentChange ?? null;
+  const isPositive = percentChange !== null && percentChange >= 0;
+  const TrendIcon = isPositive ? TrendingUpIcon : TrendingDownIcon;
+
+  // Format the count with commas
+  const formattedCount = newCount.toLocaleString();
+
+  // Get a friendly description
+  const getFooterText = () => {
+    if (loading) return "Loading enrollment data...";
+    if (error) return "Unable to load data";
+    if (newCount === 0 && data?.newPreviousPeriod === 0) return "No enrollments yet";
+    if (percentChange === null) return "First period of tracking";
+    if (percentChange > 0) return "More enrollments this period";
+    if (percentChange < 0) return "Fewer enrollments this period";
+    return "Same as last period";
+  };
+
+  const getSubText = () => {
+    if (loading) return "Fetching data...";
+    if (error) return "Check connection";
+    const previousCount = data?.newPreviousPeriod ?? 0;
+    return `${previousCount.toLocaleString()} last period`;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="relative">
+        <CardDescription className="flex items-center gap-2">
+          <UserPlusIcon className="size-4" />
+          New Enrollments
+        </CardDescription>
+        <CardTitle className="text-3xl font-semibold tabular-nums">
+          {loading ? (
+            <Loader2Icon className="size-8 animate-spin text-muted-foreground" />
+          ) : (
+            formattedCount
+          )}
+        </CardTitle>
+        {!loading && percentChange !== null && (
+          <div className="absolute right-4 top-4">
+            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+              <TrendIcon className="size-3" />
+              {isPositive ? "+" : ""}{percentChange}%
+            </Badge>
+          </div>
+        )}
+      </CardHeader>
+      <CardFooter className="flex-col items-start gap-1 text-sm">
+        <div className="line-clamp-1 flex gap-2 font-medium">
+          {getFooterText()}
+          {!loading && percentChange !== null && <TrendIcon className="size-4" />}
+        </div>
+        <div className="text-muted-foreground">
+          {getSubText()}
+        </div>
+      </CardFooter>
+    </Card>
+  );
+}
+
+/**
+ * Growth rate card - shows enrollment growth rate (active enrollment % change)
+ */
+function GrowthRateCard() {
+  const { data, loading, error } = useEnrollmentMetrics();
+
+  const growthRate = data?.growthRate ?? null;
+  const isPositive = growthRate !== null && growthRate >= 0;
+  const TrendIcon = isPositive ? TrendingUpIcon : TrendingDownIcon;
+
+  // Format the growth rate
+  const formattedRate = growthRate !== null ? `${growthRate >= 0 ? "+" : ""}${growthRate}%` : "—";
+
+  // Get a friendly description
+  const getFooterText = () => {
+    if (loading) return "Loading growth data...";
+    if (error) return "Unable to load data";
+    if (growthRate === null) return "Insufficient data";
+    if (growthRate > 10) return "Strong growth";
+    if (growthRate > 0) return "Positive growth";
+    if (growthRate < -10) return "Significant decline";
+    if (growthRate < 0) return "Slight decline";
+    return "Stable enrollment";
+  };
+
+  const getSubText = () => {
+    if (loading) return "Calculating...";
+    if (error) return "Check connection";
+    const activeTotal = data?.activeTotal ?? 0;
+    return `${activeTotal.toLocaleString()} active enrollments`;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="relative">
+        <CardDescription className="flex items-center gap-2">
+          <TrendingUpDownIcon className="size-4" />
+          Growth Rate
+        </CardDescription>
+        <CardTitle className="text-3xl font-semibold tabular-nums">
+          {loading ? (
+            <Loader2Icon className="size-8 animate-spin text-muted-foreground" />
+          ) : (
+            formattedRate
+          )}
+        </CardTitle>
+        {!loading && growthRate !== null && (
+          <div className="absolute right-4 top-4">
+            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+              <TrendIcon className="size-3" />
+              {isPositive ? "+" : ""}{growthRate}%
+            </Badge>
+          </div>
+        )}
+      </CardHeader>
+      <CardFooter className="flex-col items-start gap-1 text-sm">
+        <div className="line-clamp-1 flex gap-2 font-medium">
+          {getFooterText()}
+          {!loading && growthRate !== null && <TrendIcon className="size-4" />}
+        </div>
+        <div className="text-muted-foreground">
+          {getSubText()}
         </div>
       </CardFooter>
     </Card>
