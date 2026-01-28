@@ -18,7 +18,40 @@ export default async function RegisterPage({ params }: { params: { slug: string 
             status: "ACTIVE"
         },
         include: {
-            membershipTiers: true
+            membershipTiers: true,
+            staffAssignments: {
+                where: {
+                    role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
+                },
+                include: {
+                    staffProfile: {
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    avatar: true,
+                                },
+                            },
+                        },
+                    },
+                },
+                orderBy: [
+                    { isPrimary: "desc" },
+                    { role: "asc" },
+                ],
+                take: 3,
+            },
+            requiredMemberships: {
+                include: {
+                    group: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
+                },
+            },
         }
     });
 
@@ -27,7 +60,24 @@ export default async function RegisterPage({ params }: { params: { slug: string 
         membershipTiers: program.membershipTiers.map(tier => ({
             ...tier,
             price: Number(tier.price)
-        }))
+        })),
+        staffAssignments: program.staffAssignments.map(assignment => ({
+            id: assignment.id,
+            role: assignment.role,
+            isPrimary: assignment.isPrimary,
+            staffProfile: {
+                id: assignment.staffProfile.id,
+                title: assignment.staffProfile.title,
+                user: assignment.staffProfile.user,
+            },
+        })),
+        requiredMemberships: program.requiredMemberships.map(membership => ({
+            id: membership.id,
+            name: membership.name,
+            price: Number(membership.price),
+            billingInterval: membership.billingInterval,
+            group: membership.group,
+        })),
     }));
 
     return (

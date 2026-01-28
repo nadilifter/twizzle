@@ -6,7 +6,6 @@ import {
   ShoppingCart,
   CreditCard,
   LayoutDashboard,
-  ArrowLeft,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 
@@ -74,17 +73,17 @@ export function POSSidebar({
 
   return (
     <Sidebar {...props}>
-      <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 px-2 py-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <CreditCard className="h-4 w-4" />
+      <SidebarHeader>
+        <div className="flex items-center gap-3 px-2 py-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <CreditCard className="h-5 w-5" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">POS Terminal</span>
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">BETA</Badge>
+              <span className="font-semibold">POS Terminal</span>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">BETA</Badge>
             </div>
-            <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+            <span className="text-xs text-muted-foreground truncate max-w-[160px]">
               {organizationName || "Uplifter"}
             </span>
           </div>
@@ -122,8 +121,8 @@ export function POSSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <a href={adminUrl}>
-                    <ArrowLeft className="h-4 w-4" />
-                    <span>Back to Admin</span>
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Admin Dashboard</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>

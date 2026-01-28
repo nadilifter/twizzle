@@ -220,3 +220,38 @@ export interface AvailabilityEntry {
   endTime: string;
   isAvailable?: boolean;
 }
+
+// Program Staff Types
+export type ProgramStaffRole = "LEAD_COACH" | "ASSISTANT_COACH" | "SUBSTITUTE" | "VOLUNTEER";
+
+export interface ProgramStaff {
+  id: string;
+  programId: string;
+  staffProfileId: string;
+  role: ProgramStaffRole;
+  isPrimary: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProgramStaffWithProfile extends ProgramStaff {
+  staffProfile: {
+    id: string;
+    title: string | null;
+    user: StaffUser;
+  };
+}
+
+export interface AddProgramStaffPayload {
+  staffProfileId: string;
+  role?: ProgramStaffRole;
+  isPrimary?: boolean;
+  notes?: string | null;
+}
+
+export interface UpdateProgramStaffPayload {
+  role?: ProgramStaffRole;
+  isPrimary?: boolean;
+  notes?: string | null;
+}

@@ -34,6 +34,39 @@ export default async function SitePage({ params }: { params: { slug: string } })
     },
     include: {
       membershipTiers: true,
+      staffAssignments: {
+        where: {
+          role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] }, // Only show coaches, not substitutes/volunteers
+        },
+        include: {
+          staffProfile: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  avatar: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [
+          { isPrimary: "desc" },
+          { role: "asc" },
+        ],
+        take: 3, // Limit to top 3 coaches for card display
+      },
+      requiredMemberships: {
+        include: {
+          group: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 

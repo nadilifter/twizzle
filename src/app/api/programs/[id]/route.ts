@@ -29,6 +29,36 @@ export async function GET(
       },
       include: {
         membershipTiers: true,
+        staffAssignments: {
+          include: {
+            staffProfile: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    avatar: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: [
+            { isPrimary: "desc" },
+            { role: "asc" },
+          ],
+        },
+        requiredMemberships: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
         enrollments: {
           where: { status: "ACTIVE" },
           include: {
@@ -129,6 +159,32 @@ export async function PATCH(
       data: validatedData,
       include: {
         membershipTiers: true,
+        staffAssignments: {
+          include: {
+            staffProfile: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    avatar: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        requiredMemberships: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             enrollments: true,

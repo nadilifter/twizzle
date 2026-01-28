@@ -95,6 +95,8 @@ export const messageSchema = z.object({
   content: z.string(),
   classification: z.string(),
   audience: z.string(),
+  recipient: z.string().optional(), // Phone number for individual messages
+  status: z.string().optional(), // Twilio status (QUEUED, SENT, DELIVERED, FAILED, etc.)
   sent: z.number(),
   delivered: z.number(),
   failed: z.number(),
@@ -187,40 +189,35 @@ const columns: ColumnDef<Message>[] = [
     ),
   },
   {
-    accessorKey: "audience",
-    header: () => <span className="hidden md:block">Audience</span>,
+    accessorKey: "recipient",
+    header: () => <span className="hidden md:block">Recipient</span>,
     cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm hidden md:block">
-        {row.original.audience}
+      <span className="text-sm hidden md:block font-mono">
+        {row.original.recipient || row.original.audience}
       </span>
     ),
   },
   {
-    accessorKey: "sent",
-    header: () => <div className="text-right hidden md:block">Sent</div>,
-    cell: ({ row }) => (
-      <div className="text-right font-medium hidden md:block">
-        {row.original.sent}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "delivered",
-    header: () => <div className="text-right hidden lg:block">Delivered</div>,
-    cell: ({ row }) => (
-      <div className="text-right text-green-600 hidden lg:block">
-        {row.original.delivered}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "failed",
-    header: () => <div className="text-right hidden lg:block">Failed</div>,
-    cell: ({ row }) => (
-      <div className="text-right text-red-600 hidden lg:block">
-        {row.original.failed}
-      </div>
-    ),
+    accessorKey: "status",
+    header: () => <span className="hidden md:block">Status</span>,
+    cell: ({ row }) => {
+      const status = row.original.status?.toLowerCase() || "unknown"
+      const statusColors: Record<string, string> = {
+        delivered: "bg-green-100 text-green-800",
+        sent: "bg-blue-100 text-blue-800",
+        queued: "bg-yellow-100 text-yellow-800",
+        failed: "bg-red-100 text-red-800",
+        undelivered: "bg-red-100 text-red-800",
+      }
+      return (
+        <Badge 
+          variant="secondary" 
+          className={`hidden md:inline-flex capitalize ${statusColors[status] || ""}`}
+        >
+          {status}
+        </Badge>
+      )
+    },
   },
   {
     accessorKey: "date",

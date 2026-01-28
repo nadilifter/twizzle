@@ -9,6 +9,7 @@ import {
   Star,
   Camera,
   CalendarDays,
+  GraduationCap,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 
@@ -33,6 +34,11 @@ const navItems = [
     title: "Overview",
     url: "/coach",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Programs",
+    url: "/coach/programs",
+    icon: GraduationCap,
   },
   {
     title: "Attendance",

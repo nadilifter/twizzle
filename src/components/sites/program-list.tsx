@@ -8,12 +8,40 @@ interface MembershipTier {
   price: number | string;
 }
 
+interface StaffAssignment {
+  id: string;
+  role: string;
+  isPrimary: boolean;
+  staffProfile: {
+    id: string;
+    title: string | null;
+    user: {
+      id: string;
+      name: string;
+      avatar: string | null;
+    };
+  };
+}
+
+interface RequiredMembership {
+  id: string;
+  name: string;
+  price: number;
+  billingInterval: string;
+  group: {
+    id: string;
+    name: string;
+  };
+}
+
 interface Program {
   id: string;
   name: string;
   description: string | null;
   level: string;
   membershipTiers: MembershipTier[];
+  staffAssignments?: StaffAssignment[];
+  requiredMemberships?: RequiredMembership[];
 }
 
 interface ProgramListProps {
@@ -63,7 +91,6 @@ export function ProgramList({ programs, slug }: ProgramListProps) {
                 <ProgramCard
                   key={program.id}
                   program={program}
-                  registerUrl={`/sites/${slug}/register`}
                 />
               ))}
             </div>

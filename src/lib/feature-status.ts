@@ -98,17 +98,22 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   },
   "/dashboard/training/programs": {
     status: "live",
-    description: "Programs list uses mock data. API ready at /api/programs",
-    apiRoutes: ["/api/programs"],
+    description: "Programs management with coach assignments and membership requirements",
+    apiRoutes: ["/api/programs", "/api/programs/[id]/staff", "/api/programs/[id]/requirements"],
   },
   "/dashboard/training/rotations": {
     status: "demo",
     description: "Rotation scheduling uses mock data",
   },
   "/dashboard/training/skills": {
-    status: "demo",
-    description: "Skills database uses mock data. API ready at /api/skills",
-    apiRoutes: ["/api/skills"],
+    status: "live",
+    description: "Skills database with difficulty levels and age ranges",
+    apiRoutes: ["/api/skills", "/api/skills/[id]"],
+  },
+  "/dashboard/training/evaluations": {
+    status: "live",
+    description: "Evaluation templates and results management",
+    apiRoutes: ["/api/evaluation-templates", "/api/evaluations"],
   },
 
   // Events Section
@@ -137,8 +142,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Notifications use sample data",
   },
   "/dashboard/communication/sms": {
-    status: "demo",
-    description: "SMS management uses sample data",
+    status: "live",
+    description: "SMS messaging with Twilio integration, usage tracking, and campaigns",
+    apiRoutes: ["/api/sms", "/api/sms/sync", "/api/sms/campaigns", "/api/twilio/webhook", "/api/organization/sms-usage"],
   },
 
   // Organization Section
@@ -274,6 +280,48 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   "/dashboard/feedback": {
     status: "demo",
     description: "Feedback and feature requests",
+  },
+
+  // ========================================
+  // COACH PORTAL
+  // ========================================
+  "/coach": {
+    status: "live",
+    description: "Coach portal overview",
+  },
+  "/coach/evaluations": {
+    status: "live",
+    description: "Coach evaluation management with template assignment and skill recording",
+    apiRoutes: ["/api/evaluations", "/api/evaluation-templates"],
+  },
+  "/coach/athletes": {
+    status: "live",
+    description: "Coach athlete roster",
+    apiRoutes: ["/api/coach/athletes"],
+  },
+  "/coach/programs": {
+    status: "live",
+    description: "Coach program assignments",
+    apiRoutes: ["/api/coach/programs"],
+  },
+
+  // ========================================
+  // ATHLETE PORTAL
+  // ========================================
+  "/athletes": {
+    status: "live",
+    description: "Athlete/parent portal dashboard",
+    apiRoutes: ["/api/athletes"],
+  },
+  "/athletes/evaluations": {
+    status: "live",
+    description: "Athlete evaluation results and history",
+    apiRoutes: ["/api/athletes/[id]/evaluations"],
+  },
+  "/athletes/skills": {
+    status: "live",
+    description: "Athlete skill progress tracking",
+    apiRoutes: ["/api/athletes/[id]/skills"],
   },
 }
 

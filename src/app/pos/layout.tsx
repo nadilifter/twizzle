@@ -1,7 +1,8 @@
 import { getAuthSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import { CartProvider } from "@/components/sites/cart-context"
 
-// Root POS layout - just handles authentication
+// Root POS layout - handles authentication and provides cart context
 // Organization-specific logic is in the (terminal) route group layout
 export default async function POSLayout({
   children,
@@ -15,5 +16,5 @@ export default async function POSLayout({
     redirect("/login?callbackUrl=/pos")
   }
 
-  return <>{children}</>
+  return <CartProvider>{children}</CartProvider>
 }

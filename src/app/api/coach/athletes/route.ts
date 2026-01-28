@@ -3,7 +3,8 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 // GET /api/coach/athletes
-// Returns athletes from events assigned to the current coach
+// Returns athletes from programs assigned to the current coach
+// (via ProgramStaff assignments or Event.coachId)
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
@@ -20,6 +21,21 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "100");
     const offset = parseInt(searchParams.get("offset") || "0");
 
+    // First, get the user's staff profile
+    const staffProfile = await db.staffProfile.findUnique({
+      where: { userId: session.user.id },
+    });
+
+    // Find programs via ProgramStaff assignments
+    const programStaffAssignments = staffProfile
+      ? await db.programStaff.findMany({
+          where: { staffProfileId: staffProfile.id },
+          select: { programId: true },
+        })
+      : [];
+
+    const programIdsFromStaff = programStaffAssignments.map(a => a.programId);
+
     // Get all events where this user is the coach
     const coachEvents = await db.event.findMany({
       where: {
@@ -33,7 +49,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Get unique program IDs from coach's events
-    const programIds = [...new Set(coachEvents.map(e => e.programId).filter(Boolean))] as string[];
+    const programIdsFromEvents = coachEvents.map(e => e.programId).filter((id): id is string => id !== null);
+    
+    // Combine and deduplicate program IDs
+    const programIds = [...new Set([...programIdsFromStaff, ...programIdsFromEvents])];
 
     if (programIds.length === 0) {
       return NextResponse.json({ data: [], total: 0, limit, offset });

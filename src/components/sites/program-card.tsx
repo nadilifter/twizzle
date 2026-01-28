@@ -3,7 +3,8 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Users, ShoppingCart } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CalendarDays, Users, ShoppingCart, User, AlertCircle, Star } from "lucide-react";
 import { useCart } from "@/components/sites/cart-context";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
@@ -15,13 +16,41 @@ interface MembershipTier {
   interval?: string;
 }
 
+interface StaffAssignment {
+  id: string;
+  role: string;
+  isPrimary: boolean;
+  staffProfile: {
+    id: string;
+    title: string | null;
+    user: {
+      id: string;
+      name: string;
+      avatar: string | null;
+    };
+  };
+}
+
+interface RequiredMembership {
+  id: string;
+  name: string;
+  price: number;
+  billingInterval: string;
+  group: {
+    id: string;
+    name: string;
+  };
+}
+
 interface ProgramCardProps {
   program: {
     id: string;
     name: string;
     description: string | null;
     level: string;
-    membershipTiers?: MembershipTier[]; // Make optional
+    membershipTiers?: MembershipTier[];
+    staffAssignments?: StaffAssignment[];
+    requiredMemberships?: RequiredMembership[];
   };
   primaryColor?: string;
 }
@@ -40,6 +69,8 @@ function formatPrice(price: number | string): string {
 export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   const { addItem } = useCart();
   const membershipTiers = program.membershipTiers || [];
+  const staffAssignments = program.staffAssignments || [];
+  const requiredMemberships = program.requiredMemberships || [];
   
   const [selectedTierId, setSelectedTierId] = useState<string>(
     membershipTiers.length === 1 ? membershipTiers[0].id : ""
@@ -61,7 +92,8 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
       details: {
         programId: program.id,
         level: program.level,
-        interval: tier.interval
+        interval: tier.interval,
+        requiredMemberships: requiredMemberships.map(m => m.id),
       }
     });
   };
@@ -102,6 +134,52 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
             </div>
           )}
         </div>
+
+        {/* Coaches Section */}
+        {staffAssignments.length > 0 && (
+          <div className="mt-4 pt-3 border-t">
+            <p className="text-xs text-muted-foreground mb-2">Coached by</p>
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {staffAssignments.slice(0, 3).map((assignment) => (
+                  <Avatar key={assignment.id} className="h-7 w-7 border-2 border-background">
+                    <AvatarImage src={assignment.staffProfile.user.avatar || ""} />
+                    <AvatarFallback className="text-xs">
+                      <User className="h-3 w-3" />
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {staffAssignments.slice(0, 2).map((a, i) => (
+                  <span key={a.id}>
+                    {i > 0 && ", "}
+                    {a.staffProfile.user.name}
+                    {a.isPrimary && <Star className="h-3 w-3 inline ml-0.5 text-amber-500" />}
+                  </span>
+                ))}
+                {staffAssignments.length > 2 && (
+                  <span className="ml-1">+{staffAssignments.length - 2} more</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Required Memberships Warning */}
+        {requiredMemberships.length > 0 && (
+          <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-md border border-amber-200 dark:border-amber-800">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
+              <div className="text-xs">
+                <p className="font-medium text-amber-800 dark:text-amber-200">Membership Required</p>
+                <p className="text-amber-700 dark:text-amber-300">
+                  {requiredMemberships.map(m => m.group.name).join(", ")}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="flex flex-col gap-3 border-t bg-muted/30 pt-4">

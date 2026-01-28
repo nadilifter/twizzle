@@ -47,6 +47,7 @@ model Organization {
   lessonPlans LessonPlan[]
   announcements Announcement[]
   websiteConfig WebsiteConfig?
+  evaluationTemplates EvaluationTemplate[]
 
   // Financials
   discounts       Discount[]
@@ -76,6 +77,11 @@ model Organization {
   staffProfiles     StaffProfile[]
   shifts            Shift[]
   scheduleTemplates ScheduleTemplate[]
+  
+  // SMS
+  smsMessages       SmsMessage[]
+  smsCampaigns      SmsCampaign[]
+  smsUsage          SmsUsage[]
 }
 
 model OrganizationMember {
@@ -204,6 +210,10 @@ model Family {
   organizationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  
+  // SMS Preferences
+  smsOptOut      Boolean  @default(false) // True if family has opted out of SMS
+  smsOptOutAt    DateTime?               // When they opted out
 
   // Relations
   organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -214,6 +224,7 @@ model Family {
   payments         Payment[]
   enrollments      Enrollment[] // Enrollments paid/managed by this family
   recurringCharges RecurringCharge[]
+  smsMessages      SmsMessage[]
 
   // Auth Link
   userId         String?   @unique
@@ -247,6 +258,7 @@ model Athlete {
   memberships      AthleteMembership[]
   media            Media[]
   recurringCharges RecurringCharge[]
+  skillProgress    AthleteSkillProgress[]
   
   // Multi-family support
   guardians   AthleteGuardian[]
@@ -315,6 +327,8 @@ model Program {
   enrollments  Enrollment[]
   lineItems    LineItem[]
   membershipTiers MembershipTier[] // Legacy
+  staffAssignments    ProgramStaff[]
+  requiredMemberships MembershipInstance[]
 }
 
 enum ProgramStatus {
@@ -385,6 +399,7 @@ model MembershipInstance {
   group             MembershipGroup @relation(fields: [membershipGroupId], references: [id], onDelete: Cascade)
   athleteMemberships AthleteMembership[]
   requiredForEvents Event[]
+  requiredForPrograms Program[]
 }
 
 model AthleteMembership {
@@ -824,16 +839,72 @@ model Skill {
   id             String   @id @default(cuid())
   name           String
   category       String   // e.g., "Vault", "Bars", "Beam", "Floor"
-  level          String?
-  description    String?
+  level          String?  // Legacy field
+  description    String?  @db.Text
   organizationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  
+  // Difficulty and age targeting
+  difficultyLevel SkillDifficulty @default(BEGINNER)
+  minAge          Int?     // Suggested minimum age
+  maxAge          Int?     // Suggested maximum age
+  videoUrl        String?  // Demo video URL
+  imageUrl        String?  // Demo image URL
 
   // Relations
   organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   evaluationSkills EvaluationSkill[]
   rotationSkills   RotationSkill[]
+  templateSkills   EvaluationTemplateSkill[]
+  athleteProgress  AthleteSkillProgress[]
+}
+
+enum SkillDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+// Evaluation Templates - reusable groupings of skills for assessments
+model EvaluationTemplate {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?         @db.Text
+  difficultyLevel SkillDifficulty @default(BEGINNER)
+  minAge          Int?
+  maxAge          Int?
+  isActive        Boolean         @default(true)
+  organizationId  String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  skills          EvaluationTemplateSkill[]
+  evaluations     Evaluation[]
+  
+  @@index([organizationId])
+}
+
+// Junction table for skills in evaluation templates
+model EvaluationTemplateSkill {
+  id         String  @id @default(cuid())
+  templateId String
+  skillId    String
+  order      Int     @default(0)  // Display order
+  isRequired Boolean @default(true)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  template   EvaluationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  skill      Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, skillId])
+  @@index([templateId])
+  @@index([skillId])
 }
 
 model LessonPlan {
@@ -893,21 +964,29 @@ model Evaluation {
   id           String           @id @default(cuid())
   athleteId    String
   coachId      String
+  templateId   String?          // Optional link to evaluation template
   date         DateTime
   level        String
   overallScore Decimal          @db.Decimal(3, 1)
   status       EvaluationStatus
-  notes        String?
+  notes        String?          @db.Text
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   // Relations
   athlete      Athlete           @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   coach        User              @relation(fields: [coachId], references: [id])
+  template     EvaluationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   skillRatings EvaluationSkill[]
+  
+  @@index([athleteId])
+  @@index([coachId])
+  @@index([templateId])
 }
 
 enum EvaluationStatus {
+  PENDING      // Evaluation assigned but not completed
+  IN_PROGRESS  // Evaluation started
   PASS
   RETRY
   EXCELLENT
@@ -915,10 +994,11 @@ enum EvaluationStatus {
 }
 
 model EvaluationSkill {
-  id           String  @id @default(cuid())
+  id           String             @id @default(cuid())
   evaluationId String
   skillId      String
-  rating       Int     // 1-5
+  rating       Int?               // 1-5, optional (can use attemptStatus instead)
+  attemptStatus SkillAttemptStatus @default(NOT_ATTEMPTED)
   comment      String?
 
   // Relations
@@ -926,6 +1006,38 @@ model EvaluationSkill {
   skill      Skill      @relation(fields: [skillId], references: [id])
 
   @@unique([evaluationId, skillId])
+  @@index([evaluationId])
+  @@index([skillId])
+}
+
+enum SkillAttemptStatus {
+  NOT_ATTEMPTED
+  ATTEMPTED
+  SUCCEEDED
+}
+
+// Track athlete progress on individual skills across all evaluations
+model AthleteSkillProgress {
+  id               String             @id @default(cuid())
+  athleteId        String
+  skillId          String
+  bestStatus       SkillAttemptStatus @default(NOT_ATTEMPTED)
+  firstAttemptedAt DateTime?
+  firstSucceededAt DateTime?
+  attemptCount     Int                @default(0)
+  successCount     Int                @default(0)
+  lastEvaluatedAt  DateTime
+  lastEvaluationId String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  // Relations
+  athlete        Athlete     @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  skill          Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([athleteId, skillId])
+  @@index([athleteId])
+  @@index([skillId])
 }
 
 // ============================================
@@ -960,6 +1072,167 @@ enum AnnouncementStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+// ============================================
+// SMS Messaging
+// ============================================
+
+model SmsMessage {
+  id             String           @id @default(cuid())
+  organizationId String
+  familyId       String?          // Recipient family (if outbound)
+  staffProfileId String?          // Recipient staff (if outbound)
+  campaignId     String?          // Part of a campaign
+  
+  // Message details
+  to             String           // E.164 format phone number
+  from           String           // Twilio number used
+  body           String           @db.Text
+  segments       Int              @default(1) // SMS segment count
+  
+  // Twilio tracking
+  twilioSid      String?          @unique // Twilio message SID
+  twilioStatus   SmsStatus        @default(QUEUED)
+  
+  // Direction
+  direction      SmsDirection     @default(OUTBOUND)
+  
+  // Classification
+  classification SmsClassification @default(GENERAL)
+  
+  // Cost tracking (in cents)
+  cost           Decimal?         @db.Decimal(10, 4)
+  
+  // Timestamps
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  failedAt       DateTime?
+  
+  // Error handling
+  errorCode      String?
+  errorMessage   String?
+  
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family         Family?          @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  campaign       SmsCampaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([familyId])
+  @@index([campaignId])
+  @@index([twilioSid])
+  @@index([twilioStatus])
+  @@index([createdAt])
+}
+
+enum SmsStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  UNDELIVERED
+  FAILED
+}
+
+enum SmsDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum SmsClassification {
+  GENERAL
+  REMINDER
+  ALERT
+  BILLING
+  EVENT
+  NEWS
+}
+
+model SmsCampaign {
+  id              String              @id @default(cuid())
+  organizationId  String
+  name            String
+  body            String              @db.Text
+  classification  SmsClassification   @default(GENERAL)
+  
+  // Targeting
+  targetScope     AnnouncementScope   @default(ALL) // Reuse existing enum
+  targetProgramId String?
+  targetEventId   String?
+  
+  // Status
+  status          SmsCampaignStatus   @default(DRAFT)
+  
+  // Statistics
+  totalRecipients Int                 @default(0)
+  sentCount       Int                 @default(0)
+  deliveredCount  Int                 @default(0)
+  failedCount     Int                 @default(0)
+  
+  // Scheduling
+  scheduledAt     DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  
+  // Author
+  createdById     String?
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages        SmsMessage[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum SmsCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model SmsUsage {
+  id               String   @id @default(cuid())
+  organizationId   String
+  
+  // Period tracking
+  periodStart      DateTime
+  periodEnd        DateTime
+  
+  // Counts
+  messagesSent     Int      @default(0)
+  messagesDelivered Int     @default(0)
+  messagesFailed   Int      @default(0)
+  totalSegments    Int      @default(0)
+  
+  // Cost tracking (in dollars)
+  totalCost        Decimal  @default(0) @db.Decimal(10, 2)
+  
+  // Plan-based tracking
+  includedMessages Int      @default(0) // From plan
+  overageMessages  Int      @default(0) // Beyond plan limit
+  overageCost      Decimal  @default(0) @db.Decimal(10, 2)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, periodStart])
+  @@index([organizationId])
+  @@index([periodStart])
 }
 
 // ============================================
@@ -1304,6 +1577,10 @@ model SubscriptionPlan {
   maxUsers          Int?     // null = unlimited
   maxEvents         Int?     // null = unlimited
   
+  // SMS Limits
+  smsIncluded       Int?     // Messages included per month (null = no SMS)
+  smsOverageRate    Decimal? @db.Decimal(10, 4) // Cost per message over limit (e.g., 0.05 for $0.05)
+  
   // Features (stored as JSON for flexibility)
   features          Json     // Array of feature strings
   
@@ -1403,6 +1680,7 @@ model StaffProfile {
   shifts           Shift[]
   availability     StaffAvailability[]
   eventAssignments EventStaff[]
+  programAssignments ProgramStaff[]
 
   @@index([organizationId])
 }
@@ -1438,6 +1716,33 @@ enum EventStaffRole {
   ASSISTANT
   VOLUNTEER
   OBSERVER
+}
+
+// Program Staff - many-to-many with roles (coach assignments)
+model ProgramStaff {
+  id             String   @id @default(cuid())
+  programId      String
+  staffProfileId String
+  role           ProgramStaffRole @default(ASSISTANT_COACH)
+  isPrimary      Boolean  @default(false)
+  notes          String?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  program        Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, staffProfileId])
+  @@index([programId])
+  @@index([staffProfileId])
+}
+
+enum ProgramStaffRole {
+  LEAD_COACH
+  ASSISTANT_COACH
+  SUBSTITUTE
+  VOLUNTEER
 }
 
 // Work Shifts - one-time scheduling assignments

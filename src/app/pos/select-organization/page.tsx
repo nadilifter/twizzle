@@ -22,6 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 import { getUserOrganizations, verifyOrganizationMembership } from "@/app/actions/organization"
 
 type Organization = {
@@ -121,17 +122,22 @@ function POSSelectOrganizationForm() {
 
   if (isLoading || fetching) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <Card className="relative overflow-hidden w-full max-w-[400px] bg-slate-800 border-slate-700">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="absolute top-4 right-4">
+          <AnimatedThemeToggler />
+        </div>
+        <Card className="relative overflow-hidden w-full max-w-[400px]">
           <CardHeader className="items-center pb-2">
             <div className="flex items-center gap-2 mb-4">
-              <ShoppingCart className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-white">POS Terminal</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <ShoppingCart className="h-5 w-5" />
+              </div>
+              <span className="text-2xl font-bold">POS Terminal</span>
             </div>
-            <h1 className="text-xl font-bold text-white">
+            <h1 className="text-xl font-bold">
               {fetching ? "Loading Organizations..." : "Switching Organization"}
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted-foreground">
               Please wait...
             </p>
           </CardHeader>
@@ -144,15 +150,20 @@ function POSSelectOrganizationForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <Card className="relative overflow-hidden w-full max-w-[400px] bg-slate-800 border-slate-700">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <AnimatedThemeToggler />
+      </div>
+      <Card className="relative overflow-hidden w-full max-w-[400px]">
         <CardHeader className="items-center pb-2">
           <div className="flex items-center gap-2 mb-4">
-            <ShoppingCart className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-white">POS Terminal</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <ShoppingCart className="h-5 w-5" />
+            </div>
+            <span className="text-2xl font-bold">POS Terminal</span>
           </div>
-          <h1 className="text-xl font-bold text-white">Select Organization</h1>
-          <p className="text-sm text-slate-400">
+          <h1 className="text-xl font-bold">Select Organization</h1>
+          <p className="text-sm text-muted-foreground">
             Choose which organization to use for the POS terminal
           </p>
         </CardHeader>
@@ -166,7 +177,7 @@ function POSSelectOrganizationForm() {
                   variant="outline"
                   role="combobox"
                   aria-expanded={open}
-                  className="w-full justify-between bg-slate-700 border-slate-600 text-white hover:bg-slate-600 hover:text-white"
+                  className="w-full justify-between"
                 >
                   {value
                     ? organizations.find((org) => org.id === value)?.name
@@ -175,21 +186,20 @@ function POSSelectOrganizationForm() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent 
-                className="p-0 bg-slate-700 border-slate-600" 
+                className="p-0" 
                 align="start"
                 style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}
               >
-                <Command className="bg-slate-700">
-                  <CommandInput placeholder="Search organization..." className="text-white" />
+                <Command>
+                  <CommandInput placeholder="Search organization..." />
                   <CommandList>
-                    <CommandEmpty className="text-slate-400">No organization found.</CommandEmpty>
+                    <CommandEmpty>No organization found.</CommandEmpty>
                     <CommandGroup>
                       {organizations.map((organization) => (
                         <CommandItem
                           key={organization.id}
                           value={organization.name}
                           onSelect={() => handleSelect(organization.id)}
-                          className="text-white hover:bg-slate-600 aria-selected:bg-slate-600"
                         >
                           <Building2 className="mr-2 h-4 w-4" />
                           {organization.name}
@@ -209,16 +219,16 @@ function POSSelectOrganizationForm() {
           </div>
           
           <div className="flex flex-col gap-2">
-            <div className="text-center text-sm text-slate-400">
+            <div className="text-center text-sm text-muted-foreground">
               You will be taken to the POS terminal after selecting an organization.
             </div>
             
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-600" />
+                <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-slate-800 px-2 text-slate-400">
+                <span className="bg-card px-2 text-muted-foreground">
                   Or
                 </span>
               </div>
@@ -227,7 +237,7 @@ function POSSelectOrganizationForm() {
             <Button 
               variant="ghost" 
               onClick={handleSignOut} 
-              className="w-full text-slate-300 hover:text-white hover:bg-slate-700"
+              className="w-full"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Log out
@@ -242,8 +252,8 @@ function POSSelectOrganizationForm() {
 export default function POSSelectOrganizationPage() {
   return (
     <React.Suspense fallback={
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <Card className="relative overflow-hidden w-full max-w-[400px] bg-slate-800 border-slate-700">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="relative overflow-hidden w-full max-w-[400px]">
           <CardContent className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </CardContent>

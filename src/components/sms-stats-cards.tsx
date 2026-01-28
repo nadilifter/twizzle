@@ -1,6 +1,6 @@
 "use client"
 
-import { TrendingUpIcon } from "lucide-react"
+import { TrendingUpIcon, TrendingDownIcon, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -10,91 +10,174 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export function SmsStatsCards() {
+export interface SmsStatsProps {
+  messagesSent: number
+  messagesDelivered: number
+  messagesFailed: number
+  deliveryRate: number
+  totalCost: number
+  includedMessages: number
+  overageMessages: number
+  overageCost: number
+  overageRate: number | null
+  periodEnd: Date | null
+  configured: boolean
+}
+
+export function SmsStatsCards({ stats }: { stats?: SmsStatsProps }) {
+  // Calculate days until renewal
+  const daysUntilRenewal = stats?.periodEnd
+    ? Math.max(0, Math.ceil((new Date(stats.periodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null
+
+  // Calculate usage percentage
+  const usagePercent = stats?.includedMessages
+    ? Math.min(100, (stats.messagesSent / stats.includedMessages) * 100)
+    : 0
+
+  // Determine if approaching limit
+  const isApproachingLimit = usagePercent >= 80
+  const isOverLimit = stats?.overageMessages ? stats.overageMessages > 0 : false
+
+  if (!stats?.configured) {
+    return (
+      <div className="px-4 lg:px-6">
+        <Card className="border-dashed">
+          <CardHeader className="text-center py-8">
+            <CardTitle className="text-lg">SMS Not Configured</CardTitle>
+            <CardDescription>
+              Configure Twilio credentials in your environment settings to enable SMS messaging.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="grid gap-4 px-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 lg:px-6 *:data-[slot=card]:shadow-xs *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
       <Card>
         <CardHeader className="relative">
           <CardDescription>Messages Sent</CardDescription>
           <CardTitle className="text-3xl font-semibold tabular-nums">
-            1,240
+            {stats?.messagesSent?.toLocaleString() ?? 0}
           </CardTitle>
           <div className="absolute right-4 top-4">
             <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
-              <TrendingUpIcon className="size-3" />
-              +12.5%
+              {stats?.messagesDelivered ?? 0} delivered
             </Badge>
           </div>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Trending up this month <TrendingUpIcon className="size-4" />
+            {stats?.messagesFailed ?? 0} failed
           </div>
           <div className="text-muted-foreground">
             This billing cycle
           </div>
         </CardFooter>
       </Card>
+
       <Card>
         <CardHeader className="relative">
           <CardDescription>Delivery Rate</CardDescription>
           <CardTitle className="text-3xl font-semibold tabular-nums">
-            98.4%
+            {stats?.deliveryRate?.toFixed(1) ?? 0}%
           </CardTitle>
           <div className="absolute right-4 top-4">
-            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
-              <TrendingUpIcon className="size-3" />
-              +0.2%
-            </Badge>
+            {stats?.deliveryRate && stats.deliveryRate >= 95 ? (
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs text-green-600">
+                <TrendingUpIcon className="size-3" />
+                Excellent
+              </Badge>
+            ) : stats?.deliveryRate && stats.deliveryRate >= 90 ? (
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                Good
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs text-amber-600">
+                <TrendingDownIcon className="size-3" />
+                Needs attention
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Consistent performance <TrendingUpIcon className="size-4" />
+            {stats?.messagesSent ? (
+              <>
+                {stats.messagesDelivered} / {stats.messagesSent} delivered
+              </>
+            ) : (
+              "No messages sent"
+            )}
           </div>
           <div className="text-muted-foreground">
-            +0.2% from last month
+            Based on webhook callbacks
           </div>
         </CardFooter>
       </Card>
+
       <Card>
         <CardHeader className="relative">
           <CardDescription>Estimated Cost</CardDescription>
           <CardTitle className="text-3xl font-semibold tabular-nums">
-            $9.80
+            ${(stats?.totalCost ?? 0).toFixed(2)}
           </CardTitle>
           <div className="absolute right-4 top-4">
-            <span className="text-xs font-mono text-muted-foreground">$0.0079/msg</span>
+            {isOverLimit && stats?.overageRate ? (
+              <span className="text-xs font-mono text-amber-600">
+                ${stats.overageRate.toFixed(2)}/overage
+              </span>
+            ) : (
+              <span className="text-xs font-mono text-muted-foreground">
+                Included in plan
+              </span>
+            )}
           </div>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Within budget
+            {isOverLimit ? (
+              <span className="text-amber-600">
+                {stats?.overageMessages} overage messages (${stats?.overageCost?.toFixed(2)})
+              </span>
+            ) : (
+              "Within plan limits"
+            )}
           </div>
-          <div className="text-muted-foreground">Current usage</div>
+          <div className="text-muted-foreground">Current billing period</div>
         </CardFooter>
       </Card>
-      <Card>
+
+      <Card className={isApproachingLimit ? "border-amber-200 dark:border-amber-900" : ""}>
         <CardHeader className="relative">
-          <CardDescription>Plan Limit</CardDescription>
+          <CardDescription>Plan Usage</CardDescription>
           <CardTitle className="text-3xl font-semibold tabular-nums">
-            24.8%
+            {usagePercent.toFixed(1)}%
           </CardTitle>
           <div className="absolute right-4 top-4">
-            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
-              5,000 Cap
-            </Badge>
+            {isApproachingLimit ? (
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs text-amber-600 border-amber-300">
+                <AlertTriangle className="size-3" />
+                {isOverLimit ? "Over limit" : "Near limit"}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                {stats?.includedMessages?.toLocaleString() ?? 0} limit
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            1,240 / 5,000 used
+            {stats?.messagesSent?.toLocaleString() ?? 0} / {stats?.includedMessages?.toLocaleString() ?? 0} used
           </div>
-          <div className="text-muted-foreground">Renews in 12 days</div>
+          <div className="text-muted-foreground">
+            {daysUntilRenewal !== null ? `Renews in ${daysUntilRenewal} days` : "No plan limit"}
+          </div>
         </CardFooter>
       </Card>
     </div>
   )
 }
-
-

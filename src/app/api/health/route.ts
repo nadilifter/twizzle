@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { isRedisAvailable } from "@/lib/redis";
 import { isAdyenConfigured, getAdyenEnvironmentName } from "@/lib/adyen";
+import { isTwilioConfigured, getTwilioEnvironment } from "@/lib/twilio";
 
 /**
  * Health Check Endpoint
@@ -23,6 +24,7 @@ interface HealthStatus {
     database: CheckResult;
     redis: CheckResult;
     adyen: CheckResult;
+    twilio: CheckResult;
   };
   uptime: number;
 }
@@ -40,10 +42,11 @@ export async function GET(): Promise<NextResponse<HealthStatus>> {
   const startTime = Date.now();
   
   // Perform health checks in parallel
-  const [dbCheck, redisCheck, adyenCheck] = await Promise.all([
+  const [dbCheck, redisCheck, adyenCheck, twilioCheck] = await Promise.all([
     checkDatabase(),
     checkRedis(),
     checkAdyen(),
+    checkTwilio(),
   ]);
 
   // Determine overall status
@@ -52,7 +55,7 @@ export async function GET(): Promise<NextResponse<HealthStatus>> {
   
   if (dbCheck.status === "error") {
     overallStatus = "unhealthy";
-  } else if (redisCheck.status === "error" || adyenCheck.status === "error") {
+  } else if (redisCheck.status === "error" || adyenCheck.status === "error" || twilioCheck.status === "error") {
     overallStatus = "degraded";
   }
 
@@ -65,6 +68,7 @@ export async function GET(): Promise<NextResponse<HealthStatus>> {
       database: dbCheck,
       redis: redisCheck,
       adyen: adyenCheck,
+      twilio: twilioCheck,
     },
     uptime: Math.floor((Date.now() - serverStartTime) / 1000),
   };
@@ -163,6 +167,25 @@ async function checkAdyen(): Promise<CheckResult> {
   return {
     status: "ok",
     message: `Environment: ${getAdyenEnvironmentName()}`,
+  };
+}
+
+/**
+ * Check Twilio configuration (optional dependency)
+ */
+async function checkTwilio(): Promise<CheckResult> {
+  if (!isTwilioConfigured()) {
+    return {
+      status: "unconfigured",
+      message: "Twilio not configured",
+    };
+  }
+
+  // For Twilio, we just verify configuration is present
+  // We don't make an API call to avoid unnecessary costs
+  return {
+    status: "ok",
+    message: `Environment: ${getTwilioEnvironment()}`,
   };
 }
 

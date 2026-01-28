@@ -1,4 +1,4 @@
-import { Check, CreditCard, Download, AlertCircle, Lock } from "lucide-react"
+import { Check, CreditCard, Download, AlertCircle, Lock, MessageSquare } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import {
   Table,
@@ -28,6 +29,7 @@ import {
 import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { PlanSelector } from "./plan-selector"
+import { getUsageStats } from "@/lib/sms-service"
 
 export default async function BillingPage() {
   const session = await getAuthSession()
@@ -80,6 +82,9 @@ export default async function BillingPage() {
   
   const currentPlan = organization.subscription?.plan
   const subscription = organization.subscription
+
+  // Get SMS usage
+  const smsUsage = await getUsageStats(session.user.organizationId)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -266,6 +271,76 @@ export default async function BillingPage() {
         </Card>
       </div>
 
+      {/* SMS Usage Card */}
+      {currentPlan?.smsIncluded && currentPlan.smsIncluded > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  SMS Usage
+                </CardTitle>
+                <CardDescription>
+                  Your SMS messaging usage for this billing period
+                </CardDescription>
+              </div>
+              {smsUsage && smsUsage.overageMessages > 0 && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                  Over limit
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Messages Used</span>
+                <span className="font-medium">
+                  {smsUsage?.messagesSent ?? 0} / {currentPlan.smsIncluded}
+                </span>
+              </div>
+              <Progress 
+                value={Math.min(100, ((smsUsage?.messagesSent ?? 0) / currentPlan.smsIncluded) * 100)} 
+                className="h-2"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 pt-2">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {smsUsage?.messagesDelivered ?? 0}
+                </div>
+                <div className="text-xs text-muted-foreground">Delivered</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {smsUsage?.messagesFailed ?? 0}
+                </div>
+                <div className="text-xs text-muted-foreground">Failed</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">
+                  {smsUsage ? Math.round((smsUsage.messagesDelivered / Math.max(1, smsUsage.messagesSent)) * 100) : 0}%
+                </div>
+                <div className="text-xs text-muted-foreground">Delivery Rate</div>
+              </div>
+            </div>
+
+            {smsUsage && smsUsage.overageMessages > 0 && currentPlan.smsOverageRate && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Overage Charges</AlertTitle>
+                <AlertDescription>
+                  You&apos;ve sent {smsUsage.overageMessages} messages over your plan limit.
+                  Overage cost: {formatCurrency(smsUsage.overageCost)} ({formatCurrency(Number(currentPlan.smsOverageRate))}/message)
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
          <Card>
           <CardHeader>
@@ -321,6 +396,7 @@ export default async function BillingPage() {
                 <TableHead>Price</TableHead>
                 <TableHead>Transaction Fee</TableHead>
                 <TableHead>Limits</TableHead>
+                <TableHead>SMS</TableHead>
                 <TableHead className="text-right">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -345,6 +421,11 @@ export default async function BillingPage() {
                     <span className="text-sm text-muted-foreground">
                       {plan.maxAthletes ? `${plan.maxAthletes} athletes` : "Unlimited"}
                       {plan.maxUsers ? `, ${plan.maxUsers} users` : ""}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">
+                      {plan.smsIncluded ? `${plan.smsIncluded}/mo` : "—"}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">

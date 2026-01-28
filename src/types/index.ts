@@ -2,3 +2,5 @@
 export * from "./athletes";
 export * from "./families";
 export * from "./staff";
+export * from "./programs";
+export * from "./evaluations";

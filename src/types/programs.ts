@@ -1,3 +1,5 @@
+import type { ProgramStaffWithProfile } from "./staff";
+
 export type ProgramStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
 
 export interface MembershipTier {
@@ -10,6 +12,21 @@ export interface MembershipTier {
   features: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+// Simplified membership instance for program requirements
+export interface ProgramRequiredMembership {
+  id: string;
+  name: string;
+  price: number;
+  billingInterval: "MONTHLY" | "YEARLY" | "SESSION";
+  startDate: string;
+  endDate: string;
+  status: string;
+  group: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface Program {
@@ -30,6 +47,8 @@ export interface ProgramWithRelations extends Program {
     lessonPlans: number;
   };
   membershipTiers: MembershipTier[];
+  staffAssignments?: ProgramStaffWithProfile[];
+  requiredMemberships?: ProgramRequiredMembership[];
 }
 
 export interface ProgramsListResponse {

@@ -155,33 +155,33 @@ function POSPageContent() {
   const total = subtotal + tax
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-1 min-h-0 w-full bg-background">
       {/* Left: Product Grid */}
-      <div className="flex-1 flex flex-col border-r bg-white dark:bg-slate-950">
-        <div className="p-4 border-b flex gap-2">
+      <div className="flex-1 min-w-0 flex flex-col min-h-0">
+        <div className="p-3 md:p-4 border-b flex gap-2 bg-background shrink-0">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search products..."
-              className="pl-8"
+              className="pl-8 h-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="icon" disabled title="Barcode scanner (coming soon)">
+          <Button variant="outline" size="icon" className="h-10 w-10" disabled title="Barcode scanner (coming soon)">
             <ScanBarcode className="h-4 w-4" />
           </Button>
         </div>
         
         {/* Categories */}
-        <div className="flex gap-2 p-2 overflow-x-auto border-b bg-slate-50 dark:bg-slate-900">
+        <div className="flex gap-2 p-2 overflow-x-auto border-b bg-muted/30 shrink-0">
           {categories.map((category) => (
             <Button
               key={category}
               variant={selectedCategory === category ? "secondary" : "ghost"}
               size="sm"
-              className={selectedCategory === category ? "bg-slate-200 dark:bg-slate-700" : ""}
+              className="shrink-0"
               onClick={() => setSelectedCategory(category)}
             >
               {category}
@@ -189,131 +189,133 @@ function POSPageContent() {
           ))}
         </div>
 
-        <ScrollArea className="flex-1 p-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-              <Package className="h-12 w-12 mb-4" />
-              <p>No products found</p>
-              {products.length === 0 && (
-                <p className="text-sm mt-2">
-                  Add products in the{" "}
-                  <Link href="/dashboard/organization/store" className="text-primary underline">
-                    Store settings
-                  </Link>
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => {
-                const stockStatus = getStockStatus(product)
-                const isOutOfStock = product.currentInventory !== null && product.currentInventory <= 0
-                
-                return (
-                  <Button
-                    key={product.id}
-                    variant="outline"
-                    className={`h-auto aspect-square flex flex-col gap-2 whitespace-normal py-4 hover:border-primary relative ${
-                      isOutOfStock ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                    onClick={() => handleAddToCart(product)}
-                    disabled={isOutOfStock}
-                  >
-                    {stockStatus && (
-                      <Badge
-                        variant={stockStatus.variant}
-                        className="absolute top-2 right-2 text-[10px]"
-                      >
-                        {stockStatus.label}
-                      </Badge>
-                    )}
-                    {product.imageUrl ? (
-                      <Image
-                        src={product.imageUrl}
-                        alt={product.name}
-                        width={48}
-                        height={48}
-                        className="rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-                        <Package className="h-6 w-6 text-slate-400" />
-                      </div>
-                    )}
-                    <span className="font-medium text-center leading-tight">{product.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ${Number(product.price).toFixed(2)}
-                    </span>
-                  </Button>
-                )
-              })}
-            </div>
-          )}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-3 md:p-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <Package className="h-12 w-12 mb-4" />
+                <p>No products found</p>
+                {products.length === 0 && (
+                  <p className="text-sm mt-2">
+                    Add products in the{" "}
+                    <Link href="/dashboard/organization/store" className="text-primary underline">
+                      Store settings
+                    </Link>
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
+                {filteredProducts.map((product) => {
+                  const stockStatus = getStockStatus(product)
+                  const isOutOfStock = product.currentInventory !== null && product.currentInventory <= 0
+                  
+                  return (
+                    <Button
+                      key={product.id}
+                      variant="outline"
+                      className={`h-auto min-h-[120px] md:min-h-[140px] flex flex-col gap-1.5 md:gap-2 whitespace-normal p-2 md:p-3 hover:border-primary hover:bg-accent/50 relative transition-colors touch-manipulation ${
+                        isOutOfStock ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                      onClick={() => handleAddToCart(product)}
+                      disabled={isOutOfStock}
+                    >
+                      {stockStatus && (
+                        <Badge
+                          variant={stockStatus.variant}
+                          className="absolute top-1.5 right-1.5 text-[10px]"
+                        >
+                          {stockStatus.label}
+                        </Badge>
+                      )}
+                      {product.imageUrl ? (
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          width={48}
+                          height={48}
+                          className="rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                          <Package className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="font-medium text-center leading-tight text-xs md:text-sm line-clamp-2">{product.name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ${Number(product.price).toFixed(2)}
+                      </span>
+                    </Button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </ScrollArea>
       </div>
 
-      {/* Right: Cart */}
-      <div className="w-[400px] flex flex-col bg-slate-50 dark:bg-slate-900 shadow-xl z-10">
-        <div className="p-4 border-b bg-white dark:bg-slate-800 flex justify-between items-center">
+      {/* Right: Cart - Full height sidebar */}
+      <div className="w-[280px] md:w-[320px] lg:w-[360px] flex flex-col bg-muted/30 border-l shrink-0">
+        <div className="p-3 md:p-4 border-b bg-background flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            <span className="font-bold">Current Order</span>
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-sm md:text-base">Current Order</span>
             {totalItems > 0 && (
-              <Badge variant="secondary">{totalItems} items</Badge>
+              <Badge variant="secondary" className="text-xs">{totalItems}</Badge>
             )}
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
             onClick={clearCart}
             disabled={items.length === 0}
           >
             <Trash2 className="h-4 w-4 mr-1" />
-            Clear
+            <span className="hidden md:inline">Clear</span>
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4">
           {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-muted-foreground">
               <ShoppingCart className="h-12 w-12 mb-4 opacity-30" />
-              <p>No items in cart</p>
-              <p className="text-sm">Click a product to add it</p>
+              <p className="text-sm">No items in cart</p>
+              <p className="text-xs mt-1">Tap a product to add it</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex justify-between items-start p-3 bg-white rounded-lg border shadow-sm group"
+                  className="flex justify-between items-start p-2.5 md:p-3 bg-background rounded-lg border shadow-sm"
                 >
-                  <div className="flex-1">
-                    <div className="font-medium">{item.name}</div>
+                  <div className="flex-1 min-w-0 mr-2">
+                    <div className="font-medium text-sm truncate">{item.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      ${item.price.toFixed(2)} / ea
+                      ${item.price.toFixed(2)} each
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="font-bold">${(item.price * item.quantity).toFixed(2)}</div>
-                    <div className="flex items-center gap-2 bg-slate-100 rounded p-0.5">
+                  <div className="flex flex-col items-end gap-1.5 md:gap-2 shrink-0">
+                    <div className="font-semibold text-sm">${(item.price * item.quantity).toFixed(2)}</div>
+                    <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-6 w-6 rounded-sm"
+                        className="h-7 w-7 md:h-8 md:w-8 rounded-sm hover:bg-background touch-manipulation"
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
                       >
                         <Minus className="w-3 h-3" />
                       </Button>
-                      <span className="text-xs font-mono w-4 text-center">{item.quantity}</span>
+                      <span className="text-xs font-mono w-6 text-center">{item.quantity}</span>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-6 w-6 rounded-sm"
+                        className="h-7 w-7 md:h-8 md:w-8 rounded-sm hover:bg-background touch-manipulation"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                       >
                         <Plus className="w-3 h-3" />
@@ -324,9 +326,9 @@ function POSPageContent() {
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
         
-        <div className="p-4 bg-white dark:bg-slate-800 border-t space-y-4">
+        <div className="p-3 md:p-4 bg-background border-t space-y-3 md:space-y-4 shrink-0">
           <div className="space-y-1 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span>
@@ -337,21 +339,21 @@ function POSPageContent() {
               <span>${tax.toFixed(2)}</span>
             </div>
           </div>
-          <div className="flex justify-between text-2xl font-bold pt-2 border-t">
+          <div className="flex justify-between text-lg md:text-xl font-bold pt-2 border-t">
             <span>Total</span>
             <span>${total.toFixed(2)}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
-              className="h-12 text-lg"
+              className="h-12 md:h-14 text-base font-medium touch-manipulation"
               disabled={items.length === 0}
               asChild
             >
               <Link href="/pos/payment?method=cash">Cash</Link>
             </Button>
             <Button
-              className="h-12 text-lg"
+              className="h-12 md:h-14 text-base font-medium touch-manipulation"
               disabled={items.length === 0}
               asChild
             >

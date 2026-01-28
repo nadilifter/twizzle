@@ -11,8 +11,7 @@ import {
   AlertCircle, 
   Search,
   Loader2,
-  ScanLine,
-  ArrowLeft
+  ScanLine
 } from "lucide-react"
 import Link from "next/link"
 import { QRScanner } from "@/components/events/qr-scanner"
@@ -118,18 +117,11 @@ export default function ScanPage() {
   }, [])
 
   return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto">
+    <div className="p-4 md:p-6 lg:px-8 max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/events">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">QR Check-in</h1>
-          <p className="text-muted-foreground">Scan athlete QR codes for quick check-in</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">QR Check-in</h1>
+        <p className="text-muted-foreground mt-1">Scan athlete QR codes for quick check-in</p>
       </div>
 
       {/* Scanner Card */}

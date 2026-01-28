@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,17 +8,32 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Trash2, Save, Loader2, DollarSign } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Plus, Trash2, Save, Loader2, DollarSign, User, Star, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { usePrograms } from "@/hooks/use-programs"
+import { useStaff } from "@/hooks/use-staff"
+import { useMemberships } from "@/hooks/use-memberships"
+import type { ProgramStaffRole } from "@/types/staff"
 
 interface ProgramConfigProps {
   program: any 
   onClose: () => void
 }
 
+const ROLE_LABELS: Record<ProgramStaffRole, string> = {
+  LEAD_COACH: "Lead Coach",
+  ASSISTANT_COACH: "Assistant Coach",
+  SUBSTITUTE: "Substitute",
+  VOLUNTEER: "Volunteer",
+}
+
 export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
   const { updateProgram, fetchPrograms } = usePrograms()
+  const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
+  const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
+  
   const [activeTab, setActiveTab] = useState("general")
   const [isSaving, setIsSaving] = useState(false)
   const [isAddingTier, setIsAddingTier] = useState(false)
@@ -39,6 +54,40 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     price: "",
     interval: "MONTHLY",
   })
+  
+  // State for coaches
+  const [assignedStaff, setAssignedStaff] = useState<any[]>(program.staffAssignments || [])
+  const [isAddingStaff, setIsAddingStaff] = useState(false)
+  const [isDeletingStaff, setIsDeletingStaff] = useState<string | null>(null)
+  const [newStaffAssignment, setNewStaffAssignment] = useState({
+    staffProfileId: "",
+    role: "ASSISTANT_COACH" as ProgramStaffRole,
+    isPrimary: false,
+  })
+  
+  // State for requirements
+  const [requirements, setRequirements] = useState<any[]>(program.requiredMemberships || [])
+  const [isAddingRequirement, setIsAddingRequirement] = useState(false)
+  const [isDeletingRequirement, setIsDeletingRequirement] = useState<string | null>(null)
+  const [selectedMembershipInstance, setSelectedMembershipInstance] = useState("")
+  
+  // Flatten membership instances from groups
+  const allMembershipInstances = memberships?.flatMap(group => 
+    group.instances?.map((instance: any) => ({
+      ...instance,
+      groupName: group.name,
+    })) || []
+  ) || []
+  
+  // Filter out already required memberships
+  const availableMembershipInstances = allMembershipInstances.filter(
+    (instance: any) => !requirements.some(r => r.id === instance.id)
+  )
+  
+  // Filter out already assigned staff
+  const unassignedStaff = availableStaff?.filter(
+    s => !assignedStaff.some(a => a.staffProfile?.id === s.id || a.staffProfileId === s.id)
+  ) || []
 
   const handleSaveGeneral = async () => {
     setIsSaving(true)
@@ -100,6 +149,134 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
         toast.error("Failed to remove option")
     } finally {
         setIsDeletingTier(null)
+    }
+  }
+  
+  // Staff/Coach handlers
+  const handleAddStaff = async () => {
+    if (!newStaffAssignment.staffProfileId) {
+      toast.error("Please select a staff member")
+      return
+    }
+
+    setIsAddingStaff(true)
+    try {
+      const response = await fetch(`/api/programs/${program.id}/staff`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newStaffAssignment),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to add coach")
+      }
+
+      const addedStaff = await response.json()
+      setAssignedStaff([...assignedStaff, addedStaff])
+      setNewStaffAssignment({ staffProfileId: "", role: "ASSISTANT_COACH", isPrimary: false })
+      toast.success("Coach added to program")
+      fetchPrograms()
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || "Failed to add coach")
+    } finally {
+      setIsAddingStaff(false)
+    }
+  }
+
+  const handleRemoveStaff = async (assignmentId: string) => {
+    setIsDeletingStaff(assignmentId)
+    try {
+      const response = await fetch(`/api/programs/${program.id}/staff/${assignmentId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) throw new Error("Failed to remove coach")
+
+      setAssignedStaff(assignedStaff.filter(a => a.id !== assignmentId))
+      toast.success("Coach removed from program")
+      fetchPrograms()
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to remove coach")
+    } finally {
+      setIsDeletingStaff(null)
+    }
+  }
+
+  const handleSetPrimary = async (assignmentId: string) => {
+    try {
+      const response = await fetch(`/api/programs/${program.id}/staff/${assignmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPrimary: true }),
+      })
+
+      if (!response.ok) throw new Error("Failed to update")
+
+      // Update local state - remove primary from others, set on this one
+      setAssignedStaff(assignedStaff.map(a => ({
+        ...a,
+        isPrimary: a.id === assignmentId,
+      })))
+      toast.success("Primary coach updated")
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to update primary coach")
+    }
+  }
+  
+  // Requirements handlers
+  const handleAddRequirement = async () => {
+    if (!selectedMembershipInstance) {
+      toast.error("Please select a membership")
+      return
+    }
+
+    setIsAddingRequirement(true)
+    try {
+      const response = await fetch(`/api/programs/${program.id}/requirements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ membershipInstanceId: selectedMembershipInstance }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to add requirement")
+      }
+
+      const updatedRequirements = await response.json()
+      setRequirements(updatedRequirements)
+      setSelectedMembershipInstance("")
+      toast.success("Membership requirement added")
+      fetchPrograms()
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || "Failed to add requirement")
+    } finally {
+      setIsAddingRequirement(false)
+    }
+  }
+
+  const handleRemoveRequirement = async (instanceId: string) => {
+    setIsDeletingRequirement(instanceId)
+    try {
+      const response = await fetch(`/api/programs/${program.id}/requirements/${instanceId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) throw new Error("Failed to remove requirement")
+
+      setRequirements(requirements.filter(r => r.id !== instanceId))
+      toast.success("Requirement removed")
+      fetchPrograms()
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to remove requirement")
+    } finally {
+      setIsDeletingRequirement(null)
     }
   }
 
@@ -266,15 +443,233 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                 </div>
             </TabsContent>
 
-            <TabsContent value="requirements" className="mt-0">
-                <div className="p-12 text-center border rounded-md border-dashed bg-muted/10">
-                    <p className="text-muted-foreground">Prerequisites and requirement settings coming soon.</p>
+            <TabsContent value="requirements" className="mt-0 space-y-6 max-w-3xl">
+                <Card className="border-dashed shadow-none">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="text-base">Add Membership Requirement</CardTitle>
+                        <CardDescription>
+                            Athletes must have an active membership to enroll in this program.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex gap-4 items-end">
+                            <div className="flex-1 grid gap-2">
+                                <Label>Membership</Label>
+                                <Select
+                                    value={selectedMembershipInstance}
+                                    onValueChange={setSelectedMembershipInstance}
+                                    disabled={loadingMemberships}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={loadingMemberships ? "Loading..." : "Select a membership"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableMembershipInstances.map((instance: any) => (
+                                            <SelectItem key={instance.id} value={instance.id}>
+                                                {instance.groupName} - {instance.name} (${Number(instance.price).toFixed(2)})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button
+                                onClick={handleAddRequirement}
+                                disabled={isAddingRequirement || !selectedMembershipInstance}
+                            >
+                                {isAddingRequirement ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Plus className="h-4 w-4 mr-2" />
+                                )}
+                                Add
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {requirements.length > 0 && (
+                    <div className="p-4 border rounded-md bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                        <div className="flex gap-2 items-start">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
+                            <p className="text-sm text-amber-800 dark:text-amber-200">
+                                Athletes without these memberships will be prompted to purchase when registering for this program.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Required Memberships</h3>
+                    <div className="grid gap-3">
+                        {requirements.length === 0 ? (
+                            <div className="p-8 text-center border rounded-md bg-muted/10">
+                                <p className="text-sm text-muted-foreground">No membership requirements set. Any athlete can enroll.</p>
+                            </div>
+                        ) : (
+                            requirements.map((req) => (
+                                <div key={req.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="font-medium">{req.group?.name || "Membership"} - {req.name}</span>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <span>${Number(req.price).toFixed(2)}</span>
+                                            <span>•</span>
+                                            <span className="capitalize">{req.billingInterval?.toLowerCase()}</span>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleRemoveRequirement(req.id)}
+                                        disabled={isDeletingRequirement === req.id}
+                                        className="text-muted-foreground hover:text-destructive transition-colors"
+                                    >
+                                        {isDeletingRequirement === req.id ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Trash2 className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </TabsContent>
 
-            <TabsContent value="coaches" className="mt-0">
-                <div className="p-12 text-center border rounded-md border-dashed bg-muted/10">
-                    <p className="text-muted-foreground">Coach assignment settings coming soon.</p>
+            <TabsContent value="coaches" className="mt-0 space-y-6 max-w-3xl">
+                <Card className="border-dashed shadow-none">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="text-base">Assign Coach</CardTitle>
+                        <CardDescription>
+                            Add coaches to this program. They will be visible on the marketing site and in the coach portal.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                            <div className="md:col-span-5 grid gap-2">
+                                <Label>Staff Member</Label>
+                                <Select
+                                    value={newStaffAssignment.staffProfileId}
+                                    onValueChange={(val) => setNewStaffAssignment({ ...newStaffAssignment, staffProfileId: val })}
+                                    disabled={loadingStaff}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={loadingStaff ? "Loading..." : "Select staff member"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {unassignedStaff.map((s) => (
+                                            <SelectItem key={s.id} value={s.id}>
+                                                {s.user?.name || "Unknown"} {s.title ? `(${s.title})` : ""}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="md:col-span-4 grid gap-2">
+                                <Label>Role</Label>
+                                <Select
+                                    value={newStaffAssignment.role}
+                                    onValueChange={(val) => setNewStaffAssignment({ ...newStaffAssignment, role: val as ProgramStaffRole })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="LEAD_COACH">Lead Coach</SelectItem>
+                                        <SelectItem value="ASSISTANT_COACH">Assistant Coach</SelectItem>
+                                        <SelectItem value="SUBSTITUTE">Substitute</SelectItem>
+                                        <SelectItem value="VOLUNTEER">Volunteer</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="md:col-span-3">
+                                <Button
+                                    onClick={handleAddStaff}
+                                    disabled={isAddingStaff || !newStaffAssignment.staffProfileId}
+                                    className="w-full"
+                                >
+                                    {isAddingStaff ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Assigned Coaches</h3>
+                    <div className="grid gap-3">
+                        {assignedStaff.length === 0 ? (
+                            <div className="p-8 text-center border rounded-md bg-muted/10">
+                                <p className="text-sm text-muted-foreground">No coaches assigned to this program yet.</p>
+                            </div>
+                        ) : (
+                            assignedStaff.map((assignment) => (
+                                <div key={assignment.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={assignment.staffProfile?.user?.avatar || ""} />
+                                            <AvatarFallback>
+                                                <User className="h-4 w-4" />
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">{assignment.staffProfile?.user?.name || "Unknown"}</span>
+                                                {assignment.isPrimary && (
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        <Star className="h-3 w-3 mr-1" />
+                                                        Primary
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <span>{ROLE_LABELS[assignment.role as ProgramStaffRole] || assignment.role}</span>
+                                                {assignment.staffProfile?.title && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span>{assignment.staffProfile.title}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {!assignment.isPrimary && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleSetPrimary(assignment.id)}
+                                                className="text-muted-foreground hover:text-foreground"
+                                            >
+                                                <Star className="h-4 w-4 mr-1" />
+                                                Set Primary
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleRemoveStaff(assignment.id)}
+                                            disabled={isDeletingStaff === assignment.id}
+                                            className="text-muted-foreground hover:text-destructive transition-colors"
+                                        >
+                                            {isDeletingStaff === assignment.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </TabsContent>
         </div>

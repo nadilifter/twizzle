@@ -1,6 +1,5 @@
 import { getAuthSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { CartProvider } from "@/components/sites/cart-context"
 import { db } from "@/lib/db"
 import { getUserOrganizations } from "@/app/actions/organization"
 import { POSSidebar } from "@/components/pos-sidebar"
@@ -42,16 +41,14 @@ export default async function POSTerminalLayout({
   })
 
   return (
-    <CartProvider>
-      <SidebarProvider>
-        <POSSidebar organizationName={organization?.name} />
-        <SidebarInset>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            {children}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </CartProvider>
+    <SidebarProvider className="!min-h-svh !h-svh !max-h-svh">
+      <POSSidebar organizationName={organization?.name} />
+      <SidebarInset className="!h-full overflow-hidden">
+        <SiteHeader />
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

@@ -3,11 +3,18 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+const skillDifficultyEnum = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
+
 const createSkillSchema = z.object({
   name: z.string().min(1, "Name is required"),
   category: z.string().min(1, "Category is required"),
   level: z.string().optional(),
   description: z.string().optional(),
+  difficultyLevel: skillDifficultyEnum.optional().default("BEGINNER"),
+  minAge: z.number().int().min(0).max(100).optional().nullable(),
+  maxAge: z.number().int().min(0).max(100).optional().nullable(),
+  videoUrl: z.string().url().optional().nullable(),
+  imageUrl: z.string().url().optional().nullable(),
 });
 
 // GET /api/skills
@@ -22,6 +29,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category");
     const level = searchParams.get("level");
+    const difficultyLevel = searchParams.get("difficultyLevel");
+    const minAge = searchParams.get("minAge");
+    const maxAge = searchParams.get("maxAge");
     const limit = parseInt(searchParams.get("limit") || "100");
     const offset = parseInt(searchParams.get("offset") || "0");
 
@@ -35,16 +45,37 @@ export async function GET(request: NextRequest) {
       }),
       ...(category && { category }),
       ...(level && { level }),
+      ...(difficultyLevel && { difficultyLevel: difficultyLevel as "BEGINNER" | "INTERMEDIATE" | "ADVANCED" }),
+      // Filter skills appropriate for an athlete's age
+      ...(minAge && {
+        OR: [
+          { minAge: null },
+          { minAge: { lte: parseInt(minAge) } },
+        ],
+      }),
+      ...(maxAge && {
+        OR: [
+          { maxAge: null },
+          { maxAge: { gte: parseInt(maxAge) } },
+        ],
+      }),
     };
 
-    const [skills, total] = await Promise.all([
+    const [skills, total, categories] = await Promise.all([
       db.skill.findMany({
         where,
-        orderBy: [{ category: "asc" }, { name: "asc" }],
+        orderBy: [{ category: "asc" }, { difficultyLevel: "asc" }, { name: "asc" }],
         take: limit,
         skip: offset,
       }),
       db.skill.count({ where }),
+      // Get unique categories for filtering
+      db.skill.findMany({
+        where: { organizationId: session.user.organizationId },
+        select: { category: true },
+        distinct: ["category"],
+        orderBy: { category: "asc" },
+      }),
     ]);
 
     // Group by category for easier UI consumption
@@ -59,6 +90,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: skills,
       grouped,
+      categories: categories.map((c) => c.category),
       total,
       limit,
       offset,

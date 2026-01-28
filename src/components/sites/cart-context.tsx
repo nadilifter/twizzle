@@ -5,13 +5,13 @@ import { toast } from "sonner"
 
 export type CartItem = {
   id: string // Unique ID for the cart item instance
-  referenceId: string // ID of the actual product (programId, eventId, etc.)
-  type: "program" | "event" | "item"
+  referenceId: string // ID of the actual product (programId, eventId, membershipInstanceId, etc.)
+  type: "program" | "event" | "item" | "membership"
   name: string
   description?: string
   price: number
   quantity: number
-  details?: Record<string, any> // Additional details like size, color, or specific session
+  details?: Record<string, any> // Additional details like size, color, athleteId, requiredMemberships, etc.
 }
 
 interface CartContextType {

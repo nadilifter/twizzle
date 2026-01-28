@@ -7,14 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
-  ArrowLeft, 
   Calendar, 
   Clock, 
   MapPin, 
   Users, 
   Search,
   Check,
-  X,
   Clock4,
   Loader2,
   UserCheck,
@@ -146,39 +144,32 @@ export default function EventCheckinPage({ params }: EventCheckinPageProps) {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 lg:px-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-start gap-4 mb-6">
-        <Button variant="ghost" size="icon" asChild className="mt-1">
-          <Link href="/events">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            {event.type && (
-              <Badge variant="secondary" className="text-xs">
-                {event.type}
-              </Badge>
-            )}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          {event.type && (
+            <Badge variant="secondary" className="text-xs">
+              {event.type}
+            </Badge>
+          )}
+        </div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{event.title}</h1>
+        <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            {format(new Date(event.date), "MMM d, yyyy")}
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{event.title}</h1>
-          <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              {format(new Date(event.date), "MMM d, yyyy")}
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              {event.startTime} - {event.endTime}
-            </div>
-            {event.location?.name && (
-              <div className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                {event.location.name}
-              </div>
-            )}
+          <div className="flex items-center gap-1">
+            <Clock className="h-4 w-4" />
+            {event.startTime} - {event.endTime}
           </div>
+          {event.location?.name && (
+            <div className="flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              {event.location.name}
+            </div>
+          )}
         </div>
       </div>
 

@@ -853,21 +853,168 @@ async function main() {
   console.log(`  ✓ Created ${ledgerData.length} ledger entries`);
 
   // ============================================
-  // SKILLS
+  // SKILLS (Enhanced with difficulty levels and age ranges)
   // ============================================
   console.log("\n🎯 Creating skills...");
-  await Promise.all([
-    prisma.skill.upsert({ where: { id: `${ORG1_ID}-skill-1` }, update: {}, create: { id: `${ORG1_ID}-skill-1`, name: "Forward Roll", category: "Floor", level: "Bronze", description: "Basic forward roll", organizationId: ORG1_ID } }),
-    prisma.skill.upsert({ where: { id: `${ORG1_ID}-skill-2` }, update: {}, create: { id: `${ORG1_ID}-skill-2`, name: "Backward Roll", category: "Floor", level: "Bronze", description: "Backward roll to standing", organizationId: ORG1_ID } }),
-    prisma.skill.upsert({ where: { id: `${ORG1_ID}-skill-3` }, update: {}, create: { id: `${ORG1_ID}-skill-3`, name: "Cartwheel", category: "Floor", level: "Bronze", description: "Cartwheel with straight legs", organizationId: ORG1_ID } }),
-    prisma.skill.upsert({ where: { id: `${ORG1_ID}-skill-4` }, update: {}, create: { id: `${ORG1_ID}-skill-4`, name: "Handstand", category: "Floor", level: "Silver", description: "Controlled handstand hold", organizationId: ORG1_ID } }),
-    prisma.skill.upsert({ where: { id: `${ORG1_ID}-skill-5` }, update: {}, create: { id: `${ORG1_ID}-skill-5`, name: "Pullover", category: "Bars", level: "Bronze", description: "Pullover to front support", organizationId: ORG1_ID } }),
-    prisma.skill.upsert({ where: { id: `${ORG2_ID}-skill-1` }, update: {}, create: { id: `${ORG2_ID}-skill-1`, name: "Dribbling", category: "Soccer", level: "Beginner", description: "Basic ball control", organizationId: ORG2_ID } }),
-    prisma.skill.upsert({ where: { id: `${ORG2_ID}-skill-2` }, update: {}, create: { id: `${ORG2_ID}-skill-2`, name: "Passing", category: "Soccer", level: "Beginner", description: "Accurate short passes", organizationId: ORG2_ID } }),
-    prisma.skill.upsert({ where: { id: `${ORG2_ID}-skill-3` }, update: {}, create: { id: `${ORG2_ID}-skill-3`, name: "Layup", category: "Basketball", level: "Beginner", description: "Basic layup from both sides", organizationId: ORG2_ID } }),
-    prisma.skill.upsert({ where: { id: `${ORG2_ID}-skill-4` }, update: {}, create: { id: `${ORG2_ID}-skill-4`, name: "Freestyle Stroke", category: "Swimming", level: "Beginner", description: "Proper freestyle technique", organizationId: ORG2_ID } }),
-  ]);
-  console.log("  ✓ Created 9 skills");
+  
+  // Org1 - Gymnastics skills organized by apparatus and difficulty
+  const org1SkillsData = [
+    // Floor - Beginner (ages 4-7)
+    { id: `${ORG1_ID}-skill-1`, name: "Forward Roll", category: "Floor", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "Start standing, tuck chin to chest, push off feet, roll smoothly onto back, and stand up. Key points: tight tuck, hands push floor, smooth momentum." },
+    { id: `${ORG1_ID}-skill-2`, name: "Backward Roll", category: "Floor", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "From standing, squat down, roll backward keeping chin tucked, push through hands by ears, stand up. Key points: hands by ears, push hard to clear head." },
+    { id: `${ORG1_ID}-skill-3`, name: "Cartwheel", category: "Floor", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Hand-hand-foot-foot pattern with straight legs passing through handstand position. Key points: straight legs, T-position arms, look at hands." },
+    { id: `${ORG1_ID}-skill-4`, name: "Handstand", category: "Floor", level: "Silver", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Kick up to inverted position with body in straight line from wrists to toes. Key points: tight core, shoulder shrug, look at hands." },
+    { id: `${ORG1_ID}-skill-5`, name: "Bridge", category: "Floor", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "Arched position with hands and feet on floor, stomach facing ceiling. Key points: push shoulders over hands, straight arms." },
+    
+    // Floor - Intermediate (ages 6-10)
+    { id: `${ORG1_ID}-skill-6`, name: "Round-off", category: "Floor", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 12, description: "Running entry, cartwheel with 1/4 turn to land with both feet together facing start direction. Key points: fast snap-down, arms by ears." },
+    { id: `${ORG1_ID}-skill-7`, name: "Back Walkover", category: "Floor", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 12, description: "Standing back arch through bridge, split legs, and stand up one leg at a time. Key points: controlled arch back, split legs." },
+    { id: `${ORG1_ID}-skill-8`, name: "Front Walkover", category: "Floor", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 12, description: "Standing forward through handstand with split legs, arch over to standing. Key points: strong lunge, split in handstand." },
+    
+    // Floor - Advanced (ages 8+)
+    { id: `${ORG1_ID}-skill-9`, name: "Back Handspring", category: "Floor", level: "Gold", difficultyLevel: "ADVANCED" as const, minAge: 8, maxAge: 18, description: "Jump backward through handstand, snap down to feet. Key points: sit back, big arm swing, tight arch." },
+    { id: `${ORG1_ID}-skill-10`, name: "Front Handspring", category: "Floor", level: "Gold", difficultyLevel: "ADVANCED" as const, minAge: 8, maxAge: 18, description: "Running hurdle to handstand with powerful push through shoulders, snap down to feet. Key points: block through shoulders, tight body." },
+    
+    // Vault - Beginner
+    { id: `${ORG1_ID}-skill-11`, name: "Squat On", category: "Vault", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Run to springboard, jump to squat position on vault, stand, and jump off. Key points: strong punch off board, knees to chest." },
+    { id: `${ORG1_ID}-skill-12`, name: "Straddle Over", category: "Vault", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 6, maxAge: 12, description: "Run, punch off board, place hands on vault and straddle legs over, land on feet. Key points: straight arms, push through shoulders." },
+    
+    // Vault - Intermediate/Advanced
+    { id: `${ORG1_ID}-skill-13`, name: "Handspring Vault", category: "Vault", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 8, maxAge: 18, description: "Run, punch off board, front handspring over vault table. Key points: block through shoulders, tight body, stick landing." },
+    
+    // Bars - Beginner
+    { id: `${ORG1_ID}-skill-14`, name: "Pullover", category: "Bars", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "From hang, pull body up and over bar to front support. Key points: pull close to bar, chin tucked, hips to bar." },
+    { id: `${ORG1_ID}-skill-15`, name: "Back Hip Circle", category: "Bars", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "From front support, fall backward around bar keeping hips close. Key points: hollow body, hips stay on bar." },
+    { id: `${ORG1_ID}-skill-16`, name: "Glide Swing", category: "Bars", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "From hang, extend body forward then pull legs in to swing under bar. Key points: extend legs forward, pike at end." },
+    
+    // Bars - Intermediate
+    { id: `${ORG1_ID}-skill-17`, name: "Cast", category: "Bars", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 14, description: "From front support, push hips away from bar while maintaining hollow shape. Key points: push through shoulders, tight hollow body." },
+    { id: `${ORG1_ID}-skill-18`, name: "Kip", category: "Bars", level: "Gold", difficultyLevel: "ADVANCED" as const, minAge: 8, maxAge: 18, description: "From glide, bring toes to bar, then slide legs down bar while pulling to front support. Key points: toes to bar, aggressive pull." },
+    
+    // Beam - Beginner
+    { id: `${ORG1_ID}-skill-19`, name: "Beam Walk", category: "Beam", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "Walk forward on beam with good posture, arms out for balance. Key points: eyes up, small steps, pointed toes." },
+    { id: `${ORG1_ID}-skill-20`, name: "Dip Walk", category: "Beam", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "Walk with a plie (dip) on each step. Key points: deep plie, straight supporting leg, pointed toe." },
+    { id: `${ORG1_ID}-skill-21`, name: "Relevé Turns", category: "Beam", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Turn on balls of feet (relevé) with controlled rotation. Key points: high relevé, spot head, arms help balance." },
+    { id: `${ORG1_ID}-skill-22`, name: "Scale", category: "Beam", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Stand on one leg, other leg extended behind, torso parallel to beam. Key points: straight legs, square hips, arms extended." },
+    
+    // Beam - Intermediate
+    { id: `${ORG1_ID}-skill-23`, name: "Cartwheel on Beam", category: "Beam", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 7, maxAge: 14, description: "Cartwheel performed on the balance beam with control. Key points: stay in line, control speed, look at hands." },
+    { id: `${ORG1_ID}-skill-24`, name: "Handstand on Beam", category: "Beam", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 7, maxAge: 14, description: "Controlled handstand on beam with proper alignment. Key points: controlled kick, tight body, balance through shoulders." },
+    
+    // General/Conditioning - Beginner
+    { id: `${ORG1_ID}-skill-25`, name: "Straddle Stretch", category: "General", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 18, description: "Seated straddle position with chest reaching toward floor. Key points: straight legs, pointed toes, flat back." },
+    { id: `${ORG1_ID}-skill-26`, name: "Pike Stretch", category: "General", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 18, description: "Seated pike position reaching for toes. Key points: straight legs, flexed feet, nose to knees." },
+    { id: `${ORG1_ID}-skill-27`, name: "Hollow Body Hold", category: "General", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 18, description: "Lying on back with arms overhead, lift shoulders and legs off ground maintaining curved spine. Key points: lower back pressed to floor, tight core." },
+    { id: `${ORG1_ID}-skill-28`, name: "Arch Body Hold", category: "General", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 18, description: "Lying face down, lift arms and legs off ground in arched position. Key points: squeeze glutes, lift chest, arms by ears." },
+  ];
+  
+  for (const skill of org1SkillsData) {
+    await prisma.skill.upsert({
+      where: { id: skill.id },
+      update: {},
+      create: { ...skill, organizationId: ORG1_ID },
+    });
+  }
+  
+  // Org2 - Multi-sport skills
+  const org2SkillsData = [
+    { id: `${ORG2_ID}-skill-1`, name: "Dribbling", category: "Soccer", level: "Beginner", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 14, description: "Basic ball control while moving. Key points: soft touches, use both feet, keep ball close." },
+    { id: `${ORG2_ID}-skill-2`, name: "Passing", category: "Soccer", level: "Beginner", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 14, description: "Accurate short passes with inside of foot. Key points: plant foot beside ball, follow through toward target." },
+    { id: `${ORG2_ID}-skill-3`, name: "Layup", category: "Basketball", level: "Beginner", difficultyLevel: "BEGINNER" as const, minAge: 7, maxAge: 18, description: "Basic layup from both sides of the basket. Key points: two-step approach, knee up, soft touch on backboard." },
+    { id: `${ORG2_ID}-skill-4`, name: "Freestyle Stroke", category: "Swimming", level: "Beginner", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 18, description: "Proper freestyle technique with rhythmic breathing. Key points: high elbow recovery, bilateral breathing, flutter kick." },
+    { id: `${ORG2_ID}-skill-5`, name: "Shooting Form", category: "Basketball", level: "Intermediate", difficultyLevel: "INTERMEDIATE" as const, minAge: 8, maxAge: 18, description: "Proper shooting mechanics from mid-range. Key points: BEEF - Balance, Eyes, Elbow, Follow-through." },
+    { id: `${ORG2_ID}-skill-6`, name: "Backstroke", category: "Swimming", level: "Intermediate", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 18, description: "Proper backstroke technique with rotation. Key points: pinky first entry, hip rotation, steady kick." },
+  ];
+  
+  for (const skill of org2SkillsData) {
+    await prisma.skill.upsert({
+      where: { id: skill.id },
+      update: {},
+      create: { ...skill, organizationId: ORG2_ID },
+    });
+  }
+  
+  console.log(`  ✓ Created ${org1SkillsData.length + org2SkillsData.length} skills`);
+  
+  // ============================================
+  // EVALUATION TEMPLATES
+  // ============================================
+  console.log("\n📋 Creating evaluation templates...");
+  
+  const evaluationTemplatesData = [
+    // Org1 - Gymnastics evaluation templates
+    {
+      id: `${ORG1_ID}-template-preschool`,
+      name: "Preschool Basics",
+      description: "Fundamental skills assessment for preschool-aged gymnasts (ages 4-5). Focus on body awareness, basic movements, and fun!",
+      difficultyLevel: "BEGINNER" as const,
+      minAge: 4,
+      maxAge: 5,
+      organizationId: ORG1_ID,
+      skillIds: [`${ORG1_ID}-skill-1`, `${ORG1_ID}-skill-3`, `${ORG1_ID}-skill-5`, `${ORG1_ID}-skill-19`, `${ORG1_ID}-skill-25`], // Forward roll, cartwheel, bridge, beam walk, straddle stretch
+    },
+    {
+      id: `${ORG1_ID}-template-rec-level1`,
+      name: "Recreational Level 1",
+      description: "Entry-level recreational assessment covering basic skills across all apparatus (ages 5-7).",
+      difficultyLevel: "BEGINNER" as const,
+      minAge: 5,
+      maxAge: 7,
+      organizationId: ORG1_ID,
+      skillIds: [`${ORG1_ID}-skill-1`, `${ORG1_ID}-skill-2`, `${ORG1_ID}-skill-3`, `${ORG1_ID}-skill-11`, `${ORG1_ID}-skill-14`, `${ORG1_ID}-skill-19`, `${ORG1_ID}-skill-20`, `${ORG1_ID}-skill-27`],
+    },
+    {
+      id: `${ORG1_ID}-template-rec-level2`,
+      name: "Recreational Level 2",
+      description: "Intermediate recreational assessment with more challenging skills (ages 6-9).",
+      difficultyLevel: "INTERMEDIATE" as const,
+      minAge: 6,
+      maxAge: 9,
+      organizationId: ORG1_ID,
+      skillIds: [`${ORG1_ID}-skill-4`, `${ORG1_ID}-skill-6`, `${ORG1_ID}-skill-7`, `${ORG1_ID}-skill-12`, `${ORG1_ID}-skill-15`, `${ORG1_ID}-skill-17`, `${ORG1_ID}-skill-21`, `${ORG1_ID}-skill-22`],
+    },
+    {
+      id: `${ORG1_ID}-template-preteam`,
+      name: "Pre-Team Assessment",
+      description: "Assessment to determine readiness for competitive team program (ages 7-10). Must demonstrate proficiency in intermediate skills.",
+      difficultyLevel: "INTERMEDIATE" as const,
+      minAge: 7,
+      maxAge: 10,
+      organizationId: ORG1_ID,
+      skillIds: [`${ORG1_ID}-skill-6`, `${ORG1_ID}-skill-7`, `${ORG1_ID}-skill-8`, `${ORG1_ID}-skill-13`, `${ORG1_ID}-skill-17`, `${ORG1_ID}-skill-18`, `${ORG1_ID}-skill-23`, `${ORG1_ID}-skill-24`],
+    },
+    {
+      id: `${ORG1_ID}-template-jo-level3`,
+      name: "JO Level 3 Readiness",
+      description: "Assessment for USAG Junior Olympics Level 3 readiness (ages 8-12). Advanced beginner skills required.",
+      difficultyLevel: "ADVANCED" as const,
+      minAge: 8,
+      maxAge: 12,
+      organizationId: ORG1_ID,
+      skillIds: [`${ORG1_ID}-skill-9`, `${ORG1_ID}-skill-10`, `${ORG1_ID}-skill-13`, `${ORG1_ID}-skill-18`, `${ORG1_ID}-skill-23`, `${ORG1_ID}-skill-24`],
+    },
+  ];
+  
+  for (const template of evaluationTemplatesData) {
+    const { skillIds, ...templateData } = template;
+    
+    await prisma.evaluationTemplate.upsert({
+      where: { id: template.id },
+      update: {},
+      create: {
+        ...templateData,
+        skills: {
+          create: skillIds.map((skillId, index) => ({
+            skillId,
+            order: index,
+            isRequired: true,
+          })),
+        },
+      },
+    });
+  }
+  
+  console.log(`  ✓ Created ${evaluationTemplatesData.length} evaluation templates`);
 
   // ============================================
   // LESSON PLANS
@@ -892,18 +1039,222 @@ async function main() {
   console.log("  ✓ Created 1 lesson plan with rotations");
 
   // ============================================
-  // EVALUATIONS
+  // EVALUATIONS (Enhanced with templates and skill attempt statuses)
   // ============================================
   console.log("\n📝 Creating evaluations...");
+  
+  // Evaluation 1 - Emily (Bronze athlete) - Completed Rec Level 1
   const eval1 = await prisma.evaluation.upsert({
-    where: { id: `${ORG1_ID}-eval-1` }, update: {},
-    create: { id: `${ORG1_ID}-eval-1`, athleteId: `${ORG1_ID}-ath-1`, coachId: org1Coach1.id, date: daysAgo(14), level: "Bronze", overallScore: 4.2, status: "PASS", notes: "Great progress!" },
+    where: { id: `${ORG1_ID}-eval-1` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-eval-1`,
+      athleteId: `${ORG1_ID}-ath-1`,
+      coachId: org1Coach1.id,
+      templateId: `${ORG1_ID}-template-rec-level1`,
+      date: daysAgo(14),
+      level: "Recreational Level 1",
+      overallScore: 7.5,
+      status: "PASS",
+      notes: "Emily is making great progress! Strong tumbling skills. Keep working on bar endurance.",
+    },
   });
-  await Promise.all([
-    prisma.evaluationSkill.upsert({ where: { evaluationId_skillId: { evaluationId: eval1.id, skillId: `${ORG1_ID}-skill-1` } }, update: {}, create: { evaluationId: eval1.id, skillId: `${ORG1_ID}-skill-1`, rating: 5, comment: "Perfect form" } }),
-    prisma.evaluationSkill.upsert({ where: { evaluationId_skillId: { evaluationId: eval1.id, skillId: `${ORG1_ID}-skill-2` } }, update: {}, create: { evaluationId: eval1.id, skillId: `${ORG1_ID}-skill-2`, rating: 4, comment: "Needs tighter tuck" } }),
-  ]);
-  console.log("  ✓ Created 1 evaluation with skill ratings");
+  
+  // Skill ratings for eval1 - mix of succeeded, attempted, and not attempted
+  const eval1Skills = [
+    { skillId: `${ORG1_ID}-skill-1`, attemptStatus: "SUCCEEDED" as const, comment: "Perfect forward roll with smooth momentum" },
+    { skillId: `${ORG1_ID}-skill-2`, attemptStatus: "SUCCEEDED" as const, comment: "Good backward roll, chin nicely tucked" },
+    { skillId: `${ORG1_ID}-skill-3`, attemptStatus: "SUCCEEDED" as const, comment: "Beautiful cartwheel, straight legs" },
+    { skillId: `${ORG1_ID}-skill-11`, attemptStatus: "ATTEMPTED" as const, comment: "Almost there! Needs stronger punch off board" },
+    { skillId: `${ORG1_ID}-skill-14`, attemptStatus: "ATTEMPTED" as const, comment: "Working on pulling hips to bar" },
+    { skillId: `${ORG1_ID}-skill-19`, attemptStatus: "SUCCEEDED" as const, comment: "Confident beam walking" },
+    { skillId: `${ORG1_ID}-skill-20`, attemptStatus: "SUCCEEDED" as const, comment: "Nice deep dips" },
+    { skillId: `${ORG1_ID}-skill-27`, attemptStatus: "SUCCEEDED" as const, comment: "Strong hollow hold" },
+  ];
+  
+  for (const skill of eval1Skills) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval1.id, skillId: skill.skillId } },
+      update: {},
+      create: { evaluationId: eval1.id, ...skill },
+    });
+  }
+  
+  // Evaluation 2 - Sophie (Silver athlete) - Completed Rec Level 2
+  const eval2 = await prisma.evaluation.upsert({
+    where: { id: `${ORG1_ID}-eval-2` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-eval-2`,
+      athleteId: `${ORG1_ID}-ath-2`,
+      coachId: org1Coach1.id,
+      templateId: `${ORG1_ID}-template-rec-level2`,
+      date: daysAgo(21),
+      level: "Recreational Level 2",
+      overallScore: 8.5,
+      status: "EXCELLENT",
+      notes: "Sophie is ready for pre-team evaluation! Excellent work ethic and technique.",
+    },
+  });
+  
+  const eval2Skills = [
+    { skillId: `${ORG1_ID}-skill-4`, attemptStatus: "SUCCEEDED" as const, comment: "Beautiful handstand form" },
+    { skillId: `${ORG1_ID}-skill-6`, attemptStatus: "SUCCEEDED" as const, comment: "Strong round-off with good snap" },
+    { skillId: `${ORG1_ID}-skill-7`, attemptStatus: "SUCCEEDED" as const, comment: "Controlled back walkover" },
+    { skillId: `${ORG1_ID}-skill-12`, attemptStatus: "SUCCEEDED" as const, comment: "Clean straddle over vault" },
+    { skillId: `${ORG1_ID}-skill-15`, attemptStatus: "SUCCEEDED" as const, comment: "Smooth back hip circle" },
+    { skillId: `${ORG1_ID}-skill-17`, attemptStatus: "SUCCEEDED" as const, comment: "High cast with good form" },
+    { skillId: `${ORG1_ID}-skill-21`, attemptStatus: "SUCCEEDED" as const, comment: "Confident beam turns" },
+    { skillId: `${ORG1_ID}-skill-22`, attemptStatus: "ATTEMPTED" as const, comment: "Working on leg height in scale" },
+  ];
+  
+  for (const skill of eval2Skills) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval2.id, skillId: skill.skillId } },
+      update: {},
+      create: { evaluationId: eval2.id, ...skill },
+    });
+  }
+  
+  // Evaluation 3 - Olivia (JO athlete) - Pre-Team Assessment - PASS
+  const eval3 = await prisma.evaluation.upsert({
+    where: { id: `${ORG1_ID}-eval-3` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-eval-3`,
+      athleteId: `${ORG1_ID}-ath-3`,
+      coachId: org1Coach2.id,
+      templateId: `${ORG1_ID}-template-preteam`,
+      date: daysAgo(45),
+      level: "Pre-Team",
+      overallScore: 8.0,
+      status: "PASS",
+      notes: "Olivia has passed the pre-team assessment and is ready to join the JO team!",
+    },
+  });
+  
+  const eval3Skills = [
+    { skillId: `${ORG1_ID}-skill-6`, attemptStatus: "SUCCEEDED" as const, comment: "Excellent round-off" },
+    { skillId: `${ORG1_ID}-skill-7`, attemptStatus: "SUCCEEDED" as const, comment: "Good flexibility" },
+    { skillId: `${ORG1_ID}-skill-8`, attemptStatus: "SUCCEEDED" as const, comment: "Nice front walkover" },
+    { skillId: `${ORG1_ID}-skill-13`, attemptStatus: "SUCCEEDED" as const, comment: "Strong vault" },
+    { skillId: `${ORG1_ID}-skill-17`, attemptStatus: "SUCCEEDED" as const, comment: "High cast" },
+    { skillId: `${ORG1_ID}-skill-18`, attemptStatus: "ATTEMPTED" as const, comment: "Almost has the kip - keep practicing!" },
+    { skillId: `${ORG1_ID}-skill-23`, attemptStatus: "SUCCEEDED" as const, comment: "Confident beam cartwheel" },
+    { skillId: `${ORG1_ID}-skill-24`, attemptStatus: "ATTEMPTED" as const, comment: "Good start on beam handstand" },
+  ];
+  
+  for (const skill of eval3Skills) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval3.id, skillId: skill.skillId } },
+      update: {},
+      create: { evaluationId: eval3.id, ...skill },
+    });
+  }
+  
+  // Evaluation 4 - Lily (Bronze athlete) - Pending Rec Level 1
+  const eval4 = await prisma.evaluation.upsert({
+    where: { id: `${ORG1_ID}-eval-4` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-eval-4`,
+      athleteId: `${ORG1_ID}-ath-4`,
+      coachId: org1Coach1.id,
+      templateId: `${ORG1_ID}-template-rec-level1`,
+      date: daysFromNow(7),
+      level: "Recreational Level 1",
+      overallScore: 0,
+      status: "PENDING",
+      notes: null,
+    },
+  });
+  
+  // Create NOT_ATTEMPTED skill ratings for pending evaluation
+  const eval4SkillIds = [`${ORG1_ID}-skill-1`, `${ORG1_ID}-skill-2`, `${ORG1_ID}-skill-3`, `${ORG1_ID}-skill-11`, `${ORG1_ID}-skill-14`, `${ORG1_ID}-skill-19`, `${ORG1_ID}-skill-20`, `${ORG1_ID}-skill-27`];
+  for (const skillId of eval4SkillIds) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval4.id, skillId } },
+      update: {},
+      create: { evaluationId: eval4.id, skillId, attemptStatus: "NOT_ATTEMPTED" },
+    });
+  }
+  
+  // Evaluation 5 - Hannah (Preschool) - Completed Preschool Basics
+  const eval5 = await prisma.evaluation.upsert({
+    where: { id: `${ORG1_ID}-eval-5` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-eval-5`,
+      athleteId: `${ORG1_ID}-ath-8`,
+      coachId: org1Coach1.id,
+      templateId: `${ORG1_ID}-template-preschool`,
+      date: daysAgo(7),
+      level: "Preschool Basics",
+      overallScore: 6.0,
+      status: "SATISFACTORY",
+      notes: "Hannah is doing great for her age! Very enthusiastic and always trying her best.",
+    },
+  });
+  
+  const eval5Skills = [
+    { skillId: `${ORG1_ID}-skill-1`, attemptStatus: "SUCCEEDED" as const, comment: "Getting the roll!" },
+    { skillId: `${ORG1_ID}-skill-3`, attemptStatus: "ATTEMPTED" as const, comment: "Working on straight legs" },
+    { skillId: `${ORG1_ID}-skill-5`, attemptStatus: "ATTEMPTED" as const, comment: "Almost pushing up!" },
+    { skillId: `${ORG1_ID}-skill-19`, attemptStatus: "SUCCEEDED" as const, comment: "Great balance!" },
+    { skillId: `${ORG1_ID}-skill-25`, attemptStatus: "SUCCEEDED" as const, comment: "Good flexibility" },
+  ];
+  
+  for (const skill of eval5Skills) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval5.id, skillId: skill.skillId } },
+      update: {},
+      create: { evaluationId: eval5.id, ...skill },
+    });
+  }
+  
+  console.log("  ✓ Created 5 evaluations with skill ratings");
+  
+  // ============================================
+  // ATHLETE SKILL PROGRESS (Aggregated from evaluations)
+  // ============================================
+  console.log("\n📊 Creating athlete skill progress records...");
+  
+  // Emily's skill progress
+  const emilyProgress = [
+    { athleteId: `${ORG1_ID}-ath-1`, skillId: `${ORG1_ID}-skill-1`, bestStatus: "SUCCEEDED" as const, attemptCount: 3, successCount: 2, firstAttemptedAt: daysAgo(60), firstSucceededAt: daysAgo(30), lastEvaluatedAt: daysAgo(14) },
+    { athleteId: `${ORG1_ID}-ath-1`, skillId: `${ORG1_ID}-skill-2`, bestStatus: "SUCCEEDED" as const, attemptCount: 4, successCount: 2, firstAttemptedAt: daysAgo(55), firstSucceededAt: daysAgo(14), lastEvaluatedAt: daysAgo(14) },
+    { athleteId: `${ORG1_ID}-ath-1`, skillId: `${ORG1_ID}-skill-3`, bestStatus: "SUCCEEDED" as const, attemptCount: 5, successCount: 3, firstAttemptedAt: daysAgo(50), firstSucceededAt: daysAgo(21), lastEvaluatedAt: daysAgo(14) },
+    { athleteId: `${ORG1_ID}-ath-1`, skillId: `${ORG1_ID}-skill-11`, bestStatus: "ATTEMPTED" as const, attemptCount: 2, successCount: 0, firstAttemptedAt: daysAgo(28), lastEvaluatedAt: daysAgo(14) },
+    { athleteId: `${ORG1_ID}-ath-1`, skillId: `${ORG1_ID}-skill-14`, bestStatus: "ATTEMPTED" as const, attemptCount: 3, successCount: 0, firstAttemptedAt: daysAgo(35), lastEvaluatedAt: daysAgo(14) },
+    { athleteId: `${ORG1_ID}-ath-1`, skillId: `${ORG1_ID}-skill-19`, bestStatus: "SUCCEEDED" as const, attemptCount: 2, successCount: 2, firstAttemptedAt: daysAgo(45), firstSucceededAt: daysAgo(45), lastEvaluatedAt: daysAgo(14) },
+    { athleteId: `${ORG1_ID}-ath-1`, skillId: `${ORG1_ID}-skill-27`, bestStatus: "SUCCEEDED" as const, attemptCount: 4, successCount: 3, firstAttemptedAt: daysAgo(40), firstSucceededAt: daysAgo(28), lastEvaluatedAt: daysAgo(14) },
+  ];
+  
+  for (const progress of emilyProgress) {
+    await prisma.athleteSkillProgress.upsert({
+      where: { athleteId_skillId: { athleteId: progress.athleteId, skillId: progress.skillId } },
+      update: {},
+      create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
+    });
+  }
+  
+  // Sophie's skill progress (more advanced)
+  const sophieProgress = [
+    { athleteId: `${ORG1_ID}-ath-2`, skillId: `${ORG1_ID}-skill-4`, bestStatus: "SUCCEEDED" as const, attemptCount: 5, successCount: 4, firstAttemptedAt: daysAgo(90), firstSucceededAt: daysAgo(60), lastEvaluatedAt: daysAgo(21) },
+    { athleteId: `${ORG1_ID}-ath-2`, skillId: `${ORG1_ID}-skill-6`, bestStatus: "SUCCEEDED" as const, attemptCount: 6, successCount: 5, firstAttemptedAt: daysAgo(80), firstSucceededAt: daysAgo(45), lastEvaluatedAt: daysAgo(21) },
+    { athleteId: `${ORG1_ID}-ath-2`, skillId: `${ORG1_ID}-skill-7`, bestStatus: "SUCCEEDED" as const, attemptCount: 4, successCount: 3, firstAttemptedAt: daysAgo(70), firstSucceededAt: daysAgo(35), lastEvaluatedAt: daysAgo(21) },
+    { athleteId: `${ORG1_ID}-ath-2`, skillId: `${ORG1_ID}-skill-22`, bestStatus: "ATTEMPTED" as const, attemptCount: 3, successCount: 0, firstAttemptedAt: daysAgo(40), lastEvaluatedAt: daysAgo(21) },
+  ];
+  
+  for (const progress of sophieProgress) {
+    await prisma.athleteSkillProgress.upsert({
+      where: { athleteId_skillId: { athleteId: progress.athleteId, skillId: progress.skillId } },
+      update: {},
+      create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
+    });
+  }
+  
+  console.log(`  ✓ Created ${emilyProgress.length + sophieProgress.length} athlete skill progress records`);
 
   // ============================================
   // ANNOUNCEMENTS
@@ -1303,6 +1654,68 @@ async function main() {
   console.log(`  ✓ Created ${eventStaffData.length} event staff assignments`);
 
   // ============================================
+  // PROGRAM STAFF ASSIGNMENTS
+  // ============================================
+  console.log("\n🏅 Creating program staff assignments...");
+  const programStaffData = [
+    // Org1 Program Staff
+    { id: `${ORG1_ID}-ps-1`, programId: `${ORG1_ID}-prog-rec-bronze`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Primary coach for Bronze program" },
+    { id: `${ORG1_ID}-ps-2`, programId: `${ORG1_ID}-prog-rec-silver`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
+    { id: `${ORG1_ID}-ps-3`, programId: `${ORG1_ID}-prog-rec-gold`, staffProfileId: `${ORG1_ID}-staff-1`, role: "ASSISTANT_COACH" as const, isPrimary: false, notes: null },
+    { id: `${ORG1_ID}-ps-4`, programId: `${ORG1_ID}-prog-rec-gold`, staffProfileId: `${ORG1_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Primary coach for Gold program" },
+    { id: `${ORG1_ID}-ps-5`, programId: `${ORG1_ID}-prog-jo`, staffProfileId: `${ORG1_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "JO Team Head Coach" },
+    { id: `${ORG1_ID}-ps-6`, programId: `${ORG1_ID}-prog-jo`, staffProfileId: `${ORG1_ID}-staff-1`, role: "ASSISTANT_COACH" as const, isPrimary: false, notes: "Beam and floor specialist" },
+    { id: `${ORG1_ID}-ps-7`, programId: `${ORG1_ID}-prog-preschool`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
+    // Org2 Program Staff
+    { id: `${ORG2_ID}-ps-1`, programId: `${ORG2_ID}-prog-soccer`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Soccer program lead" },
+    { id: `${ORG2_ID}-ps-2`, programId: `${ORG2_ID}-prog-soccer`, staffProfileId: `${ORG2_ID}-staff-2`, role: "VOLUNTEER" as const, isPrimary: false, notes: "Volunteer assistant" },
+    { id: `${ORG2_ID}-ps-3`, programId: `${ORG2_ID}-prog-basketball`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
+    { id: `${ORG2_ID}-ps-4`, programId: `${ORG2_ID}-prog-swim`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Swim team head coach" },
+    { id: `${ORG2_ID}-ps-5`, programId: `${ORG2_ID}-prog-fitness`, staffProfileId: `${ORG2_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Kids fitness leader" },
+  ];
+  for (const ps of programStaffData) {
+    await prisma.programStaff.upsert({
+      where: { id: ps.id },
+      update: {},
+      create: ps,
+    });
+  }
+  console.log(`  ✓ Created ${programStaffData.length} program staff assignments`);
+
+  // ============================================
+  // PROGRAM REQUIREMENTS (Membership Requirements)
+  // ============================================
+  console.log("\n📋 Setting program membership requirements...");
+  // JO Team requires the annual club membership
+  await prisma.program.update({
+    where: { id: `${ORG1_ID}-prog-jo` },
+    data: {
+      requiredMemberships: {
+        connect: [{ id: `${ORG1_ID}-mi-2026` }],
+      },
+    },
+  });
+  // Gold program requires annual club membership
+  await prisma.program.update({
+    where: { id: `${ORG1_ID}-prog-rec-gold` },
+    data: {
+      requiredMemberships: {
+        connect: [{ id: `${ORG1_ID}-mi-2026` }],
+      },
+    },
+  });
+  // Org2 swim team requires seasonal pass
+  await prisma.program.update({
+    where: { id: `${ORG2_ID}-prog-swim` },
+    data: {
+      requiredMemberships: {
+        connect: [{ id: `${ORG2_ID}-mi-winter26` }],
+      },
+    },
+  });
+  console.log("  ✓ Set membership requirements for 3 programs");
+
+  // ============================================
   // VISITOR ANALYTICS (Redis)
   // ============================================
   if (redis) {
@@ -1409,12 +1822,18 @@ async function main() {
   console.log("  • 9 families with payment methods");
   console.log("  • 14 athletes with guardian relationships");
   console.log("  • 9 programs with membership tiers");
+  console.log("  • 12 program staff assignments (coaches)");
+  console.log("  • 3 programs with membership requirements");
   console.log("  • 29+ events with 40+ attendance records (historical + current)");
   console.log("  • 5 invoices with line items and payments");
   console.log("  • 9 transactions (Adyen)");
   console.log("  • 5 payouts (settlements)");
   console.log("  • 7 recurring charges");
-  console.log("  • 9 skills with lesson plans");
+  console.log("  • 34 gymnastics skills with difficulty levels and age ranges");
+  console.log("  • 5 evaluation templates with skill groupings");
+  console.log("  • 5 evaluations with skill attempt statuses");
+  console.log("  • 11 athlete skill progress records");
+  console.log("  • Lesson plans and rotations");
   console.log("  • 7 POS products with stock movements");
   console.log("  • 6 media items (photos/videos)");
   console.log("  • 5 staff profiles with availability");

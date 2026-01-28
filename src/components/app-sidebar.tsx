@@ -196,6 +196,10 @@ const data = {
           title: "Skills",
           url: "/dashboard/training/skills",
         },
+        {
+          title: "Evaluations",
+          url: "/dashboard/training/evaluations",
+        },
       ],
     },
     {

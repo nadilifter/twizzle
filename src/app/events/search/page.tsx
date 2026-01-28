@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
-  ArrowLeft, 
   Search,
   Check,
   Clock4,
@@ -16,7 +15,6 @@ import {
   Calendar,
   UserCheck
 } from "lucide-react"
-import Link from "next/link"
 import { format } from "date-fns"
 import { useAthletes } from "@/hooks/use-athletes"
 import { useEvents } from "@/hooks/use-events"
@@ -137,18 +135,11 @@ export default function AthleteSearchPage() {
   }, [])
 
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto">
+    <div className="p-4 md:p-6 lg:px-8 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/events">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Athlete Search</h1>
-          <p className="text-muted-foreground">Find and check in athletes manually</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Athlete Search</h1>
+        <p className="text-muted-foreground mt-1">Find and check in athletes manually</p>
       </div>
 
       {/* Search Input */}

@@ -11,7 +11,10 @@ async function main() {
   
   const freePlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "free" },
-    update: {},
+    update: {
+      smsIncluded: null, // No SMS on free plan
+      smsOverageRate: null,
+    },
     create: {
       name: "Free",
       slug: "free",
@@ -23,6 +26,8 @@ async function main() {
       maxAthletes: 25,
       maxUsers: 2,
       maxEvents: 5,
+      smsIncluded: null, // No SMS on free plan
+      smsOverageRate: null,
       features: [
         "Up to 25 athletes",
         "Basic scheduling",
@@ -38,7 +43,10 @@ async function main() {
 
   const starterPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "starter" },
-    update: {},
+    update: {
+      smsIncluded: 100, // 100 SMS/month
+      smsOverageRate: 0.05, // $0.05 per message over limit
+    },
     create: {
       name: "Starter",
       slug: "starter",
@@ -50,6 +58,8 @@ async function main() {
       maxAthletes: 100,
       maxUsers: 5,
       maxEvents: 20,
+      smsIncluded: 100, // 100 SMS/month
+      smsOverageRate: 0.05, // $0.05 per message over limit
       features: [
         "Up to 100 athletes",
         "5 staff accounts",
@@ -57,6 +67,7 @@ async function main() {
         "Online payments",
         "Email support",
         "Custom branding",
+        "100 SMS/month",
       ],
       isPopular: false,
       displayOrder: 1,
@@ -67,7 +78,10 @@ async function main() {
 
   const goldPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "gold" },
-    update: {},
+    update: {
+      smsIncluded: 500, // 500 SMS/month
+      smsOverageRate: 0.04, // $0.04 per message over limit
+    },
     create: {
       name: "Gold",
       slug: "gold",
@@ -79,6 +93,8 @@ async function main() {
       maxAthletes: 500,
       maxUsers: 15,
       maxEvents: null, // Unlimited
+      smsIncluded: 500, // 500 SMS/month
+      smsOverageRate: 0.04, // $0.04 per message over limit
       features: [
         "Up to 500 athletes",
         "15 staff accounts",
@@ -87,6 +103,7 @@ async function main() {
         "Priority support",
         "Custom domain",
         "Point of Sale",
+        "500 SMS/month",
       ],
       isPopular: true,
       displayOrder: 2,
@@ -97,7 +114,10 @@ async function main() {
 
   const platinumPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "platinum" },
-    update: {},
+    update: {
+      smsIncluded: 2000, // 2000 SMS/month
+      smsOverageRate: 0.03, // $0.03 per message over limit
+    },
     create: {
       name: "Platinum",
       slug: "platinum",
@@ -109,6 +129,8 @@ async function main() {
       maxAthletes: null, // Unlimited
       maxUsers: null, // Unlimited
       maxEvents: null, // Unlimited
+      smsIncluded: 2000, // 2000 SMS/month
+      smsOverageRate: 0.03, // $0.03 per message over limit
       features: [
         "Unlimited athletes",
         "Unlimited staff accounts",
@@ -119,6 +141,7 @@ async function main() {
         "Point of Sale",
         "API access",
         "White-label options",
+        "2000 SMS/month",
       ],
       isPopular: false,
       displayOrder: 3,
