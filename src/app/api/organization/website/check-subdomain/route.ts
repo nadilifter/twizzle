@@ -17,6 +17,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Subdomain is required" }, { status: 400 });
     }
 
+    const organizationId = session.user.organizationId;
+    if (!organizationId) {
+      console.error("No organizationId in session for subdomain check, user:", session.user.email);
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
+    }
+
     // Validate subdomain format (alphanumeric and hyphens only)
     const subdomainRegex = /^[a-z0-9-]+$/;
     if (!subdomainRegex.test(subdomain)) {
@@ -33,14 +39,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check if subdomain exists and is not the current user's
+    // Check if subdomain exists
     const existing = await db.websiteConfig.findUnique({
       where: { subdomain },
       select: { organizationId: true }
     });
 
-    if (existing && existing.organizationId !== session.user.organizationId) {
-      return NextResponse.json({ available: false, reason: "Taken" });
+    if (existing) {
+      // Check if this org owns the subdomain
+      if (existing.organizationId === organizationId) {
+        return NextResponse.json({ available: true, owned: true });
+      } else {
+        return NextResponse.json({ available: false, reason: "Taken" });
+      }
     }
 
     return NextResponse.json({ available: true });

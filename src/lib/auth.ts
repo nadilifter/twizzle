@@ -55,7 +55,19 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            allowDangerousEmailAccountLinking: true,
+            // SECURITY NOTE: Email account linking
+            // This setting allows linking OAuth accounts to existing accounts with the same email.
+            // While convenient, it can be a security risk if an attacker controls a Google account
+            // with the same email as an existing user.
+            // 
+            // Mitigations in place:
+            // 1. signIn callback verifies user exists in our database
+            // 2. Only @uplifterinc.com emails can be auto-created
+            // 3. External users must be pre-created by an admin
+            //
+            // Set ALLOW_OAUTH_ACCOUNT_LINKING=false to disable this behavior
+            allowDangerousEmailAccountLinking: 
+              process.env.ALLOW_OAUTH_ACCOUNT_LINKING !== "false",
             authorization: {
               params: {
                 prompt: "consent",
@@ -158,6 +170,9 @@ export const authOptions: NextAuthOptions = {
           
           let existingUser = await db.user.findUnique({
             where: { email },
+            include: {
+              accounts: true, // Include linked OAuth accounts
+            },
           });
 
           // Auto-create super admin users for @uplifterinc.com emails
@@ -172,6 +187,9 @@ export const authOptions: NextAuthOptions = {
                 status: "ACTIVE",
                 isSuperAdmin: true,
               },
+              include: {
+                accounts: true,
+              },
             });
             
             // Create wildcard permission for super admins
@@ -184,27 +202,43 @@ export const authOptions: NextAuthOptions = {
           } else if (!existingUser) {
             // Non-uplifter emails must have an existing account
             return "/login?error=NoAccount";
-          } else if (isUplifterEmail && !existingUser.isSuperAdmin) {
-            // Ensure existing uplifter users are marked as super admins
-            await db.user.update({
-              where: { id: existingUser.id },
-              data: { isSuperAdmin: true },
-            });
+          } else {
+            // Security check: If user exists with a password but no OAuth link,
+            // and ALLOW_OAUTH_ACCOUNT_LINKING is disabled, reject the login
+            const hasPassword = !!existingUser.passwordHash;
+            const hasGoogleLink = existingUser.accounts.some(
+              (acc) => acc.provider === "google"
+            );
             
-            // Ensure they have wildcard permission
-            await db.userPermission.upsert({
-              where: {
-                userId_permission: {
+            if (hasPassword && !hasGoogleLink && process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "false") {
+              console.warn(
+                `OAuth linking blocked for ${email}: User has password but no Google link`
+              );
+              return "/login?error=AccountNotLinked";
+            }
+            
+            // For uplifter emails, ensure super admin status
+            if (isUplifterEmail && !existingUser.isSuperAdmin) {
+              await db.user.update({
+                where: { id: existingUser.id },
+                data: { isSuperAdmin: true },
+              });
+              
+              // Ensure they have wildcard permission
+              await db.userPermission.upsert({
+                where: {
+                  userId_permission: {
+                    userId: existingUser.id,
+                    permission: "*",
+                  },
+                },
+                create: {
                   userId: existingUser.id,
                   permission: "*",
                 },
-              },
-              create: {
-                userId: existingUser.id,
-                permission: "*",
-              },
-              update: {},
-            });
+                update: {},
+              });
+            }
           }
 
           await db.user.update({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { encode } from "next-auth/jwt";
 import { db } from "@/lib/db";
+import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
  * Session Bridge Endpoint
@@ -20,6 +21,12 @@ import { db } from "@/lib/db";
 const BRIDGE_TOKEN_MAX_AGE = 60; // 60 seconds
 
 export async function GET(req: NextRequest) {
+  // Rate limit session bridge requests to prevent abuse
+  const rateLimitResponse = await checkAuthRateLimit(req, RATE_LIMITS.auth);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const searchParams = req.nextUrl.searchParams;
   const bridgeToken = searchParams.get("token");
   const callbackUrl = searchParams.get("callbackUrl") || "/";

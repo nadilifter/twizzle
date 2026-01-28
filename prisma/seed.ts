@@ -6,6 +6,129 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding database...");
 
+  // Create Subscription Plans
+  console.log("Creating subscription plans...");
+  
+  const freePlan = await prisma.subscriptionPlan.upsert({
+    where: { slug: "free" },
+    update: {},
+    create: {
+      name: "Free",
+      slug: "free",
+      description: "Perfect for getting started with basic club management",
+      monthlyPrice: 0,
+      yearlyPrice: 0,
+      transactionFee: 0.05, // 5%
+      perTransactionFee: 0.50,
+      maxAthletes: 25,
+      maxUsers: 2,
+      maxEvents: 5,
+      features: [
+        "Up to 25 athletes",
+        "Basic scheduling",
+        "Email support",
+        "Public website",
+      ],
+      isPopular: false,
+      displayOrder: 0,
+      isActive: true,
+      isPublic: true,
+    },
+  });
+
+  const starterPlan = await prisma.subscriptionPlan.upsert({
+    where: { slug: "starter" },
+    update: {},
+    create: {
+      name: "Starter",
+      slug: "starter",
+      description: "Ideal for small clubs ready to grow",
+      monthlyPrice: 29,
+      yearlyPrice: 290,
+      transactionFee: 0.04, // 4%
+      perTransactionFee: 0.40,
+      maxAthletes: 100,
+      maxUsers: 5,
+      maxEvents: 20,
+      features: [
+        "Up to 100 athletes",
+        "5 staff accounts",
+        "Event management",
+        "Online payments",
+        "Email support",
+        "Custom branding",
+      ],
+      isPopular: false,
+      displayOrder: 1,
+      isActive: true,
+      isPublic: true,
+    },
+  });
+
+  const goldPlan = await prisma.subscriptionPlan.upsert({
+    where: { slug: "gold" },
+    update: {},
+    create: {
+      name: "Gold",
+      slug: "gold",
+      description: "For established clubs with growing needs",
+      monthlyPrice: 79,
+      yearlyPrice: 790,
+      transactionFee: 0.03, // 3%
+      perTransactionFee: 0.30,
+      maxAthletes: 500,
+      maxUsers: 15,
+      maxEvents: null, // Unlimited
+      features: [
+        "Up to 500 athletes",
+        "15 staff accounts",
+        "Unlimited events",
+        "Advanced analytics",
+        "Priority support",
+        "Custom domain",
+        "Point of Sale",
+      ],
+      isPopular: true,
+      displayOrder: 2,
+      isActive: true,
+      isPublic: true,
+    },
+  });
+
+  const platinumPlan = await prisma.subscriptionPlan.upsert({
+    where: { slug: "platinum" },
+    update: {},
+    create: {
+      name: "Platinum",
+      slug: "platinum",
+      description: "Enterprise-grade solution for large organizations",
+      monthlyPrice: 199,
+      yearlyPrice: 1990,
+      transactionFee: 0.025, // 2.5%
+      perTransactionFee: 0.25,
+      maxAthletes: null, // Unlimited
+      maxUsers: null, // Unlimited
+      maxEvents: null, // Unlimited
+      features: [
+        "Unlimited athletes",
+        "Unlimited staff accounts",
+        "Unlimited events",
+        "Advanced analytics",
+        "Dedicated support",
+        "Custom domain",
+        "Point of Sale",
+        "API access",
+        "White-label options",
+      ],
+      isPopular: false,
+      displayOrder: 3,
+      isActive: true,
+      isPublic: true,
+    },
+  });
+
+  console.log("Created subscription plans:", freePlan.name, starterPlan.name, goldPlan.name, platinumPlan.name);
+
   // 1. Create "Demo Gymnastics Club" Organization
   const org = await prisma.organization.upsert({
     where: { slug: "demo-gym" },
@@ -783,8 +906,8 @@ async function main() {
         organizationId: londonWesternOrg.id,
         membershipTiers: {
           create: [
-            { name: "Fall Season", price: 225, interval: "MONTHLY" },
-            { name: "Full Year", price: 400, interval: "YEARLY" },
+            { name: "Fall Season", price: 225, interval: "MONTHLY", organizationId: londonWesternOrg.id },
+            { name: "Full Year", price: 400, interval: "YEARLY", organizationId: londonWesternOrg.id },
           ],
         },
       },
@@ -801,8 +924,8 @@ async function main() {
         organizationId: londonWesternOrg.id,
         membershipTiers: {
           create: [
-            { name: "Fall Season", price: 275, interval: "MONTHLY" },
-            { name: "Full Year", price: 475, interval: "YEARLY" },
+            { name: "Fall Season", price: 275, interval: "MONTHLY", organizationId: londonWesternOrg.id },
+            { name: "Full Year", price: 475, interval: "YEARLY", organizationId: londonWesternOrg.id },
           ],
         },
       },
@@ -819,8 +942,8 @@ async function main() {
         organizationId: londonWesternOrg.id,
         membershipTiers: {
           create: [
-            { name: "Fall Season", price: 325, interval: "MONTHLY" },
-            { name: "Full Year", price: 550, interval: "YEARLY" },
+            { name: "Fall Season", price: 325, interval: "MONTHLY", organizationId: londonWesternOrg.id },
+            { name: "Full Year", price: 550, interval: "YEARLY", organizationId: londonWesternOrg.id },
           ],
         },
       },
@@ -837,8 +960,8 @@ async function main() {
         organizationId: londonWesternOrg.id,
         membershipTiers: {
           create: [
-            { name: "Full Season", price: 650, interval: "MONTHLY" },
-            { name: "Collegiate", price: 950, interval: "YEARLY" },
+            { name: "Full Season", price: 650, interval: "MONTHLY", organizationId: londonWesternOrg.id },
+            { name: "Collegiate", price: 950, interval: "YEARLY", organizationId: londonWesternOrg.id },
           ],
         },
       },
@@ -855,7 +978,7 @@ async function main() {
         organizationId: londonWesternOrg.id,
         membershipTiers: {
           create: [
-            { name: "Annual Membership", price: 350, interval: "YEARLY" },
+            { name: "Annual Membership", price: 350, interval: "YEARLY", organizationId: londonWesternOrg.id },
           ],
         },
       },
@@ -872,7 +995,7 @@ async function main() {
         organizationId: londonWesternOrg.id,
         membershipTiers: {
           create: [
-            { name: "Annual", price: 0, interval: "YEARLY" },
+            { name: "Annual", price: 0, interval: "YEARLY", organizationId: londonWesternOrg.id },
           ],
         },
       },

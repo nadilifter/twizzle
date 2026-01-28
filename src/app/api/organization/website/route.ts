@@ -28,13 +28,28 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = session.user.organizationId;
+    
+    if (!organizationId) {
+      console.error("No organizationId in session for user:", session.user.email);
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
+    }
+
     const config = await db.websiteConfig.findUnique({
       where: {
-        organizationId: session.user.organizationId,
+        organizationId: organizationId,
       },
     });
 
-    return NextResponse.json(config || {});
+    // If config exists, mark the subdomain as owned by this org
+    if (config) {
+      return NextResponse.json({ 
+        ...config, 
+        subdomainOwned: true // Flag to indicate this org owns the subdomain
+      });
+    }
+
+    return NextResponse.json({});
   } catch (error) {
     console.error("Error fetching website config:", error);
     return NextResponse.json({ error: "Failed to fetch website config" }, { status: 500 });

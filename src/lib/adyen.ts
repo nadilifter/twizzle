@@ -1,19 +1,79 @@
-import { Client, CheckoutAPI } from "@adyen/api-library";
+import { Client, CheckoutAPI, Environment } from "@adyen/api-library";
 
+/**
+ * Adyen Payment Integration
+ * 
+ * Environment variables:
+ *   - ADYEN_API_KEY: Your Adyen API key
+ *   - ADYEN_MERCHANT_ACCOUNT: Your Adyen merchant account name
+ *   - ADYEN_ENVIRONMENT: "TEST" or "LIVE" (defaults to TEST in development, required in production)
+ */
+
+// Validate required configuration
 if (!process.env.ADYEN_API_KEY) {
-  console.warn("ADYEN_API_KEY is not set");
+  console.warn("ADYEN_API_KEY is not set - Adyen payments will not work");
 }
 
 if (!process.env.ADYEN_MERCHANT_ACCOUNT) {
-  console.warn("ADYEN_MERCHANT_ACCOUNT is not set");
+  console.warn("ADYEN_MERCHANT_ACCOUNT is not set - Adyen payments will not work");
+}
+
+// Determine Adyen environment from env var
+// In production, require explicit configuration
+// In development, default to TEST
+function getAdyenEnvironment(): Environment {
+  const envValue = process.env.ADYEN_ENVIRONMENT?.toUpperCase();
+  
+  if (envValue === "LIVE") {
+    return Environment.LIVE;
+  }
+  
+  if (envValue === "TEST") {
+    return Environment.TEST;
+  }
+  
+  // If not explicitly set
+  if (process.env.NODE_ENV === "production") {
+    // In production, warn if not set but default to TEST for safety
+    console.warn(
+      "ADYEN_ENVIRONMENT is not set in production! " +
+      "Set to 'LIVE' for production payments or 'TEST' for sandbox. " +
+      "Defaulting to TEST for safety."
+    );
+    return Environment.TEST;
+  }
+  
+  // In development, default to TEST
+  return Environment.TEST;
+}
+
+const adyenEnvironment = getAdyenEnvironment();
+
+// Log environment in development
+if (process.env.NODE_ENV === "development") {
+  console.log(`Adyen initialized in ${adyenEnvironment} mode`);
 }
 
 const client = new Client({
-  apiKey: process.env.ADYEN_API_KEY || "TEST_KEY",
-  environment: "TEST", // or "LIVE"
+  apiKey: process.env.ADYEN_API_KEY || "",
+  environment: adyenEnvironment,
 });
 
 export const checkoutApi = new CheckoutAPI(client);
+
+/**
+ * Check if Adyen is properly configured
+ */
+export function isAdyenConfigured(): boolean {
+  return !!(process.env.ADYEN_API_KEY && process.env.ADYEN_MERCHANT_ACCOUNT);
+}
+
+/**
+ * Get current Adyen environment
+ */
+export function getAdyenEnvironmentName(): "TEST" | "LIVE" {
+  return adyenEnvironment === Environment.LIVE ? "LIVE" : "TEST";
+}
 
 export async function createPaymentSession(
   amount: number,

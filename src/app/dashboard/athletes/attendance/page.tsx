@@ -1,267 +1,652 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import * as React from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Calendar } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Check, X, Clock, Loader2, AlertCircle } from "lucide-react"
-import { useState, useEffect } from "react"
-import { format } from "date-fns"
-import { useAttendance } from "@/hooks/use-attendance"
-import { usePrograms } from "@/hooks/use-programs"
-import { useEvents } from "@/hooks/use-events"
-import { useEnrollments } from "@/hooks/use-enrollments"
-import { toast } from "sonner"
-import type { AttendanceStatus } from "@/types/attendance"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { 
+  Check, X, Clock, Loader2, CalendarIcon, Search, Users, 
+  TrendingUp, TrendingDown, UserCheck, UserX, AlertCircle, Download
+} from "lucide-react"
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns"
+import { DateRange } from "react-day-picker"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart, Pie, PieChart, Cell, Label as RechartsLabel } from "recharts"
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
+import { cn } from "@/lib/utils"
+import { useAttendanceMetrics } from "@/hooks/use-attendance-metrics"
+import type { AttendanceBreakdownItem, AttendanceGroupBy } from "@/types/attendance"
+
+const statusColors = {
+  present: "hsl(var(--chart-1))",
+  absent: "hsl(var(--chart-2))",
+  late: "hsl(var(--chart-3))",
+  excused: "hsl(var(--chart-4))",
+}
+
+const statusChartConfig = {
+  present: { label: "Present", color: "hsl(142.1 76.2% 36.3%)" },
+  absent: { label: "Absent", color: "hsl(0 72.2% 50.6%)" },
+  late: { label: "Late", color: "hsl(45.4 93.4% 47.5%)" },
+  excused: { label: "Excused", color: "hsl(221.2 83.2% 53.3%)" },
+} satisfies ChartConfig
+
+const trendChartConfig = {
+  rate: { label: "Attendance Rate", color: "hsl(var(--primary))" },
+} satisfies ChartConfig
 
 export default function AttendancePage() {
-  const [date, setDate] = useState<Date | undefined>(new Date())
-  const [selectedProgramId, setSelectedProgramId] = useState<string>("")
-  const [selectedEventId, setSelectedEventId] = useState<string>("")
-
-  // Hooks
-  const { programs, fetchPrograms, isLoading: isLoadingPrograms } = usePrograms({ autoFetch: true })
-  const { events, fetchEvents, isLoading: isLoadingEvents } = useEvents({ autoFetch: false })
-  const { enrollments, fetchEnrollments, isLoading: isLoadingEnrollments } = useEnrollments({ autoFetch: false })
-  const { attendances, fetchAttendance, markAttendance, isLoading: isLoadingAttendance } = useAttendance({ autoFetch: false })
-
-  // Derived state for stats
-  const stats = {
-    present: attendances.filter(a => a.status === "PRESENT").length,
-    absent: attendances.filter(a => a.status === "ABSENT").length,
-    late: attendances.filter(a => a.status === "LATE").length,
-  }
-
-  // Fetch events when date or program changes
-  useEffect(() => {
-    if (date && selectedProgramId) {
-      const dateStr = format(date, "yyyy-MM-dd")
-      fetchEvents({ 
-        startDate: dateStr, 
-        endDate: dateStr, 
-        programId: selectedProgramId 
-      }).then(() => {
-        // We will handle setting the selectedEventId in a separate effect or after fetch
-        // Note: fetchEvents updates the `events` state.
-      })
-      
-      // Also fetch enrollments for this program to know who SHOULD be there
-      fetchEnrollments({ programId: selectedProgramId, status: "ACTIVE" })
-    }
-  }, [date, selectedProgramId, fetchEvents, fetchEnrollments])
-
-  // Select the first event if available, or clear selection
-  useEffect(() => {
-    if (events.length > 0) {
-      setSelectedEventId(events[0].id)
-    } else {
-      setSelectedEventId("")
-    }
-  }, [events])
-
-  // Fetch attendance when event is selected
-  useEffect(() => {
-    if (selectedEventId) {
-      fetchAttendance({ eventId: selectedEventId })
-    }
-  }, [selectedEventId, fetchAttendance])
-
-  // Combined list of students (enrolled + any extra attendance records not in enrollment?)
-  // For now, we drive the list by Enrollments (active students)
-  const studentList = enrollments.map(enrollment => {
-    const attendance = attendances.find(a => a.athleteId === enrollment.athlete.id)
-    return {
-      athlete: enrollment.athlete,
-      attendance
-    }
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  })
+  const [search, setSearch] = React.useState("")
+  const [activeTab, setActiveTab] = React.useState<AttendanceGroupBy>("overall")
+  
+  // Fetch metrics based on active tab
+  const { metrics, isLoading, fetchMetrics } = useAttendanceMetrics({
+    autoFetch: true,
+    initialFilters: {
+      groupBy: "overall",
+      startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+      endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+    },
   })
 
-  const handleMarkAttendance = async (athleteId: string, status: AttendanceStatus) => {
-    if (!selectedEventId) {
-      toast.error("No event selected")
-      return
-    }
-
-    const result = await markAttendance({
-      athleteId,
-      eventId: selectedEventId,
-      status,
+  // Refetch when date range or tab changes
+  React.useEffect(() => {
+    const newGroupBy = activeTab === "overall" ? "date" : activeTab
+    fetchMetrics({
+      groupBy: activeTab === "overall" ? "overall" : newGroupBy,
+      startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+      endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     })
+  }, [dateRange, activeTab, fetchMetrics])
+  
+  // Also fetch date trend data for the overview
+  const { metrics: trendMetrics, fetchMetrics: fetchTrendMetrics } = useAttendanceMetrics()
+  
+  React.useEffect(() => {
+    if (activeTab === "overall") {
+      fetchTrendMetrics({
+        groupBy: "date",
+        startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+        endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+      })
+    }
+  }, [dateRange, activeTab, fetchTrendMetrics])
 
-    if (result) {
-      // toast.success(`Marked as ${status.toLowerCase()}`)
+  // Filter breakdown items by search
+  const filteredBreakdown = React.useMemo(() => {
+    if (!metrics?.breakdown || !search) return metrics?.breakdown || []
+    const searchLower = search.toLowerCase()
+    return metrics.breakdown.filter(item => 
+      item.name.toLowerCase().includes(searchLower)
+    )
+  }, [metrics?.breakdown, search])
+
+  // Prepare status distribution chart data
+  const statusDistributionData = React.useMemo(() => {
+    if (!metrics?.summary) return []
+    return [
+      { status: "present", count: metrics.summary.present, fill: statusChartConfig.present.color },
+      { status: "absent", count: metrics.summary.absent, fill: statusChartConfig.absent.color },
+      { status: "late", count: metrics.summary.late, fill: statusChartConfig.late.color },
+      { status: "excused", count: metrics.summary.excused, fill: statusChartConfig.excused.color },
+    ]
+  }, [metrics?.summary])
+
+  // Prepare trend chart data
+  const trendData = React.useMemo(() => {
+    if (!trendMetrics?.breakdown) return []
+    return trendMetrics.breakdown.map(item => ({
+      date: item.date || item.name,
+      rate: item.rate,
+      total: item.total,
+    })).slice(-14) // Last 14 days
+  }, [trendMetrics?.breakdown])
+
+  // Export to CSV
+  const handleExport = () => {
+    if (!filteredBreakdown.length) return
+    
+    const headers = ["Name", "Total", "Present", "Absent", "Late", "Excused", "Rate (%)"]
+    const rows = filteredBreakdown.map(item => [
+      item.name,
+      item.total,
+      item.present,
+      item.absent,
+      item.late,
+      item.excused,
+      item.rate,
+    ])
+    
+    const csv = [headers, ...rows].map(row => row.join(",")).join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `attendance-${activeTab}-${format(new Date(), "yyyy-MM-dd")}.csv`
+    a.click()
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "PRESENT":
+        return <Badge className="bg-green-100 text-green-700 border-green-200">Present</Badge>
+      case "ABSENT":
+        return <Badge className="bg-red-100 text-red-700 border-red-200">Absent</Badge>
+      case "LATE":
+        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Late</Badge>
+      case "EXCUSED":
+        return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Excused</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
     }
   }
 
-  const isLoading = isLoadingPrograms || isLoadingEvents || isLoadingEnrollments || isLoadingAttendance
+  if (isLoading && !metrics) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Attendance</h1>
-        <p className="text-muted-foreground">
-          Track daily attendance for training groups.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">Attendance Analytics</h1>
+          <p className="text-muted-foreground">
+            Track and analyze attendance across athletes, programs, and coaches.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date range</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[300px_1fr]">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardContent className="p-4">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border w-full flex justify-center"
-              />
-            </CardContent>
-          </Card>
-          
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics?.summary.attendanceRate || 0}%</div>
+            <p className="text-xs text-muted-foreground">
+              Present + Late out of total
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Present</CardTitle>
+            <Check className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{metrics?.summary.present || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics?.summary.total ? Math.round((metrics.summary.present / metrics.summary.total) * 100) : 0}% of total
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Absent</CardTitle>
+            <X className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{metrics?.summary.absent || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics?.summary.total ? Math.round((metrics.summary.absent / metrics.summary.total) * 100) : 0}% of total
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Records</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics?.summary.total || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              In selected date range
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AttendanceGroupBy)} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overall">Overview</TabsTrigger>
+          <TabsTrigger value="athlete">By Athlete</TabsTrigger>
+          <TabsTrigger value="program">By Program</TabsTrigger>
+          <TabsTrigger value="coach">By Coach</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overall" className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+            {/* Trend Chart */}
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Attendance Trend</CardTitle>
+                <CardDescription>
+                  Daily attendance rate over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {trendData.length > 0 ? (
+                  <ChartContainer config={trendChartConfig} className="h-[300px] w-full">
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis 
+                        dataKey="date" 
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => {
+                          const date = new Date(value)
+                          return format(date, "MMM d")
+                        }}
+                      />
+                      <YAxis 
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}%`}
+                        domain={[0, 100]}
+                      />
+                      <ChartTooltip 
+                        content={<ChartTooltipContent />}
+                        formatter={(value) => [`${value}%`, "Rate"]}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="rate" 
+                        stroke="var(--color-rate)" 
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    No attendance data for selected period
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Status Distribution */}
+            <Card className="col-span-3">
+              <CardHeader>
+                <CardTitle>Status Distribution</CardTitle>
+                <CardDescription>
+                  Breakdown by attendance status
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {statusDistributionData.some(d => d.count > 0) ? (
+                  <ChartContainer config={statusChartConfig} className="mx-auto aspect-square max-h-[280px]">
+                    <PieChart>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Pie
+                        data={statusDistributionData}
+                        dataKey="count"
+                        nameKey="status"
+                        innerRadius={60}
+                        strokeWidth={5}
+                      >
+                        <RechartsLabel
+                          content={({ viewBox }) => {
+                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                              return (
+                                <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                                  <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-3xl font-bold">
+                                    {metrics?.summary.total || 0}
+                                  </tspan>
+                                  <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-muted-foreground text-sm">
+                                    Total
+                                  </tspan>
+                                </text>
+                              )
+                            }
+                          }}
+                        />
+                      </Pie>
+                      <ChartLegend
+                        content={<ChartLegendContent nameKey="status" />}
+                        className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                      />
+                    </PieChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[280px] text-muted-foreground">
+                    No attendance data
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* By Athlete Tab */}
+        <TabsContent value="athlete" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Class Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-sm">Present</span>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{stats.present}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-sm">Absent</span>
-                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">{stats.absent}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-sm">Late</span>
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">{stats.late}</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Select Program" />
-              </SelectTrigger>
-              <SelectContent>
-                {programs.map(program => (
-                  <SelectItem key={program.id} value={program.id}>
-                    {program.name} ({program.level})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {/* <Button variant="outline">Mark All Present</Button> */}
-          </div>
-
-          {!selectedProgramId ? (
-            <div className="flex flex-col items-center justify-center h-64 border rounded-lg border-dashed">
-              <p className="text-muted-foreground">Select a program to view attendance</p>
-            </div>
-          ) : events.length === 0 ? (
-             <div className="flex flex-col items-center justify-center h-64 border rounded-lg border-dashed">
-              <p className="text-muted-foreground">No events found for this program on the selected date.</p>
-              <Button variant="link" asChild className="mt-2">
-                <a href="/dashboard/events">Schedule an Event</a>
-              </Button>
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-0">
-                <div className="p-4 border-b bg-muted/20">
-                    <h3 className="font-medium">{events.find(e => e.id === selectedEventId)?.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                        {events.find(e => e.id === selectedEventId)?.startTime} - {events.find(e => e.id === selectedEventId)?.endTime}
-                    </p>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Attendance by Athlete</CardTitle>
+                  <CardDescription>
+                    Individual athlete attendance records and rates
+                  </CardDescription>
                 </div>
-                <Table>
-                  <TableHeader>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search athletes..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-8 w-[250px]"
+                    />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Athlete</TableHead>
+                    <TableHead>Level</TableHead>
+                    <TableHead className="text-center">Total</TableHead>
+                    <TableHead className="text-center">Present</TableHead>
+                    <TableHead className="text-center">Absent</TableHead>
+                    <TableHead className="text-center">Late</TableHead>
+                    <TableHead className="text-center">Rate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
                     <TableRow>
-                      <TableHead>Athlete</TableHead>
-                      <TableHead>Check-in Time</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {studentList.map(({ athlete, attendance }) => (
-                      <TableRow key={athlete.id}>
-                        <TableCell className="font-medium">
+                  ) : filteredBreakdown.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No attendance records found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredBreakdown.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={null} /> 
-                              <AvatarFallback>{athlete.name.charAt(0)}</AvatarFallback>
+                              <AvatarFallback>{item.name.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            {athlete.name}
+                            <span className="font-medium">{item.name}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                            {attendance?.checkedIn ? format(new Date(attendance.checkedIn), "hh:mm a") : "-"}
+                          <Badge variant="outline">{item.level || "N/A"}</Badge>
                         </TableCell>
+                        <TableCell className="text-center">{item.total}</TableCell>
+                        <TableCell className="text-center text-green-600">{item.present}</TableCell>
+                        <TableCell className="text-center text-red-600">{item.absent}</TableCell>
+                        <TableCell className="text-center text-yellow-600">{item.late}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              item.rate >= 90 ? "bg-green-50 text-green-700 border-green-200" :
+                              item.rate >= 70 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                              "bg-red-50 text-red-700 border-red-200"
+                            )}
+                          >
+                            {item.rate}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* By Program Tab */}
+        <TabsContent value="program" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Attendance by Program</CardTitle>
+                  <CardDescription>
+                    Program-level attendance metrics
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search programs..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-8 w-[250px]"
+                    />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : filteredBreakdown.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No program attendance data found
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredBreakdown.map((item) => (
+                    <Card key={item.id}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">{item.name}</CardTitle>
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              item.rate >= 90 ? "bg-green-50 text-green-700 border-green-200" :
+                              item.rate >= 70 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                              "bg-red-50 text-red-700 border-red-200"
+                            )}
+                          >
+                            {item.rate}%
+                          </Badge>
+                        </div>
+                        {item.level && (
+                          <CardDescription>Level: {item.level}</CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                          <div>
+                            <div className="font-bold">{item.total}</div>
+                            <div className="text-muted-foreground text-xs">Total</div>
+                          </div>
+                          <div>
+                            <div className="font-bold text-green-600">{item.present}</div>
+                            <div className="text-muted-foreground text-xs">Present</div>
+                          </div>
+                          <div>
+                            <div className="font-bold text-red-600">{item.absent}</div>
+                            <div className="text-muted-foreground text-xs">Absent</div>
+                          </div>
+                          <div>
+                            <div className="font-bold text-yellow-600">{item.late}</div>
+                            <div className="text-muted-foreground text-xs">Late</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* By Coach Tab */}
+        <TabsContent value="coach" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Attendance by Coach</CardTitle>
+                  <CardDescription>
+                    Coach performance based on class attendance
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search coaches..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-8 w-[250px]"
+                    />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Coach</TableHead>
+                    <TableHead className="text-center">Classes</TableHead>
+                    <TableHead className="text-center">Present</TableHead>
+                    <TableHead className="text-center">Absent</TableHead>
+                    <TableHead className="text-center">Late</TableHead>
+                    <TableHead className="text-center">Attendance Rate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredBreakdown.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No coach attendance data found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredBreakdown.map((item) => (
+                      <TableRow key={item.id}>
                         <TableCell>
-                          {attendance ? (
-                            <Badge 
-                              variant="outline" 
-                              className={
-                                attendance.status === "PRESENT" ? "bg-green-50 text-green-700 border-green-200" :
-                                attendance.status === "ABSENT" ? "bg-red-50 text-red-700 border-red-200" :
-                                "bg-yellow-50 text-yellow-700 border-yellow-200"
-                              }
-                            >
-                              {attendance.status}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm italic">Not marked</span>
-                          )}
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>{item.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{item.name}</div>
+                              {item.email && (
+                                <div className="text-xs text-muted-foreground">{item.email}</div>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className={`h-8 w-8 ${attendance?.status === "PRESENT" ? "bg-green-100 text-green-700" : "text-green-600 hover:text-green-700 hover:bg-green-50"}`}
-                                onClick={() => handleMarkAttendance(athlete.id, "PRESENT")}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className={`h-8 w-8 ${attendance?.status === "LATE" ? "bg-yellow-100 text-yellow-700" : "text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"}`}
-                                onClick={() => handleMarkAttendance(athlete.id, "LATE")}
-                            >
-                              <Clock className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className={`h-8 w-8 ${attendance?.status === "ABSENT" ? "bg-red-100 text-red-700" : "text-red-600 hover:text-red-700 hover:bg-red-50"}`}
-                                onClick={() => handleMarkAttendance(athlete.id, "ABSENT")}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                        <TableCell className="text-center">{item.total}</TableCell>
+                        <TableCell className="text-center text-green-600">{item.present}</TableCell>
+                        <TableCell className="text-center text-red-600">{item.absent}</TableCell>
+                        <TableCell className="text-center text-yellow-600">{item.late}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  "h-2 rounded-full",
+                                  item.rate >= 90 ? "bg-green-500" :
+                                  item.rate >= 70 ? "bg-yellow-500" :
+                                  "bg-red-500"
+                                )}
+                                style={{ width: `${item.rate}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium">{item.rate}%</span>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                    {studentList.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                No athletes enrolled in this program.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

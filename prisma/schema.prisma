@@ -19,6 +19,18 @@ model Organization {
   name      String
   slug      String   @unique
   logo      String?
+  
+  // Contact
+  email         String?
+  phone         String?
+  
+  // Address (structured)
+  street        String?
+  city          String?
+  stateProvince String?
+  postalCode    String?
+  country       String?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

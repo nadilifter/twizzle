@@ -6,7 +6,7 @@ import { z } from "zod";
 const createAttendanceSchema = z.object({
   athleteId: z.string().min(1, "Athlete is required"),
   eventId: z.string().min(1, "Event is required"),
-  status: z.enum(["PRESENT", "ABSENT", "LATE", "EXCUSED"]).default("PRESENT"),
+  status: z.enum(["REGISTERED", "PRESENT", "ABSENT", "LATE", "EXCUSED"]).default("PRESENT"),
   notes: z.string().optional(),
 });
 
@@ -14,7 +14,7 @@ const bulkAttendanceSchema = z.object({
   eventId: z.string().min(1, "Event is required"),
   attendances: z.array(z.object({
     athleteId: z.string().min(1),
-    status: z.enum(["PRESENT", "ABSENT", "LATE", "EXCUSED"]),
+    status: z.enum(["REGISTERED", "PRESENT", "ABSENT", "LATE", "EXCUSED"]),
     notes: z.string().optional(),
   })),
 });
@@ -30,28 +30,32 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get("eventId");
     const athleteId = searchParams.get("athleteId");
+    const programId = searchParams.get("programId");
+    const coachId = searchParams.get("coachId");
     const status = searchParams.get("status");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const limit = parseInt(searchParams.get("limit") || "100");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    const where = {
-      event: {
-        organizationId: session.user.organizationId,
-      },
-      ...(eventId && { eventId }),
-      ...(athleteId && { athleteId }),
-      ...(status && { status: status as "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" }),
+    // Build event filter conditions
+    const eventWhere: any = {
+      organizationId: session.user.organizationId,
+      ...(programId && { programId }),
+      ...(coachId && { coachId }),
       ...(startDate && endDate && {
-        event: {
-          organizationId: session.user.organizationId,
-          date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
-          },
+        date: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
         },
       }),
+    };
+
+    const where = {
+      event: eventWhere,
+      ...(eventId && { eventId }),
+      ...(athleteId && { athleteId }),
+      ...(status && { status: status as "REGISTERED" | "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" }),
     };
 
     const [attendances, total] = await Promise.all([
@@ -64,10 +68,15 @@ export async function GET(request: NextRequest) {
               name: true,
               level: true,
               group: true,
-              family: {
-                select: {
-                  id: true,
-                  name: true,
+              guardians: {
+                take: 1,
+                include: {
+                  family: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
                 },
               },
             },
@@ -81,6 +90,12 @@ export async function GET(request: NextRequest) {
               endTime: true,
               type: true,
               program: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              coach: {
                 select: {
                   id: true,
                   name: true,
@@ -188,13 +203,22 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Event not found" }, { status: 404 });
       }
 
-      // Verify athlete
+      // Verify athlete belongs to organization
       const athlete = await db.athlete.findFirst({
         where: {
           id: validatedData.athleteId,
-          family: {
-            organizationId: session.user.organizationId,
-          },
+          OR: [
+            { organizationId: session.user.organizationId },
+            {
+              guardians: {
+                some: {
+                  family: {
+                    organizationId: session.user.organizationId,
+                  },
+                },
+              },
+            },
+          ],
         },
       });
 

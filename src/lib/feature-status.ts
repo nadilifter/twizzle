@@ -185,7 +185,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   },
   "/dashboard/financials/integrations": {
     status: "demo",
-    description: "Integration settings preview",
+    description: "Integration settings preview (hidden from sidebar)",
   },
   "/dashboard/financials/invoices": {
     status: "live",

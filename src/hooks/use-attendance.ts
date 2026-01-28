@@ -101,7 +101,11 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     setIsUpdating(true);
     setError(null);
     try {
-      await api.post("/api/attendance/bulk", data);
+      // Transform records to attendances format expected by API
+      await api.post("/api/attendance", {
+        eventId: data.eventId,
+        attendances: data.records,
+      });
       // Refresh after bulk update
       await fetchAttendance({ eventId: data.eventId });
       return true;

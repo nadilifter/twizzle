@@ -9,6 +9,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { CartProvider } from "@/components/sites/cart-context";
 import { CartSheet } from "@/components/sites/cart-sheet";
 import { CartFloatingButton } from "@/components/sites/cart-floating-button";
+import { VisitorTracker } from "@/components/sites/visitor-tracker";
+import { CookieNotice } from "@/components/sites/cookie-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -170,6 +172,8 @@ export default async function SiteLayout({
                 </div>
              </div>
         </footer>
+        <VisitorTracker organizationId={config.organizationId} />
+        <CookieNotice />
     </div>
     </CartProvider>
     </ThemeProvider>

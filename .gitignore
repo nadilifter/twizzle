@@ -20,6 +20,7 @@
 .DS_Store
 *.pem
 deploy-local.sh
+temp_*
 
 # debug
 npm-debug.log*

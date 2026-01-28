@@ -27,8 +27,17 @@
 
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { Redis } from "@upstash/redis";
 
 const prisma = new PrismaClient();
+
+// Initialize Redis client for analytics seeding (if configured)
+const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
 
 // ============================================
 // CONSTANTS & HELPERS
@@ -434,26 +443,145 @@ async function main() {
   console.log("  ✓ Created 9 events");
 
   // ============================================
+  // HISTORICAL EVENTS (for attendance metrics)
+  // ============================================
+  console.log("\n📆 Creating historical events for attendance tracking...");
+  const historicalEvents: Array<{ id: string; title: string; date: Date; startTime: string; endTime: string; type: "CLASS" | "CAMP" | "PARTY" | "COMPETITION" | "MEETING" | "OTHER"; programId: string; coachId: string; organizationId: string; capacity: number }> = [];
+  
+  // Create 4 weeks of historical events for ORG1
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    historicalEvents.push(
+      { id: `${ORG1_ID}-evt-hist-bronze-${week}`, title: "Bronze Class - Historical", date: weekDate, startTime: "16:00", endTime: "17:00", type: "CLASS", programId: `${ORG1_ID}-prog-rec-bronze`, coachId: org1Coach1.id, organizationId: ORG1_ID, capacity: 12 },
+      { id: `${ORG1_ID}-evt-hist-silver-${week}`, title: "Silver Class - Historical", date: weekDate, startTime: "17:00", endTime: "18:30", type: "CLASS", programId: `${ORG1_ID}-prog-rec-silver`, coachId: org1Coach1.id, organizationId: ORG1_ID, capacity: 10 },
+      { id: `${ORG1_ID}-evt-hist-jo-${week}`, title: "JO Team Practice - Historical", date: weekDate, startTime: "18:30", endTime: "21:00", type: "CLASS", programId: `${ORG1_ID}-prog-jo`, coachId: org1Coach2.id, organizationId: ORG1_ID, capacity: 20 },
+    );
+  }
+  
+  // Create 4 weeks of historical events for ORG2
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    historicalEvents.push(
+      { id: `${ORG2_ID}-evt-hist-soccer-${week}`, title: "Soccer Practice - Historical", date: weekDate, startTime: "16:00", endTime: "17:30", type: "CLASS", programId: `${ORG2_ID}-prog-soccer`, coachId: org2Coach.id, organizationId: ORG2_ID, capacity: 24 },
+      { id: `${ORG2_ID}-evt-hist-basketball-${week}`, title: "Basketball Practice - Historical", date: weekDate, startTime: "18:00", endTime: "20:00", type: "CLASS", programId: `${ORG2_ID}-prog-basketball`, coachId: org2Coach.id, organizationId: ORG2_ID, capacity: 20 },
+    );
+  }
+  
+  for (const evt of historicalEvents) {
+    await prisma.event.upsert({ where: { id: evt.id }, update: {}, create: evt });
+  }
+  console.log(`  ✓ Created ${historicalEvents.length} historical events`);
+
+  // ============================================
   // ATTENDANCE
   // ============================================
-  console.log("\n✅ Creating attendance records...");
-  const attendanceData = [
-    { athleteId: `${ORG1_ID}-ath-1`, eventId: `${ORG1_ID}-evt-1`, status: "PRESENT" as const, checkedIn: today },
-    { athleteId: `${ORG1_ID}-ath-4`, eventId: `${ORG1_ID}-evt-1`, status: "PRESENT" as const, checkedIn: today },
-    { athleteId: `${ORG1_ID}-ath-2`, eventId: `${ORG1_ID}-evt-2`, status: "PRESENT" as const, checkedIn: today },
-    { athleteId: `${ORG1_ID}-ath-3`, eventId: `${ORG1_ID}-evt-3`, status: "PRESENT" as const, checkedIn: today },
-    { athleteId: `${ORG1_ID}-ath-3`, eventId: `${ORG1_ID}-evt-4`, status: "REGISTERED" as const },
-    { athleteId: `${ORG2_ID}-ath-1`, eventId: `${ORG2_ID}-evt-1`, status: "PRESENT" as const, checkedIn: today },
-    { athleteId: `${ORG2_ID}-ath-2`, eventId: `${ORG2_ID}-evt-2`, status: "REGISTERED" as const },
-    { athleteId: `${ORG2_ID}-ath-4`, eventId: `${ORG2_ID}-evt-3`, status: "REGISTERED" as const },
-  ];
+  console.log("\n✅ Creating comprehensive attendance records...");
+  const attendanceStatuses = ["PRESENT", "ABSENT", "LATE", "EXCUSED"] as const;
+  const attendanceData: Array<{ athleteId: string; eventId: string; status: typeof attendanceStatuses[number] | "REGISTERED"; checkedIn?: Date; notes?: string }> = [];
+  
+  // Today's events attendance
+  attendanceData.push(
+    { athleteId: `${ORG1_ID}-ath-1`, eventId: `${ORG1_ID}-evt-1`, status: "PRESENT", checkedIn: today },
+    { athleteId: `${ORG1_ID}-ath-4`, eventId: `${ORG1_ID}-evt-1`, status: "PRESENT", checkedIn: today },
+    { athleteId: `${ORG1_ID}-ath-2`, eventId: `${ORG1_ID}-evt-2`, status: "PRESENT", checkedIn: today },
+    { athleteId: `${ORG1_ID}-ath-3`, eventId: `${ORG1_ID}-evt-3`, status: "PRESENT", checkedIn: today },
+    { athleteId: `${ORG1_ID}-ath-3`, eventId: `${ORG1_ID}-evt-4`, status: "REGISTERED" },
+    { athleteId: `${ORG2_ID}-ath-1`, eventId: `${ORG2_ID}-evt-1`, status: "PRESENT", checkedIn: today },
+    { athleteId: `${ORG2_ID}-ath-2`, eventId: `${ORG2_ID}-evt-2`, status: "REGISTERED" },
+    { athleteId: `${ORG2_ID}-ath-4`, eventId: `${ORG2_ID}-evt-3`, status: "REGISTERED" },
+  );
+  
+  // Historical attendance - ORG1 (Bronze class - Athlete 1 and 4)
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    // Athlete 1 - good attendance (mostly present, occasional late)
+    const ath1Status = week === 2 ? "LATE" : week === 4 ? "EXCUSED" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG1_ID}-ath-1`, 
+      eventId: `${ORG1_ID}-evt-hist-bronze-${week}`, 
+      status: ath1Status, 
+      checkedIn: ath1Status !== "EXCUSED" ? weekDate : undefined,
+      notes: ath1Status === "EXCUSED" ? "Family vacation" : undefined
+    });
+    
+    // Athlete 4 - some absences
+    const ath4Status = week === 1 ? "ABSENT" : week === 3 ? "LATE" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG1_ID}-ath-4`, 
+      eventId: `${ORG1_ID}-evt-hist-bronze-${week}`, 
+      status: ath4Status, 
+      checkedIn: ath4Status === "PRESENT" || ath4Status === "LATE" ? weekDate : undefined,
+      notes: ath4Status === "ABSENT" ? "Sick" : undefined
+    });
+  }
+  
+  // Historical attendance - ORG1 (Silver class - Athlete 2)
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    const status = week === 3 ? "ABSENT" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG1_ID}-ath-2`, 
+      eventId: `${ORG1_ID}-evt-hist-silver-${week}`, 
+      status, 
+      checkedIn: status === "PRESENT" ? weekDate : undefined,
+      notes: status === "ABSENT" ? "School event" : undefined
+    });
+  }
+  
+  // Historical attendance - ORG1 (JO Team - Athlete 3) - Perfect attendance
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    attendanceData.push({ 
+      athleteId: `${ORG1_ID}-ath-3`, 
+      eventId: `${ORG1_ID}-evt-hist-jo-${week}`, 
+      status: "PRESENT", 
+      checkedIn: weekDate 
+    });
+  }
+  
+  // Historical attendance - ORG2 (Soccer - Athlete 1)
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    const status = week === 2 ? "LATE" : week === 4 ? "ABSENT" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG2_ID}-ath-1`, 
+      eventId: `${ORG2_ID}-evt-hist-soccer-${week}`, 
+      status, 
+      checkedIn: status !== "ABSENT" ? weekDate : undefined 
+    });
+  }
+  
+  // Historical attendance - ORG2 (Basketball - Athlete 2)
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    const status = week === 1 ? "EXCUSED" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG2_ID}-ath-2`, 
+      eventId: `${ORG2_ID}-evt-hist-basketball-${week}`, 
+      status, 
+      checkedIn: status === "PRESENT" ? weekDate : undefined,
+      notes: status === "EXCUSED" ? "Doctor appointment" : undefined
+    });
+  }
+  
+  // Historical attendance - ORG2 (Athlete 4 in swim events - add to some soccer events too)
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    attendanceData.push({ 
+      athleteId: `${ORG2_ID}-ath-4`, 
+      eventId: `${ORG2_ID}-evt-hist-soccer-${week}`, 
+      status: week % 2 === 0 ? "PRESENT" : "ABSENT", 
+      checkedIn: week % 2 === 0 ? weekDate : undefined 
+    });
+  }
+  
   for (const att of attendanceData) {
     await prisma.attendance.upsert({
       where: { athleteId_eventId: { athleteId: att.athleteId, eventId: att.eventId } },
       update: {}, create: att,
     });
   }
-  console.log(`  ✓ Created ${attendanceData.length} attendance records`);
+  console.log(`  ✓ Created ${attendanceData.length} attendance records (including ${attendanceData.length - 8} historical records)`);
 
   // ============================================
   // INVOICES & LINE ITEMS
@@ -814,6 +942,100 @@ async function main() {
   console.log(`  ✓ Created ${mediaData.length} media items`);
 
   // ============================================
+  // VISITOR ANALYTICS (Redis)
+  // ============================================
+  if (redis) {
+    console.log("\n📊 Seeding visitor analytics...");
+    
+    // Get all organizations with published website configs
+    const publishedSites = await prisma.websiteConfig.findMany({
+      where: { isPublished: true },
+      select: { organizationId: true },
+    });
+    
+    const formatDate = (date: Date): string => date.toISOString().split("T")[0];
+    const VISITOR_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days
+    
+    let totalDaysSeeded = 0;
+    let totalDesktopVisitors = 0;
+    let totalMobileVisitors = 0;
+    
+    for (const site of publishedSites) {
+      const orgId = site.organizationId;
+      
+      // Seed 90 days of historical data (excluding today)
+      // Today will have 0 visitors for easy testing
+      for (let daysBack = 1; daysBack <= 90; daysBack++) {
+        const date = new Date();
+        date.setDate(date.getDate() - daysBack);
+        const dateStr = formatDate(date);
+        
+        // Calculate visitor count with realistic patterns
+        const dayOfWeek = date.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        
+        // Base visitors: lower on weekends
+        const baseVisitors = isWeekend ? 50 : 150;
+        
+        // Add variance (0-100)
+        const variance = Math.floor(Math.random() * 100);
+        
+        // Occasional spikes (10% chance of 2x traffic)
+        const spike = Math.random() < 0.1 ? 2 : 1;
+        
+        // More recent days tend to have more traffic (growth trend)
+        const recencyBonus = Math.floor((90 - daysBack) / 10) * 10;
+        
+        const totalVisitors = Math.floor((baseVisitors + variance + recencyBonus) * spike);
+        
+        // Split between desktop (~60%) and mobile (~40%) with some variance
+        const mobileRatio = 0.35 + (Math.random() * 0.1); // 35-45% mobile
+        const mobileCount = Math.floor(totalVisitors * mobileRatio);
+        const desktopCount = totalVisitors - mobileCount;
+        
+        // Generate desktop visitor IDs
+        const desktopKey = `visitors:${orgId}:${dateStr}:desktop`;
+        if (desktopCount > 0) {
+          const desktopIds: [string, ...string[]] = [`seed-desktop-${dateStr}-0`];
+          for (let i = 1; i < desktopCount; i++) {
+            desktopIds.push(`seed-desktop-${dateStr}-${i}`);
+          }
+          await redis
+            .pipeline()
+            .sadd(desktopKey, ...desktopIds)
+            .expire(desktopKey, VISITOR_TTL_SECONDS)
+            .exec();
+          totalDesktopVisitors += desktopCount;
+        }
+        
+        // Generate mobile visitor IDs
+        const mobileKey = `visitors:${orgId}:${dateStr}:mobile`;
+        if (mobileCount > 0) {
+          const mobileIds: [string, ...string[]] = [`seed-mobile-${dateStr}-0`];
+          for (let i = 1; i < mobileCount; i++) {
+            mobileIds.push(`seed-mobile-${dateStr}-${i}`);
+          }
+          await redis
+            .pipeline()
+            .sadd(mobileKey, ...mobileIds)
+            .expire(mobileKey, VISITOR_TTL_SECONDS)
+            .exec();
+          totalMobileVisitors += mobileCount;
+        }
+        
+        totalDaysSeeded++;
+      }
+    }
+    
+    console.log(`  ✓ Seeded ${totalDaysSeeded} days of visitor analytics for ${publishedSites.length} sites`);
+    console.log(`  ✓ Total: ${(totalDesktopVisitors + totalMobileVisitors).toLocaleString()} visitors (${totalDesktopVisitors.toLocaleString()} desktop, ${totalMobileVisitors.toLocaleString()} mobile)`);
+    console.log("  ℹ Today has 0 visitors (for testing)");
+  } else {
+    console.log("\n📊 Skipping visitor analytics (Redis not configured)");
+    console.log("  ℹ Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable");
+  }
+
+  // ============================================
   // COMPLETE
   // ============================================
   console.log("\n" + "=".repeat(50));
@@ -826,7 +1048,7 @@ async function main() {
   console.log("  • 9 families with payment methods");
   console.log("  • 14 athletes with guardian relationships");
   console.log("  • 9 programs with membership tiers");
-  console.log("  • 9 events with attendance records");
+  console.log("  • 29+ events with 40+ attendance records (historical + current)");
   console.log("  • 5 invoices with line items and payments");
   console.log("  • 9 transactions (Adyen)");
   console.log("  • 5 payouts (settlements)");
@@ -834,6 +1056,7 @@ async function main() {
   console.log("  • 9 skills with lesson plans");
   console.log("  • 7 POS products with stock movements");
   console.log("  • 6 media items (photos/videos)");
+  console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (password: password123):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");
   console.log("  Metro Sports Admin: admin@metro-sports.com");

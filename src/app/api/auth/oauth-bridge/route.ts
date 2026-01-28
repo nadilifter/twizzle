@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import crypto from "crypto";
+import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
  * OAuth Bridge Endpoint
@@ -11,6 +12,12 @@ import crypto from "crypto";
  */
 
 export async function GET(req: NextRequest) {
+  // Rate limit to prevent abuse
+  const rateLimitResponse = await checkAuthRateLimit(req, RATE_LIMITS.auth);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const searchParams = req.nextUrl.searchParams;
   const callbackUrl = searchParams.get("callbackUrl") || "http://admin.uplifterinc.localhost:3000/";
 

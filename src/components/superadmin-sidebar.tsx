@@ -12,7 +12,8 @@ import {
   ShieldCheck, 
   Users,
   CalendarCheck,
-  ExternalLink
+  ExternalLink,
+  UserPlus
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 
@@ -30,6 +31,34 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+
+// Signup link component to handle SSR
+function SignupLink() {
+  const [signupUrl, setSignupUrl] = React.useState("https://signup.uplifterinc.com")
+  
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hostname.includes("localhost")) {
+      setSignupUrl("http://signup.uplifterinc.localhost:3000")
+    }
+  }, [])
+
+  return (
+    <SidebarMenuButton asChild>
+      <a 
+        href={signupUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-between"
+      >
+        <span className="flex items-center gap-2">
+          <UserPlus className="h-4 w-4" />
+          <span>Organization Signup</span>
+        </span>
+        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+      </a>
+    </SidebarMenuButton>
+  )
+}
 
 // Superadmin navigation data
 const navItems = [
@@ -115,26 +144,16 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {/* Events Portal temporarily hidden - see superadmin overview for stashed features
         <SidebarGroup>
-          <SidebarGroupLabel>Portals</SidebarGroupLabel>
+          <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/events" className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <CalendarCheck className="h-4 w-4" />
-                      <span>Events Portal</span>
-                    </span>
-                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                  </a>
-                </SidebarMenuButton>
+                <SignupLink />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        */}
       </SidebarContent>
       <SidebarFooter>
         {isLoading || !user ? (

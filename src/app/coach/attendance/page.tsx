@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { useCoachTodayEvents } from "@/hooks/use-coach-events";
+import { useCoachEvents } from "@/hooks/use-coach-events";
 import { useAttendance } from "@/hooks/use-attendance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Select, 
   SelectContent, 
@@ -23,6 +25,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Check, 
@@ -33,9 +42,14 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
+  ChevronDown,
+  CalendarIcon,
+  Shield,
 } from "lucide-react";
 import { format } from "date-fns";
 import { api } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type AttendanceStatus = "REGISTERED" | "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
@@ -51,12 +65,26 @@ export default function CoachAttendancePage() {
   const searchParams = useSearchParams();
   const initialEventId = searchParams.get("eventId");
   
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedEventId, setSelectedEventId] = useState<string | null>(initialEventId);
   const [enrolledAthletes, setEnrolledAthletes] = useState<EnrolledAthlete[]>([]);
   const [loadingAthletes, setLoadingAthletes] = useState(false);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   
-  const { events, isLoading: loadingEvents } = useCoachTodayEvents();
+  // Use coach events hook with date filtering
+  const { events, isLoading: loadingEvents, fetchEvents } = useCoachEvents({
+    autoFetch: false,
+  });
   const { attendances, isLoading: loadingAttendance, isUpdating, markAttendance, fetchAttendance } = useAttendance();
+
+  // Fetch events when date changes
+  useEffect(() => {
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    fetchEvents({
+      startDate: dateStr,
+      endDate: dateStr,
+    });
+  }, [selectedDate, fetchEvents]);
 
   // Fetch attendance when event is selected
   useEffect(() => {
@@ -66,10 +94,13 @@ export default function CoachAttendancePage() {
     }
   }, [selectedEventId, fetchAttendance]);
 
-  // Auto-select first event if none selected
+  // Auto-select first event when events change
   useEffect(() => {
-    if (!selectedEventId && events.length > 0) {
+    if (events.length > 0 && !events.find(e => e.id === selectedEventId)) {
       setSelectedEventId(events[0].id);
+    } else if (events.length === 0) {
+      setSelectedEventId(null);
+      setEnrolledAthletes([]);
     }
   }, [events, selectedEventId]);
 
@@ -92,6 +123,8 @@ export default function CoachAttendancePage() {
             group: enrollment.athlete.group,
           }))
         );
+      } else {
+        setEnrolledAthletes([]);
       }
     } catch (error) {
       console.error("Error fetching enrolled athletes:", error);
@@ -116,6 +149,31 @@ export default function CoachAttendancePage() {
       status,
     });
   };
+
+  // Bulk mark all athletes
+  const handleBulkMark = useCallback(async (status: AttendanceStatus) => {
+    if (!selectedEventId || enrolledAthletes.length === 0) return;
+    
+    setBulkUpdating(true);
+    try {
+      // Mark all athletes with the specified status
+      await Promise.all(
+        enrolledAthletes.map(athlete => 
+          markAttendance({
+            athleteId: athlete.id,
+            eventId: selectedEventId,
+            status,
+          })
+        )
+      );
+      toast.success(`Marked all athletes as ${status.toLowerCase()}`);
+    } catch (error) {
+      console.error("Error bulk marking attendance:", error);
+      toast.error("Failed to mark all athletes");
+    } finally {
+      setBulkUpdating(false);
+    }
+  }, [selectedEventId, enrolledAthletes, markAttendance]);
 
   // Get selected event
   const selectedEvent = useMemo(() => {
@@ -157,9 +215,29 @@ export default function CoachAttendancePage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Attendance</h1>
-        <p className="text-muted-foreground">Mark attendance for your classes</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Attendance</h1>
+          <p className="text-muted-foreground">Mark attendance for your classes</p>
+        </div>
+        
+        {/* Date Picker */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("justify-start text-left font-normal w-[200px]")}>
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {format(selectedDate, "EEEE, MMM d")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Event Selector */}
@@ -178,7 +256,7 @@ export default function CoachAttendancePage() {
                 </SelectTrigger>
                 <SelectContent>
                   {events.length === 0 ? (
-                    <SelectItem value="none" disabled>No classes today</SelectItem>
+                    <SelectItem value="none" disabled>No classes on this date</SelectItem>
                   ) : (
                     events.map((event) => (
                       <SelectItem key={event.id} value={event.id}>
@@ -213,7 +291,7 @@ export default function CoachAttendancePage() {
 
       {/* Stats */}
       {selectedEventId && !isLoading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-full bg-green-500/10">
@@ -249,6 +327,17 @@ export default function CoachAttendancePage() {
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-blue-500/10">
+                <Shield className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.excused}</p>
+                <p className="text-xs text-muted-foreground">Excused</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-full bg-muted">
                 <AlertCircle className="h-5 w-5 text-muted-foreground" />
               </div>
@@ -265,7 +354,40 @@ export default function CoachAttendancePage() {
       {selectedEventId && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Athletes ({enrolledAthletes.length})</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CardTitle className="text-lg">Athletes ({enrolledAthletes.length})</CardTitle>
+              
+              {/* Bulk Actions */}
+              {enrolledAthletes.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" disabled={bulkUpdating || isUpdating}>
+                      Bulk Actions
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleBulkMark("PRESENT")}>
+                      <Check className="mr-2 h-4 w-4 text-green-600" />
+                      Mark All Present
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkMark("ABSENT")}>
+                      <X className="mr-2 h-4 w-4 text-red-600" />
+                      Mark All Absent
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleBulkMark("LATE")}>
+                      <Clock className="mr-2 h-4 w-4 text-yellow-600" />
+                      Mark All Late
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkMark("EXCUSED")}>
+                      <Shield className="mr-2 h-4 w-4 text-blue-600" />
+                      Mark All Excused
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -319,7 +441,8 @@ export default function CoachAttendancePage() {
                               variant={currentStatus === "PRESENT" ? "default" : "outline"}
                               className={currentStatus === "PRESENT" ? "bg-green-600 hover:bg-green-700" : ""}
                               onClick={() => handleMarkAttendance(athlete.id, "PRESENT")}
-                              disabled={isUpdating}
+                              disabled={isUpdating || bulkUpdating}
+                              title="Present"
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -328,7 +451,8 @@ export default function CoachAttendancePage() {
                               variant={currentStatus === "LATE" ? "default" : "outline"}
                               className={currentStatus === "LATE" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
                               onClick={() => handleMarkAttendance(athlete.id, "LATE")}
-                              disabled={isUpdating}
+                              disabled={isUpdating || bulkUpdating}
+                              title="Late"
                             >
                               <Clock className="h-4 w-4" />
                             </Button>
@@ -337,9 +461,20 @@ export default function CoachAttendancePage() {
                               variant={currentStatus === "ABSENT" ? "default" : "outline"}
                               className={currentStatus === "ABSENT" ? "bg-red-600 hover:bg-red-700" : ""}
                               onClick={() => handleMarkAttendance(athlete.id, "ABSENT")}
-                              disabled={isUpdating}
+                              disabled={isUpdating || bulkUpdating}
+                              title="Absent"
                             >
                               <X className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant={currentStatus === "EXCUSED" ? "default" : "outline"}
+                              className={currentStatus === "EXCUSED" ? "bg-blue-600 hover:bg-blue-700" : ""}
+                              onClick={() => handleMarkAttendance(athlete.id, "EXCUSED")}
+                              disabled={isUpdating || bulkUpdating}
+                              title="Excused"
+                            >
+                              <Shield className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -358,9 +493,9 @@ export default function CoachAttendancePage() {
         <Card>
           <CardContent className="p-8 text-center">
             <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold mb-2">No Classes Today</h3>
+            <h3 className="font-semibold mb-2">No Classes on {format(selectedDate, "MMMM d, yyyy")}</h3>
             <p className="text-muted-foreground">
-              You don't have any classes assigned for today. Check your schedule for upcoming classes.
+              You don&apos;t have any classes assigned for this date. Try selecting a different date or check your schedule.
             </p>
           </CardContent>
         </Card>

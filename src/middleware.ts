@@ -1,11 +1,69 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
+/**
+ * Allowed origins for CORS
+ * In production, only uplifterinc.com and its subdomains are allowed
+ * In development, localhost variations are also allowed
+ */
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  
+  // Development origins
+  if (process.env.NODE_ENV === "development") {
+    if (origin.includes("localhost")) return true;
+    if (origin.includes("uplifterinc.localhost")) return true;
+  }
+  
+  // Production origins - uplifterinc.com and all subdomains
+  if (origin.endsWith(".uplifterinc.com") || origin === "https://uplifterinc.com") {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Handle CORS preflight and add CORS headers
+ */
+function handleCors(req: NextRequest, response: NextResponse): NextResponse {
+  const origin = req.headers.get("origin");
+  
+  if (origin && isAllowedOrigin(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    response.headers.set("Access-Control-Max-Age", "86400");
+  }
+  
+  return response;
+}
+
 export async function middleware(req: NextRequest) {
-  const token = await getToken({ req });
   const url = req.nextUrl;
   const hostname = req.headers.get("host") || "";
   const path = url.pathname;
+
+  // Handle CORS preflight requests for API routes
+  if (path.startsWith("/api") && req.method === "OPTIONS") {
+    const response = new NextResponse(null, { status: 204 });
+    return handleCors(req, response);
+  }
+
+  // Add CORS headers to API responses
+  if (path.startsWith("/api")) {
+    const response = NextResponse.next();
+    return handleCors(req, response);
+  }
+
+  // Bypass for static files
+  if (path.startsWith("/_next") || path.includes(".")) {
+    return NextResponse.next();
+  }
+
+  // Get auth token for protected routes
+  const token = await getToken({ req });
 
   // 1. Domain Parsing
   const isLocal = hostname.includes("localhost");
@@ -31,11 +89,6 @@ export async function middleware(req: NextRequest) {
     } else {
       currentHost = hostname.replace(`.uplifterinc.com`, "");
     }
-  }
-
-  // Bypass for static files and APIs
-  if (path.startsWith("/api") || path.startsWith("/_next") || path.includes(".")) {
-    return NextResponse.next();
   }
 
   // 2. Portal Routing
@@ -205,6 +258,19 @@ export async function middleware(req: NextRequest) {
           newPath = "/events";
       } else if (!path.startsWith("/events")) {
           newPath = `/events${path}`;
+      }
+      url.pathname = newPath;
+      return NextResponse.rewrite(url);
+  }
+
+  // SIGNUP PORTAL (signup.uplifterinc.com) -> /org-signup
+  // No auth required - public organization registration page
+  if (currentHost === "signup") {
+      let newPath = path;
+      if (path === "/") {
+          newPath = "/org-signup";
+      } else if (!path.startsWith("/org-signup")) {
+          newPath = `/org-signup${path}`;
       }
       url.pathname = newPath;
       return NextResponse.rewrite(url);
