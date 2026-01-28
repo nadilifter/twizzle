@@ -969,6 +969,9 @@ model WebsiteConfig {
   heroHeadline      String?
   heroSubheadline   String?
   heroText          String?  @db.Text
+  heroAgeRange      String?  // e.g., "All Ages Welcome", "Ages 5-18"
+  heroProgramPeriods String? // e.g., "Year-Round Programs", "Fall & Spring Sessions"
+  heroLocation      String?  // e.g., "Austin, TX"
   
   // Visibility
   showCalendar      Boolean  @default(true)

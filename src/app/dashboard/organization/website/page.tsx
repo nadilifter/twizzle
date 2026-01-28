@@ -21,6 +21,8 @@ export default function WebsitePage() {
   const [checkingSubdomain, setCheckingSubdomain] = useState(false);
   const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'available' | 'taken' | 'invalid' | 'error'>('idle');
   const [domainType, setDomainType] = useState<"subdomain" | "custom">("subdomain");
+  // Track the subdomain that's currently saved/owned by this org
+  const [ownedSubdomain, setOwnedSubdomain] = useState<string | null>(null);
 
   // Fetch config on mount
   useEffect(() => {
@@ -37,8 +39,9 @@ export default function WebsitePage() {
         if (data.domain) {
             setDomainType("custom");
         }
-        // If the subdomain is owned by this org, mark it as available
+        // If the subdomain is owned by this org, track it and mark as available
         if (data.subdomain && data.subdomainOwned) {
+            setOwnedSubdomain(data.subdomain);
             setSubdomainStatus('available');
         }
         setLoading(false);
@@ -66,6 +69,10 @@ export default function WebsitePage() {
       if (!res.ok) throw new Error("Failed to save");
       const data = await res.json();
       setConfig(data);
+      // After save, the current subdomain is now owned by this org
+      if (data.subdomain) {
+        setOwnedSubdomain(data.subdomain);
+      }
       toast.success("Website configuration saved");
     } catch (error) {
       toast.error("Failed to save changes");
@@ -85,8 +92,9 @@ export default function WebsitePage() {
             setSubdomainStatus('idle');
             return;
         }
-        // Skip check if we already know this subdomain is owned by us
-        if (config.subdomainOwned && subdomainStatus === 'available') {
+        // Skip check if the current subdomain matches the one we already own
+        if (ownedSubdomain && config.subdomain === ownedSubdomain) {
+            setSubdomainStatus('available');
             return;
         }
         setCheckingSubdomain(true);
@@ -101,6 +109,10 @@ export default function WebsitePage() {
             const data = await res.json();
             if (data.available) {
                 setSubdomainStatus('available');
+                // If the API confirms we own this subdomain, update our tracked value
+                if (data.owned) {
+                    setOwnedSubdomain(config.subdomain);
+                }
             } else {
                 setSubdomainStatus(data.reason === 'Invalid format' ? 'invalid' : 'taken');
             }
@@ -114,7 +126,7 @@ export default function WebsitePage() {
 
     const timer = setTimeout(checkSubdomain, 500);
     return () => clearTimeout(timer);
-  }, [config.subdomain, config.subdomainOwned, subdomainStatus]);
+  }, [config.subdomain, ownedSubdomain]);
 
   const handlePublishToggle = async () => {
     const newStatus = !config.isPublished;
@@ -143,6 +155,10 @@ export default function WebsitePage() {
       if (!res.ok) throw new Error("Failed to update status");
       const data = await res.json();
       setConfig(data);
+      // After save, the current subdomain is now owned by this org
+      if (data.subdomain) {
+        setOwnedSubdomain(data.subdomain);
+      }
       toast.success(newStatus ? "Site is now live!" : "Site unpublished");
     } catch (error) {
       console.error(error);
@@ -376,6 +392,38 @@ export default function WebsitePage() {
               value={config.heroText || ""} 
               onChange={(val) => updateConfig("heroText", val)} 
             />
+          </div>
+          
+          <Separator />
+          
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Age Range</Label>
+              <Input 
+                value={config.heroAgeRange || ""} 
+                onChange={(e) => updateConfig("heroAgeRange", e.target.value)}
+                placeholder="All Ages Welcome" 
+              />
+              <p className="text-xs text-muted-foreground">Leave empty to hide this badge</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Program Periods</Label>
+              <Input 
+                value={config.heroProgramPeriods || ""} 
+                onChange={(e) => updateConfig("heroProgramPeriods", e.target.value)}
+                placeholder="Year-Round Programs" 
+              />
+              <p className="text-xs text-muted-foreground">Leave empty to hide this badge</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <Input 
+                value={config.heroLocation || ""} 
+                onChange={(e) => updateConfig("heroLocation", e.target.value)}
+                placeholder="Austin, TX" 
+              />
+              <p className="text-xs text-muted-foreground">Leave empty to hide this badge</p>
+            </div>
           </div>
         </CardContent>
       </Card>

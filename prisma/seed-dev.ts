@@ -776,11 +776,11 @@ async function main() {
   await Promise.all([
     prisma.websiteConfig.upsert({
       where: { organizationId: ORG1_ID }, update: {},
-      create: { organizationId: ORG1_ID, subdomain: "sunrise-gymnastics", primaryColor: "#FF6B35", secondaryColor: "#004E89", heroHeadline: "Where Champions Begin", heroSubheadline: "Building confidence through gymnastics", showCalendar: true, showRegistration: true, showLogin: true, showContact: true, isPublished: true },
+      create: { organizationId: ORG1_ID, subdomain: "sunrise-gymnastics", primaryColor: "#FF6B35", secondaryColor: "#004E89", heroHeadline: "Where Champions Begin", heroSubheadline: "Building confidence through gymnastics", heroAgeRange: "Ages 3-18", heroProgramPeriods: "Year-Round Programs", heroLocation: "Sunnyvale, CA", showCalendar: true, showRegistration: true, showLogin: true, showContact: true, isPublished: true },
     }),
     prisma.websiteConfig.upsert({
       where: { organizationId: ORG2_ID }, update: {},
-      create: { organizationId: ORG2_ID, subdomain: "metro-sports", primaryColor: "#2D5A27", secondaryColor: "#F5A623", heroHeadline: "Play. Compete. Thrive.", heroSubheadline: "Your community sports destination", showCalendar: true, showRegistration: true, showLogin: true, showContact: true, isPublished: true },
+      create: { organizationId: ORG2_ID, subdomain: "metro-sports", primaryColor: "#2D5A27", secondaryColor: "#F5A623", heroHeadline: "Play. Compete. Thrive.", heroSubheadline: "Your community sports destination", heroAgeRange: "All Ages Welcome", heroProgramPeriods: "Seasonal Programs", heroLocation: "San Jose, CA", showCalendar: true, showRegistration: true, showLogin: true, showContact: true, isPublished: true },
     }),
   ]);
   
@@ -800,6 +800,9 @@ async function main() {
         secondaryColor: existingOrg.slug === "demo-gym" ? "#10B981" : "#EC4899",
         heroHeadline: existingOrg.slug === "demo-gym" ? "Welcome to Demo Gym" : "Uplifter Platform",
         heroSubheadline: existingOrg.slug === "demo-gym" ? "Your gymnastics journey starts here" : "Empowering sports organizations",
+        heroAgeRange: existingOrg.slug === "demo-gym" ? "All Ages Welcome" : null,
+        heroProgramPeriods: existingOrg.slug === "demo-gym" ? "Year-Round Programs" : null,
+        heroLocation: existingOrg.slug === "demo-gym" ? "Anytown, USA" : null,
         showCalendar: true,
         showRegistration: true,
         showLogin: true,

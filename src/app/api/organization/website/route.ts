@@ -12,6 +12,9 @@ const websiteConfigSchema = z.object({
   heroHeadline: z.string().optional().nullable(),
   heroSubheadline: z.string().optional().nullable(),
   heroText: z.string().optional().nullable(),
+  heroAgeRange: z.string().optional().nullable(),
+  heroProgramPeriods: z.string().optional().nullable(),
+  heroLocation: z.string().optional().nullable(),
   showCalendar: z.boolean().optional(),
   showRegistration: z.boolean().optional(),
   showLogin: z.boolean().optional(),
@@ -77,7 +80,8 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(config);
+    // Include subdomainOwned flag so frontend knows this org owns this subdomain
+    return NextResponse.json({ ...config, subdomainOwned: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors[0].message }, { status: 400 });

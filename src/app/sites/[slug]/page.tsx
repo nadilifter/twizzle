@@ -8,6 +8,14 @@ import { Users, Calendar, MapPin, Trophy } from "lucide-react";
 import { ProgramList } from "@/components/sites/program-list";
 import { InfoSection } from "@/components/sites/info-section";
 
+// Helper to check if HTML content has actual text (not just empty tags)
+function hasContent(html: string | null | undefined): boolean {
+  if (!html) return false;
+  // Strip HTML tags and check if there's any text content
+  const textContent = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+  return textContent.length > 0;
+}
+
 export default async function SitePage({ params }: { params: { slug: string } }) {
   const config = await db.websiteConfig.findUnique({
     where: { subdomain: params.slug },
@@ -59,9 +67,13 @@ export default async function SitePage({ params }: { params: { slug: string } })
             </Badge>
 
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              {config.heroHeadline || "Welcome to"}
+              {config.heroHeadline && (
+                <>
+                  {config.heroHeadline}
+                </>
+              )}
               <span 
-                className="block mt-2"
+                className={config.heroHeadline ? "block mt-2" : ""}
                 style={{ 
                   color: config.secondaryColor && config.secondaryColor !== "#ffffff" 
                     ? config.secondaryColor 
@@ -72,24 +84,34 @@ export default async function SitePage({ params }: { params: { slug: string } })
               </span>
             </h1>
 
-            <p className="mb-8 text-lg text-white/80 sm:text-xl">
-              {config.heroSubheadline || `Join ${config.organization.name} and be part of our community. We offer programs for all ages and skill levels.`}
-            </p>
+            {config.heroSubheadline && (
+              <p className="mb-8 text-lg text-white/80 sm:text-xl">
+                {config.heroSubheadline}
+              </p>
+            )}
 
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-white/70">
-              <div className="flex items-center gap-1.5">
-                <Users className="h-4 w-4" />
-                <span>All Ages Welcome</span>
+            {(config.heroAgeRange || config.heroProgramPeriods || config.heroLocation) && (
+              <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-white/70">
+                {config.heroAgeRange && (
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-4 w-4" />
+                    <span>{config.heroAgeRange}</span>
+                  </div>
+                )}
+                {config.heroProgramPeriods && (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4" />
+                    <span>{config.heroProgramPeriods}</span>
+                  </div>
+                )}
+                {config.heroLocation && (
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4" />
+                    <span>{config.heroLocation}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
-                <span>Year-Round Programs</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4" />
-                <span>Join Today</span>
-              </div>
-            </div>
+            )}
 
             {config.showRegistration && (
               <div className="mt-8">
@@ -129,13 +151,13 @@ export default async function SitePage({ params }: { params: { slug: string } })
       )}
 
       {/* Hero Text / Additional Content */}
-      {config.heroText && (
+      {hasContent(config.heroText) && (
         <section className="py-16 bg-muted/30">
           <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
             <div className="max-w-3xl mx-auto bg-card rounded-2xl p-8 md:p-12 shadow-sm border">
               <div 
                 className="prose prose-lg prose-slate mx-auto" 
-                dangerouslySetInnerHTML={{ __html: config.heroText }} 
+                dangerouslySetInnerHTML={{ __html: config.heroText! }} 
               />
             </div>
           </div>
