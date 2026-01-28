@@ -1,5 +1,5 @@
 export const DEFAULT_WEBSITE_ASSETS = {
-  logo: "/defaults/logo-default.ico",
+  logo: "/uplifter-logo.png",
   favicon: "/defaults/favicon-default.ico",
   heroImage: "/defaults/hero-default.ico",
   primaryColor: "#4A1D91", // Deep purple

@@ -47,6 +47,10 @@ export default async function AdminDashboardPage() {
           <CardContent>
             <ul className="list-disc pl-5 space-y-2">
               <li>
+                <span className="font-medium">Microsoft & Facebook Login</span> (login/signup forms) - 
+                <span className="text-muted-foreground ml-2">OAuth buttons hidden until integration is implemented. Only Google OAuth is active.</span>
+              </li>
+              <li>
                 <span className="font-medium">App Page</span> (/dashboard/organization/app) - 
                 <span className="text-muted-foreground ml-2">Hidden from My Organization section.</span>
               </li>

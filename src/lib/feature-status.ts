@@ -150,9 +150,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "demo",
     description: "App configuration uses sample data",
   },
-  "/dashboard/organization/facility": {
-    status: "demo",
-    description: "Facility management uses sample data",
+  "/dashboard/organization/facilities": {
+    status: "live",
+    description: "Facility management with full CRUD operations",
   },
   "/dashboard/organization/schedules": {
     status: "demo",

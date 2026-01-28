@@ -205,6 +205,23 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      // 6. Create the default facility with organization's address
+      await tx.facility.create({
+        data: {
+          organizationId: organization.id,
+          name: validatedData.orgName,
+          street: validatedData.street || null,
+          city: validatedData.city || null,
+          stateProvince: validatedData.stateProvince || null,
+          postalCode: validatedData.postalCode || null,
+          country: validatedData.country || null,
+          phone: validatedData.phone || null,
+          email: validatedData.orgEmail || null,
+          isDefault: true,
+          status: "ACTIVE",
+        },
+      })
+
       return { organization, user }
     })
 

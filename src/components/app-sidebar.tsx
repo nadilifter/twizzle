@@ -257,8 +257,8 @@ const data = {
         },
         */
         {
-          title: "Facility",
-          url: "/dashboard/organization/facility",
+          title: "Facilities",
+          url: "/dashboard/organization/facilities",
         },
         {
           title: "Schedules",

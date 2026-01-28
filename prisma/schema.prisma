@@ -67,6 +67,10 @@ model Organization {
   
   // Media
   media         Media[]
+  
+  // Facilities
+  facilities    Facility[]
+  equipment     Equipment[]
 }
 
 model OrganizationMember {
@@ -114,6 +118,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   media         Media[]
+  facilityAssignments FacilityAssignment[]
 }
 
 model Session {
@@ -450,10 +455,11 @@ model Event {
   meetingLink    String?
   timezone       String?
   capacity       Int?
-  location       Json?     // { lat, lng, address, name }
+  location       Json?     // { lat, lng, address, name } - for external/custom locations
   details        Json?     // { whatToBring, whatToExpect, requirements }
   programId      String?
   coachId        String?
+  facilityId     String?   // Optional - links to a Facility for scheduling
   requiredMemberships MembershipInstance[]
   organizationId String
   createdAt      DateTime  @default(now())
@@ -463,6 +469,7 @@ model Event {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   program      Program?     @relation(fields: [programId], references: [id])
   coach        User?        @relation("EventCoach", fields: [coachId], references: [id])
+  facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   attendances  Attendance[]
   lineItems    LineItem[]
   media        Media[]
@@ -1114,6 +1121,139 @@ model Media {
 enum MediaType {
   IMAGE
   VIDEO
+}
+
+// ============================================
+// Facilities & Equipment
+// ============================================
+
+model Facility {
+  id             String         @id @default(cuid())
+  organizationId String
+  name           String
+  
+  // Address
+  street         String?
+  city           String?
+  stateProvince  String?
+  postalCode     String?
+  country        String?
+  
+  // Contact
+  phone          String?
+  email          String?
+  
+  // Status & Metadata
+  status         FacilityStatus @default(ACTIVE)
+  isDefault      Boolean        @default(false)
+  squareFootage  Int?
+  maxCapacity    Int?
+  description    String?
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  trainingZones  TrainingZone[]
+  equipment      Equipment[]
+  assignments    FacilityAssignment[]
+  events         Event[]
+
+  @@index([organizationId])
+}
+
+enum FacilityStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+model TrainingZone {
+  id          String     @id @default(cuid())
+  facilityId  String
+  name        String
+  type        String     // e.g., "Floor", "Vault", "Bars", "Beam", "Trampoline"
+  capacity    Int?
+  status      ZoneStatus @default(OPEN)
+  description String?
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  facility    Facility   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  equipment   Equipment[]
+
+  @@index([facilityId])
+}
+
+enum ZoneStatus {
+  OPEN
+  CLOSED
+  MAINTENANCE
+}
+
+model Equipment {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  facilityId         String?            // Optional - null means org-level equipment
+  trainingZoneId     String?            // Optional - for zone assignment within facility
+  
+  name               String
+  type               String             // e.g., "Apparatus", "Mat", "Training Aid"
+  serialNumber       String?
+  condition          EquipmentCondition @default(GOOD)
+  status             EquipmentStatus    @default(ACTIVE)
+  
+  // Tracking
+  purchaseDate       DateTime?
+  lastInspectionDate DateTime?
+  notes              String?
+  
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Relations
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility           Facility?          @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  trainingZone       TrainingZone?      @relation(fields: [trainingZoneId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([facilityId])
+  @@index([trainingZoneId])
+}
+
+enum EquipmentCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  UNSAFE
+}
+
+enum EquipmentStatus {
+  ACTIVE
+  RETIRED
+  MAINTENANCE
+}
+
+model FacilityAssignment {
+  id         String   @id @default(cuid())
+  facilityId String
+  userId     String
+  isPrimary  Boolean  @default(false)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, userId])
+  @@index([facilityId])
+  @@index([userId])
 }
 
 // ============================================
