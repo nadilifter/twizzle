@@ -108,14 +108,15 @@ export async function PATCH(
     return NextResponse.json(plan)
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const message = error.errors?.[0]?.message || "Validation error"
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: message },
         { status: 400 }
       )
     }
     console.error("Error updating plan:", error)
     return NextResponse.json(
-      { error: "Failed to update plan" },
+      { error: error instanceof Error ? error.message : "Failed to update plan" },
       { status: 500 }
     )
   }

@@ -47,6 +47,10 @@ export default async function AdminDashboardPage() {
           <CardContent>
             <ul className="list-disc pl-5 space-y-2">
               <li>
+                <span className="font-medium">App Page</span> (/dashboard/organization/app) - 
+                <span className="text-muted-foreground ml-2">Hidden from My Organization section.</span>
+              </li>
+              <li>
                 <span className="font-medium">Analytics Page</span> (/dashboard/analytics) - 
                 <span className="text-muted-foreground ml-2">Hidden from Dashboard section.</span>
               </li>

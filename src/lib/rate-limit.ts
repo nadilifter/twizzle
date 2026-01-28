@@ -26,16 +26,19 @@ export interface RateLimitResult {
 
 /**
  * Default rate limit configurations for different endpoints
+ * More lenient in development to avoid hitting limits during testing
  */
+const isDev = process.env.NODE_ENV === "development";
+
 export const RATE_LIMITS = {
   /** Auth endpoints (login, signup) - strict to prevent brute force */
-  auth: { limit: 5, windowSeconds: 60 }, // 5 attempts per minute
+  auth: { limit: isDev ? 30 : 5, windowSeconds: 60 }, // 30/min dev, 5/min prod
   /** Password reset - very strict */
-  passwordReset: { limit: 3, windowSeconds: 300 }, // 3 attempts per 5 minutes
+  passwordReset: { limit: isDev ? 10 : 3, windowSeconds: 300 }, // More lenient in dev
   /** API endpoints - more lenient for legitimate usage */
   api: { limit: 100, windowSeconds: 60 }, // 100 requests per minute
   /** Sensitive operations (payment, etc) */
-  sensitive: { limit: 10, windowSeconds: 60 }, // 10 requests per minute
+  sensitive: { limit: isDev ? 30 : 10, windowSeconds: 60 }, // More lenient in dev
 } as const;
 
 /**

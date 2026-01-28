@@ -6,9 +6,6 @@ import Link from "next/link"
 export const metadata = {
   title: "Sign Up - Uplifter",
   description: "Create your organization on Uplifter - The complete platform for sports clubs and organizations",
-  icons: {
-    icon: "/favicon.ico",
-  },
 }
 
 export default function SignupsLayout({
@@ -27,14 +24,15 @@ export default function SignupsLayout({
             <Image
               src="/uplifter-logo.svg"
               alt="Uplifter"
-              width={90}
+              width={32}
               height={32}
               className="dark:invert"
             />
+            <span className="font-semibold text-xl">Uplifter</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link 
-              href="https://login.uplifterinc.com" 
+              href="https://uplifterinc.com/login" 
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Already have an account? Sign in

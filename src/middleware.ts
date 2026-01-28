@@ -93,12 +93,29 @@ export async function middleware(req: NextRequest) {
 
   // 2. Portal Routing
   
+  // LOGIN PORTAL (login.uplifterinc.com) -> /(auth)/*
+  // In local dev, Google OAuth must go through localhost:3000 (Google's restriction)
+  // The login form handles this by posting OAuth to localhost:3000, then session-bridge
+  // transfers the session back to uplifterinc.localhost subdomains
+  if (currentHost === "login") {
+    let newPath = path;
+    if (path === "/") {
+      newPath = "/login"; // Default to login page
+    }
+    // Routes like /login, /signup, /forgot-password are in the (auth) group
+    url.pathname = newPath;
+    return NextResponse.rewrite(url);
+  }
+
+  // Helper to get the login host based on environment
+  const getLoginHost = () => isLocal ? "login.uplifterinc.localhost:3000" : "login.uplifterinc.com";
+
   // ADMIN PORTAL (admin.uplifterinc.com) -> /dashboard
   if (currentHost === "admin") {
-    // Redirect /login to centralized login to avoid 404s and support Google Auth
+    // Redirect /login to centralized login portal
     if (path.startsWith("/login")) {
          const protocol = req.nextUrl.protocol;
-         const loginHost = isLocal ? "uplifterinc.localhost:3000" : "uplifterinc.com";
+         const loginHost = getLoginHost();
          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
          // Redirect to root of admin portal after login, or preserve callback
          const adminHost = isLocal ? `admin.${localRoot}` : "admin.uplifterinc.com";
@@ -110,8 +127,7 @@ export async function middleware(req: NextRequest) {
     // Auth Check for Admin
     if (!token && !path.startsWith("/login")) {
       const protocol = req.nextUrl.protocol;
-      // Use uplifterinc.localhost:3000 for local dev to share cookies across subdomains
-      const loginHost = isLocal ? "uplifterinc.localhost:3000" : "uplifterinc.com";
+      const loginHost = getLoginHost();
       const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
       loginUrl.searchParams.set("callbackUrl", req.url);
       return NextResponse.redirect(loginUrl);
@@ -140,10 +156,10 @@ export async function middleware(req: NextRequest) {
 
   // SUPER ADMIN (superadmin.uplifterinc.com) -> /superadmin
   if (currentHost === "superadmin") {
-      // Redirect /login to centralized login
+      // Redirect /login to centralized login portal
       if (path.startsWith("/login")) {
          const protocol = req.nextUrl.protocol;
-         const loginHost = isLocal ? "uplifterinc.localhost:3000" : "uplifterinc.com";
+         const loginHost = getLoginHost();
          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
          const superAdminHost = isLocal ? `superadmin.${localRoot}` : "superadmin.uplifterinc.com";
          const existingCallback = req.nextUrl.searchParams.get("callbackUrl");
@@ -153,7 +169,7 @@ export async function middleware(req: NextRequest) {
 
       if (!token?.isSuperAdmin && !path.startsWith("/login")) {
          const protocol = req.nextUrl.protocol;
-         const loginHost = isLocal ? "uplifterinc.localhost:3000" : "uplifterinc.com";
+         const loginHost = getLoginHost();
          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
          loginUrl.searchParams.set("callbackUrl", req.url);
          return NextResponse.redirect(loginUrl);
@@ -195,10 +211,10 @@ export async function middleware(req: NextRequest) {
 
   // POS PORTAL (pos.uplifterinc.com) -> /pos
   if (currentHost === "pos") {
-      // Redirect /login to centralized login
+      // Redirect /login to centralized login portal
       if (path.startsWith("/login")) {
           const protocol = req.nextUrl.protocol;
-          const loginHost = isLocal ? "uplifterinc.localhost:3000" : "uplifterinc.com";
+          const loginHost = getLoginHost();
           const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
           const posHost = isLocal ? `pos.${localRoot}` : "pos.uplifterinc.com";
           
@@ -218,12 +234,11 @@ export async function middleware(req: NextRequest) {
       // Auth Check for POS - redirect unauthenticated users to login
       if (!token && !path.startsWith("/login")) {
           const protocol = req.nextUrl.protocol;
-          const loginHost = isLocal ? "uplifterinc.localhost:3000" : "uplifterinc.com";
+          const loginHost = getLoginHost();
           const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
           
           // Preserve orgId in callback URL if present
-          const orgId = req.nextUrl.searchParams.get("orgId");
-          let callbackUrl = req.url;
+          const callbackUrl = req.url;
           
           loginUrl.searchParams.set("callbackUrl", callbackUrl);
           return NextResponse.redirect(loginUrl);

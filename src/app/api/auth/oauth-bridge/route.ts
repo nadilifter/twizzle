@@ -6,10 +6,35 @@ import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 /**
  * OAuth Bridge Endpoint
  * 
+ * LOCAL DEVELOPMENT ONLY:
  * This endpoint is called after Google OAuth completes on localhost:3000.
  * It creates a bridge token from the session and redirects to the session-bridge
  * endpoint on uplifterinc.localhost to set the cookie with the correct domain.
+ * 
+ * PRODUCTION:
+ * In production, OAuth goes directly through login.uplifterinc.com with cookies
+ * set on .uplifterinc.com, so this bridge is not needed. However, it still works
+ * as a fallback if someone lands here.
  */
+
+function getEnvironmentUrls(req: NextRequest) {
+  const host = req.headers.get("host") || "";
+  const isLocal = host.includes("localhost");
+  
+  if (isLocal) {
+    return {
+      loginBaseUrl: "http://login.uplifterinc.localhost:3000",
+      bridgeBaseUrl: "http://uplifterinc.localhost:3000",
+      defaultCallback: "http://admin.uplifterinc.localhost:3000/",
+    };
+  } else {
+    return {
+      loginBaseUrl: "https://login.uplifterinc.com",
+      bridgeBaseUrl: "https://uplifterinc.com",
+      defaultCallback: "https://admin.uplifterinc.com/",
+    };
+  }
+}
 
 export async function GET(req: NextRequest) {
   // Rate limit to prevent abuse
@@ -18,8 +43,9 @@ export async function GET(req: NextRequest) {
     return rateLimitResponse;
   }
 
+  const { loginBaseUrl, bridgeBaseUrl, defaultCallback } = getEnvironmentUrls(req);
   const searchParams = req.nextUrl.searchParams;
-  const callbackUrl = searchParams.get("callbackUrl") || "http://admin.uplifterinc.localhost:3000/";
+  const callbackUrl = searchParams.get("callbackUrl") || defaultCallback;
 
   try {
     // Get the JWT token from the session that was just created
@@ -33,7 +59,7 @@ export async function GET(req: NextRequest) {
     if (!token || !token.email) {
       console.error("OAuth bridge: No valid session found");
       // Redirect back to login with error
-      const loginUrl = new URL("/login", "http://uplifterinc.localhost:3000");
+      const loginUrl = new URL("/login", loginBaseUrl);
       loginUrl.searchParams.set("error", "OAuthSessionMissing");
       loginUrl.searchParams.set("callbackUrl", callbackUrl);
       return NextResponse.redirect(loginUrl);
@@ -56,8 +82,8 @@ export async function GET(req: NextRequest) {
     const tokenData = { email, exp, signature };
     const bridgeToken = Buffer.from(JSON.stringify(tokenData)).toString("base64url");
 
-    // Redirect to session-bridge on uplifterinc.localhost
-    const bridgeUrl = new URL("/api/auth/session-bridge", "http://uplifterinc.localhost:3000");
+    // Redirect to session-bridge to set cookie with correct domain
+    const bridgeUrl = new URL("/api/auth/session-bridge", bridgeBaseUrl);
     bridgeUrl.searchParams.set("token", bridgeToken);
     bridgeUrl.searchParams.set("callbackUrl", callbackUrl);
 
@@ -65,7 +91,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(bridgeUrl);
   } catch (error) {
     console.error("OAuth bridge error:", error);
-    const loginUrl = new URL("/login", "http://uplifterinc.localhost:3000");
+    const loginUrl = new URL("/login", loginBaseUrl);
     loginUrl.searchParams.set("error", "OAuthBridgeError");
     return NextResponse.redirect(loginUrl);
   }

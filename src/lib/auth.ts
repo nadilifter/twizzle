@@ -35,11 +35,15 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        // In production, share cookies across all subdomains
-        // In development, don't set domain - let NextAuth default to request host
-        // This allows OAuth to work on localhost:3000 while session-bridge
-        // sets the correct domain for uplifterinc.localhost subdomains
-        ...(process.env.NODE_ENV === "production" && { domain: ".uplifterinc.com" })
+        // Share cookies across all subdomains
+        // This is required for:
+        // 1. Session sharing across admin.*, pos.*, etc.
+        // 2. Proper signOut from any subdomain (must match the domain the cookie was set on)
+        // Note: OAuth on localhost:3000 sets cookies on localhost, but session-bridge
+        // handles transferring the session to uplifterinc.localhost subdomains
+        domain: process.env.NODE_ENV === "production" 
+          ? ".uplifterinc.com" 
+          : ".uplifterinc.localhost"
       }
     }
   },

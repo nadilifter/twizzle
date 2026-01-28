@@ -7,10 +7,36 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { signIn, getCsrfToken } from "next-auth/react"
 import { toast } from "sonner"
+
+/**
+ * Get the OAuth host URL based on environment.
+ * 
+ * LOCAL DEVELOPMENT:
+ *   Google OAuth doesn't allow subdomains on localhost (e.g., login.uplifterinc.localhost).
+ *   So we must use localhost:3000 for OAuth callbacks, then the session-bridge
+ *   transfers the session to the uplifterinc.localhost subdomains.
+ * 
+ * PRODUCTION:
+ *   OAuth goes directly through login.uplifterinc.com.
+ */
+function getOAuthHost(): string {
+  if (typeof window === "undefined") return "http://localhost:3000";
+  
+  const hostname = window.location.hostname;
+  const isLocal = hostname.includes("localhost");
+  
+  if (isLocal) {
+    // Google OAuth must go through localhost:3000 (not subdomains)
+    return "http://localhost:3000";
+  } else {
+    // Production: OAuth goes through the login subdomain
+    return "https://login.uplifterinc.com";
+  }
+}
 
 export function LoginForm() {
   const searchParams = useSearchParams()
@@ -21,6 +47,9 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [csrfToken, setCsrfToken] = useState<string>("")
   const [googleCsrfToken, setGoogleCsrfToken] = useState<string>("")
+  
+  // Determine OAuth host based on environment
+  const oauthHost = useMemo(() => getOAuthHost(), [])
 
   useEffect(() => {
     // Get CSRF token for current domain (credentials login)
@@ -28,9 +57,10 @@ export function LoginForm() {
       if (token) setCsrfToken(token)
     })
     
-    // Get CSRF token from localhost:3000 for Google OAuth
-    // This is needed because Google OAuth must go through localhost:3000
-    fetch("http://localhost:3000/api/auth/csrf", {
+    // Get CSRF token from the OAuth host for Google OAuth
+    // In local dev, this is localhost:3000 (Google's restriction)
+    // In production, this is login.uplifterinc.com
+    fetch(`${oauthHost}/api/auth/csrf`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -44,7 +74,7 @@ export function LoginForm() {
           if (token) setGoogleCsrfToken(token)
         })
       })
-  }, [])
+  }, [oauthHost])
   
   // Check for OAuth errors in URL params
   const urlError = searchParams.get("error")
@@ -121,10 +151,12 @@ export function LoginForm() {
 
   return (
     <>
-        {/* Hidden form for Google OAuth - Posts to localhost:3000 for Google's authorized origins */}
+        {/* Hidden form for Google OAuth
+            - Local dev: Posts to localhost:3000 (Google doesn't allow localhost subdomains)
+            - Production: Posts to login.uplifterinc.com */}
         <form 
           id="google-signin-form"
-          action="http://localhost:3000/api/auth/signin/google" 
+          action={`${oauthHost}/api/auth/signin/google`}
           method="POST"
           style={{ display: 'none' }}
         >

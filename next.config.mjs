@@ -1,4 +1,26 @@
 /** @type {import('next').NextConfig} */
+
+// Determine CSP directives based on environment
+// In development, we need to allow connections/forms to localhost:3000 for Google OAuth
+// (Google doesn't allow localhost subdomains as OAuth redirect URIs)
+// In production, everything goes through the login subdomain directly
+const getFormActionCsp = () => {
+  if (process.env.NODE_ENV === "production") {
+    return "form-action 'self' https://login.uplifterinc.com https://accounts.google.com";
+  }
+  // Development: allow localhost:3000 for OAuth
+  return "form-action 'self' http://localhost:3000 https://accounts.google.com";
+};
+
+const getConnectSrcCsp = () => {
+  const base = "'self' https://*.adyen.com https://*.upstash.io wss:";
+  if (process.env.NODE_ENV === "production") {
+    return `connect-src ${base}`;
+  }
+  // Development: allow fetching CSRF token from localhost:3000
+  return `connect-src ${base} http://localhost:3000`;
+};
+
 const nextConfig = {
   output: "standalone",
   // Improve local development performance
@@ -73,10 +95,10 @@ const nextConfig = {
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
-          "connect-src 'self' https://*.adyen.com https://*.upstash.io wss:",
+          getConnectSrcCsp(),
           "frame-src 'self' https://*.adyen.com https://pay.google.com",
           "frame-ancestors 'none'",
-          "form-action 'self'",
+          getFormActionCsp(),
           "base-uri 'self'",
           "object-src 'none'",
         ].join("; "),

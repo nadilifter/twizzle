@@ -1,6 +1,7 @@
 import React from "react";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,28 @@ import { VisitorTracker } from "@/components/sites/visitor-tracker";
 import { CookieNotice } from "@/components/sites/cookie-notice";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Get the login URL for tenant sites.
+ * Redirects to the centralized login portal with callback to return to the tenant site.
+ */
+function getLoginUrl(subdomain: string, host: string): string {
+  const isLocal = host.includes("localhost");
+  const protocol = isLocal ? "http" : "https";
+  
+  // Construct the callback URL to return to this tenant site after login
+  const tenantHost = isLocal 
+    ? `${subdomain}.uplifterinc.localhost:3000`
+    : `${subdomain}.uplifterinc.com`;
+  const callbackUrl = `${protocol}://${tenantHost}/`;
+  
+  // Construct the login URL
+  const loginHost = isLocal 
+    ? "login.uplifterinc.localhost:3000"
+    : "login.uplifterinc.com";
+  
+  return `${protocol}://${loginHost}/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+}
 
 // Helper to convert hex to HSL
 function hexToHSL(hex: string): string {
@@ -85,6 +108,11 @@ export default async function SiteLayout({
     return notFound();
   }
 
+  // Get host for constructing login URL
+  const headersList = headers();
+  const host = headersList.get("host") || "";
+  const loginUrl = getLoginUrl(subdomain, host);
+
   const primaryColor = config.primaryColor || "#000000";
   const secondaryColor = config.secondaryColor || "#ffffff";
   
@@ -139,7 +167,7 @@ export default async function SiteLayout({
                 <div className="flex items-center gap-3 text-sm">
                     <ThemeToggle />
                     <Button asChild size="sm" className="text-sm font-medium">
-                        <Link href={`/login?callbackUrl=${encodeURIComponent(`/sites/${subdomain}/`)}`}>Login</Link>
+                        <Link href={loginUrl}>Login</Link>
                     </Button>
                 </div>
             </div>

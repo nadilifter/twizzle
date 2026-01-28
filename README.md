@@ -140,6 +140,8 @@ To develop locally with the multi-portal architecture, you must update your `/et
 **Add these lines:**
 ```
 127.0.0.1   uplifterinc.localhost
+127.0.0.1   login.uplifterinc.localhost
+127.0.0.1   signup.uplifterinc.localhost
 127.0.0.1   admin.uplifterinc.localhost
 127.0.0.1   superadmin.uplifterinc.localhost
 127.0.0.1   coach.uplifterinc.localhost
@@ -152,6 +154,8 @@ To develop locally with the multi-portal architecture, you must update your `/et
 ```
 
 **Access Points:**
+-   **Login Portal**: `http://login.uplifterinc.localhost:3000` - Centralized authentication
+-   **Organization Signup**: `http://signup.uplifterinc.localhost:3000` - New organization registration
 -   **Super Admin**: `http://superadmin.uplifterinc.localhost:3000`
 -   **Business Dashboard**: `http://admin.uplifterinc.localhost:3000`
 -   **Coach Portal**: `http://coach.uplifterinc.localhost:3000`
@@ -161,6 +165,26 @@ To develop locally with the multi-portal architecture, you must update your `/et
 -   **Events Portal**: `http://events.uplifterinc.localhost:3000` - Day-of-event operations (QR check-in, athlete search, schedule)
 -   **Tenant Site 1**: `http://demo-gym.uplifterinc.localhost:3000`
 -   **Tenant Site 2**: `http://londonwestern.uplifterinc.localhost:3000`
+
+### Authentication Architecture
+
+Authentication is centralized at `login.uplifterinc.com` (production) or `login.uplifterinc.localhost:3000` (local).
+
+**How it works:**
+1. All protected portals redirect unauthenticated users to the login portal
+2. After successful login, users are redirected back to the original portal via `callbackUrl`
+3. Session cookies are shared across all subdomains via the `.uplifterinc.com` cookie domain
+
+**Google OAuth (Local Development):**
+Google doesn't allow subdomains on localhost (e.g., `login.uplifterinc.localhost`) as OAuth redirect URIs. To work around this:
+1. OAuth callbacks go through `localhost:3000` (which Google accepts)
+2. The `oauth-bridge` endpoint creates a signed bridge token
+3. The `session-bridge` endpoint sets the session cookie on the correct domain
+4. User is redirected to their original destination
+
+**Google OAuth (Production):**
+Configure these redirect URIs in Google Cloud Console:
+- `https://login.uplifterinc.com/api/auth/callback/google`
 
 Turborepo task filtering should be used sparingly and intentionally. Default workflows should remain simple.
 

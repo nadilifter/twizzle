@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import type {
   AttendanceMetricsResponse,
@@ -37,14 +37,16 @@ export function useAttendanceMetrics(
   const [metrics, setMetrics] = useState<AttendanceMetricsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentFilters, setCurrentFilters] = useState<UseAttendanceMetricsFilters>(initialFilters);
+  // Use a ref instead of state to avoid re-creating fetchMetrics on filter changes
+  const currentFiltersRef = useRef<UseAttendanceMetricsFilters>(initialFilters);
 
   const fetchMetrics = useCallback(async (filters?: UseAttendanceMetricsFilters) => {
     setIsLoading(true);
     setError(null);
     
-    const mergedFilters = { ...currentFilters, ...filters };
-    setCurrentFilters(mergedFilters);
+    // Merge and store filters in ref (doesn't trigger re-render)
+    const mergedFilters = { ...currentFiltersRef.current, ...filters };
+    currentFiltersRef.current = mergedFilters;
     
     try {
       // Build query params, filtering out undefined/null values
@@ -64,11 +66,11 @@ export function useAttendanceMetrics(
     } finally {
       setIsLoading(false);
     }
-  }, [currentFilters]);
+  }, []);
 
   const refetch = useCallback(async () => {
-    await fetchMetrics(currentFilters);
-  }, [fetchMetrics, currentFilters]);
+    await fetchMetrics(currentFiltersRef.current);
+  }, [fetchMetrics]);
 
   useEffect(() => {
     if (autoFetch) {

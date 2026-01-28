@@ -1,0 +1,226 @@
+import { NextRequest, NextResponse } from "next/server"
+import { db } from "@/lib/db"
+import { hashPassword } from "@/lib/auth"
+import { z } from "zod"
+
+// Reserved subdomains that cannot be used
+const RESERVED_SUBDOMAINS = [
+  "admin",
+  "superadmin",
+  "coach",
+  "athletes",
+  "pos",
+  "feedback",
+  "events",
+  "signups",
+  "www",
+  "api",
+  "app",
+  "mail",
+  "help",
+  "support",
+  "blog",
+  "docs",
+  "status",
+  "cdn",
+  "static",
+  "assets",
+  "images",
+  "files",
+  "download",
+  "upload",
+  "dashboard",
+  "login",
+  "signup",
+  "register",
+  "account",
+  "settings",
+  "billing",
+  "payment",
+  "checkout",
+]
+
+const signupSchema = z.object({
+  // User account
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  
+  // Organization
+  orgName: z.string().min(1, "Organization name is required"),
+  orgEmail: z.string().email("Invalid organization email"),
+  phone: z.string().optional(),
+  street: z.string().optional(),
+  city: z.string().optional(),
+  stateProvince: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+  
+  // Website
+  subdomain: z.string()
+    .min(3, "Subdomain must be at least 3 characters")
+    .max(63, "Subdomain must be at most 63 characters")
+    .regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens")
+    .refine((s) => !s.startsWith("-") && !s.endsWith("-"), "Subdomain cannot start or end with a hyphen"),
+  
+  // Plan
+  planId: z.string().min(1, "Please select a plan"),
+})
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const validatedData = signupSchema.parse(body)
+
+    // Check if subdomain is reserved
+    if (RESERVED_SUBDOMAINS.includes(validatedData.subdomain.toLowerCase())) {
+      return NextResponse.json(
+        { error: "This subdomain is reserved and cannot be used" },
+        { status: 400 }
+      )
+    }
+
+    // Check if email already exists
+    const existingUser = await db.user.findUnique({
+      where: { email: validatedData.email },
+    })
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "An account with this email already exists" },
+        { status: 400 }
+      )
+    }
+
+    // Check if subdomain is already taken
+    const existingSubdomain = await db.websiteConfig.findUnique({
+      where: { subdomain: validatedData.subdomain },
+    })
+
+    if (existingSubdomain) {
+      return NextResponse.json(
+        { error: "This subdomain is already taken" },
+        { status: 400 }
+      )
+    }
+
+    // Check if organization slug is taken
+    const orgSlug = validatedData.subdomain // Use subdomain as slug
+    const existingOrg = await db.organization.findUnique({
+      where: { slug: orgSlug },
+    })
+
+    if (existingOrg) {
+      return NextResponse.json(
+        { error: "This organization identifier is already taken" },
+        { status: 400 }
+      )
+    }
+
+    // Verify the plan exists and is active/public
+    const plan = await db.subscriptionPlan.findUnique({
+      where: { id: validatedData.planId },
+    })
+
+    if (!plan || !plan.isActive || !plan.isPublic) {
+      return NextResponse.json(
+        { error: "Invalid subscription plan" },
+        { status: 400 }
+      )
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(validatedData.password)
+
+    // Calculate trial end date (30 days from now)
+    const now = new Date()
+    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+    // Create everything in a transaction
+    const result = await db.$transaction(async (tx) => {
+      // 1. Create the organization
+      const organization = await tx.organization.create({
+        data: {
+          name: validatedData.orgName,
+          slug: orgSlug,
+          email: validatedData.orgEmail,
+          phone: validatedData.phone || null,
+          street: validatedData.street || null,
+          city: validatedData.city || null,
+          stateProvince: validatedData.stateProvince || null,
+          postalCode: validatedData.postalCode || null,
+          country: validatedData.country || null,
+        },
+      })
+
+      // 2. Create the user
+      const user = await tx.user.create({
+        data: {
+          email: validatedData.email,
+          name: validatedData.name,
+          passwordHash,
+          role: "ADMIN",
+          status: "ACTIVE",
+          organizationId: organization.id,
+        },
+      })
+
+      // 3. Create the organization member relationship
+      await tx.organizationMember.create({
+        data: {
+          organizationId: organization.id,
+          userId: user.id,
+          role: "ADMIN",
+          status: "ACTIVE",
+        },
+      })
+
+      // 4. Create the website config
+      await tx.websiteConfig.create({
+        data: {
+          organizationId: organization.id,
+          subdomain: validatedData.subdomain,
+          isPublished: true,
+          heroHeadline: `Welcome to ${validatedData.orgName}`,
+          heroSubheadline: "Your organization's home on Uplifter",
+        },
+      })
+
+      // 5. Create the subscription (trial)
+      await tx.organizationSubscription.create({
+        data: {
+          organizationId: organization.id,
+          planId: plan.id,
+          status: "TRIALING",
+          billingCycle: "MONTHLY",
+          currentPeriodStart: now,
+          currentPeriodEnd: trialEndsAt,
+          trialEndsAt: trialEndsAt,
+        },
+      })
+
+      return { organization, user }
+    })
+
+    return NextResponse.json({
+      success: true,
+      organizationId: result.organization.id,
+      userId: result.user.id,
+      subdomain: validatedData.subdomain,
+    }, { status: 201 })
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.issues[0].message },
+        { status: 400 }
+      )
+    }
+
+    console.error("Signup error:", error)
+    return NextResponse.json(
+      { error: "Failed to create organization. Please try again." },
+      { status: 500 }
+    )
+  }
+}

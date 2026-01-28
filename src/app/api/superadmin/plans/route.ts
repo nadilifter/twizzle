@@ -6,9 +6,9 @@ import { z } from "zod"
 const createPlanSchema = z.object({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required").regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   monthlyPrice: z.number().min(0),
-  yearlyPrice: z.number().min(0).optional(),
+  yearlyPrice: z.number().min(0).optional().nullable(),
   transactionFee: z.number().min(0).max(1), // 0-100%
   perTransactionFee: z.number().min(0),
   maxAthletes: z.number().int().positive().optional().nullable(),
@@ -94,14 +94,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(plan, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const message = error.errors?.[0]?.message || "Validation error"
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: message },
         { status: 400 }
       )
     }
     console.error("Error creating plan:", error)
     return NextResponse.json(
-      { error: "Failed to create plan" },
+      { error: error instanceof Error ? error.message : "Failed to create plan" },
       { status: 500 }
     )
   }

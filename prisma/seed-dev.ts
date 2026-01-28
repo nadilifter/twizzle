@@ -45,10 +45,7 @@ const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_RE
 
 const ORG1_ID = "seed-org-sunrise";
 const ORG2_ID = "seed-org-metro";
-const PLAN_FREE_ID = "plan-free";
-const PLAN_STARTER_ID = "plan-starter";
-const PLAN_GOLD_ID = "plan-gold";
-const PLAN_PLATINUM_ID = "plan-platinum";
+// Plan IDs will be dynamically assigned from the upsert results
 
 const daysFromNow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -62,52 +59,52 @@ async function main() {
   // SUBSCRIPTION PLANS
   // ============================================
   console.log("📋 Creating subscription plans...");
-  await Promise.all([
-    prisma.subscriptionPlan.upsert({
-      where: { id: PLAN_FREE_ID },
-      update: {},
-      create: {
-        id: PLAN_FREE_ID, name: "Free", slug: "free", description: "Perfect for getting started",
-        monthlyPrice: 0, yearlyPrice: 0, transactionFee: 0.05, perTransactionFee: 0.50,
-        maxAthletes: 25, maxUsers: 2, maxEvents: 10,
-        features: ["Basic scheduling", "Up to 25 athletes", "Email support"],
-        isPopular: false, displayOrder: 0, isActive: true, isPublic: true,
-      },
-    }),
-    prisma.subscriptionPlan.upsert({
-      where: { id: PLAN_STARTER_ID },
-      update: {},
-      create: {
-        id: PLAN_STARTER_ID, name: "Starter", slug: "starter", description: "For growing organizations",
-        monthlyPrice: 49, yearlyPrice: 470, transactionFee: 0.035, perTransactionFee: 0.35,
-        maxAthletes: 100, maxUsers: 5, maxEvents: 50,
-        features: ["Advanced scheduling", "Up to 100 athletes", "Priority email support", "Basic reporting"],
-        isPopular: false, displayOrder: 1, isActive: true, isPublic: true,
-      },
-    }),
-    prisma.subscriptionPlan.upsert({
-      where: { id: PLAN_GOLD_ID },
-      update: {},
-      create: {
-        id: PLAN_GOLD_ID, name: "Gold", slug: "gold", description: "Most popular for established clubs",
-        monthlyPrice: 149, yearlyPrice: 1430, transactionFee: 0.029, perTransactionFee: 0.30,
-        maxAthletes: 500, maxUsers: 15, maxEvents: null,
-        features: ["Unlimited events", "Up to 500 athletes", "Phone support", "Advanced reporting", "Custom branding"],
-        isPopular: true, displayOrder: 2, isActive: true, isPublic: true,
-      },
-    }),
-    prisma.subscriptionPlan.upsert({
-      where: { id: PLAN_PLATINUM_ID },
-      update: {},
-      create: {
-        id: PLAN_PLATINUM_ID, name: "Platinum", slug: "platinum", description: "Enterprise-grade solution",
-        monthlyPrice: 349, yearlyPrice: 3350, transactionFee: 0.025, perTransactionFee: 0.25,
-        maxAthletes: null, maxUsers: null, maxEvents: null,
-        features: ["Unlimited everything", "Dedicated support", "Custom integrations", "White-label options", "SLA guarantee"],
-        isPopular: false, displayOrder: 3, isActive: true, isPublic: true,
-      },
-    }),
-  ]);
+  
+  // Use slug for where clause to be idempotent regardless of IDs
+  const freePlan = await prisma.subscriptionPlan.upsert({
+    where: { slug: "free" },
+    update: {},
+    create: {
+      name: "Free", slug: "free", description: "Perfect for getting started",
+      monthlyPrice: 0, yearlyPrice: 0, transactionFee: 0.05, perTransactionFee: 0.50,
+      maxAthletes: 25, maxUsers: 2, maxEvents: 10,
+      features: ["Basic scheduling", "Up to 25 athletes", "Email support"],
+      isPopular: false, displayOrder: 0, isActive: true, isPublic: true,
+    },
+  });
+  const starterPlan = await prisma.subscriptionPlan.upsert({
+    where: { slug: "starter" },
+    update: {},
+    create: {
+      name: "Starter", slug: "starter", description: "For growing organizations",
+      monthlyPrice: 49, yearlyPrice: 470, transactionFee: 0.035, perTransactionFee: 0.35,
+      maxAthletes: 100, maxUsers: 5, maxEvents: 50,
+      features: ["Advanced scheduling", "Up to 100 athletes", "Priority email support", "Basic reporting"],
+      isPopular: false, displayOrder: 1, isActive: true, isPublic: true,
+    },
+  });
+  const goldPlan = await prisma.subscriptionPlan.upsert({
+    where: { slug: "gold" },
+    update: {},
+    create: {
+      name: "Gold", slug: "gold", description: "Most popular for established clubs",
+      monthlyPrice: 149, yearlyPrice: 1430, transactionFee: 0.029, perTransactionFee: 0.30,
+      maxAthletes: 500, maxUsers: 15, maxEvents: null,
+      features: ["Unlimited events", "Up to 500 athletes", "Phone support", "Advanced reporting", "Custom branding"],
+      isPopular: true, displayOrder: 2, isActive: true, isPublic: true,
+    },
+  });
+  const platinumPlan = await prisma.subscriptionPlan.upsert({
+    where: { slug: "platinum" },
+    update: {},
+    create: {
+      name: "Platinum", slug: "platinum", description: "Enterprise-grade solution",
+      monthlyPrice: 349, yearlyPrice: 3350, transactionFee: 0.025, perTransactionFee: 0.25,
+      maxAthletes: null, maxUsers: null, maxEvents: null,
+      features: ["Unlimited everything", "Dedicated support", "Custom integrations", "White-label options", "SLA guarantee"],
+      isPopular: false, displayOrder: 3, isActive: true, isPublic: true,
+    },
+  });
   console.log("  ✓ Created 4 subscription plans");
 
   // ============================================
@@ -133,7 +130,7 @@ async function main() {
     prisma.organizationSubscription.upsert({
       where: { organizationId: ORG1_ID }, update: {},
       create: {
-        organizationId: ORG1_ID, planId: PLAN_GOLD_ID, status: "ACTIVE", billingCycle: "YEARLY",
+        organizationId: ORG1_ID, planId: goldPlan.id, status: "ACTIVE", billingCycle: "YEARLY",
         currentPeriodStart: daysAgo(30), currentPeriodEnd: daysFromNow(335),
         stripeCustomerId: "cus_seed_sunrise", stripeSubscriptionId: "sub_seed_sunrise",
       },
@@ -141,7 +138,7 @@ async function main() {
     prisma.organizationSubscription.upsert({
       where: { organizationId: ORG2_ID }, update: {},
       create: {
-        organizationId: ORG2_ID, planId: PLAN_STARTER_ID, status: "ACTIVE", billingCycle: "MONTHLY",
+        organizationId: ORG2_ID, planId: starterPlan.id, status: "ACTIVE", billingCycle: "MONTHLY",
         currentPeriodStart: daysAgo(15), currentPeriodEnd: daysFromNow(15),
         stripeCustomerId: "cus_seed_metro", stripeSubscriptionId: "sub_seed_metro",
       },

@@ -23,10 +23,10 @@ export default async function Home() {
       redirect("/dashboard")
     }
   } else {
-    // No session - redirect to login
-    // If on localhost:3000, redirect to uplifterinc.localhost for consistent login experience
+    // No session - redirect to login portal
+    // If on localhost:3000, redirect to login.uplifterinc.localhost for consistent login experience
     if (isLocalhostOnly) {
-      redirect("http://uplifterinc.localhost:3000/login")
+      redirect("http://login.uplifterinc.localhost:3000")
     }
     redirect("/login")
   }

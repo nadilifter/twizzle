@@ -250,10 +250,12 @@ const data = {
       title: "My Organization",
       url: "/dashboard/organization",
       items: [
+        /*
         {
           title: "App",
           url: "/dashboard/organization/app",
         },
+        */
         {
           title: "Facility",
           url: "/dashboard/organization/facility",
