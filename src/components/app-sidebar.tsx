@@ -81,7 +81,7 @@ function FeatureStatusIndicator({ url }: { url: string }) {
           </TooltipTrigger>
           <TooltipContent side="right" className="max-w-[200px]">
             <p className="font-medium text-xs">Live Feature</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs opacity-80">
               {config.description || "Connected to backend services"}
             </p>
           </TooltipContent>
@@ -101,7 +101,7 @@ function FeatureStatusIndicator({ url }: { url: string }) {
           </TooltipTrigger>
           <TooltipContent side="right" className="max-w-[200px]">
             <p className="font-medium text-xs">Demo Data</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs opacity-80">
               {config.description || "Using sample data for preview"}
             </p>
           </TooltipContent>
@@ -122,7 +122,7 @@ function FeatureStatusIndicator({ url }: { url: string }) {
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-[200px]">
           <p className="font-medium text-xs">Partial Implementation</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs opacity-80">
             {config.description || "Some features use real data, others are demo"}
           </p>
         </TooltipContent>

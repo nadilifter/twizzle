@@ -56,7 +56,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   
   // Dashboard
   "/dashboard": {
-    status: "demo",
+    status: "live",
     description: "Dashboard overview uses sample metrics",
   },
   "/dashboard/analytics": {
@@ -155,11 +155,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Facility management with full CRUD operations",
   },
   "/dashboard/organization/schedules": {
-    status: "demo",
+    status: "live",
     description: "Schedule management uses sample data",
   },
   "/dashboard/organization/staff": {
-    status: "demo",
+    status: "live",
     description: "Staff management uses sample data",
   },
   "/dashboard/organization/store": {

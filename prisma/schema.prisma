@@ -71,6 +71,11 @@ model Organization {
   // Facilities
   facilities    Facility[]
   equipment     Equipment[]
+  
+  // Staff & Scheduling
+  staffProfiles     StaffProfile[]
+  shifts            Shift[]
+  scheduleTemplates ScheduleTemplate[]
 }
 
 model OrganizationMember {
@@ -119,6 +124,7 @@ model User {
   accounts      Account[]
   media         Media[]
   facilityAssignments FacilityAssignment[]
+  staffProfile  StaffProfile?
 }
 
 model Session {
@@ -473,6 +479,7 @@ model Event {
   attendances  Attendance[]
   lineItems    LineItem[]
   media        Media[]
+  staffAssignments EventStaff[]
 }
 
 enum EventType {
@@ -1159,6 +1166,7 @@ model Facility {
   equipment      Equipment[]
   assignments    FacilityAssignment[]
   events         Event[]
+  shifts         Shift[]
 
   @@index([organizationId])
 }
@@ -1361,4 +1369,167 @@ enum SubscriptionStatus {
 enum BillingCycle {
   MONTHLY
   YEARLY
+}
+
+// ============================================
+// PHASE 9: Staff & Scheduling
+// ============================================
+
+// Staff Profile - extends User with staff-specific data
+model StaffProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  organizationId String
+  
+  // Employment
+  employmentType EmploymentType @default(FULL_TIME)
+  title          String?        // e.g., "Head Coach", "Assistant Coach"
+  hourlyRate     Decimal?       @db.Decimal(10, 2)
+  hireDate       DateTime?
+  
+  // Certifications (JSON array for flexibility)
+  certifications Json?    // [{ name, expiresAt, verified }]
+  
+  // Contact (override user contact if needed)
+  phone          String?
+  emergencyContact Json?  // { name, phone, relationship }
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shifts           Shift[]
+  availability     StaffAvailability[]
+  eventAssignments EventStaff[]
+
+  @@index([organizationId])
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACTOR
+  VOLUNTEER
+}
+
+// Event Staff - many-to-many with roles
+model EventStaff {
+  id             String   @id @default(cuid())
+  eventId        String
+  staffProfileId String
+  role           EventStaffRole @default(ASSISTANT)
+  notes          String?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  event          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, staffProfileId])
+  @@index([eventId])
+  @@index([staffProfileId])
+}
+
+enum EventStaffRole {
+  LEAD
+  ASSISTANT
+  VOLUNTEER
+  OBSERVER
+}
+
+// Work Shifts - one-time scheduling assignments
+model Shift {
+  id             String      @id @default(cuid())
+  organizationId String
+  staffProfileId String
+  facilityId     String?
+  
+  // Time
+  date           DateTime
+  startTime      String      // "09:00"
+  endTime        String      // "17:00"
+  
+  // Role/Type
+  shiftType      String      // e.g., "Opening Manager", "Coach", "Front Desk"
+  notes          String?
+  
+  // Status
+  status         ShiftStatus @default(SCHEDULED)
+  
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([staffProfileId])
+  @@index([date])
+}
+
+enum ShiftStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// Recurring Schedule Templates - weekly patterns
+model ScheduleTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   // e.g., "Standard Week", "Summer Schedule"
+  isActive       Boolean  @default(true)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries        ScheduleTemplateEntry[]
+
+  @@index([organizationId])
+}
+
+model ScheduleTemplateEntry {
+  id                 String   @id @default(cuid())
+  templateId         String
+  
+  dayOfWeek          Int      // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime          String   // "09:00"
+  endTime            String   // "17:00"
+  shiftType          String   // Role/position type
+  staffProfileId     String?  // Optional - can be unassigned
+  facilityId         String?
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  template           ScheduleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+// Staff Availability - personal weekly availability
+model StaffAvailability {
+  id             String   @id @default(cuid())
+  staffProfileId String
+  
+  dayOfWeek      Int      // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime      String   // "09:00"
+  endTime        String   // "17:00"
+  isAvailable    Boolean  @default(true)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([staffProfileId, dayOfWeek]) // One entry per day per staff
+  @@index([staffProfileId])
 }

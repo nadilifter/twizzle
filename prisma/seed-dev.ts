@@ -25,7 +25,7 @@
  * - Keep realistic data that exercises edge cases
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { Redis } from "@upstash/redis";
 
@@ -1094,6 +1094,215 @@ async function main() {
   console.log(`  ✓ Created ${mediaData.length} media items`);
 
   // ============================================
+  // STAFF PROFILES
+  // ============================================
+  console.log("\n👷 Creating staff profiles...");
+  const staffProfileData = [
+    // Org1 Staff Profiles
+    {
+      id: `${ORG1_ID}-staff-1`,
+      userId: org1Coach1.id,
+      organizationId: ORG1_ID,
+      employmentType: "FULL_TIME" as const,
+      title: "Head Coach",
+      hourlyRate: 35.00,
+      hireDate: daysAgo(365),
+      certifications: [
+        { name: "USAG Safety Certification", expiresAt: daysFromNow(180).toISOString(), verified: true },
+        { name: "CPR / First Aid", expiresAt: daysFromNow(365).toISOString(), verified: true },
+        { name: "SafeSport Trained", expiresAt: daysFromNow(730).toISOString(), verified: true },
+      ],
+      phone: "(555) 111-2222",
+      emergencyContact: { name: "John Rodriguez", phone: "(555) 111-3333", relationship: "Spouse" },
+    },
+    {
+      id: `${ORG1_ID}-staff-2`,
+      userId: org1Coach2.id,
+      organizationId: ORG1_ID,
+      employmentType: "FULL_TIME" as const,
+      title: "JO Team Coach",
+      hourlyRate: 32.00,
+      hireDate: daysAgo(180),
+      certifications: [
+        { name: "USAG Safety Certification", expiresAt: daysFromNow(300).toISOString(), verified: true },
+        { name: "SafeSport Trained", expiresAt: daysFromNow(500).toISOString(), verified: true },
+      ],
+      phone: "(555) 111-4444",
+      emergencyContact: { name: "Lisa Chen", phone: "(555) 111-5555", relationship: "Parent" },
+    },
+    {
+      id: `${ORG1_ID}-staff-3`,
+      userId: org1Accountant.id,
+      organizationId: ORG1_ID,
+      employmentType: "PART_TIME" as const,
+      title: "Finance & Admin",
+      hourlyRate: 25.00,
+      hireDate: daysAgo(90),
+      certifications: [
+        { name: "Background Check Cleared", expiresAt: null, verified: true },
+      ],
+      phone: "(555) 111-6666",
+      emergencyContact: Prisma.DbNull,
+    },
+    // Org2 Staff Profiles
+    {
+      id: `${ORG2_ID}-staff-1`,
+      userId: org2Coach.id,
+      organizationId: ORG2_ID,
+      employmentType: "FULL_TIME" as const,
+      title: "Multi-Sport Coach",
+      hourlyRate: 28.00,
+      hireDate: daysAgo(200),
+      certifications: [
+        { name: "CPR / First Aid", expiresAt: daysFromNow(200).toISOString(), verified: true },
+        { name: "SafeSport Trained", expiresAt: daysFromNow(400).toISOString(), verified: true },
+      ],
+      phone: "(555) 222-1111",
+      emergencyContact: { name: "Carlos Martinez", phone: "(555) 222-2222", relationship: "Spouse" },
+    },
+    {
+      id: `${ORG2_ID}-staff-2`,
+      userId: org2Volunteer.id,
+      organizationId: ORG2_ID,
+      employmentType: "VOLUNTEER" as const,
+      title: "Assistant Coach",
+      hourlyRate: null,
+      hireDate: daysAgo(60),
+      certifications: [
+        { name: "Background Check Cleared", expiresAt: null, verified: true },
+      ],
+      phone: "(555) 222-3333",
+      emergencyContact: Prisma.DbNull,
+    },
+  ];
+  for (const sp of staffProfileData) {
+    await prisma.staffProfile.upsert({ where: { id: sp.id }, update: {}, create: sp });
+  }
+  console.log(`  ✓ Created ${staffProfileData.length} staff profiles`);
+
+  // ============================================
+  // STAFF AVAILABILITY
+  // ============================================
+  console.log("\n📅 Creating staff availability...");
+  const availabilityData = [
+    // Org1 Coach 1 - Available weekdays 8am-6pm
+    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 1, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 2, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 3, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 4, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 5, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    // Org1 Coach 2 - Afternoons and evenings
+    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 1, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 2, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 3, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 4, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 5, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 6, startTime: "09:00", endTime: "14:00", isAvailable: true },
+    // Org2 Coach - Full availability
+    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 1, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 2, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 3, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 4, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 5, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 6, startTime: "10:00", endTime: "15:00", isAvailable: true },
+  ];
+  for (const avail of availabilityData) {
+    await prisma.staffAvailability.upsert({
+      where: { staffProfileId_dayOfWeek: { staffProfileId: avail.staffProfileId, dayOfWeek: avail.dayOfWeek } },
+      update: {},
+      create: avail,
+    });
+  }
+  console.log(`  ✓ Created ${availabilityData.length} availability entries`);
+
+  // ============================================
+  // SHIFTS
+  // ============================================
+  console.log("\n⏰ Creating shifts...");
+  const shiftData = [
+    // Today and upcoming shifts for Org1
+    { id: `${ORG1_ID}-shift-1`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: today, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "IN_PROGRESS" as const },
+    { id: `${ORG1_ID}-shift-2`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: today, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "SCHEDULED" as const },
+    { id: `${ORG1_ID}-shift-3`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: daysFromNow(1), startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "SCHEDULED" as const },
+    { id: `${ORG1_ID}-shift-4`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: daysFromNow(1), startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "SCHEDULED" as const },
+    { id: `${ORG1_ID}-shift-5`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-3`, facilityId: org1Facility1.id, date: daysFromNow(2), startTime: "09:00", endTime: "14:00", shiftType: "Front Desk", status: "SCHEDULED" as const },
+    // Historical shifts (completed)
+    { id: `${ORG1_ID}-shift-6`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: daysAgo(1), startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "COMPLETED" as const },
+    { id: `${ORG1_ID}-shift-7`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: daysAgo(1), startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "COMPLETED" as const },
+    // Org2 shifts
+    { id: `${ORG2_ID}-shift-1`, organizationId: ORG2_ID, staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id, date: today, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", status: "IN_PROGRESS" as const },
+    { id: `${ORG2_ID}-shift-2`, organizationId: ORG2_ID, staffProfileId: `${ORG2_ID}-staff-2`, facilityId: org2Facility.id, date: today, startTime: "14:00", endTime: "18:00", shiftType: "Assistant Coach", status: "SCHEDULED" as const },
+    { id: `${ORG2_ID}-shift-3`, organizationId: ORG2_ID, staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id, date: daysFromNow(1), startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", status: "SCHEDULED" as const },
+  ];
+  for (const shift of shiftData) {
+    await prisma.shift.upsert({ where: { id: shift.id }, update: {}, create: shift });
+  }
+  console.log(`  ✓ Created ${shiftData.length} shifts`);
+
+  // ============================================
+  // SCHEDULE TEMPLATES
+  // ============================================
+  console.log("\n📋 Creating schedule templates...");
+  const template1 = await prisma.scheduleTemplate.upsert({
+    where: { id: `${ORG1_ID}-template-1` },
+    update: {},
+    create: { id: `${ORG1_ID}-template-1`, organizationId: ORG1_ID, name: "Standard Week", isActive: true },
+  });
+  const template2 = await prisma.scheduleTemplate.upsert({
+    where: { id: `${ORG2_ID}-template-1` },
+    update: {},
+    create: { id: `${ORG2_ID}-template-1`, organizationId: ORG2_ID, name: "Regular Schedule", isActive: true },
+  });
+
+  // Template entries
+  const templateEntryData = [
+    // Org1 Standard Week - Mon-Fri
+    { id: `${ORG1_ID}-tentry-1`, templateId: template1.id, dayOfWeek: 1, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-2`, templateId: template1.id, dayOfWeek: 1, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-3`, templateId: template1.id, dayOfWeek: 2, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-4`, templateId: template1.id, dayOfWeek: 2, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-5`, templateId: template1.id, dayOfWeek: 3, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-6`, templateId: template1.id, dayOfWeek: 3, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
+    // Org2 Regular Schedule
+    { id: `${ORG2_ID}-tentry-1`, templateId: template2.id, dayOfWeek: 1, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-2`, templateId: template2.id, dayOfWeek: 2, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-3`, templateId: template2.id, dayOfWeek: 3, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-4`, templateId: template2.id, dayOfWeek: 4, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-5`, templateId: template2.id, dayOfWeek: 5, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+  ];
+  for (const entry of templateEntryData) {
+    await prisma.scheduleTemplateEntry.upsert({ where: { id: entry.id }, update: {}, create: entry });
+  }
+  console.log(`  ✓ Created 2 schedule templates with ${templateEntryData.length} entries`);
+
+  // ============================================
+  // EVENT STAFF ASSIGNMENTS
+  // ============================================
+  console.log("\n👥 Creating event staff assignments...");
+  const eventStaffData = [
+    // Org1 Event Staff
+    { id: `${ORG1_ID}-es-1`, eventId: `${ORG1_ID}-evt-1`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: "Lead instructor" },
+    { id: `${ORG1_ID}-es-2`, eventId: `${ORG1_ID}-evt-2`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: null },
+    { id: `${ORG1_ID}-es-3`, eventId: `${ORG1_ID}-evt-3`, staffProfileId: `${ORG1_ID}-staff-2`, role: "LEAD" as const, notes: "JO Team practice lead" },
+    { id: `${ORG1_ID}-es-4`, eventId: `${ORG1_ID}-evt-3`, staffProfileId: `${ORG1_ID}-staff-1`, role: "ASSISTANT" as const, notes: "Beam specialist" },
+    { id: `${ORG1_ID}-es-5`, eventId: `${ORG1_ID}-evt-4`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: "Competition director" },
+    { id: `${ORG1_ID}-es-6`, eventId: `${ORG1_ID}-evt-4`, staffProfileId: `${ORG1_ID}-staff-2`, role: "ASSISTANT" as const, notes: null },
+    // Org2 Event Staff
+    { id: `${ORG2_ID}-es-1`, eventId: `${ORG2_ID}-evt-1`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: null },
+    { id: `${ORG2_ID}-es-2`, eventId: `${ORG2_ID}-evt-1`, staffProfileId: `${ORG2_ID}-staff-2`, role: "VOLUNTEER" as const, notes: "Equipment setup" },
+    { id: `${ORG2_ID}-es-3`, eventId: `${ORG2_ID}-evt-2`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: null },
+    { id: `${ORG2_ID}-es-4`, eventId: `${ORG2_ID}-evt-3`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: "Meet coordinator" },
+  ];
+  for (const es of eventStaffData) {
+    await prisma.eventStaff.upsert({ 
+      where: { id: es.id }, 
+      update: {}, 
+      create: es 
+    });
+  }
+  console.log(`  ✓ Created ${eventStaffData.length} event staff assignments`);
+
+  // ============================================
   // VISITOR ANALYTICS (Redis)
   // ============================================
   if (redis) {
@@ -1208,6 +1417,10 @@ async function main() {
   console.log("  • 9 skills with lesson plans");
   console.log("  • 7 POS products with stock movements");
   console.log("  • 6 media items (photos/videos)");
+  console.log("  • 5 staff profiles with availability");
+  console.log("  • 10 shifts (historical + scheduled)");
+  console.log("  • 2 schedule templates with entries");
+  console.log("  • 10 event staff assignments");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (password: password123):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");

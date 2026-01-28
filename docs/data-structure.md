@@ -16,11 +16,19 @@ erDiagram
     Organization ||--o| OrganizationSubscription : subscribes
     Organization ||--o{ Facility : owns
     Organization ||--o{ Equipment : manages
+    Organization ||--o{ StaffProfile : employs
+    Organization ||--o{ Shift : schedules
+    Organization ||--o{ ScheduleTemplate : defines
 
     User ||--o{ OrganizationMember : joins
     User ||--o{ Session : has
     User ||--o{ Account : links
     User ||--o{ FacilityAssignment : assigned_to
+    User ||--o| StaffProfile : has_profile
+
+    StaffProfile ||--o{ Shift : works
+    StaffProfile ||--o{ StaffAvailability : available
+    StaffProfile ||--o{ EventStaff : assigned_to
 
     Family ||--o{ AthleteGuardian : guardians
     Athlete ||--o{ AthleteGuardian : has
@@ -39,11 +47,15 @@ erDiagram
 
     Event ||--o{ Attendance : tracks
     Event }o--o| Facility : hosted_at
+    Event ||--o{ EventStaff : staffed_by
     
     Facility ||--o{ TrainingZone : contains
     Facility ||--o{ Equipment : houses
     Facility ||--o{ FacilityAssignment : staffed_by
+    Facility ||--o{ Shift : location_for
     TrainingZone ||--o{ Equipment : optionally_contains
+    
+    ScheduleTemplate ||--o{ ScheduleTemplateEntry : contains
     
     Invoice ||--o{ LineItem : contains
     Invoice ||--o{ Payment : settles
@@ -533,6 +545,115 @@ classDiagram
     StockMovement --> StockMovementType
 ```
 
+### Staff & Scheduling
+
+```mermaid
+classDiagram
+    class StaffProfile {
+        +String id
+        +String userId
+        +String organizationId
+        +EmploymentType employmentType
+        +String title
+        +Decimal hourlyRate
+        +DateTime hireDate
+        +Json certifications
+        +String phone
+        +Json emergencyContact
+    }
+
+    class Shift {
+        +String id
+        +String organizationId
+        +String staffProfileId
+        +String facilityId
+        +DateTime date
+        +String startTime
+        +String endTime
+        +String shiftType
+        +String notes
+        +ShiftStatus status
+    }
+
+    class ScheduleTemplate {
+        +String id
+        +String organizationId
+        +String name
+        +Boolean isActive
+    }
+
+    class ScheduleTemplateEntry {
+        +String id
+        +String templateId
+        +Int dayOfWeek
+        +String startTime
+        +String endTime
+        +String shiftType
+        +String staffProfileId
+        +String facilityId
+    }
+
+    class StaffAvailability {
+        +String id
+        +String staffProfileId
+        +Int dayOfWeek
+        +String startTime
+        +String endTime
+        +Boolean isAvailable
+    }
+
+    class EventStaff {
+        +String id
+        +String eventId
+        +String staffProfileId
+        +EventStaffRole role
+        +String notes
+    }
+
+    class EmploymentType {
+        <<enumeration>>
+        FULL_TIME
+        PART_TIME
+        CONTRACTOR
+        VOLUNTEER
+    }
+
+    class ShiftStatus {
+        <<enumeration>>
+        SCHEDULED
+        CONFIRMED
+        IN_PROGRESS
+        COMPLETED
+        CANCELLED
+        NO_SHOW
+    }
+
+    class EventStaffRole {
+        <<enumeration>>
+        LEAD
+        ASSISTANT
+        VOLUNTEER
+        OBSERVER
+    }
+
+    StaffProfile --> EmploymentType
+    StaffProfile "1" --> "*" Shift
+    StaffProfile "1" --> "*" StaffAvailability
+    StaffProfile "1" --> "*" EventStaff
+    Shift --> ShiftStatus
+    ScheduleTemplate "1" --> "*" ScheduleTemplateEntry
+    EventStaff --> EventStaffRole
+```
+
+**Key Relationships:**
+
+- **StaffProfile ↔ User**: One-to-one relationship extending User with staff-specific data (employment type, certifications, hourly rate)
+- **StaffProfile → Shift**: Staff members can be assigned to multiple shifts
+- **StaffProfile → StaffAvailability**: Each staff member has weekly availability (one entry per day)
+- **StaffProfile → EventStaff**: Staff can be assigned to multiple events with specific roles
+- **ScheduleTemplate → ScheduleTemplateEntry**: Templates contain reusable weekly shift patterns
+- **Shift → Facility**: Shifts can optionally be assigned to a specific facility
+
 ## Data Flow
 
 ```mermaid
@@ -582,3 +703,6 @@ flowchart TD
 | ZoneStatus | OPEN, CLOSED, MAINTENANCE |
 | EquipmentCondition | EXCELLENT, GOOD, FAIR, POOR, UNSAFE |
 | EquipmentStatus | ACTIVE, RETIRED, MAINTENANCE |
+| EmploymentType | FULL_TIME, PART_TIME, CONTRACTOR, VOLUNTEER |
+| ShiftStatus | SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW |
+| EventStaffRole | LEAD, ASSISTANT, VOLUNTEER, OBSERVER |

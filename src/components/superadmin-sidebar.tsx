@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { 
   Building2, 
@@ -11,9 +10,14 @@ import {
   Package,
   ShieldCheck, 
   Users,
-  CalendarCheck,
   ExternalLink,
-  UserPlus
+  UserPlus,
+  ShoppingCart,
+  Calendar,
+  LogIn,
+  Home,
+  Megaphone,
+  MessageSquare
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 
@@ -31,6 +35,20 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+
+// Quick link items for external pages
+const quickLinkItems = [
+  { title: "Landing Page", url: "/", icon: Home },
+  { title: "Login", url: "/login", icon: LogIn },
+  { title: "Signup", url: "/signup", icon: UserPlus },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "POS Terminal", url: "/pos", icon: ShoppingCart },
+  { title: "Coach Portal", url: "/coach", icon: Users },
+  { title: "Athletes Portal", url: "/athletes", icon: Users },
+  { title: "Events Portal", url: "/events", icon: Calendar },
+  { title: "Campaigns", url: "/campaigns", icon: Megaphone },
+  { title: "Feedback", url: "/feedback", icon: MessageSquare },
+]
 
 // Signup link component to handle SSR
 function SignupLink() {
@@ -52,7 +70,7 @@ function SignupLink() {
       >
         <span className="flex items-center gap-2">
           <UserPlus className="h-4 w-4" />
-          <span>Organization Signup</span>
+          <span>Org Signup (Subdomain)</span>
         </span>
         <ExternalLink className="h-3 w-3 text-muted-foreground" />
       </a>
@@ -148,6 +166,19 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
           <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {quickLinkItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <a href={item.url} className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
               <SidebarMenuItem>
                 <SignupLink />
               </SidebarMenuItem>

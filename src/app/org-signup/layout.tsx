@@ -11,11 +11,23 @@ export const metadata = {
   },
 }
 
+function getLoginUrl(): string {
+  const nextAuthUrl = process.env.NEXTAUTH_URL || ""
+  const isLocal = nextAuthUrl.includes("localhost")
+  
+  if (isLocal) {
+    return "http://login.uplifterinc.localhost:3000"
+  }
+  return "https://login.uplifterinc.com"
+}
+
 export default function SignupsLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const loginUrl = getLoginUrl()
+  
   return (
     <div className="flex flex-col min-h-screen bg-background relative overflow-hidden">
       <GradientBackground className="z-0" />
@@ -34,7 +46,7 @@ export default function SignupsLayout({
           </Link>
           <div className="flex items-center gap-4">
             <Link 
-              href="https://login.uplifterinc.com" 
+              href={loginUrl} 
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Already have an account? Sign in
