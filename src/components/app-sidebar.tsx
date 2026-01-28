@@ -176,7 +176,6 @@ const data = {
       title: "Training",
       url: "/dashboard/training",
       items: [
-        /*
         {
           title: "Overview",
           url: "/dashboard/training",
@@ -185,12 +184,10 @@ const data = {
           title: "Plans",
           url: "/dashboard/training/plans",
         },
-        */
         {
           title: "Programs",
           url: "/dashboard/training/programs",
         },
-        /*
         {
           title: "Rotations",
           url: "/dashboard/training/rotations",
@@ -199,10 +196,8 @@ const data = {
           title: "Skills",
           url: "/dashboard/training/skills",
         },
-        */
       ],
     },
-    /*
     {
       title: "Events",
       url: "/dashboard/events",
@@ -217,8 +212,6 @@ const data = {
         },
       ],
     },
-    */
-    /*
     {
       title: "Communication",
       url: "/dashboard/communication",
@@ -245,17 +238,14 @@ const data = {
         },
       ],
     },
-    */
     {
       title: "My Organization",
       url: "/dashboard/organization",
       items: [
-        /*
         {
           title: "App",
           url: "/dashboard/organization/app",
         },
-        */
         {
           title: "Facilities",
           url: "/dashboard/organization/facilities",
@@ -379,13 +369,11 @@ const data = {
   ],
   // Access point links - subdomain field is used to construct full URLs
   navSecondaryAccessPoints: [
-    /*
     {
       title: "Events Portal",
       subdomain: "events",
       icon: CalendarCheck,
     },
-    */
     {
       title: "Point of Sale",
       subdomain: "pos",

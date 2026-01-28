@@ -71,7 +71,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/athletes"],
   },
   "/dashboard/athletes/attendance": {
-    status: "demo",
+    status: "live",
     description: "Attendance tracking uses mock data",
     apiRoutes: ["/api/attendance"],
   },

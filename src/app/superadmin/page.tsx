@@ -51,24 +51,8 @@ export default async function AdminDashboardPage() {
                 <span className="text-muted-foreground ml-2">OAuth buttons hidden until integration is implemented. Only Google OAuth is active.</span>
               </li>
               <li>
-                <span className="font-medium">App Page</span> (/dashboard/organization/app) - 
-                <span className="text-muted-foreground ml-2">Hidden from My Organization section.</span>
-              </li>
-              <li>
                 <span className="font-medium">Analytics Page</span> (/dashboard/analytics) - 
                 <span className="text-muted-foreground ml-2">Hidden from Dashboard section.</span>
-              </li>
-              <li>
-                <span className="font-medium">Training Section</span> (/dashboard/training) - 
-                <span className="text-muted-foreground ml-2">Hidden from sidebar. Includes Plans, Programs, Rotations, and Skills.</span>
-              </li>
-              <li>
-                <span className="font-medium">Events Section</span> (/dashboard/events) - 
-                <span className="text-muted-foreground ml-2">Hidden from sidebar and access points. Includes Calendar, Upcoming events, and Events Portal.</span>
-              </li>
-              <li>
-                <span className="font-medium">Communication Section</span> (/dashboard/communication) - 
-                <span className="text-muted-foreground ml-2">Hidden from sidebar. Includes Announcements, Chat, Email, Notifications, and SMS.</span>
               </li>
               <li>
                 <span className="font-medium">Forms Section</span> (/dashboard/forms) - 
