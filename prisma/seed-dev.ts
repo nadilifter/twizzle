@@ -1,22 +1,24 @@
 /**
- * Development Seed Script
- * =======================
+ * Main Seed Script
+ * ================
  * 
- * This script populates the database with comprehensive dummy data for development
- * and testing purposes. It creates two distinct organizations with different data
+ * This script populates the database with comprehensive data for development
+ * and testing purposes. It creates multiple organizations with different data
  * to test multi-tenancy and various features.
  * 
  * Organizations:
- * 1. Sunrise Gymnastics Academy - Youth gymnastics club
- * 2. Metro Sports Complex - Multi-sport community facility
+ * 1. Sunrise Gymnastics Academy - Youth gymnastics club (comprehensive data)
+ * 2. Metro Sports Complex - Multi-sport community facility (comprehensive data)
+ * 3. Demo Gymnastics Club - Demo/testing organization
+ * 4. Uplifter - Platform owner organization
  * 
  * Usage:
- *   pnpm db:seed:dev
+ *   pnpm db:seed
  * 
  * To reset and reseed:
- *   pnpm prisma migrate reset && pnpm db:seed:dev
+ *   pnpm db:reset
  * 
- * Last Updated: 2026-01-27
+ * Last Updated: 2026-01-29
  * 
  * MAINTENANCE NOTES:
  * - When adding new models to schema.prisma, add seed data in the corresponding section
@@ -45,6 +47,8 @@ const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_RE
 
 const ORG1_ID = "seed-org-sunrise";
 const ORG2_ID = "seed-org-metro";
+const ORG_DEMO_ID = "seed-org-demo-gym";
+const ORG_UPLIFTER_ID = "seed-org-uplifter";
 // Plan IDs will be dynamically assigned from the upsert results
 
 const daysFromNow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -122,6 +126,18 @@ async function main() {
   console.log(`  ✓ Created: ${org1.name}`);
   console.log(`  ✓ Created: ${org2.name}`);
 
+  // Demo Gym and Uplifter (from original seed.ts)
+  const orgDemo = await prisma.organization.upsert({
+    where: { slug: "demo-gym" }, update: {},
+    create: { id: ORG_DEMO_ID, name: "Demo Gymnastics Club", slug: "demo-gym" },
+  });
+  const orgUplifter = await prisma.organization.upsert({
+    where: { slug: "uplifter" }, update: {},
+    create: { id: ORG_UPLIFTER_ID, name: "Uplifter", slug: "uplifter" },
+  });
+  console.log(`  ✓ Created: ${orgDemo.name}`);
+  console.log(`  ✓ Created: ${orgUplifter.name}`);
+
   // ============================================
   // ORGANIZATION SUBSCRIPTIONS
   // ============================================
@@ -143,8 +159,24 @@ async function main() {
         stripeCustomerId: "cus_seed_metro", stripeSubscriptionId: "sub_seed_metro",
       },
     }),
+    prisma.organizationSubscription.upsert({
+      where: { organizationId: orgDemo.id }, update: {},
+      create: {
+        organizationId: orgDemo.id, planId: goldPlan.id, status: "ACTIVE", billingCycle: "MONTHLY",
+        currentPeriodStart: daysAgo(10), currentPeriodEnd: daysFromNow(20),
+        stripeCustomerId: "cus_seed_demo", stripeSubscriptionId: "sub_seed_demo",
+      },
+    }),
+    prisma.organizationSubscription.upsert({
+      where: { organizationId: orgUplifter.id }, update: {},
+      create: {
+        organizationId: orgUplifter.id, planId: platinumPlan.id, status: "ACTIVE", billingCycle: "YEARLY",
+        currentPeriodStart: daysAgo(60), currentPeriodEnd: daysFromNow(305),
+        stripeCustomerId: "cus_seed_uplifter", stripeSubscriptionId: "sub_seed_uplifter",
+      },
+    }),
   ]);
-  console.log("  ✓ Created subscriptions for both organizations");
+  console.log("  ✓ Created subscriptions for all organizations");
 
   // ============================================
   // USERS
@@ -185,7 +217,24 @@ async function main() {
     update: { organizationId: ORG2_ID },
     create: { email: "volunteer@metro-sports.com", name: "David Lee", passwordHash: hashedPassword, role: "VOLUNTEER", status: "ACTIVE", organizationId: ORG2_ID },
   });
-  console.log("  ✓ Created 7 users across both organizations");
+  
+  // Demo Gym and Uplifter users (from original seed.ts)
+  const andrewUser = await prisma.user.upsert({
+    where: { email: "andrewkarzel@uplifterinc.com" },
+    update: { isSuperAdmin: true, organizationId: orgUplifter.id },
+    create: { email: "andrewkarzel@uplifterinc.com", name: "Andrew Karzel", passwordHash: hashedPassword, role: "ADMIN", status: "ACTIVE", organizationId: orgUplifter.id, isSuperAdmin: true },
+  });
+  const demoAdmin = await prisma.user.upsert({
+    where: { email: "admin@demo.com" },
+    update: { organizationId: orgDemo.id },
+    create: { email: "admin@demo.com", name: "Admin User", passwordHash: hashedPassword, role: "ADMIN", status: "ACTIVE", organizationId: orgDemo.id },
+  });
+  const demoCoach = await prisma.user.upsert({
+    where: { email: "coach@demo.com" },
+    update: { organizationId: orgDemo.id },
+    create: { email: "coach@demo.com", name: "Sarah Coach", passwordHash: hashedPassword, role: "COACH", status: "ACTIVE", organizationId: orgDemo.id },
+  });
+  console.log("  ✓ Created 10 users across all organizations");
 
   // ============================================
   // ORGANIZATION MEMBERS
@@ -199,6 +248,11 @@ async function main() {
     { orgId: ORG2_ID, userId: org2Admin.id, role: "ADMIN" as const },
     { orgId: ORG2_ID, userId: org2Coach.id, role: "COACH" as const },
     { orgId: ORG2_ID, userId: org2Volunteer.id, role: "VOLUNTEER" as const },
+    // Demo Gym and Uplifter memberships
+    { orgId: orgUplifter.id, userId: andrewUser.id, role: "ADMIN" as const },
+    { orgId: orgDemo.id, userId: andrewUser.id, role: "ADMIN" as const }, // Andrew has access to Demo too
+    { orgId: orgDemo.id, userId: demoAdmin.id, role: "ADMIN" as const },
+    { orgId: orgDemo.id, userId: demoCoach.id, role: "COACH" as const },
   ];
   await Promise.all(membershipData.map((m) =>
     prisma.organizationMember.upsert({
@@ -235,6 +289,18 @@ async function main() {
     { userId: org1Accountant.id, permission: "invoices.create" },
     { userId: org2Volunteer.id, permission: "dashboard.view" },
     { userId: org2Volunteer.id, permission: "events.view" },
+    // Demo Gym and Uplifter permissions
+    { userId: andrewUser.id, permission: "*" },
+    { userId: demoAdmin.id, permission: "*" },
+    { userId: demoCoach.id, permission: "dashboard.view" },
+    { userId: demoCoach.id, permission: "athletes.view" },
+    { userId: demoCoach.id, permission: "athletes.edit" },
+    { userId: demoCoach.id, permission: "training.view" },
+    { userId: demoCoach.id, permission: "training.create" },
+    { userId: demoCoach.id, permission: "training.edit" },
+    { userId: demoCoach.id, permission: "events.view" },
+    { userId: demoCoach.id, permission: "events.create" },
+    { userId: demoCoach.id, permission: "events.edit" },
   ];
   for (const p of permissionData) {
     await prisma.userPermission.upsert({
@@ -1275,7 +1341,7 @@ async function main() {
   // ============================================
   console.log("\n🌐 Creating website configurations...");
   
-  // Create configs for the new seed orgs
+  // Create configs for all organizations
   await Promise.all([
     prisma.websiteConfig.upsert({
       where: { organizationId: ORG1_ID }, update: {},
@@ -1285,37 +1351,17 @@ async function main() {
       where: { organizationId: ORG2_ID }, update: {},
       create: { organizationId: ORG2_ID, subdomain: "metro-sports", primaryColor: "#2D5A27", secondaryColor: "#F5A623", heroHeadline: "Play. Compete. Thrive.", heroSubheadline: "Your community sports destination", heroAgeRange: "All Ages Welcome", heroProgramPeriods: "Seasonal Programs", heroLocation: "San Jose, CA", showCalendar: true, showRegistration: true, showLogin: true, showContact: true, isPublished: true },
     }),
+    prisma.websiteConfig.upsert({
+      where: { organizationId: orgDemo.id }, update: {},
+      create: { organizationId: orgDemo.id, subdomain: "demo-gym", primaryColor: "#3B82F6", secondaryColor: "#10B981", heroHeadline: "Welcome to Demo Gym", heroSubheadline: "Your gymnastics journey starts here", heroAgeRange: "All Ages Welcome", heroProgramPeriods: "Year-Round Programs", heroLocation: "Anytown, USA", showCalendar: true, showRegistration: true, showLogin: true, showContact: true, isPublished: true },
+    }),
+    prisma.websiteConfig.upsert({
+      where: { organizationId: orgUplifter.id }, update: {},
+      create: { organizationId: orgUplifter.id, subdomain: "uplifter", primaryColor: "#8B5CF6", secondaryColor: "#EC4899", heroHeadline: "Uplifter Platform", heroSubheadline: "Empowering sports organizations", showCalendar: true, showRegistration: true, showLogin: true, showContact: true, isPublished: true },
+    }),
   ]);
   
-  // Also create website configs for existing orgs from seed.ts (if they exist)
-  const existingOrgs = await prisma.organization.findMany({
-    where: { slug: { in: ["demo-gym", "uplifter"] } },
-  });
-  
-  for (const existingOrg of existingOrgs) {
-    await prisma.websiteConfig.upsert({
-      where: { organizationId: existingOrg.id },
-      update: {},
-      create: {
-        organizationId: existingOrg.id,
-        subdomain: existingOrg.slug,
-        primaryColor: existingOrg.slug === "demo-gym" ? "#3B82F6" : "#8B5CF6",
-        secondaryColor: existingOrg.slug === "demo-gym" ? "#10B981" : "#EC4899",
-        heroHeadline: existingOrg.slug === "demo-gym" ? "Welcome to Demo Gym" : "Uplifter Platform",
-        heroSubheadline: existingOrg.slug === "demo-gym" ? "Your gymnastics journey starts here" : "Empowering sports organizations",
-        heroAgeRange: existingOrg.slug === "demo-gym" ? "All Ages Welcome" : null,
-        heroProgramPeriods: existingOrg.slug === "demo-gym" ? "Year-Round Programs" : null,
-        heroLocation: existingOrg.slug === "demo-gym" ? "Anytown, USA" : null,
-        showCalendar: true,
-        showRegistration: true,
-        showLogin: true,
-        showContact: true,
-        isPublished: true,
-      },
-    });
-  }
-  
-  console.log(`  ✓ Created ${2 + existingOrgs.length} website configurations`);
+  console.log("  ✓ Created 4 website configurations");
 
   // ============================================
   // PRODUCTS (POS)
@@ -2084,15 +2130,47 @@ async function main() {
   console.log("  ✓ Created 5 custom medical responses");
 
   // ============================================
+  // RESERVED DOMAINS - System and Brand Protection
+  // ============================================
+  console.log("\n🔒 Creating reserved domains...");
+  const reservedDomainData = [
+    // System reserved - exact matches
+    { pattern: "admin", type: "EXACT" as const, reason: "System use - admin portal" },
+    { pattern: "api", type: "EXACT" as const, reason: "System use - API endpoint" },
+    { pattern: "app", type: "EXACT" as const, reason: "System use - application" },
+    { pattern: "www", type: "EXACT" as const, reason: "System use - main website" },
+    { pattern: "mail", type: "EXACT" as const, reason: "System use - email services" },
+    { pattern: "help", type: "EXACT" as const, reason: "System use - help center" },
+    { pattern: "support", type: "EXACT" as const, reason: "System use - support portal" },
+    { pattern: "status", type: "EXACT" as const, reason: "System use - status page" },
+    { pattern: "docs", type: "EXACT" as const, reason: "System use - documentation" },
+    // Brand protection
+    { pattern: "uplifter", type: "EXACT" as const, reason: "Brand protection - Uplifter trademark" },
+    { pattern: "leapfrog", type: "EXACT" as const, reason: "Brand protection - LeapFrog trademark" },
+    // Prefix reserved - blocks anything starting with pattern
+    { pattern: "test-", type: "PREFIX" as const, reason: "System use - testing environments" },
+    { pattern: "demo-", type: "PREFIX" as const, reason: "System use - demo environments" },
+    { pattern: "staging-", type: "PREFIX" as const, reason: "System use - staging environments" },
+  ];
+  for (const rd of reservedDomainData) {
+    await prisma.reservedDomain.upsert({
+      where: { pattern: rd.pattern },
+      update: {},
+      create: rd,
+    });
+  }
+  console.log(`  ✓ Created ${reservedDomainData.length} reserved domains`);
+
+  // ============================================
   // COMPLETE
   // ============================================
   console.log("\n" + "=".repeat(50));
   console.log("🎉 Development seed completed successfully!");
   console.log("=".repeat(50));
   console.log("\nCreated data summary:");
-  console.log("  • 2 organizations (Sunrise Gymnastics, Metro Sports)");
+  console.log("  • 4 organizations (Sunrise Gymnastics, Metro Sports, Demo Gym, Uplifter)");
   console.log("  • 4 subscription plans");
-  console.log("  • 7 users with permissions");
+  console.log("  • 10 users with permissions");
   console.log("  • 9 families with payment methods");
   console.log("  • 14 athletes with guardian relationships");
   console.log("  • 9 programs with membership tiers");
@@ -2116,10 +2194,14 @@ async function main() {
   console.log("  • 10 event staff assignments");
   console.log("  • 2 medical form configs with custom questions");
   console.log("  • 6 athlete medical info records with responses");
+  console.log("  • 14 reserved domains");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (password: password123):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");
   console.log("  Metro Sports Admin: admin@metro-sports.com");
+  console.log("  Demo Gym Admin: admin@demo.com");
+  console.log("  Demo Gym Coach: coach@demo.com");
+  console.log("  Superadmin: andrewkarzel@uplifterinc.com");
 }
 
 main()
