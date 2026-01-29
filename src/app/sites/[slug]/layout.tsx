@@ -1,4 +1,5 @@
 import React from "react";
+import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
@@ -12,6 +13,7 @@ import { CartSheet } from "@/components/sites/cart-sheet";
 import { CartFloatingButton } from "@/components/sites/cart-floating-button";
 import { VisitorTracker } from "@/components/sites/visitor-tracker";
 import { CookieNotice } from "@/components/sites/cookie-notice";
+import { SiteStructuredData } from "@/components/sites/structured-data";
 
 export const dynamic = "force-dynamic";
 
@@ -74,17 +76,101 @@ function hexToHSL(hex: string): string {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+/**
+ * Generate SEO-optimized metadata for tenant sites.
+ * Includes Open Graph, Twitter Cards, canonical URLs, and keywords.
+ */
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const config = await db.websiteConfig.findUnique({
     where: { subdomain: params.slug },
     include: { organization: true },
   });
   if (!config) return {};
+
+  const org = config.organization;
+  
+  // Construct the canonical site URL
+  const siteUrl = config.domain 
+    ? `https://${config.domain}` 
+    : `https://${config.subdomain}.uplifterinc.com`;
+
+  // Generate description: use custom SEO description, or hero content, or default
+  const locationText = org.city && org.stateProvince 
+    ? `in ${org.city}, ${org.stateProvince}` 
+    : "";
+  const defaultDescription = `${org.name} - Gymnastics programs ${locationText}. Classes for all ages and skill levels.`.trim().replace(/\s+/g, ' ');
+  const description = config.seoDescription || config.heroSubheadline || defaultDescription;
+
+  // Build keywords array: use custom keywords or generate defaults for gymnastics
+  const customKeywords = config.seoKeywords 
+    ? config.seoKeywords.split(',').map(k => k.trim()).filter(Boolean)
+    : [];
+  
+  const defaultKeywords = [
+    'gymnastics',
+    'gymnastics classes',
+    'gymnastics programs',
+    'youth gymnastics',
+    'kids gymnastics',
+    org.city,
+    org.stateProvince,
+    `gymnastics ${org.city}`,
+    'tumbling',
+    'recreational gymnastics',
+    'competitive gymnastics',
+  ].filter(Boolean) as string[];
+
+  // Merge custom keywords with defaults, removing duplicates
+  const keywords = customKeywords.length > 0 
+    ? [...new Set([...customKeywords, ...defaultKeywords])]
+    : defaultKeywords;
+
   return {
-    title: config.organization.name,
-    icons: {
+    title: {
+      default: org.name,
+      template: `%s | ${org.name}`,
+    },
+    description,
+    keywords,
+    icons: { 
       icon: config.favicon || "/favicon.ico",
     },
+    metadataBase: new URL(siteUrl),
+    alternates: { 
+      canonical: siteUrl,
+    },
+    openGraph: {
+      type: 'website',
+      siteName: org.name,
+      title: org.name,
+      description,
+      url: siteUrl,
+      locale: 'en_US',
+      images: config.heroImage 
+        ? [{ 
+            url: config.heroImage, 
+            alt: `${org.name} - Gymnastics`,
+            width: 1200,
+            height: 630,
+          }] 
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: org.name,
+      description,
+      images: config.heroImage ? [config.heroImage] : [],
+    },
+    // Allow indexing for published sites
+    robots: config.isPublished 
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
+    // Google Search Console verification
+    ...(config.googleVerification && {
+      verification: {
+        google: config.googleVerification,
+      },
+    }),
   };
 }
 
@@ -119,6 +205,11 @@ export default async function SiteLayout({
   // Convert to HSL for Tailwind CSS variables
   const primaryHSL = hexToHSL(primaryColor);
 
+  // Construct the canonical site URL for structured data
+  const siteUrl = config.domain 
+    ? `https://${config.domain}` 
+    : `https://${config.subdomain}.uplifterinc.com`;
+
   return (
     <ThemeProvider
       attribute="class"
@@ -146,6 +237,13 @@ export default async function SiteLayout({
                 --ring: ${primaryHSL};
             }
         `}} />
+        
+        {/* SEO Structured Data (JSON-LD) */}
+        <SiteStructuredData
+          organization={config.organization}
+          siteUrl={siteUrl}
+          heroImage={config.heroImage}
+        />
         
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">

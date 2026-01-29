@@ -1394,6 +1394,11 @@ model WebsiteConfig {
   // Status
   isPublished       Boolean  @default(false)
   
+  // SEO
+  seoDescription    String?  @db.Text  // Custom meta description for search engines
+  seoKeywords       String?            // Comma-separated keywords
+  googleVerification String?           // Google Search Console verification code
+  
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
