@@ -4,3 +4,4 @@ export * from "./families";
 export * from "./staff";
 export * from "./programs";
 export * from "./evaluations";
+export * from "./medical";

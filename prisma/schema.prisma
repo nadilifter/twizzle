@@ -82,6 +82,10 @@ model Organization {
   smsMessages       SmsMessage[]
   smsCampaigns      SmsCampaign[]
   smsUsage          SmsUsage[]
+  
+  // Medical
+  medicalFormConfig      MedicalFormConfig?
+  customMedicalQuestions CustomMedicalQuestion[]
 }
 
 model OrganizationMember {
@@ -262,6 +266,9 @@ model Athlete {
   
   // Multi-family support
   guardians   AthleteGuardian[]
+  
+  // Medical information
+  medicalInfo AthleteMedicalInfo?
 }
 
 model AthleteGuardian {
@@ -284,6 +291,119 @@ enum AthleteStatus {
   INACTIVE
   TRIAL
   GRADUATED
+}
+
+// ============================================
+// Medical Information System
+// ============================================
+
+// Question types for custom medical questions
+enum MedicalQuestionType {
+  TEXT
+  YES_NO
+  MULTIPLE_CHOICE
+  CHECKBOX
+}
+
+// Organization-level medical form configuration
+model MedicalFormConfig {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  
+  // Standard questions toggles
+  collectAllergies          Boolean @default(true)
+  collectMedications        Boolean @default(true)
+  collectConditions         Boolean @default(true)
+  collectEmergencyContact   Boolean @default(true)
+  collectDietaryRestrictions Boolean @default(false)
+  collectInsuranceInfo      Boolean @default(false)
+  
+  // Registration integration
+  requireDuringRegistration Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// Custom medical questions defined by organization
+model CustomMedicalQuestion {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  questionText   String
+  questionType   MedicalQuestionType @default(TEXT)
+  options        Json?    // For MULTIPLE_CHOICE/CHECKBOX types: string[]
+  required       Boolean  @default(false)
+  displayOrder   Int      @default(0)
+  isActive       Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  responses    CustomMedicalResponse[]
+
+  @@index([organizationId])
+}
+
+// Structured medical data per athlete
+model AthleteMedicalInfo {
+  id        String   @id @default(cuid())
+  athleteId String   @unique
+  
+  // Standard fields (arrays for multiple entries)
+  allergies              String[] // Food, environmental, medication allergies
+  medications            String[] // Current medications
+  conditions             String[] // Medical conditions (asthma, diabetes, etc.)
+  dietaryRestrictions    String[] // Dietary restrictions
+  
+  // Insurance info
+  insuranceProvider      String?
+  insurancePolicyNumber  String?
+  
+  // Emergency contact (structured from JSON)
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  emergencyContactRelation String?
+  
+  // Additional notes
+  additionalNotes        String?  @db.Text
+  
+  // Metadata
+  lastUpdatedBy String?  // User ID who last updated
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  athlete         Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  customResponses CustomMedicalResponse[]
+
+  @@index([athleteId])
+}
+
+// Answers to custom medical questions
+model CustomMedicalResponse {
+  id            String   @id @default(cuid())
+  medicalInfoId String
+  questionId    String
+  
+  response      String   // Stored as string, parsed based on question type
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  medicalInfo AthleteMedicalInfo    @relation(fields: [medicalInfoId], references: [id], onDelete: Cascade)
+  question    CustomMedicalQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([medicalInfoId, questionId])
+  @@index([medicalInfoId])
+  @@index([questionId])
 }
 
 model PaymentMethod {

@@ -19,6 +19,12 @@ erDiagram
     Organization ||--o{ StaffProfile : employs
     Organization ||--o{ Shift : schedules
     Organization ||--o{ ScheduleTemplate : defines
+    Organization ||--o| MedicalFormConfig : configures
+    Organization ||--o{ CustomMedicalQuestion : defines
+
+    Athlete ||--o| AthleteMedicalInfo : has
+    AthleteMedicalInfo ||--o{ CustomMedicalResponse : contains
+    CustomMedicalQuestion ||--o{ CustomMedicalResponse : answered_by
 
     User ||--o{ OrganizationMember : joins
     User ||--o{ Session : has
@@ -177,6 +183,71 @@ classDiagram
     Athlete "1" --> "*" Enrollment
     Family "1" --> "*" Enrollment
 ```
+
+### Medical Information
+
+Organizations can configure which medical information to collect from athletes. The system supports both standard medical fields (allergies, conditions, medications, emergency contact) and custom questions defined by the organization.
+
+```mermaid
+classDiagram
+    class MedicalFormConfig {
+        +String id
+        +String organizationId
+        +Boolean collectAllergies
+        +Boolean collectMedications
+        +Boolean collectConditions
+        +Boolean collectEmergencyContact
+        +Boolean collectDietaryRestrictions
+        +Boolean collectInsuranceInfo
+        +Boolean requireDuringRegistration
+    }
+
+    class CustomMedicalQuestion {
+        +String id
+        +String organizationId
+        +String questionText
+        +MedicalQuestionType questionType
+        +Json options
+        +Boolean required
+        +Int displayOrder
+        +Boolean isActive
+    }
+
+    class AthleteMedicalInfo {
+        +String id
+        +String athleteId
+        +String[] allergies
+        +String[] medications
+        +String[] conditions
+        +String[] dietaryRestrictions
+        +String insuranceProvider
+        +String insurancePolicyNumber
+        +String emergencyContactName
+        +String emergencyContactPhone
+        +String emergencyContactRelation
+        +String additionalNotes
+        +String lastUpdatedBy
+    }
+
+    class CustomMedicalResponse {
+        +String id
+        +String medicalInfoId
+        +String questionId
+        +String response
+    }
+
+    Organization "1" --> "0..1" MedicalFormConfig
+    Organization "1" --> "*" CustomMedicalQuestion
+    Athlete "1" --> "0..1" AthleteMedicalInfo
+    AthleteMedicalInfo "1" --> "*" CustomMedicalResponse
+    CustomMedicalQuestion "1" --> "*" CustomMedicalResponse
+```
+
+**MedicalQuestionType enum values:**
+- `TEXT` - Free-form text response
+- `YES_NO` - Yes/No radio buttons
+- `MULTIPLE_CHOICE` - Single selection from options
+- `CHECKBOX` - Multiple selections from options
 
 ### Programs & Memberships
 

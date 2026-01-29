@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,9 +13,13 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX, User, Mail, CalendarDays, Trophy, TrendingUp, Star, FileText, ChevronDown, Plus, Loader2, AlertCircle, ArrowLeft } from "lucide-react"
+import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX, User, Mail, CalendarDays, Trophy, TrendingUp, Star, FileText, ChevronDown, Plus, Loader2, AlertCircle, ArrowLeft, Heart } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useAthlete } from "@/hooks/use-athletes"
+import { useAthleteMedicalInfo } from "@/hooks/use-medical"
+import { MedicalDisplay, MedicalAlertBadge } from "@/components/medical/medical-display"
+import { MedicalForm } from "@/components/medical/medical-form"
+import { toast } from "sonner"
 import Link from "next/link"
 
 // Transform status for display
@@ -49,6 +54,15 @@ export default function AthleteProfilePage() {
   const athleteId = typeof params.id === "string" ? params.id : null
   
   const { athlete, isLoading, error, fetchAthlete } = useAthlete(athleteId)
+  const { 
+    medicalInfo, 
+    customQuestions, 
+    config: medicalConfig, 
+    isLoading: medicalLoading,
+    isSaving: medicalSaving,
+    saveMedicalInfo 
+  } = useAthleteMedicalInfo(athleteId)
+  const [isEditingMedical, setIsEditingMedical] = React.useState(false)
 
   // Loading state
   if (isLoading) {
@@ -216,6 +230,10 @@ export default function AthleteProfilePage() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="medical" className="gap-1">
+            <Heart className="h-4 w-4" />
+            Medical
+          </TabsTrigger>
           <TabsTrigger value="enrollments">Programs</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
@@ -286,6 +304,45 @@ export default function AthleteProfilePage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="medical" className="space-y-4">
+          {medicalLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : isEditingMedical ? (
+            <MedicalForm
+              medicalInfo={medicalInfo}
+              config={medicalConfig}
+              customQuestions={customQuestions}
+              onSave={async (data) => {
+                const success = await saveMedicalInfo(data);
+                if (success) {
+                  toast.success("Medical information saved");
+                  setIsEditingMedical(false);
+                } else {
+                  toast.error("Failed to save medical information");
+                }
+                return success;
+              }}
+              isSaving={medicalSaving}
+              onCancel={() => setIsEditingMedical(false)}
+            />
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => setIsEditingMedical(true)}>
+                  Edit Medical Info
+                </Button>
+              </div>
+              <MedicalDisplay
+                medicalInfo={medicalInfo}
+                config={medicalConfig}
+                showEmptyState={true}
+              />
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="enrollments" className="space-y-4">

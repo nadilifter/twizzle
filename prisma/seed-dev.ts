@@ -1810,6 +1810,280 @@ async function main() {
   }
 
   // ============================================
+  // MEDICAL INFORMATION
+  // ============================================
+  console.log("\n💊 Creating medical form configurations...");
+  
+  // Medical Form Config for each organization
+  await Promise.all([
+    prisma.medicalFormConfig.upsert({
+      where: { organizationId: ORG1_ID },
+      update: {},
+      create: {
+        organizationId: ORG1_ID,
+        collectAllergies: true,
+        collectMedications: true,
+        collectConditions: true,
+        collectEmergencyContact: true,
+        collectDietaryRestrictions: true,
+        collectInsuranceInfo: false,
+        requireDuringRegistration: true,
+      },
+    }),
+    prisma.medicalFormConfig.upsert({
+      where: { organizationId: ORG2_ID },
+      update: {},
+      create: {
+        organizationId: ORG2_ID,
+        collectAllergies: true,
+        collectMedications: true,
+        collectConditions: true,
+        collectEmergencyContact: true,
+        collectDietaryRestrictions: false,
+        collectInsuranceInfo: true,
+        requireDuringRegistration: false,
+      },
+    }),
+  ]);
+
+  console.log("  ✓ Created medical form configs for both organizations");
+
+  // Custom Medical Questions
+  console.log("📝 Creating custom medical questions...");
+  await Promise.all([
+    // Sunrise Gymnastics custom questions
+    prisma.customMedicalQuestion.upsert({
+      where: { id: `${ORG1_ID}-mq-1` },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-mq-1`,
+        organizationId: ORG1_ID,
+        questionText: "Has your child had any recent injuries that may affect their training?",
+        questionType: "YES_NO",
+        required: true,
+        displayOrder: 1,
+        isActive: true,
+      },
+    }),
+    prisma.customMedicalQuestion.upsert({
+      where: { id: `${ORG1_ID}-mq-2` },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-mq-2`,
+        organizationId: ORG1_ID,
+        questionText: "What is your child's experience level with gymnastics?",
+        questionType: "MULTIPLE_CHOICE",
+        options: ["Beginner - No experience", "Intermediate - Some classes", "Advanced - Competitive experience"],
+        required: false,
+        displayOrder: 2,
+        isActive: true,
+      },
+    }),
+    prisma.customMedicalQuestion.upsert({
+      where: { id: `${ORG1_ID}-mq-3` },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-mq-3`,
+        organizationId: ORG1_ID,
+        questionText: "Are there any specific fears or concerns we should be aware of?",
+        questionType: "TEXT",
+        required: false,
+        displayOrder: 3,
+        isActive: true,
+      },
+    }),
+    // Metro Sports custom questions
+    prisma.customMedicalQuestion.upsert({
+      where: { id: `${ORG2_ID}-mq-1` },
+      update: {},
+      create: {
+        id: `${ORG2_ID}-mq-1`,
+        organizationId: ORG2_ID,
+        questionText: "Does your child require an EpiPen?",
+        questionType: "YES_NO",
+        required: true,
+        displayOrder: 1,
+        isActive: true,
+      },
+    }),
+    prisma.customMedicalQuestion.upsert({
+      where: { id: `${ORG2_ID}-mq-2` },
+      update: {},
+      create: {
+        id: `${ORG2_ID}-mq-2`,
+        organizationId: ORG2_ID,
+        questionText: "Which sports has your child participated in previously?",
+        questionType: "CHECKBOX",
+        options: ["Soccer", "Basketball", "Swimming", "Gymnastics", "Track & Field", "None"],
+        required: false,
+        displayOrder: 2,
+        isActive: true,
+      },
+    }),
+  ]);
+
+  console.log("  ✓ Created 5 custom medical questions");
+
+  // Athlete Medical Info
+  console.log("🏥 Creating athlete medical info...");
+  const medicalInfoRecords = await Promise.all([
+    // Emily Anderson - has allergies
+    prisma.athleteMedicalInfo.upsert({
+      where: { athleteId: `${ORG1_ID}-ath-1` },
+      update: {},
+      create: {
+        athleteId: `${ORG1_ID}-ath-1`,
+        allergies: ["Peanuts", "Tree Nuts"],
+        medications: [],
+        conditions: [],
+        dietaryRestrictions: ["Nut-Free"],
+        emergencyContactName: "Michelle Anderson",
+        emergencyContactPhone: "(555) 101-1001",
+        emergencyContactRelation: "Mother",
+        additionalNotes: "Carries EpiPen in her bag at all times.",
+      },
+    }),
+    // Sophie Anderson - asthma
+    prisma.athleteMedicalInfo.upsert({
+      where: { athleteId: `${ORG1_ID}-ath-2` },
+      update: {},
+      create: {
+        athleteId: `${ORG1_ID}-ath-2`,
+        allergies: [],
+        medications: ["Albuterol inhaler (as needed)"],
+        conditions: ["Asthma"],
+        dietaryRestrictions: [],
+        emergencyContactName: "Michelle Anderson",
+        emergencyContactPhone: "(555) 101-1001",
+        emergencyContactRelation: "Mother",
+        additionalNotes: "Inhaler should be easily accessible during intense activities.",
+      },
+    }),
+    // Olivia Chen - no medical concerns
+    prisma.athleteMedicalInfo.upsert({
+      where: { athleteId: `${ORG1_ID}-ath-3` },
+      update: {},
+      create: {
+        athleteId: `${ORG1_ID}-ath-3`,
+        allergies: [],
+        medications: [],
+        conditions: [],
+        dietaryRestrictions: [],
+        emergencyContactName: "Jennifer Chen",
+        emergencyContactPhone: "(555) 102-1002",
+        emergencyContactRelation: "Mother",
+      },
+    }),
+    // Mason Williams - ADHD
+    prisma.athleteMedicalInfo.upsert({
+      where: { athleteId: `${ORG1_ID}-ath-5` },
+      update: {},
+      create: {
+        athleteId: `${ORG1_ID}-ath-5`,
+        allergies: ["Bee Stings"],
+        medications: ["Adderall (morning)"],
+        conditions: ["ADHD"],
+        dietaryRestrictions: [],
+        emergencyContactName: "Robert Williams",
+        emergencyContactPhone: "(555) 103-1003",
+        emergencyContactRelation: "Father",
+        additionalNotes: "Takes medication before school. May need extra patience with instructions.",
+      },
+    }),
+    // Ava Patel - lactose intolerant
+    prisma.athleteMedicalInfo.upsert({
+      where: { athleteId: `${ORG1_ID}-ath-6` },
+      update: {},
+      create: {
+        athleteId: `${ORG1_ID}-ath-6`,
+        allergies: [],
+        medications: [],
+        conditions: [],
+        dietaryRestrictions: ["Dairy-Free", "Vegetarian"],
+        emergencyContactName: "Priya Patel",
+        emergencyContactPhone: "(555) 104-1004",
+        emergencyContactRelation: "Mother",
+      },
+    }),
+    // Metro Sports athlete - Michael Chen
+    prisma.athleteMedicalInfo.upsert({
+      where: { athleteId: `${ORG2_ID}-ath-1` },
+      update: {},
+      create: {
+        athleteId: `${ORG2_ID}-ath-1`,
+        allergies: ["Shellfish"],
+        medications: [],
+        conditions: [],
+        dietaryRestrictions: [],
+        emergencyContactName: "David Chen",
+        emergencyContactPhone: "(555) 401-4001",
+        emergencyContactRelation: "Father",
+        insuranceProvider: "Blue Cross Blue Shield",
+        insurancePolicyNumber: "BCBS-12345678",
+      },
+    }),
+  ]);
+
+  console.log(`  ✓ Created ${medicalInfoRecords.length} athlete medical info records`);
+
+  // Custom Medical Responses
+  console.log("📋 Creating custom medical responses...");
+  const emilyMedicalInfo = medicalInfoRecords[0];
+  const sophieMedicalInfo = medicalInfoRecords[1];
+  
+  await Promise.all([
+    // Emily's responses
+    prisma.customMedicalResponse.upsert({
+      where: { medicalInfoId_questionId: { medicalInfoId: emilyMedicalInfo.id, questionId: `${ORG1_ID}-mq-1` } },
+      update: {},
+      create: {
+        medicalInfoId: emilyMedicalInfo.id,
+        questionId: `${ORG1_ID}-mq-1`,
+        response: "No",
+      },
+    }),
+    prisma.customMedicalResponse.upsert({
+      where: { medicalInfoId_questionId: { medicalInfoId: emilyMedicalInfo.id, questionId: `${ORG1_ID}-mq-2` } },
+      update: {},
+      create: {
+        medicalInfoId: emilyMedicalInfo.id,
+        questionId: `${ORG1_ID}-mq-2`,
+        response: "Intermediate - Some classes",
+      },
+    }),
+    // Sophie's responses
+    prisma.customMedicalResponse.upsert({
+      where: { medicalInfoId_questionId: { medicalInfoId: sophieMedicalInfo.id, questionId: `${ORG1_ID}-mq-1` } },
+      update: {},
+      create: {
+        medicalInfoId: sophieMedicalInfo.id,
+        questionId: `${ORG1_ID}-mq-1`,
+        response: "No",
+      },
+    }),
+    prisma.customMedicalResponse.upsert({
+      where: { medicalInfoId_questionId: { medicalInfoId: sophieMedicalInfo.id, questionId: `${ORG1_ID}-mq-2` } },
+      update: {},
+      create: {
+        medicalInfoId: sophieMedicalInfo.id,
+        questionId: `${ORG1_ID}-mq-2`,
+        response: "Advanced - Competitive experience",
+      },
+    }),
+    prisma.customMedicalResponse.upsert({
+      where: { medicalInfoId_questionId: { medicalInfoId: sophieMedicalInfo.id, questionId: `${ORG1_ID}-mq-3` } },
+      update: {},
+      create: {
+        medicalInfoId: sophieMedicalInfo.id,
+        questionId: `${ORG1_ID}-mq-3`,
+        response: "No specific fears. She loves tumbling!",
+      },
+    }),
+  ]);
+
+  console.log("  ✓ Created 5 custom medical responses");
+
+  // ============================================
   // COMPLETE
   // ============================================
   console.log("\n" + "=".repeat(50));
@@ -1840,6 +2114,8 @@ async function main() {
   console.log("  • 10 shifts (historical + scheduled)");
   console.log("  • 2 schedule templates with entries");
   console.log("  • 10 event staff assignments");
+  console.log("  • 2 medical form configs with custom questions");
+  console.log("  • 6 athlete medical info records with responses");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (password: password123):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");

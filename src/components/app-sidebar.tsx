@@ -255,6 +255,10 @@ const data = {
           url: "/dashboard/organization/facilities",
         },
         {
+          title: "Medical Forms",
+          url: "/dashboard/organization/medical",
+        },
+        {
           title: "Schedules",
           url: "/dashboard/organization/schedules",
         },
