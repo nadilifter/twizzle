@@ -26,7 +26,7 @@ export default async function ContactPage({ params }: { params: { slug: string }
 
                     <div className="space-y-8">
                         <div className="flex items-start gap-4">
-                            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                            <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg">
                                 <Mail className="w-6 h-6" />
                             </div>
                             <div>
@@ -36,7 +36,7 @@ export default async function ContactPage({ params }: { params: { slug: string }
                         </div>
 
                         <div className="flex items-start gap-4">
-                            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                            <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg">
                                 <Phone className="w-6 h-6" />
                             </div>
                             <div>
@@ -46,7 +46,7 @@ export default async function ContactPage({ params }: { params: { slug: string }
                         </div>
 
                         <div className="flex items-start gap-4">
-                            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                            <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg">
                                 <MapPin className="w-6 h-6" />
                             </div>
                             <div>
@@ -60,39 +60,39 @@ export default async function ContactPage({ params }: { params: { slug: string }
                     </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-card p-8 rounded-xl shadow-sm border border-border">
                     <h2 className="text-xl font-semibold mb-6">Send us a Message</h2>
                     <form className="space-y-4">
                         <div>
-                            <label htmlFor="name" className="block text-sm font-medium mb-1 text-slate-700">Name</label>
+                            <label htmlFor="name" className="block text-sm font-medium mb-1 text-foreground">Name</label>
                             <input 
                                 type="text" 
                                 id="name" 
-                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-muted-foreground"
                                 placeholder="Your name"
                             />
                         </div>
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium mb-1 text-slate-700">Email</label>
+                            <label htmlFor="email" className="block text-sm font-medium mb-1 text-foreground">Email</label>
                             <input 
                                 type="email" 
                                 id="email" 
-                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-muted-foreground"
                                 placeholder="your@email.com"
                             />
                         </div>
                         <div>
-                            <label htmlFor="message" className="block text-sm font-medium mb-1 text-slate-700">Message</label>
+                            <label htmlFor="message" className="block text-sm font-medium mb-1 text-foreground">Message</label>
                             <textarea 
                                 id="message" 
                                 rows={4}
-                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-muted-foreground"
                                 placeholder="How can we help you?"
                             ></textarea>
                         </div>
                         <button 
                             type="button" 
-                            className="w-full bg-slate-900 text-white py-3 rounded-md hover:bg-slate-800 transition-colors font-medium"
+                            className="w-full bg-primary text-primary-foreground py-3 rounded-md hover:bg-primary/90 transition-colors font-medium"
                         >
                             Send Message
                         </button>
