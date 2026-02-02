@@ -1582,23 +1582,31 @@ async function main() {
   // ============================================
   console.log("\n🌐 Creating website configurations...");
   
+  // Default info box content
+  const defaultInfoBox1Title = "Membership Includes";
+  const defaultInfoBox1Content = "<ul><li>Access to all registered programs</li><li>Facility and equipment access</li><li>Member communications and updates</li><li>Participation in club events</li></ul>";
+  const defaultInfoBox2Title = "Financial Assistance";
+  const defaultInfoBox2Content = "<p>We believe in accessible athletics for all. Financial assistance may be available for qualifying families. Contact us for more information about assistance options.</p>";
+  const defaultInfoBox3Title = "Get Involved";
+  const defaultInfoBox3Content = "<p>We run on community support. Volunteer opportunities are available for parents and members who want to contribute to our programs and events.</p>";
+
   // Create configs for all organizations
   await Promise.all([
     prisma.websiteConfig.upsert({
       where: { organizationId: ORG1_ID }, update: {},
-      create: { organizationId: ORG1_ID, subdomain: "sunrise-gymnastics", primaryColor: "#FF6B35", secondaryColor: "#004E89", heroHeadline: "Where Champions Begin", heroSubheadline: "Building confidence through gymnastics", heroAgeRange: "Ages 3-18", heroProgramPeriods: "Year-Round Programs", heroLocation: "Sunnyvale, CA", showCalendar: true, showRegistration: true, showContact: true, isPublished: true },
+      create: { organizationId: ORG1_ID, subdomain: "sunrise-gymnastics", primaryColor: "#FF6B35", secondaryColor: "#004E89", heroHeadline: "Where Champions Begin", heroSubheadline: "Building confidence through gymnastics", heroAgeRange: "Ages 3-18", heroProgramPeriods: "Year-Round Programs", heroLocation: "Sunnyvale, CA", showCalendar: true, showRegistration: true, showContact: true, isPublished: true, infoBox1Title: defaultInfoBox1Title, infoBox1Content: defaultInfoBox1Content, infoBox2Title: defaultInfoBox2Title, infoBox2Content: defaultInfoBox2Content, infoBox3Title: defaultInfoBox3Title, infoBox3Content: defaultInfoBox3Content },
     }),
     prisma.websiteConfig.upsert({
       where: { organizationId: ORG2_ID }, update: {},
-      create: { organizationId: ORG2_ID, subdomain: "metro-sports", primaryColor: "#2D5A27", secondaryColor: "#F5A623", heroHeadline: "Play. Compete. Thrive.", heroSubheadline: "Your community sports destination", heroAgeRange: "All Ages Welcome", heroProgramPeriods: "Seasonal Programs", heroLocation: "San Jose, CA", showCalendar: true, showRegistration: true, showContact: true, isPublished: true },
+      create: { organizationId: ORG2_ID, subdomain: "metro-sports", primaryColor: "#2D5A27", secondaryColor: "#F5A623", heroHeadline: "Play. Compete. Thrive.", heroSubheadline: "Your community sports destination", heroAgeRange: "All Ages Welcome", heroProgramPeriods: "Seasonal Programs", heroLocation: "San Jose, CA", showCalendar: true, showRegistration: true, showContact: true, isPublished: true, infoBox1Title: defaultInfoBox1Title, infoBox1Content: defaultInfoBox1Content, infoBox2Title: defaultInfoBox2Title, infoBox2Content: defaultInfoBox2Content, infoBox3Title: defaultInfoBox3Title, infoBox3Content: defaultInfoBox3Content },
     }),
     prisma.websiteConfig.upsert({
       where: { organizationId: orgDemo.id }, update: {},
-      create: { organizationId: orgDemo.id, subdomain: "demo-gym", primaryColor: "#3B82F6", secondaryColor: "#10B981", heroHeadline: "Welcome to Demo Gym", heroSubheadline: "Your gymnastics journey starts here", heroAgeRange: "All Ages Welcome", heroProgramPeriods: "Year-Round Programs", heroLocation: "Anytown, USA", showCalendar: true, showRegistration: true, showContact: true, isPublished: true },
+      create: { organizationId: orgDemo.id, subdomain: "demo-gym", primaryColor: "#3B82F6", secondaryColor: "#10B981", heroHeadline: "Welcome to Demo Gym", heroSubheadline: "Your gymnastics journey starts here", heroAgeRange: "All Ages Welcome", heroProgramPeriods: "Year-Round Programs", heroLocation: "Anytown, USA", showCalendar: true, showRegistration: true, showContact: true, isPublished: true, infoBox1Title: defaultInfoBox1Title, infoBox1Content: defaultInfoBox1Content, infoBox2Title: defaultInfoBox2Title, infoBox2Content: defaultInfoBox2Content, infoBox3Title: defaultInfoBox3Title, infoBox3Content: defaultInfoBox3Content },
     }),
     prisma.websiteConfig.upsert({
       where: { organizationId: orgUplifter.id }, update: {},
-      create: { organizationId: orgUplifter.id, subdomain: "uplifter", primaryColor: "#8B5CF6", secondaryColor: "#EC4899", heroHeadline: "Uplifter Platform", heroSubheadline: "Empowering sports organizations", showCalendar: true, showRegistration: true, showContact: true, isPublished: true },
+      create: { organizationId: orgUplifter.id, subdomain: "uplifter", primaryColor: "#8B5CF6", secondaryColor: "#EC4899", heroHeadline: "Uplifter Platform", heroSubheadline: "Empowering sports organizations", showCalendar: true, showRegistration: true, showContact: true, isPublished: true, infoBox1Title: defaultInfoBox1Title, infoBox1Content: defaultInfoBox1Content, infoBox2Title: defaultInfoBox2Title, infoBox2Content: defaultInfoBox2Content, infoBox3Title: defaultInfoBox3Title, infoBox3Content: defaultInfoBox3Content },
     }),
   ]);
   

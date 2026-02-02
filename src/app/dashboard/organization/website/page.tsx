@@ -10,7 +10,7 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Check, Globe, Palette, Image, Eye } from "lucide-react";
+import { Loader2, AlertCircle, Check, Globe, Palette, Image, Eye, LayoutGrid } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 
@@ -423,6 +423,82 @@ export default function WebsitePage() {
                 placeholder="Austin, TX" 
               />
               <p className="text-xs text-muted-foreground">Leave empty to hide this badge</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Information Boxes */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <LayoutGrid className="h-5 w-5 text-primary" />
+            <CardTitle>Information Boxes</CardTitle>
+          </div>
+          <CardDescription>Add up to 3 information boxes to display on your home page. Leave empty to hide.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          {/* Info Box 1 */}
+          <div className="space-y-4 rounded-lg border p-4">
+            <div className="space-y-2">
+              <Label>Box 1 Title</Label>
+              <Input 
+                value={config.infoBox1Title || ""} 
+                onChange={(e) => updateConfig("infoBox1Title", e.target.value)}
+                placeholder="Membership Includes" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Box 1 Content</Label>
+              <RichTextEditor 
+                value={config.infoBox1Content || ""} 
+                onChange={(val) => updateConfig("infoBox1Content", val)} 
+              />
+              <p className="text-xs text-muted-foreground">Leave both title and content empty to hide this box</p>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          {/* Info Box 2 */}
+          <div className="space-y-4 rounded-lg border p-4">
+            <div className="space-y-2">
+              <Label>Box 2 Title</Label>
+              <Input 
+                value={config.infoBox2Title || ""} 
+                onChange={(e) => updateConfig("infoBox2Title", e.target.value)}
+                placeholder="Financial Assistance" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Box 2 Content</Label>
+              <RichTextEditor 
+                value={config.infoBox2Content || ""} 
+                onChange={(val) => updateConfig("infoBox2Content", val)} 
+              />
+              <p className="text-xs text-muted-foreground">Leave both title and content empty to hide this box</p>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          {/* Info Box 3 */}
+          <div className="space-y-4 rounded-lg border p-4">
+            <div className="space-y-2">
+              <Label>Box 3 Title</Label>
+              <Input 
+                value={config.infoBox3Title || ""} 
+                onChange={(e) => updateConfig("infoBox3Title", e.target.value)}
+                placeholder="Get Involved" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Box 3 Content</Label>
+              <RichTextEditor 
+                value={config.infoBox3Content || ""} 
+                onChange={(val) => updateConfig("infoBox3Content", val)} 
+              />
+              <p className="text-xs text-muted-foreground">Leave both title and content empty to hide this box</p>
             </div>
           </div>
         </CardContent>

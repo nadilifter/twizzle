@@ -218,7 +218,14 @@ export default async function SitePage({ params }: { params: { slug: string } })
       )}
 
       {/* Info Section */}
-      <InfoSection organizationName={config.organization.name} />
+      <InfoSection 
+        infoBox1Title={config.infoBox1Title}
+        infoBox1Content={config.infoBox1Content}
+        infoBox2Title={config.infoBox2Title}
+        infoBox2Content={config.infoBox2Content}
+        infoBox3Title={config.infoBox3Title}
+        infoBox3Content={config.infoBox3Content}
+      />
     </div>
   );
 }

@@ -21,6 +21,13 @@ const websiteConfigSchema = z.object({
   domain: z.string().optional().nullable(),
   subdomain: z.string().optional().nullable(),
   isPublished: z.boolean().optional(),
+  // Information Boxes
+  infoBox1Title: z.string().optional().nullable(),
+  infoBox1Content: z.string().optional().nullable(),
+  infoBox2Title: z.string().optional().nullable(),
+  infoBox2Content: z.string().optional().nullable(),
+  infoBox3Title: z.string().optional().nullable(),
+  infoBox3Content: z.string().optional().nullable(),
 });
 
 export async function GET() {

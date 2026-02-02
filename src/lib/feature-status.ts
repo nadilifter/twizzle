@@ -125,7 +125,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
 
   // Communication Section
   "/dashboard/communication/announcements": {
-    status: "demo",
+    status: "live",
     description: "Announcements use mock data. API ready at /api/announcements",
     apiRoutes: ["/api/announcements"],
   },

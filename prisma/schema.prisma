@@ -144,6 +144,11 @@ model User {
   announcementReads       AnnouncementRead[] @relation("AnnouncementReads")
   systemAnnouncementReads SystemAnnouncementRead[] @relation("SystemAnnouncementReads")
   systemAnnouncementsCreated SystemAnnouncement[] @relation("SystemAnnouncementCreator")
+  
+  // Feature request relations
+  featureRequests         FeatureRequest[] @relation("FeatureRequestAuthor")
+  featureVotes            FeatureVote[] @relation("FeatureVotes")
+  featureComments         FeatureComment[] @relation("FeatureComments")
 }
 
 model Session {
@@ -1570,6 +1575,14 @@ model WebsiteConfig {
   seoKeywords       String?            // Comma-separated keywords
   googleVerification String?           // Google Search Console verification code
   
+  // Information Boxes (up to 3 configurable boxes on home page)
+  infoBox1Title     String?
+  infoBox1Content   String?  @db.Text
+  infoBox2Title     String?
+  infoBox2Content   String?  @db.Text
+  infoBox3Title     String?
+  infoBox3Content   String?  @db.Text
+  
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -1633,24 +1646,52 @@ enum StockMovementType {
 // PHASE 8: Feedback & Feature Requests
 // ============================================
 
-model FeatureRequest {
-  id          String    @id @default(cuid())
-  title       String
-  description String
-  status      FeatureStatus @default(OPEN)
-  votes       Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  userId      String?   // Author
-  
-  comments    FeatureComment[]
+enum FeatureStatus {
+  SUBMITTED     // New submission, pending review
+  PLANNED       // Accepted and on roadmap
+  IN_PROGRESS   // Currently being built
+  DONE          // Completed
+  CLOSED        // Rejected/won't do
 }
 
-enum FeatureStatus {
-  OPEN
-  IN_PROGRESS
-  DONE
-  CLOSED
+model FeatureRequest {
+  id              String          @id @default(cuid())
+  title           String
+  description     String
+  status          FeatureStatus   @default(SUBMITTED)
+  isPublic        Boolean         @default(false)  // Only show on public roadmap if true
+  targetDate      DateTime?       // Target delivery date
+  statusChangedAt DateTime?       // Last status change timestamp
+  categories      String[]        // Array of category strings
+  mergedIntoId    String?         // If merged into another feature
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  userId          String?         // Author (submitter)
+  
+  // Relations
+  user            User?           @relation("FeatureRequestAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  mergedInto      FeatureRequest? @relation("FeatureMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom      FeatureRequest[] @relation("FeatureMerge")
+  comments        FeatureComment[]
+  votes           FeatureVote[]
+  
+  @@index([status])
+  @@index([isPublic])
+  @@index([userId])
+}
+
+model FeatureVote {
+  id               String         @id @default(cuid())
+  featureRequestId String
+  userId           String
+  createdAt        DateTime       @default(now())
+  
+  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+  user             User           @relation("FeatureVotes", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([featureRequestId, userId]) // One vote per user per feature
+  @@index([featureRequestId])
+  @@index([userId])
 }
 
 model FeatureComment {
@@ -1658,10 +1699,15 @@ model FeatureComment {
   featureRequestId String
   content          String
   userId           String
+  isStaffReply     Boolean        @default(false) // True if from superadmin/staff
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   
   featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+  user             User           @relation("FeatureComments", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([featureRequestId])
+  @@index([userId])
 }
 
 

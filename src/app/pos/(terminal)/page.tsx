@@ -13,6 +13,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { toast } from "sonner"
 import { verifyOrganizationMembership } from "@/app/actions/organization"
+import { getSubdomainUrl } from "@/lib/env-domains"
 
 type Product = {
   id: string
@@ -202,9 +203,12 @@ function POSPageContent() {
                 {products.length === 0 && (
                   <p className="text-sm mt-2">
                     Add products in the{" "}
-                    <Link href="/dashboard/organization/store" className="text-primary underline">
+                    <a 
+                      href={`${getSubdomainUrl("admin")}/organization/store`} 
+                      className="text-primary underline"
+                    >
                       Store settings
-                    </Link>
+                    </a>
                   </p>
                 )}
               </div>

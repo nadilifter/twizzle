@@ -1,0 +1,613 @@
+"use client"
+
+import * as React from "react"
+import { useRouter } from "next/navigation"
+import { Loader2, Check, X, Info, Building2, User, Globe, CreditCard } from "lucide-react"
+import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+
+interface SubscriptionPlan {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  monthlyPrice: string
+  yearlyPrice: string | null
+  features: string[]
+  isPopular: boolean
+  maxAthletes: number | null
+  maxUsers: number | null
+  maxEvents: number | null
+}
+
+const COUNTRIES = [
+  { code: "US", name: "United States" },
+  { code: "CA", name: "Canada" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "AU", name: "Australia" },
+  { code: "DE", name: "Germany" },
+  { code: "FR", name: "France" },
+  { code: "ES", name: "Spain" },
+  { code: "IT", name: "Italy" },
+  { code: "NL", name: "Netherlands" },
+  { code: "BE", name: "Belgium" },
+  { code: "AT", name: "Austria" },
+  { code: "CH", name: "Switzerland" },
+  { code: "IE", name: "Ireland" },
+  { code: "NZ", name: "New Zealand" },
+  { code: "MX", name: "Mexico" },
+  { code: "BR", name: "Brazil" },
+  { code: "AR", name: "Argentina" },
+  { code: "JP", name: "Japan" },
+  { code: "KR", name: "South Korea" },
+  { code: "IN", name: "India" },
+]
+
+export default function SignupPage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [plans, setPlans] = React.useState<SubscriptionPlan[]>([])
+  const [plansLoading, setPlansLoading] = React.useState(true)
+  
+  // Subdomain availability check
+  const [subdomainStatus, setSubdomainStatus] = React.useState<"idle" | "checking" | "available" | "taken">("idle")
+  const subdomainCheckTimeout = React.useRef<NodeJS.Timeout | null>(null)
+  
+  // Form state
+  const [formData, setFormData] = React.useState({
+    // User account
+    email: "",
+    password: "",
+    confirmPassword: "",
+    name: "",
+    
+    // Organization
+    orgName: "",
+    orgEmail: "",
+    phone: "",
+    street: "",
+    city: "",
+    stateProvince: "",
+    postalCode: "",
+    country: "",
+    
+    // Website
+    subdomain: "",
+    
+    // Plan
+    planId: "",
+  })
+
+  // Validation errors
+  const [errors, setErrors] = React.useState<Record<string, string>>({})
+
+  // Fetch plans on mount
+  React.useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const response = await fetch("/api/signups/plans")
+        if (!response.ok) throw new Error("Failed to fetch plans")
+        const data = await response.json()
+        setPlans(data)
+        // Pre-select the most popular plan or first plan
+        const popularPlan = data.find((p: SubscriptionPlan) => p.isPopular)
+        if (popularPlan) {
+          setFormData(prev => ({ ...prev, planId: popularPlan.id }))
+        } else if (data.length > 0) {
+          setFormData(prev => ({ ...prev, planId: data[0].id }))
+        }
+      } catch (error) {
+        toast.error("Failed to load subscription plans")
+      } finally {
+        setPlansLoading(false)
+      }
+    }
+    fetchPlans()
+  }, [])
+
+  // Check subdomain availability
+  const checkSubdomain = React.useCallback(async (subdomain: string) => {
+    if (!subdomain || subdomain.length < 3) {
+      setSubdomainStatus("idle")
+      return
+    }
+
+    setSubdomainStatus("checking")
+    try {
+      const response = await fetch(`/api/signups/check-subdomain?subdomain=${encodeURIComponent(subdomain)}`)
+      const data = await response.json()
+      setSubdomainStatus(data.available ? "available" : "taken")
+    } catch (error) {
+      setSubdomainStatus("idle")
+    }
+  }, [])
+
+  // Debounced subdomain check
+  const handleSubdomainChange = (value: string) => {
+    // Normalize subdomain: lowercase, alphanumeric and hyphens only
+    const normalized = value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+    setFormData(prev => ({ ...prev, subdomain: normalized }))
+    
+    if (subdomainCheckTimeout.current) {
+      clearTimeout(subdomainCheckTimeout.current)
+    }
+    
+    subdomainCheckTimeout.current = setTimeout(() => {
+      checkSubdomain(normalized)
+    }, 500)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }))
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    // User account validation
+    if (!formData.name.trim()) {
+      newErrors.name = "Your name is required"
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email"
+    }
+    if (!formData.password) {
+      newErrors.password = "Password is required"
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters"
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match"
+    }
+
+    // Organization validation
+    if (!formData.orgName.trim()) {
+      newErrors.orgName = "Organization name is required"
+    }
+    if (!formData.orgEmail.trim()) {
+      newErrors.orgEmail = "Organization email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.orgEmail)) {
+      newErrors.orgEmail = "Please enter a valid email"
+    }
+
+    // Subdomain validation
+    if (!formData.subdomain.trim()) {
+      newErrors.subdomain = "Subdomain is required"
+    } else if (formData.subdomain.length < 3) {
+      newErrors.subdomain = "Subdomain must be at least 3 characters"
+    } else if (subdomainStatus === "taken") {
+      newErrors.subdomain = "This subdomain is already taken"
+    }
+
+    // Plan validation
+    if (!formData.planId) {
+      newErrors.planId = "Please select a plan"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/signups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create organization")
+      }
+
+      toast.success("Organization created successfully!")
+      router.push(`/signups/success?subdomain=${formData.subdomain}&orgName=${encodeURIComponent(formData.orgName)}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const formatCurrency = (amount: string | number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+    }).format(Number(amount))
+  }
+
+  return (
+    <TooltipProvider>
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">Create Your Organization</h1>
+          <p className="text-muted-foreground">
+            Get started with Uplifter in just a few minutes. All plans include a 30-day free trial.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Section 1: Your Account */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                <CardTitle>Your Account</CardTitle>
+              </div>
+              <CardDescription>
+                Create your administrator account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="name">Your Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="John Smith"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className={errors.name ? "border-destructive" : ""}
+                />
+                {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className={errors.email ? "border-destructive" : ""}
+                />
+                {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Min. 8 characters"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={errors.password ? "border-destructive" : ""}
+                />
+                {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+              </div>
+              <div className="space-y-2 sm:col-start-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={errors.confirmPassword ? "border-destructive" : ""}
+                />
+                {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 2: Organization Details */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                <CardTitle>Organization Details</CardTitle>
+              </div>
+              <CardDescription>
+                Tell us about your organization
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="orgName">Organization Name</Label>
+                <Input
+                  id="orgName"
+                  name="orgName"
+                  placeholder="Sunrise Gymnastics Club"
+                  value={formData.orgName}
+                  onChange={handleInputChange}
+                  className={errors.orgName ? "border-destructive" : ""}
+                />
+                {errors.orgName && <p className="text-sm text-destructive">{errors.orgName}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="orgEmail">Organization Email</Label>
+                <Input
+                  id="orgEmail"
+                  name="orgEmail"
+                  type="email"
+                  placeholder="info@yourclub.com"
+                  value={formData.orgEmail}
+                  onChange={handleInputChange}
+                  className={errors.orgEmail ? "border-destructive" : ""}
+                />
+                {errors.orgEmail && <p className="text-sm text-destructive">{errors.orgEmail}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone (optional)</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="+1 (555) 123-4567"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="street">Street Address</Label>
+                <Input
+                  id="street"
+                  name="street"
+                  placeholder="123 Main Street"
+                  value={formData.street}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  name="city"
+                  placeholder="New York"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stateProvince">State / Province</Label>
+                <Input
+                  id="stateProvince"
+                  name="stateProvince"
+                  placeholder="NY"
+                  value={formData.stateProvince}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postalCode">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  name="postalCode"
+                  placeholder="10001"
+                  value={formData.postalCode}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Select
+                  value={formData.country}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 3: Your Website */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Globe className="h-5 w-5 text-primary" />
+                <CardTitle>Your Website</CardTitle>
+              </div>
+              <CardDescription>
+                Choose your organization&apos;s web address
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="subdomain">Subdomain</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>A custom domain (e.g., yourclub.com) can be configured after initial setup in your dashboard settings.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="flex items-center">
+                  <Input
+                    id="subdomain"
+                    name="subdomain"
+                    placeholder="your-club"
+                    value={formData.subdomain}
+                    onChange={(e) => handleSubdomainChange(e.target.value)}
+                    className={cn(
+                      "rounded-r-none",
+                      errors.subdomain ? "border-destructive" : "",
+                      subdomainStatus === "available" ? "border-green-500 focus-visible:ring-green-500" : "",
+                      subdomainStatus === "taken" ? "border-destructive" : ""
+                    )}
+                  />
+                  <span className="inline-flex items-center px-3 h-9 border border-l-0 rounded-r-md bg-muted text-muted-foreground text-sm">
+                    .uplifterinc.com
+                  </span>
+                  <div className="ml-2 w-6">
+                    {subdomainStatus === "checking" && (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                    {subdomainStatus === "available" && (
+                      <Check className="h-4 w-4 text-green-500" />
+                    )}
+                    {subdomainStatus === "taken" && (
+                      <X className="h-4 w-4 text-destructive" />
+                    )}
+                  </div>
+                </div>
+                {errors.subdomain && <p className="text-sm text-destructive">{errors.subdomain}</p>}
+                {subdomainStatus === "available" && (
+                  <p className="text-sm text-green-600">This subdomain is available!</p>
+                )}
+                {subdomainStatus === "taken" && (
+                  <p className="text-sm text-destructive">This subdomain is already taken. Please choose another.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 4: Choose Your Plan */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <CardTitle>Choose Your Plan</CardTitle>
+              </div>
+              <CardDescription>
+                All plans include a 30-day free trial. No credit card required.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {plansLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {plans.map((plan) => (
+                    <div
+                      key={plan.id}
+                      onClick={() => setFormData(prev => ({ ...prev, planId: plan.id }))}
+                      className={cn(
+                        "relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50",
+                        formData.planId === plan.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                      )}
+                    >
+                      {plan.isPopular && (
+                        <Badge className="absolute -top-2 right-2 bg-primary">
+                          Popular
+                        </Badge>
+                      )}
+                      <div className="mb-3">
+                        <h3 className="font-semibold">{plan.name}</h3>
+                        <div className="flex items-baseline gap-1 mt-1">
+                          <span className="text-2xl font-bold">
+                            {formatCurrency(plan.monthlyPrice)}
+                          </span>
+                          <span className="text-muted-foreground text-sm">/mo</span>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="mb-3">
+                        Free for 30 days
+                      </Badge>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        {plan.features.slice(0, 3).map((feature, i) => (
+                          <li key={i} className="flex items-center gap-1">
+                            <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
+                            <span className="truncate">{feature}</span>
+                          </li>
+                        ))}
+                        {plan.features.length > 3 && (
+                          <li className="text-xs">+{plan.features.length - 3} more</li>
+                        )}
+                      </ul>
+                      {formData.planId === plan.id && (
+                        <div className="absolute top-2 left-2">
+                          <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {errors.planId && <p className="text-sm text-destructive mt-2">{errors.planId}</p>}
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <div className="flex justify-center">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isLoading || subdomainStatus === "checking"}
+              className="w-full sm:w-auto min-w-[200px]"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Organization...
+                </>
+              ) : (
+                "Create Organization"
+              )}
+            </Button>
+          </div>
+
+          <p className="text-center text-sm text-muted-foreground">
+            By creating an account, you agree to our{" "}
+            <a href="#" className="underline hover:text-foreground">Terms of Service</a>
+            {" "}and{" "}
+            <a href="#" className="underline hover:text-foreground">Privacy Policy</a>.
+          </p>
+        </form>
+      </div>
+    </TooltipProvider>
+  )
+}
