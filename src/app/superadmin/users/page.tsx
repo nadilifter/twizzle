@@ -1,26 +1,54 @@
 import { db } from "@/lib/db"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { SuperadminUsersTable } from "@/components/superadmin/users-table"
 
 export default async function AdminUsersPage() {
+  // Fetch users with memberships
   const users = await db.user.findMany({
     include: {
       memberships: {
         include: {
-            organization: true
+          organization: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
         }
       }
     },
     orderBy: { createdAt: 'desc' }
   })
+
+  // Fetch all organizations for the filter dropdown
+  const organizations = await db.organization.findMany({
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: { name: 'asc' }
+  })
+
+  // Transform data for the client component (serialize dates)
+  const serializedUsers = users.map((user) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    avatar: user.avatar,
+    role: user.role,
+    status: user.status,
+    isSuperAdmin: user.isSuperAdmin,
+    createdAt: user.createdAt.toISOString(),
+    lastActiveAt: user.lastActiveAt?.toISOString() || null,
+    memberships: user.memberships.map((m) => ({
+      id: m.id,
+      role: m.role,
+      organization: {
+        id: m.organization.id,
+        name: m.organization.name,
+      }
+    }))
+  }))
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -28,44 +56,15 @@ export default async function AdminUsersPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Users</CardTitle>
+          <CardDescription>
+            Manage and view all platform users across organizations
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role (Platform)</TableHead>
-                <TableHead>Organizations</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                      {user.isSuperAdmin ? <Badge variant="destructive">Super Admin</Badge> : user.role}
-                  </TableCell>
-                  <TableCell>
-                      <div className="flex flex-col gap-1">
-                          {user.memberships.map(m => (
-                              <span key={m.id} className="text-xs text-muted-foreground">
-                                  {m.organization.name} ({m.role})
-                              </span>
-                          ))}
-                      </div>
-                  </TableCell>
-                  <TableCell>
-                      <Badge variant={user.status === "ACTIVE" ? "default" : "secondary"}>
-                          {user.status}
-                      </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <SuperadminUsersTable 
+            users={serializedUsers} 
+            organizations={organizations}
+          />
         </CardContent>
       </Card>
     </div>
