@@ -245,7 +245,7 @@ To develop locally with the multi-portal architecture, you must update your `/et
 ```
 127.0.0.1   uplifterinc.localhost
 127.0.0.1   login.uplifterinc.localhost
-127.0.0.1   signup.uplifterinc.localhost
+127.0.0.1   startup.uplifterinc.localhost
 127.0.0.1   admin.uplifterinc.localhost
 127.0.0.1   superadmin.uplifterinc.localhost
 127.0.0.1   coach.uplifterinc.localhost
@@ -258,7 +258,7 @@ To develop locally with the multi-portal architecture, you must update your `/et
 
 **Access Points:**
 -   **Login Portal**: `http://login.uplifterinc.localhost:3000` - Centralized authentication
--   **Organization Signup**: `http://signup.uplifterinc.localhost:3000` - New organization registration
+-   **Organization Startup**: `http://startup.uplifterinc.localhost:3000` - New organization registration (supports URL parameters for partner referrals)
 -   **Super Admin**: `http://superadmin.uplifterinc.localhost:3000`
 -   **Business Dashboard**: `http://admin.uplifterinc.localhost:3000`
 -   **Coach Portal**: `http://coach.uplifterinc.localhost:3000`

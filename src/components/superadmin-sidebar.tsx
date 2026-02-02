@@ -91,13 +91,12 @@ const quickLinkConfig = [
   { title: "Coach Portal", subdomain: "coach", path: "/", icon: Users },
   { title: "Athletes Portal", subdomain: "athletes", path: "/", icon: Users },
   { title: "Events Portal", subdomain: "events", path: "/", icon: Calendar },
-  { title: "Campaigns", subdomain: null, path: "/campaigns", icon: Megaphone },
   { title: "Feedback", subdomain: "feedback", path: "/", icon: MessageSquare },
 ]
 
 // Org Signup link component (separate subdomain)
 function OrgSignupLink({ getUrl }: { getUrl: (subdomain: string | null) => string }) {
-  const url = getUrl("signup")
+  const url = getUrl("startup")
 
   return (
     <SidebarMenuButton asChild>

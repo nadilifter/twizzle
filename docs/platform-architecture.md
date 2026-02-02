@@ -22,9 +22,9 @@ flowchart TB
     subgraph Portals["Access Point Subdomains"]
         direction TB
         
-        subgraph Auth["Authentication"]
+        subgraph Auth["Authentication & Onboarding"]
             Login["login.uplifterinc.com"]
-            Signup["signup.uplifterinc.com"]
+            Startup["startup.uplifterinc.com"]
         end
 
         subgraph Admin["Administration"]
@@ -46,7 +46,7 @@ flowchart TB
     end
 
     Router --> Login
-    Router --> Signup
+    Router --> Startup
     Router --> OrgAdmin
     Router --> SuperAdmin
     Router --> POS
@@ -111,7 +111,7 @@ flowchart LR
         athletes["athletes."]
         sites["[slug]."]
         login["login."]
-        signup["signup."]
+        startup["startup."]
     end
 
     SA --> superadmin
@@ -130,15 +130,15 @@ flowchart LR
     
     PU --> sites
     PU --> login
-    PU --> signup
+    PU --> startup
 ```
 
 ## Portal Descriptions
 
 | Subdomain | Purpose | Primary Users | Status |
 |-----------|---------|---------------|--------|
-| `login.` | Authentication & password reset | All users | Live |
-| `signup.` | New organization registration | New customers | Live |
+| `login.` | Authentication, password reset & user signup | All users | Live |
+| `startup.` | New organization registration (supports partner referral params) | New customers | Live |
 | `admin.` | Organization management dashboard | Org Admins, Staff | Live |
 | `superadmin.` | Platform-wide administration | Uplifter staff | Live |
 | `pos.` | Point of Sale terminal | Staff at front desk | Live |

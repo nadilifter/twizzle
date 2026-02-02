@@ -345,9 +345,10 @@ export async function middleware(req: NextRequest) {
       return NextResponse.rewrite(url);
   }
 
-  // SIGNUP PORTAL (signup.{baseDomain}) -> /org-signup
+  // STARTUP PORTAL (startup.{baseDomain}) -> /org-signup
   // No auth required - public organization registration page
-  if (currentHost === "signup") {
+  // Supports URL parameters for pre-filling form data (e.g., ?plan=pro&ref=partner123)
+  if (currentHost === "startup") {
       let newPath = path;
       if (path === "/") {
           newPath = "/org-signup";
