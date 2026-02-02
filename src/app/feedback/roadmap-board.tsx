@@ -3,21 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Plus, MoreHorizontal, MessageSquare, ThumbsUp } from "lucide-react";
-import { getStatusVariant, formatStatus } from "./utils";
+import { MessageSquare, ThumbsUp, Calendar, Clock } from "lucide-react";
+import { getStatusVariant, formatStatus, formatQuarter, getQuarterSortValue } from "./utils";
+import { formatDistanceToNow } from "date-fns";
 
 interface RoadmapBoardProps {
   features: FeatureRequest[];
-  onStatusChange: (id: string, status: Status) => void;
   onSelect: (feature: FeatureRequest) => void;
 }
 
-const COLUMNS: Status[] = ["planned", "in-progress", "done"];
+const COLUMNS: Status[] = ["PLANNED", "IN_PROGRESS", "DONE"];
 
 export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
   const getFeaturesByStatus = (status: Status) => 
-    features.filter(f => f.status === status);
+    features
+      .filter(f => f.status === status)
+      .sort((a, b) => getQuarterSortValue(a.targetDate) - getQuarterSortValue(b.targetDate));
 
   return (
     <div className="flex h-full gap-6 overflow-x-auto pb-4">
@@ -32,9 +33,6 @@ export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
                  {getFeaturesByStatus(status).length}
                </span>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                <Plus className="h-4 w-4" />
-            </Button>
           </div>
           
           {/* Column Content */}
@@ -49,9 +47,20 @@ export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
                   <CardHeader className="p-4 pb-2 space-y-2">
                     <div className="flex justify-between items-start">
                         <CardTitle className="text-sm font-semibold leading-snug">{feature.title}</CardTitle>
-                         <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 -mt-2 text-muted-foreground">
-                            <MoreHorizontal className="h-3 w-3" />
-                         </Button>
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {feature.targetDate && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>Target: {formatQuarter(feature.targetDate)}</span>
+                        </div>
+                      )}
+                      {feature.statusChangedAt && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>Updated {formatDistanceToNow(new Date(feature.statusChangedAt), { addSuffix: true })}</span>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0 text-xs text-muted-foreground line-clamp-2">
@@ -59,24 +68,33 @@ export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
                   </CardContent>
                   <CardFooter className="p-4 pt-0 flex items-center justify-between mt-2">
                     <div className="flex items-center gap-3 text-muted-foreground">
-                        <div className="flex items-center gap-1 text-xs">
-                             <ThumbsUp className="h-3 w-3" />
-                             <span>{feature.votes}</span>
+                        <div className={`flex items-center gap-1 text-xs ${feature.hasVoted ? "text-primary" : ""}`}>
+                             <ThumbsUp className={`h-3 w-3 ${feature.hasVoted ? "fill-current" : ""}`} />
+                             <span>{feature.voteCount}</span>
                         </div>
                         <div className="flex items-center gap-1 text-xs">
                              <MessageSquare className="h-3 w-3" />
-                             <span>{feature.comments.length}</span>
+                             <span>{feature.commentCount}</span>
                         </div>
                     </div>
-                    {/* Mock Avatar for Author - in real app would match user ID */}
-                    <div className="flex -space-x-2 overflow-hidden">
-                        <Avatar className="h-6 w-6 border-2 border-background">
-                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{feature.author[0]}</AvatarFallback>
-                        </Avatar>
-                    </div>
+                    {feature.author && (
+                      <div className="flex -space-x-2 overflow-hidden">
+                          <Avatar className="h-6 w-6 border-2 border-background">
+                              <AvatarImage src={feature.author.avatar || undefined} />
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                {feature.author.name?.[0] || "?"}
+                              </AvatarFallback>
+                          </Avatar>
+                      </div>
+                    )}
                   </CardFooter>
                 </Card>
               ))}
+              {getFeaturesByStatus(status).length === 0 && (
+                <div className="text-center text-sm text-muted-foreground py-8">
+                  No features yet
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>

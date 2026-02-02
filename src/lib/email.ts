@@ -187,7 +187,8 @@ export type EmailTemplate =
   | 'invitation'
   | 'registration-confirmation'
   | 'payment-confirmation'
-  | 'announcement';
+  | 'announcement'
+  | 'feedback-roadmap';
 
 /**
  * Render an email template with data
@@ -337,6 +338,32 @@ function renderTemplate(
         {{content}}
         
         - {{organizationName}}
+      `,
+    },
+    'feedback-roadmap': {
+      subject: 'Your feedback has been added to the Uplifter roadmap!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #2563eb;">Great news, {{name}}!</h1>
+          <p>Your feedback "<strong>{{featureTitle}}</strong>" has been added to our product roadmap.</p>
+          <p>We'll keep you updated as we make progress. You can track the status at:</p>
+          <p><a href="{{feedbackUrl}}" style="color: #2563eb; text-decoration: underline;">View Roadmap</a></p>
+          <p>Thank you for helping us improve Uplifter!</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #6b7280; font-size: 14px;">The Uplifter Team</p>
+        </div>
+      `,
+      text: `
+        Great news, {{name}}!
+        
+        Your feedback "{{featureTitle}}" has been added to our product roadmap.
+        
+        We'll keep you updated as we make progress. You can track the status at:
+        {{feedbackUrl}}
+        
+        Thank you for helping us improve Uplifter!
+        
+        The Uplifter Team
       `,
     },
   };

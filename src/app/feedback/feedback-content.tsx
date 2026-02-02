@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { 
   Tabs, 
   TabsContent, 
@@ -8,139 +10,358 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { FeatureRequest, Status } from "./types";
-import { initialFeatures } from "./data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Loader2, Filter } from "lucide-react";
+import { FeatureRequest, Status, Category, Comment } from "./types";
 import { FeatureList } from "./feature-list";
 import { RoadmapBoard } from "./roadmap-board";
 import { SubmitFeatureDialog } from "./submit-feature-dialog";
 import { FeatureDetailDialog } from "./feature-detail-dialog";
+import { toast } from "sonner";
+
+/**
+ * Build the login URL with callback to return to feedback page
+ */
+function getLoginUrlWithCallback(): string {
+  if (typeof window === "undefined") return "/login";
+  
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  const port = window.location.port;
+  
+  // Construct the current feedback page URL as the callback
+  const feedbackUrl = `${protocol}//${hostname}${port ? `:${port}` : ""}${window.location.pathname}?action=submit`;
+  
+  // Determine the login subdomain URL
+  const parts = hostname.split(".");
+  let loginUrl: string;
+  
+  if (hostname.includes("localhost")) {
+    // Local development
+    const baseDomain = parts.slice(1).join(".") || "uplifterinc.localhost";
+    loginUrl = `${protocol}//login.${baseDomain}${port ? `:${port}` : ""}`;
+  } else {
+    // Production/staging
+    const baseDomain = parts.slice(1).join(".");
+    loginUrl = `${protocol}//login.${baseDomain}`;
+  }
+  
+  return `${loginUrl}?callbackUrl=${encodeURIComponent(feedbackUrl)}`;
+}
 
 export function FeedbackContent() {
-  const [features, setFeatures] = useState<FeatureRequest[]>(initialFeatures);
+  const { data: session, status: sessionStatus } = useSession();
+  const searchParams = useSearchParams();
+  const [features, setFeatures] = useState<FeatureRequest[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("votes");
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<FeatureRequest | null>(null);
+  const [featureDetails, setFeatureDetails] = useState<FeatureRequest | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [hasCheckedAction, setHasCheckedAction] = useState(false);
 
-  const handleVote = (id: string) => {
-    setFeatures((prev) =>
-      prev.map((f) =>
-        f.id === id ? { ...f, votes: f.votes + 1 } : f
-      )
-    );
-  };
-
-  const handleSubmit = (feature: Omit<FeatureRequest, "id" | "votes" | "comments" | "createdAt" | "author">) => {
-    const newFeature: FeatureRequest = {
-      ...feature,
-      id: Math.random().toString(36).substr(2, 9),
-      votes: 0,
-      comments: [],
-      author: "Current User", // Mock user
-      createdAt: new Date().toISOString(),
-    };
-    setFeatures([newFeature, ...features]);
-    setIsSubmitOpen(false);
-  };
-
-  const handleAddComment = (featureId: string, content: string) => {
-    setFeatures((prev) =>
-      prev.map((f) => {
-        if (f.id === featureId) {
-          return {
-            ...f,
-            comments: [
-              ...f.comments,
-              {
-                id: Math.random().toString(36).substr(2, 9),
-                author: "Current User",
-                avatar: "/avatars/shadcn.jpg", // Mock avatar
-                content,
-                createdAt: new Date().toISOString(),
-              },
-            ],
-          };
-        }
-        return f;
-      })
-    );
+  const isLoggedIn = sessionStatus === "authenticated" && !!session?.user;
+  
+  // Check for action=submit in URL after login redirect
+  useEffect(() => {
+    if (sessionStatus === "loading" || hasCheckedAction) return;
     
-    // Also update selected feature to reflect changes immediately
-    if (selectedFeature && selectedFeature.id === featureId) {
-        setSelectedFeature(prev => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                 comments: [
-                    ...prev.comments,
-                    {
-                        id: Math.random().toString(36).substr(2, 9),
-                        author: "Current User",
-                        avatar: "/avatars/shadcn.jpg",
-                        content,
-                        createdAt: new Date().toISOString(),
-                    }
-                ]
-            }
-        })
+    const action = searchParams.get("action");
+    if (action === "submit" && isLoggedIn) {
+      setIsSubmitOpen(true);
+      // Clear the action param from URL without page reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete("action");
+      window.history.replaceState({}, "", url.toString());
+    }
+    setHasCheckedAction(true);
+  }, [sessionStatus, isLoggedIn, searchParams, hasCheckedAction]);
+
+  // Handler for submit button click
+  const handleSubmitClick = useCallback(() => {
+    if (!isLoggedIn) {
+      // Redirect to login with callback to return here
+      window.location.href = getLoginUrlWithCallback();
+      return;
+    }
+    setIsSubmitOpen(true);
+  }, [isLoggedIn]);
+
+  // Fetch features
+  const fetchFeatures = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedCategory && selectedCategory !== "all") {
+        params.set("category", selectedCategory);
+      }
+      params.set("sortBy", sortBy);
+      
+      const response = await fetch(`/api/feedback?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFeatures(data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch features:", error);
+      toast.error("Failed to load features");
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  const handleUpdateStatus = (id: string, newStatus: Status) => {
-      setFeatures(prev => prev.map(f => f.id === id ? { ...f, status: newStatus } : f));
-  }
+
+  // Fetch categories
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("/api/feedback/categories");
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeatures();
+    fetchCategories();
+  }, [selectedCategory, sortBy]);
+
+  // Fetch feature details when selected
+  const handleSelectFeature = async (feature: FeatureRequest) => {
+    setSelectedFeature(feature);
+    setLoadingDetails(true);
+    
+    try {
+      const response = await fetch(`/api/feedback/${feature.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFeatureDetails(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch feature details:", error);
+      toast.error("Failed to load feature details");
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const handleVote = async (id: string) => {
+    if (!isLoggedIn) {
+      toast.error("Sign in to vote - redirecting...");
+      setTimeout(() => {
+        window.location.href = getLoginUrlWithCallback();
+      }, 1000);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/feedback/${id}/vote`, {
+        method: "POST",
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Update the feature in the list
+        setFeatures((prev) =>
+          prev.map((f) =>
+            f.id === id ? { ...f, voteCount: data.voteCount, hasVoted: data.voted } : f
+          )
+        );
+        // Update feature details if open
+        if (featureDetails?.id === id) {
+          setFeatureDetails((prev) =>
+            prev ? { ...prev, voteCount: data.voteCount, hasVoted: data.voted } : null
+          );
+        }
+        toast.success(data.voted ? "Vote added!" : "Vote removed");
+      }
+    } catch (error) {
+      console.error("Failed to vote:", error);
+      toast.error("Failed to process vote");
+    }
+  };
+
+  const handleSubmit = async (data: { title: string; description: string; categories: string[] }) => {
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        toast.success("Feedback submitted! It will be reviewed by our team.");
+        setIsSubmitOpen(false);
+        // Don't add to list since it needs approval
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to submit feedback");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to submit feedback");
+    }
+  };
+
+  const handleAddComment = async (featureId: string, content: string) => {
+    if (!isLoggedIn) {
+      toast.error("Sign in to comment - redirecting...");
+      setTimeout(() => {
+        window.location.href = getLoginUrlWithCallback();
+      }, 1000);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/feedback/${featureId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update feature details with new comment
+        if (featureDetails?.id === featureId) {
+          setFeatureDetails((prev) =>
+            prev ? { 
+              ...prev, 
+              comments: [...(prev.comments || []), data.data] 
+            } : null
+          );
+        }
+        // Update comment count in list
+        setFeatures((prev) =>
+          prev.map((f) =>
+            f.id === featureId ? { ...f, commentCount: f.commentCount + 1 } : f
+          )
+        );
+        toast.success("Comment added!");
+      }
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+      toast.error("Failed to add comment");
+    }
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedFeature(null);
+    setFeatureDetails(null);
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] p-4 md:p-6 space-y-6 overflow-hidden">
-      <div className="flex items-center justify-between shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Product Feedback</h1>
           <p className="text-muted-foreground">
             Help us improve by voting on features or suggesting new ones.
           </p>
         </div>
-        <Button onClick={() => setIsSubmitOpen(true)}>
+        <Button onClick={handleSubmitClick}>
           <Plus className="mr-2 h-4 w-4" />
           Submit Feedback
         </Button>
       </div>
 
-      <Tabs defaultValue="requests" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="shrink-0 w-fit">
-          <TabsTrigger value="requests">Feature Requests</TabsTrigger>
-          <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
-        </TabsList>
-        <TabsContent value="requests" className="flex-1 mt-4 min-h-0">
-          <FeatureList 
-            features={features} 
-            onVote={handleVote} 
-            onSelect={setSelectedFeature} 
-          />
-        </TabsContent>
-        <TabsContent value="roadmap" className="flex-1 mt-4 min-h-0">
-          <RoadmapBoard 
-            features={features} 
-            onStatusChange={handleUpdateStatus}
-            onSelect={setSelectedFeature}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.name} value={cat.name}>
+                  {cat.name} ({cat.count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="votes">Most Voted</SelectItem>
+            <SelectItem value="newest">Newest</SelectItem>
+            <SelectItem value="targetDate">Target Date</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <Tabs defaultValue="requests" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="shrink-0 w-fit">
+            <TabsTrigger value="requests">Feature Requests</TabsTrigger>
+            <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
+          </TabsList>
+          <TabsContent value="requests" className="flex-1 mt-4 min-h-0">
+            {features.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <p className="text-muted-foreground">No features found</p>
+                {selectedCategory !== "all" && (
+                  <Button 
+                    variant="link" 
+                    onClick={() => setSelectedCategory("all")}
+                    className="mt-2"
+                  >
+                    Clear filter
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <FeatureList 
+                features={features} 
+                onVote={handleVote} 
+                onSelect={handleSelectFeature}
+                isLoggedIn={isLoggedIn}
+              />
+            )}
+          </TabsContent>
+          <TabsContent value="roadmap" className="flex-1 mt-4 min-h-0">
+            <RoadmapBoard 
+              features={features} 
+              onSelect={handleSelectFeature}
+            />
+          </TabsContent>
+        </Tabs>
+      )}
 
       <SubmitFeatureDialog 
         open={isSubmitOpen} 
         onOpenChange={setIsSubmitOpen} 
-        onSubmit={handleSubmit} 
+        onSubmit={handleSubmit}
       />
 
       {selectedFeature && (
         <FeatureDetailDialog
-          feature={selectedFeature}
+          feature={featureDetails || selectedFeature}
+          loading={loadingDetails}
           open={!!selectedFeature}
-          onOpenChange={(open) => !open && setSelectedFeature(null)}
+          onOpenChange={(open) => !open && handleCloseDetails()}
           onAddComment={handleAddComment}
           onVote={handleVote}
+          isLoggedIn={isLoggedIn}
         />
       )}
     </div>
   );
 }
-

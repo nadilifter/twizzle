@@ -1,5 +1,31 @@
+import { Metadata } from "next"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 import { UplifterLogo } from "@/components/uplifter-logo"
+
+export const metadata: Metadata = {
+  title: "Product Feedback & Roadmap | Uplifter",
+  description: "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform. Shape the future of sports club management software.",
+  keywords: ["product roadmap", "feature requests", "feedback", "uplifter", "sports management", "club software"],
+  openGraph: {
+    title: "Product Feedback & Roadmap | Uplifter",
+    description: "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform.",
+    type: "website",
+    siteName: "Uplifter",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Product Feedback & Roadmap | Uplifter",
+    description: "See what features are in development, vote on your favorites, and suggest new features for the Uplifter platform.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+}
 
 export default function FeedbackLayout({
   children,

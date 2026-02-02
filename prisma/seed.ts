@@ -1646,19 +1646,138 @@ async function main() {
   // FEATURE REQUESTS
   // ============================================
   console.log("\n💡 Creating feature requests...");
+  
+  // Public features on the roadmap
   const feature1 = await prisma.featureRequest.upsert({
     where: { id: "feature-1" }, update: {},
-    create: { id: "feature-1", title: "Mobile app for parents", description: "It would be great to have a mobile app where parents can check schedules and make payments.", status: "IN_PROGRESS", votes: 47, userId: org1Admin.id },
+    create: { 
+      id: "feature-1", 
+      title: "Mobile app for parents", 
+      description: "A dedicated mobile app where parents can check schedules, receive notifications, make payments, and track their child's progress. Features would include push notifications, calendar sync, and payment history.", 
+      status: "IN_PROGRESS",
+      isPublic: true,
+      categories: ["Mobile", "Communication"],
+      targetDate: daysFromNow(60), // Q1 2026
+      statusChangedAt: daysAgo(14),
+      userId: org1Admin.id,
+    },
   });
-  await prisma.featureRequest.upsert({
+  
+  const feature2 = await prisma.featureRequest.upsert({
     where: { id: "feature-2" }, update: {},
-    create: { id: "feature-2", title: "Automated attendance tracking", description: "QR code or RFID-based check-in system.", status: "OPEN", votes: 32, userId: org2Admin.id },
+    create: { 
+      id: "feature-2", 
+      title: "Automated attendance tracking", 
+      description: "QR code or RFID-based check-in system that automatically records attendance when athletes enter the facility. Would integrate with existing scheduling system.", 
+      status: "PLANNED",
+      isPublic: true,
+      categories: ["Athletes", "Scheduling"],
+      targetDate: daysFromNow(120), // Q2 2026
+      statusChangedAt: daysAgo(7),
+      userId: org2Admin.id,
+    },
   });
+  
+  const feature3 = await prisma.featureRequest.upsert({
+    where: { id: "feature-3" }, update: {},
+    create: { 
+      id: "feature-3", 
+      title: "Dark mode support", 
+      description: "Add a dark mode theme option across all dashboards and portals for better visibility in low-light environments and reduced eye strain.", 
+      status: "DONE",
+      isPublic: true,
+      categories: ["UI/UX"],
+      targetDate: daysAgo(30),
+      statusChangedAt: daysAgo(5),
+      userId: org1Coach1.id,
+    },
+  });
+  
+  const feature4 = await prisma.featureRequest.upsert({
+    where: { id: "feature-4" }, update: {},
+    create: { 
+      id: "feature-4", 
+      title: "Integration with Stripe for payments", 
+      description: "Add Stripe as an alternative payment processor alongside Adyen for organizations that prefer Stripe.", 
+      status: "PLANNED",
+      isPublic: true,
+      categories: ["Integrations", "Financials"],
+      targetDate: daysFromNow(180), // Q3 2026
+      statusChangedAt: daysAgo(21),
+      userId: org2Admin.id,
+    },
+  });
+  
+  const feature5 = await prisma.featureRequest.upsert({
+    where: { id: "feature-5" }, update: {},
+    create: { 
+      id: "feature-5", 
+      title: "Advanced analytics dashboard", 
+      description: "Comprehensive analytics with custom date ranges, exportable reports, athlete progress tracking over time, and financial trend analysis.", 
+      status: "IN_PROGRESS",
+      isPublic: true,
+      categories: ["Analytics", "UI/UX"],
+      targetDate: daysFromNow(45),
+      statusChangedAt: daysAgo(10),
+      userId: org1Admin.id,
+    },
+  });
+  
+  // Pending submission (not public)
+  const feature6 = await prisma.featureRequest.upsert({
+    where: { id: "feature-6" }, update: {},
+    create: { 
+      id: "feature-6", 
+      title: "Bulk athlete import from CSV", 
+      description: "Allow administrators to import multiple athletes at once using a CSV file upload. Would save significant time during initial setup or new season registration.", 
+      status: "SUBMITTED",
+      isPublic: false,
+      categories: ["Athletes"],
+      userId: org1Coach1.id,
+    },
+  });
+  
+  // Feature votes
+  const voteData = [
+    { id: "vote-1-1", featureRequestId: feature1.id, userId: org1Admin.id },
+    { id: "vote-1-2", featureRequestId: feature1.id, userId: org1Coach1.id },
+    { id: "vote-1-3", featureRequestId: feature1.id, userId: org2Admin.id },
+    { id: "vote-2-1", featureRequestId: feature2.id, userId: org1Admin.id },
+    { id: "vote-2-2", featureRequestId: feature2.id, userId: org2Admin.id },
+    { id: "vote-3-1", featureRequestId: feature3.id, userId: org1Coach1.id },
+    { id: "vote-4-1", featureRequestId: feature4.id, userId: org1Admin.id },
+    { id: "vote-4-2", featureRequestId: feature4.id, userId: org2Admin.id },
+    { id: "vote-4-3", featureRequestId: feature4.id, userId: org1Coach1.id },
+    { id: "vote-5-1", featureRequestId: feature5.id, userId: org1Admin.id },
+    { id: "vote-5-2", featureRequestId: feature5.id, userId: org2Admin.id },
+  ];
+  for (const vote of voteData) {
+    await prisma.featureVote.upsert({ where: { id: vote.id }, update: {}, create: vote });
+  }
+  
+  // Feature comments
   await prisma.featureComment.upsert({
     where: { id: "fc-1" }, update: {},
-    create: { id: "fc-1", featureRequestId: feature1.id, content: "This would be amazing!", userId: org1Coach1.id },
+    create: { id: "fc-1", featureRequestId: feature1.id, content: "This would be amazing! Parents constantly ask about a mobile app.", userId: org1Coach1.id, isStaffReply: false },
   });
-  console.log("  ✓ Created 2 feature requests with comments");
+  await prisma.featureComment.upsert({
+    where: { id: "fc-2" }, update: {},
+    create: { id: "fc-2", featureRequestId: feature1.id, content: "We're actively working on this! Beta testing should begin next month.", userId: andrewUser.id, isStaffReply: true },
+  });
+  await prisma.featureComment.upsert({
+    where: { id: "fc-3" }, update: {},
+    create: { id: "fc-3", featureRequestId: feature2.id, content: "QR codes would be perfect for our setup. Looking forward to this!", userId: org1Admin.id, isStaffReply: false },
+  });
+  await prisma.featureComment.upsert({
+    where: { id: "fc-4" }, update: {},
+    create: { id: "fc-4", featureRequestId: feature3.id, content: "Dark mode is now live! Enjoy the new theme options.", userId: andrewUser.id, isStaffReply: true },
+  });
+  await prisma.featureComment.upsert({
+    where: { id: "fc-5" }, update: {},
+    create: { id: "fc-5", featureRequestId: feature5.id, content: "Can you add export to PDF for reports?", userId: org2Admin.id, isStaffReply: false },
+  });
+  
+  console.log("  ✓ Created 6 feature requests, 11 votes, and 5 comments");
 
   // ============================================
   // MEDIA

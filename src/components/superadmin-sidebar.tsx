@@ -159,6 +159,11 @@ const navItems = [
     icon: Bell,
   },
   {
+    title: "Feedback",
+    url: "/superadmin/feedback",
+    icon: MessageSquare,
+  },
+  {
     title: "View as Coach",
     url: "/superadmin/view-as-coach",
     icon: Eye,

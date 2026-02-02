@@ -278,8 +278,23 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
 
   // Feedback
   "/dashboard/feedback": {
-    status: "demo",
+    status: "live",
     description: "Feedback and feature requests",
+    apiRoutes: ["/api/feedback"],
+  },
+  
+  // Feedback Portal (public)
+  "/feedback": {
+    status: "live",
+    description: "Public feedback portal for feature requests and voting",
+    apiRoutes: ["/api/feedback", "/api/feedback/categories"],
+  },
+  
+  // Superadmin Feedback Management
+  "/superadmin/feedback": {
+    status: "live",
+    description: "Superadmin feedback management with submissions and live features",
+    apiRoutes: ["/api/superadmin/feedback"],
   },
 
   // ========================================

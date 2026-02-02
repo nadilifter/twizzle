@@ -10,45 +10,48 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { FeatureRequest, Status } from "./types";
 
 interface SubmitFeatureDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (feature: Omit<FeatureRequest, "id" | "votes" | "comments" | "createdAt" | "author">) => void;
+  onSubmit: (data: { title: string; description: string; categories: string[] }) => Promise<void>;
 }
 
 export function SubmitFeatureDialog({ open, onOpenChange, onSubmit }: SubmitFeatureDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [tagInput, setTagInput] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description) return;
     
-    onSubmit({
-      title,
-      description,
-      status: "under-review", // Default status for new requests
-      tags: tagInput.split(",").map(t => t.trim()).filter(t => t),
-    });
-    
-    // Reset
-    setTitle("");
-    setDescription("");
-    setTagInput("");
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        title,
+        description,
+        categories: [], // Categories are assigned by superadmins during review
+      });
+      
+      // Reset form
+      setTitle("");
+      setDescription("");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Submit Feature Request</DialogTitle>
             <DialogDescription>
-              Suggest a new feature for the platform.
+              Suggest a new feature for the platform. Our team will review your submission and categorize it appropriately.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -58,9 +61,13 @@ export function SubmitFeatureDialog({ open, onOpenChange, onSubmit }: SubmitFeat
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Feature title"
+                placeholder="e.g., Mobile app for parents"
                 required
+                maxLength={200}
               />
+              <p className="text-xs text-muted-foreground">
+                A clear, concise title for your feature request
+              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
@@ -68,26 +75,28 @@ export function SubmitFeatureDialog({ open, onOpenChange, onSubmit }: SubmitFeat
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the feature..."
+                placeholder="Describe the feature you'd like to see and how it would help you..."
                 required
+                rows={5}
+                minLength={10}
+                maxLength={5000}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="tags">Tags (comma separated)</Label>
-              <Input
-                id="tags"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                placeholder="UI, Mobile, API"
-              />
+              <p className="text-xs text-muted-foreground">
+                {description.length}/5000 characters - Be specific about what you need and why
+              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Submit Request</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!title || !description || description.length < 10 || submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit Request
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
-
