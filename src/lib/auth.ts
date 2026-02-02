@@ -312,11 +312,24 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        // Handle session updates (e.g., switching organizations)
+        // Handle session updates (e.g., switching organizations or impersonation)
         if (trigger === "update" && session) {
           console.log("JWT callback: Session update", session);
-          token.organizationId = session.organizationId;
-          token.organizationName = session.organizationName;
+          
+          // Handle organization switching
+          if (session.organizationId !== undefined) {
+            token.organizationId = session.organizationId;
+            token.organizationName = session.organizationName;
+          }
+          
+          // Handle impersonation (superadmin "view as coach" feature)
+          // Only allow if user is a superadmin
+          if (token.isSuperAdmin && session.viewingAsCoachId !== undefined) {
+            token.viewingAsCoachId = session.viewingAsCoachId || undefined;
+            token.viewingAsCoachName = session.viewingAsCoachName || undefined;
+            token.viewingAsOrganizationId = session.viewingAsOrganizationId || undefined;
+            token.viewingAsOrganizationName = session.viewingAsOrganizationName || undefined;
+          }
         }
 
         // console.log("JWT callback returning token:", JSON.stringify(token, null, 2));
@@ -336,6 +349,12 @@ export const authOptions: NextAuthOptions = {
           session.user.organizationName = token.organizationName as string;
           session.user.permissions = token.permissions as string[];
           session.user.isSuperAdmin = token.isSuperAdmin as boolean;
+          
+          // Include impersonation fields
+          session.user.viewingAsCoachId = token.viewingAsCoachId as string | undefined;
+          session.user.viewingAsCoachName = token.viewingAsCoachName as string | undefined;
+          session.user.viewingAsOrganizationId = token.viewingAsOrganizationId as string | undefined;
+          session.user.viewingAsOrganizationName = token.viewingAsOrganizationName as string | undefined;
         }
         return session;
       } catch (error) {

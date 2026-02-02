@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { syncTemplateSkills } from "@/lib/services/template-sync";
 
 const skillDifficultyEnum = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
+const scoringTypeEnum = z.enum(["PASS_FAIL", "POINT_SCALE"]);
+const completionTypeEnum = z.enum(["PERCENTAGE", "COUNT", "ALL"]);
 
 const updateTemplateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -12,7 +15,24 @@ const updateTemplateSchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   isActive: z.boolean().optional(),
-  skillIds: z.array(z.string()).min(1).optional(),
+  
+  // Auto-sync configuration
+  autoSyncEnabled: z.boolean().optional(),
+  autoSyncLevels: z.array(skillDifficultyEnum).optional(),
+  autoSyncCategories: z.array(z.string()).optional(),
+  
+  // Scoring configuration
+  scoringType: scoringTypeEnum.optional(),
+  pointScaleMin: z.number().int().min(0).max(100).optional(),
+  pointScaleMax: z.number().int().min(1).max(100).optional(),
+  pointScalePassThreshold: z.number().int().min(0).max(100).optional(),
+  
+  // Completion requirements
+  completionType: completionTypeEnum.optional(),
+  completionThreshold: z.number().min(0).max(100).optional(),
+  
+  // Skills (ignored if auto-sync enabled)
+  skillIds: z.array(z.string()).optional(),
 });
 
 // GET /api/evaluation-templates/[id]
@@ -39,6 +59,24 @@ export async function GET(
             skill: true,
           },
           orderBy: { order: "asc" },
+        },
+        programTemplates: {
+          include: {
+            program: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        achievements: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            badgeImageUrl: true,
+          },
         },
         _count: {
           select: {
@@ -99,8 +137,32 @@ export async function PUT(
 
     const { skillIds, ...templateData } = validatedData;
 
-    // If skillIds provided, verify all skills exist
-    if (skillIds) {
+    // Determine if auto-sync is being enabled/updated
+    const willAutoSync = validatedData.autoSyncEnabled ?? existingTemplate.autoSyncEnabled;
+
+    // Validate point scale configuration if scoringType is being set to POINT_SCALE
+    const scoringType = templateData.scoringType ?? existingTemplate.scoringType;
+    if (scoringType === "POINT_SCALE") {
+      const min = templateData.pointScaleMin ?? existingTemplate.pointScaleMin;
+      const max = templateData.pointScaleMax ?? existingTemplate.pointScaleMax;
+      const threshold = templateData.pointScalePassThreshold ?? existingTemplate.pointScalePassThreshold;
+
+      if (min >= max) {
+        return NextResponse.json(
+          { error: "Point scale minimum must be less than maximum" },
+          { status: 400 }
+        );
+      }
+      if (threshold < min || threshold > max) {
+        return NextResponse.json(
+          { error: "Pass threshold must be within the point scale range" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // If not using auto-sync and skillIds provided, verify all skills exist
+    if (!willAutoSync && skillIds) {
       const skills = await db.skill.findMany({
         where: {
           id: { in: skillIds },
@@ -124,8 +186,8 @@ export async function PUT(
         data: templateData,
       });
 
-      // If skillIds provided, replace all skills
-      if (skillIds) {
+      // If not using auto-sync and skillIds provided, replace all skills
+      if (!willAutoSync && skillIds) {
         // Delete existing skill associations
         await tx.evaluationTemplateSkill.deleteMany({
           where: { templateId: id },
@@ -152,6 +214,24 @@ export async function PUT(
             },
             orderBy: { order: "asc" },
           },
+          programTemplates: {
+            include: {
+              program: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          achievements: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              badgeImageUrl: true,
+            },
+          },
           _count: {
             select: {
               evaluations: true,
@@ -160,6 +240,53 @@ export async function PUT(
         },
       });
     });
+
+    // If auto-sync is enabled or auto-sync config changed, sync the skills
+    if (willAutoSync && (
+      validatedData.autoSyncEnabled !== undefined ||
+      validatedData.autoSyncLevels !== undefined ||
+      validatedData.autoSyncCategories !== undefined
+    )) {
+      await syncTemplateSkills(id);
+      
+      // Fetch the updated template with synced skills
+      const updatedTemplate = await db.evaluationTemplate.findUnique({
+        where: { id },
+        include: {
+          skills: {
+            include: {
+              skill: true,
+            },
+            orderBy: { order: "asc" },
+          },
+          programTemplates: {
+            include: {
+              program: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          achievements: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              badgeImageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              evaluations: true,
+            },
+          },
+        },
+      });
+
+      return NextResponse.json(updatedTemplate);
+    }
 
     return NextResponse.json(template);
   } catch (error) {

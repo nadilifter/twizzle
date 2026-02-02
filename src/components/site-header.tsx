@@ -2,6 +2,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { DynamicBreadcrumb } from "@/components/dynamic-breadcrumb"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
+import { SiteHeaderActions } from "@/components/site-header-actions"
 
 export function SiteHeader() {
   return (
@@ -13,7 +14,8 @@ export function SiteHeader() {
           className="mx-2 data-[orientation=vertical]:h-4"
         />
         <DynamicBreadcrumb />
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <SiteHeaderActions />
           <AnimatedThemeToggler />
         </div>
       </div>

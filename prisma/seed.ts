@@ -1017,7 +1017,17 @@ async function main() {
       minAge: 4,
       maxAge: 5,
       organizationId: ORG1_ID,
-      skillIds: [`${ORG1_ID}-skill-1`, `${ORG1_ID}-skill-3`, `${ORG1_ID}-skill-5`, `${ORG1_ID}-skill-19`, `${ORG1_ID}-skill-25`], // Forward roll, cartwheel, bridge, beam walk, straddle stretch
+      // New evaluation enhancement fields
+      autoSyncEnabled: false,
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
+      scoringType: "PASS_FAIL" as const,
+      pointScaleMin: 1,
+      pointScaleMax: 10,
+      pointScalePassThreshold: 7,
+      completionType: "PERCENTAGE" as const,
+      completionThreshold: 80,
+      skillIds: [`${ORG1_ID}-skill-1`, `${ORG1_ID}-skill-3`, `${ORG1_ID}-skill-5`, `${ORG1_ID}-skill-19`, `${ORG1_ID}-skill-25`],
     },
     {
       id: `${ORG1_ID}-template-rec-level1`,
@@ -1027,6 +1037,16 @@ async function main() {
       minAge: 5,
       maxAge: 7,
       organizationId: ORG1_ID,
+      // Pass/Fail scoring with 75% completion requirement
+      autoSyncEnabled: false,
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
+      scoringType: "PASS_FAIL" as const,
+      pointScaleMin: 1,
+      pointScaleMax: 10,
+      pointScalePassThreshold: 7,
+      completionType: "PERCENTAGE" as const,
+      completionThreshold: 75,
       skillIds: [`${ORG1_ID}-skill-1`, `${ORG1_ID}-skill-2`, `${ORG1_ID}-skill-3`, `${ORG1_ID}-skill-11`, `${ORG1_ID}-skill-14`, `${ORG1_ID}-skill-19`, `${ORG1_ID}-skill-20`, `${ORG1_ID}-skill-27`],
     },
     {
@@ -1037,6 +1057,16 @@ async function main() {
       minAge: 6,
       maxAge: 9,
       organizationId: ORG1_ID,
+      // Point scale scoring (1-10) with pass threshold of 7
+      autoSyncEnabled: false,
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
+      scoringType: "POINT_SCALE" as const,
+      pointScaleMin: 1,
+      pointScaleMax: 10,
+      pointScalePassThreshold: 7,
+      completionType: "PERCENTAGE" as const,
+      completionThreshold: 80,
       skillIds: [`${ORG1_ID}-skill-4`, `${ORG1_ID}-skill-6`, `${ORG1_ID}-skill-7`, `${ORG1_ID}-skill-12`, `${ORG1_ID}-skill-15`, `${ORG1_ID}-skill-17`, `${ORG1_ID}-skill-21`, `${ORG1_ID}-skill-22`],
     },
     {
@@ -1047,6 +1077,16 @@ async function main() {
       minAge: 7,
       maxAge: 10,
       organizationId: ORG1_ID,
+      // All skills must pass for pre-team readiness
+      autoSyncEnabled: false,
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
+      scoringType: "PASS_FAIL" as const,
+      pointScaleMin: 1,
+      pointScaleMax: 10,
+      pointScalePassThreshold: 7,
+      completionType: "ALL" as const,
+      completionThreshold: 100,
       skillIds: [`${ORG1_ID}-skill-6`, `${ORG1_ID}-skill-7`, `${ORG1_ID}-skill-8`, `${ORG1_ID}-skill-13`, `${ORG1_ID}-skill-17`, `${ORG1_ID}-skill-18`, `${ORG1_ID}-skill-23`, `${ORG1_ID}-skill-24`],
     },
     {
@@ -1057,6 +1097,16 @@ async function main() {
       minAge: 8,
       maxAge: 12,
       organizationId: ORG1_ID,
+      // Point scale scoring (1-10) with strict 8+ threshold and 90% completion
+      autoSyncEnabled: false,
+      autoSyncLevels: [] as string[],
+      autoSyncCategories: [] as string[],
+      scoringType: "POINT_SCALE" as const,
+      pointScaleMin: 1,
+      pointScaleMax: 10,
+      pointScalePassThreshold: 8,
+      completionType: "PERCENTAGE" as const,
+      completionThreshold: 90,
       skillIds: [`${ORG1_ID}-skill-9`, `${ORG1_ID}-skill-10`, `${ORG1_ID}-skill-13`, `${ORG1_ID}-skill-18`, `${ORG1_ID}-skill-23`, `${ORG1_ID}-skill-24`],
     },
   ];
@@ -1066,21 +1116,147 @@ async function main() {
     
     await prisma.evaluationTemplate.upsert({
       where: { id: template.id },
-      update: {},
+      update: {
+        // Update with new fields if template already exists
+        autoSyncEnabled: templateData.autoSyncEnabled,
+        autoSyncLevels: templateData.autoSyncLevels,
+        autoSyncCategories: templateData.autoSyncCategories,
+        scoringType: templateData.scoringType,
+        pointScaleMin: templateData.pointScaleMin,
+        pointScaleMax: templateData.pointScaleMax,
+        pointScalePassThreshold: templateData.pointScalePassThreshold,
+        completionType: templateData.completionType,
+        completionThreshold: templateData.completionThreshold,
+      },
       create: {
         ...templateData,
-        skills: {
+        skills: skillIds.length > 0 ? {
           create: skillIds.map((skillId, index) => ({
             skillId,
             order: index,
             isRequired: true,
           })),
-        },
+        } : undefined,
       },
     });
   }
   
   console.log(`  ✓ Created ${evaluationTemplatesData.length} evaluation templates`);
+
+  // ============================================
+  // ACHIEVEMENTS
+  // ============================================
+  console.log("\n🏆 Creating achievements...");
+  
+  const achievementsData = [
+    {
+      id: `${ORG1_ID}-achievement-preschool`,
+      templateId: `${ORG1_ID}-template-preschool`,
+      name: "Preschool Graduate",
+      description: "Successfully completed the Preschool Basics evaluation. Ready for the next level!",
+      badgeImageUrl: null,
+      organizationId: ORG1_ID,
+    },
+    {
+      id: `${ORG1_ID}-achievement-rec-level1`,
+      templateId: `${ORG1_ID}-template-rec-level1`,
+      name: "Rec Level 1 Champion",
+      description: "Mastered all foundational gymnastics skills in Recreational Level 1.",
+      badgeImageUrl: null,
+      organizationId: ORG1_ID,
+    },
+    {
+      id: `${ORG1_ID}-achievement-rec-level2`,
+      templateId: `${ORG1_ID}-template-rec-level2`,
+      name: "Rec Level 2 Star",
+      description: "Achieved excellence in intermediate recreational gymnastics skills.",
+      badgeImageUrl: null,
+      organizationId: ORG1_ID,
+    },
+    {
+      id: `${ORG1_ID}-achievement-preteam`,
+      templateId: `${ORG1_ID}-template-preteam`,
+      name: "Pre-Team Ready",
+      description: "Demonstrated readiness for the competitive team program. Outstanding dedication!",
+      badgeImageUrl: null,
+      organizationId: ORG1_ID,
+    },
+    {
+      id: `${ORG1_ID}-achievement-jo-level3`,
+      templateId: `${ORG1_ID}-template-jo-level3`,
+      name: "JO Level 3 Qualifier",
+      description: "Qualified for USAG Junior Olympics Level 3. An impressive achievement!",
+      badgeImageUrl: null,
+      organizationId: ORG1_ID,
+    },
+  ];
+
+  for (const achievement of achievementsData) {
+    await prisma.achievement.upsert({
+      where: { id: achievement.id },
+      update: {},
+      create: achievement,
+    });
+  }
+  
+  console.log(`  ✓ Created ${achievementsData.length} achievements`);
+
+  // ============================================
+  // PROGRAM EVALUATION TEMPLATES (Assign templates to programs)
+  // ============================================
+  console.log("\n🔗 Assigning evaluation templates to programs...");
+  
+  const programTemplateAssignments = [
+    // Bronze program uses Rec Level 1 template
+    {
+      id: `${ORG1_ID}-pet-bronze-rec1`,
+      programId: `${ORG1_ID}-prog-rec-bronze`,
+      templateId: `${ORG1_ID}-template-rec-level1`,
+      isRequired: true,
+      dueDate: null,
+    },
+    // Silver program uses Rec Level 2 template
+    {
+      id: `${ORG1_ID}-pet-silver-rec2`,
+      programId: `${ORG1_ID}-prog-rec-silver`,
+      templateId: `${ORG1_ID}-template-rec-level2`,
+      isRequired: true,
+      dueDate: null,
+    },
+    // JO program uses Pre-Team and JO Level 3 templates
+    {
+      id: `${ORG1_ID}-pet-jo-preteam`,
+      programId: `${ORG1_ID}-prog-jo`,
+      templateId: `${ORG1_ID}-template-preteam`,
+      isRequired: false,
+      dueDate: null,
+    },
+    {
+      id: `${ORG1_ID}-pet-jo-jo3`,
+      programId: `${ORG1_ID}-prog-jo`,
+      templateId: `${ORG1_ID}-template-jo-level3`,
+      isRequired: true,
+      dueDate: null,
+    },
+    // Preschool program uses Preschool Basics template
+    {
+      id: `${ORG1_ID}-pet-preschool`,
+      programId: `${ORG1_ID}-prog-preschool`,
+      templateId: `${ORG1_ID}-template-preschool`,
+      isRequired: true,
+      dueDate: null,
+    },
+  ];
+
+  for (const assignment of programTemplateAssignments) {
+    await prisma.programEvaluationTemplate.upsert({
+      where: { id: assignment.id },
+      update: {},
+      create: assignment,
+    });
+  }
+  
+  console.log(`  ✓ Created ${programTemplateAssignments.length} program-template assignments`);
 
   // ============================================
   // LESSON PLANS
@@ -1112,12 +1288,13 @@ async function main() {
   // Evaluation 1 - Emily (Bronze athlete) - Completed Rec Level 1
   const eval1 = await prisma.evaluation.upsert({
     where: { id: `${ORG1_ID}-eval-1` },
-    update: {},
+    update: { programId: `${ORG1_ID}-prog-rec-bronze` },
     create: {
       id: `${ORG1_ID}-eval-1`,
       athleteId: `${ORG1_ID}-ath-1`,
       coachId: org1Coach1.id,
       templateId: `${ORG1_ID}-template-rec-level1`,
+      programId: `${ORG1_ID}-prog-rec-bronze`, // Link to Bronze program
       date: daysAgo(14),
       level: "Recreational Level 1",
       overallScore: 7.5,
@@ -1126,35 +1303,36 @@ async function main() {
     },
   });
   
-  // Skill ratings for eval1 - mix of succeeded, attempted, and not attempted
+  // Skill ratings for eval1 - mix of succeeded, attempted, and not attempted (Pass/Fail scoring)
   const eval1Skills = [
-    { skillId: `${ORG1_ID}-skill-1`, attemptStatus: "SUCCEEDED" as const, comment: "Perfect forward roll with smooth momentum" },
-    { skillId: `${ORG1_ID}-skill-2`, attemptStatus: "SUCCEEDED" as const, comment: "Good backward roll, chin nicely tucked" },
-    { skillId: `${ORG1_ID}-skill-3`, attemptStatus: "SUCCEEDED" as const, comment: "Beautiful cartwheel, straight legs" },
-    { skillId: `${ORG1_ID}-skill-11`, attemptStatus: "ATTEMPTED" as const, comment: "Almost there! Needs stronger punch off board" },
-    { skillId: `${ORG1_ID}-skill-14`, attemptStatus: "ATTEMPTED" as const, comment: "Working on pulling hips to bar" },
-    { skillId: `${ORG1_ID}-skill-19`, attemptStatus: "SUCCEEDED" as const, comment: "Confident beam walking" },
-    { skillId: `${ORG1_ID}-skill-20`, attemptStatus: "SUCCEEDED" as const, comment: "Nice deep dips" },
-    { skillId: `${ORG1_ID}-skill-27`, attemptStatus: "SUCCEEDED" as const, comment: "Strong hollow hold" },
+    { skillId: `${ORG1_ID}-skill-1`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Perfect forward roll with smooth momentum" },
+    { skillId: `${ORG1_ID}-skill-2`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Good backward roll, chin nicely tucked" },
+    { skillId: `${ORG1_ID}-skill-3`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Beautiful cartwheel, straight legs" },
+    { skillId: `${ORG1_ID}-skill-11`, attemptStatus: "ATTEMPTED" as const, passed: false, comment: "Almost there! Needs stronger punch off board" },
+    { skillId: `${ORG1_ID}-skill-14`, attemptStatus: "ATTEMPTED" as const, passed: false, comment: "Working on pulling hips to bar" },
+    { skillId: `${ORG1_ID}-skill-19`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Confident beam walking" },
+    { skillId: `${ORG1_ID}-skill-20`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Nice deep dips" },
+    { skillId: `${ORG1_ID}-skill-27`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Strong hollow hold" },
   ];
   
   for (const skill of eval1Skills) {
     await prisma.evaluationSkill.upsert({
       where: { evaluationId_skillId: { evaluationId: eval1.id, skillId: skill.skillId } },
-      update: {},
+      update: { passed: skill.passed },
       create: { evaluationId: eval1.id, ...skill },
     });
   }
   
-  // Evaluation 2 - Sophie (Silver athlete) - Completed Rec Level 2
+  // Evaluation 2 - Sophie (Silver athlete) - Completed Rec Level 2 (Point Scale scoring)
   const eval2 = await prisma.evaluation.upsert({
     where: { id: `${ORG1_ID}-eval-2` },
-    update: {},
+    update: { programId: `${ORG1_ID}-prog-rec-silver` },
     create: {
       id: `${ORG1_ID}-eval-2`,
       athleteId: `${ORG1_ID}-ath-2`,
       coachId: org1Coach1.id,
       templateId: `${ORG1_ID}-template-rec-level2`,
+      programId: `${ORG1_ID}-prog-rec-silver`, // Link to Silver program
       date: daysAgo(21),
       level: "Recreational Level 2",
       overallScore: 8.5,
@@ -1163,21 +1341,22 @@ async function main() {
     },
   });
   
+  // Point scale scoring (1-10, pass threshold 7) for eval2
   const eval2Skills = [
-    { skillId: `${ORG1_ID}-skill-4`, attemptStatus: "SUCCEEDED" as const, comment: "Beautiful handstand form" },
-    { skillId: `${ORG1_ID}-skill-6`, attemptStatus: "SUCCEEDED" as const, comment: "Strong round-off with good snap" },
-    { skillId: `${ORG1_ID}-skill-7`, attemptStatus: "SUCCEEDED" as const, comment: "Controlled back walkover" },
-    { skillId: `${ORG1_ID}-skill-12`, attemptStatus: "SUCCEEDED" as const, comment: "Clean straddle over vault" },
-    { skillId: `${ORG1_ID}-skill-15`, attemptStatus: "SUCCEEDED" as const, comment: "Smooth back hip circle" },
-    { skillId: `${ORG1_ID}-skill-17`, attemptStatus: "SUCCEEDED" as const, comment: "High cast with good form" },
-    { skillId: `${ORG1_ID}-skill-21`, attemptStatus: "SUCCEEDED" as const, comment: "Confident beam turns" },
-    { skillId: `${ORG1_ID}-skill-22`, attemptStatus: "ATTEMPTED" as const, comment: "Working on leg height in scale" },
+    { skillId: `${ORG1_ID}-skill-4`, attemptStatus: "SUCCEEDED" as const, pointScore: 9, passed: true, comment: "Beautiful handstand form" },
+    { skillId: `${ORG1_ID}-skill-6`, attemptStatus: "SUCCEEDED" as const, pointScore: 8, passed: true, comment: "Strong round-off with good snap" },
+    { skillId: `${ORG1_ID}-skill-7`, attemptStatus: "SUCCEEDED" as const, pointScore: 9, passed: true, comment: "Controlled back walkover" },
+    { skillId: `${ORG1_ID}-skill-12`, attemptStatus: "SUCCEEDED" as const, pointScore: 8, passed: true, comment: "Clean straddle over vault" },
+    { skillId: `${ORG1_ID}-skill-15`, attemptStatus: "SUCCEEDED" as const, pointScore: 9, passed: true, comment: "Smooth back hip circle" },
+    { skillId: `${ORG1_ID}-skill-17`, attemptStatus: "SUCCEEDED" as const, pointScore: 8, passed: true, comment: "High cast with good form" },
+    { skillId: `${ORG1_ID}-skill-21`, attemptStatus: "SUCCEEDED" as const, pointScore: 9, passed: true, comment: "Confident beam turns" },
+    { skillId: `${ORG1_ID}-skill-22`, attemptStatus: "ATTEMPTED" as const, pointScore: 6, passed: false, comment: "Working on leg height in scale" },
   ];
   
   for (const skill of eval2Skills) {
     await prisma.evaluationSkill.upsert({
       where: { evaluationId_skillId: { evaluationId: eval2.id, skillId: skill.skillId } },
-      update: {},
+      update: { passed: skill.passed, pointScore: skill.pointScore },
       create: { evaluationId: eval2.id, ...skill },
     });
   }
@@ -1185,12 +1364,13 @@ async function main() {
   // Evaluation 3 - Olivia (JO athlete) - Pre-Team Assessment - PASS
   const eval3 = await prisma.evaluation.upsert({
     where: { id: `${ORG1_ID}-eval-3` },
-    update: {},
+    update: { programId: `${ORG1_ID}-prog-jo` },
     create: {
       id: `${ORG1_ID}-eval-3`,
       athleteId: `${ORG1_ID}-ath-3`,
       coachId: org1Coach2.id,
       templateId: `${ORG1_ID}-template-preteam`,
+      programId: `${ORG1_ID}-prog-jo`, // Link to JO program
       date: daysAgo(45),
       level: "Pre-Team",
       overallScore: 8.0,
@@ -1199,21 +1379,22 @@ async function main() {
     },
   });
   
+  // Pass/Fail scoring for Pre-Team (all skills must pass)
   const eval3Skills = [
-    { skillId: `${ORG1_ID}-skill-6`, attemptStatus: "SUCCEEDED" as const, comment: "Excellent round-off" },
-    { skillId: `${ORG1_ID}-skill-7`, attemptStatus: "SUCCEEDED" as const, comment: "Good flexibility" },
-    { skillId: `${ORG1_ID}-skill-8`, attemptStatus: "SUCCEEDED" as const, comment: "Nice front walkover" },
-    { skillId: `${ORG1_ID}-skill-13`, attemptStatus: "SUCCEEDED" as const, comment: "Strong vault" },
-    { skillId: `${ORG1_ID}-skill-17`, attemptStatus: "SUCCEEDED" as const, comment: "High cast" },
-    { skillId: `${ORG1_ID}-skill-18`, attemptStatus: "ATTEMPTED" as const, comment: "Almost has the kip - keep practicing!" },
-    { skillId: `${ORG1_ID}-skill-23`, attemptStatus: "SUCCEEDED" as const, comment: "Confident beam cartwheel" },
-    { skillId: `${ORG1_ID}-skill-24`, attemptStatus: "ATTEMPTED" as const, comment: "Good start on beam handstand" },
+    { skillId: `${ORG1_ID}-skill-6`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Excellent round-off" },
+    { skillId: `${ORG1_ID}-skill-7`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Good flexibility" },
+    { skillId: `${ORG1_ID}-skill-8`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Nice front walkover" },
+    { skillId: `${ORG1_ID}-skill-13`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Strong vault" },
+    { skillId: `${ORG1_ID}-skill-17`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "High cast" },
+    { skillId: `${ORG1_ID}-skill-18`, attemptStatus: "ATTEMPTED" as const, passed: false, comment: "Almost has the kip - keep practicing!" },
+    { skillId: `${ORG1_ID}-skill-23`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Confident beam cartwheel" },
+    { skillId: `${ORG1_ID}-skill-24`, attemptStatus: "ATTEMPTED" as const, passed: false, comment: "Good start on beam handstand" },
   ];
   
   for (const skill of eval3Skills) {
     await prisma.evaluationSkill.upsert({
       where: { evaluationId_skillId: { evaluationId: eval3.id, skillId: skill.skillId } },
-      update: {},
+      update: { passed: skill.passed },
       create: { evaluationId: eval3.id, ...skill },
     });
   }
@@ -1221,12 +1402,13 @@ async function main() {
   // Evaluation 4 - Lily (Bronze athlete) - Pending Rec Level 1
   const eval4 = await prisma.evaluation.upsert({
     where: { id: `${ORG1_ID}-eval-4` },
-    update: {},
+    update: { programId: `${ORG1_ID}-prog-rec-bronze` },
     create: {
       id: `${ORG1_ID}-eval-4`,
       athleteId: `${ORG1_ID}-ath-4`,
       coachId: org1Coach1.id,
       templateId: `${ORG1_ID}-template-rec-level1`,
+      programId: `${ORG1_ID}-prog-rec-bronze`, // Link to Bronze program
       date: daysFromNow(7),
       level: "Recreational Level 1",
       overallScore: 0,
@@ -1240,20 +1422,21 @@ async function main() {
   for (const skillId of eval4SkillIds) {
     await prisma.evaluationSkill.upsert({
       where: { evaluationId_skillId: { evaluationId: eval4.id, skillId } },
-      update: {},
-      create: { evaluationId: eval4.id, skillId, attemptStatus: "NOT_ATTEMPTED" },
+      update: { passed: false },
+      create: { evaluationId: eval4.id, skillId, attemptStatus: "NOT_ATTEMPTED", passed: false },
     });
   }
   
   // Evaluation 5 - Hannah (Preschool) - Completed Preschool Basics
   const eval5 = await prisma.evaluation.upsert({
     where: { id: `${ORG1_ID}-eval-5` },
-    update: {},
+    update: { programId: `${ORG1_ID}-prog-preschool` },
     create: {
       id: `${ORG1_ID}-eval-5`,
       athleteId: `${ORG1_ID}-ath-8`,
       coachId: org1Coach1.id,
       templateId: `${ORG1_ID}-template-preschool`,
+      programId: `${ORG1_ID}-prog-preschool`, // Link to Preschool program
       date: daysAgo(7),
       level: "Preschool Basics",
       overallScore: 6.0,
@@ -1263,22 +1446,80 @@ async function main() {
   });
   
   const eval5Skills = [
-    { skillId: `${ORG1_ID}-skill-1`, attemptStatus: "SUCCEEDED" as const, comment: "Getting the roll!" },
-    { skillId: `${ORG1_ID}-skill-3`, attemptStatus: "ATTEMPTED" as const, comment: "Working on straight legs" },
-    { skillId: `${ORG1_ID}-skill-5`, attemptStatus: "ATTEMPTED" as const, comment: "Almost pushing up!" },
-    { skillId: `${ORG1_ID}-skill-19`, attemptStatus: "SUCCEEDED" as const, comment: "Great balance!" },
-    { skillId: `${ORG1_ID}-skill-25`, attemptStatus: "SUCCEEDED" as const, comment: "Good flexibility" },
+    { skillId: `${ORG1_ID}-skill-1`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Getting the roll!" },
+    { skillId: `${ORG1_ID}-skill-3`, attemptStatus: "ATTEMPTED" as const, passed: false, comment: "Working on straight legs" },
+    { skillId: `${ORG1_ID}-skill-5`, attemptStatus: "ATTEMPTED" as const, passed: false, comment: "Almost pushing up!" },
+    { skillId: `${ORG1_ID}-skill-19`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Great balance!" },
+    { skillId: `${ORG1_ID}-skill-25`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Good flexibility" },
   ];
   
   for (const skill of eval5Skills) {
     await prisma.evaluationSkill.upsert({
       where: { evaluationId_skillId: { evaluationId: eval5.id, skillId: skill.skillId } },
-      update: {},
+      update: { passed: skill.passed },
       create: { evaluationId: eval5.id, ...skill },
     });
   }
   
   console.log("  ✓ Created 5 evaluations with skill ratings");
+
+  // ============================================
+  // ATHLETE ACHIEVEMENTS (Earned from completed evaluations)
+  // ============================================
+  console.log("\n🎖️ Creating athlete achievements...");
+  
+  const athleteAchievementsData = [
+    // Emily earned Rec Level 1 Champion
+    {
+      id: `${ORG1_ID}-athlete-ach-1`,
+      athleteId: `${ORG1_ID}-ath-1`,
+      achievementId: `${ORG1_ID}-achievement-rec-level1`,
+      evaluationId: eval1.id,
+      earnedAt: daysAgo(14),
+      bestResultsByCategory: { "Floor": 100, "Vault": 50, "Bars": 50, "Beam": 100, "Conditioning": 100 },
+      overallScore: 7.5,
+    },
+    // Sophie earned Rec Level 2 Star
+    {
+      id: `${ORG1_ID}-athlete-ach-2`,
+      athleteId: `${ORG1_ID}-ath-2`,
+      achievementId: `${ORG1_ID}-achievement-rec-level2`,
+      evaluationId: eval2.id,
+      earnedAt: daysAgo(21),
+      bestResultsByCategory: { "Floor": 9, "Vault": 8, "Bars": 8.5, "Beam": 8, "Conditioning": 9 },
+      overallScore: 8.5,
+    },
+    // Olivia earned Pre-Team Ready
+    {
+      id: `${ORG1_ID}-athlete-ach-3`,
+      athleteId: `${ORG1_ID}-ath-3`,
+      achievementId: `${ORG1_ID}-achievement-preteam`,
+      evaluationId: eval3.id,
+      earnedAt: daysAgo(45),
+      bestResultsByCategory: { "Floor": 100, "Vault": 100, "Bars": 50, "Beam": 75 },
+      overallScore: 8.0,
+    },
+    // Hannah earned Preschool Graduate
+    {
+      id: `${ORG1_ID}-athlete-ach-4`,
+      athleteId: `${ORG1_ID}-ath-8`,
+      achievementId: `${ORG1_ID}-achievement-preschool`,
+      evaluationId: eval5.id,
+      earnedAt: daysAgo(7),
+      bestResultsByCategory: { "Floor": 66, "Beam": 100, "Flexibility": 100 },
+      overallScore: 6.0,
+    },
+  ];
+
+  for (const achievement of athleteAchievementsData) {
+    await prisma.athleteAchievement.upsert({
+      where: { id: achievement.id },
+      update: {},
+      create: achievement,
+    });
+  }
+  
+  console.log(`  ✓ Created ${athleteAchievementsData.length} athlete achievements`);
   
   // ============================================
   // ATHLETE SKILL PROGRESS (Aggregated from evaluations)

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getEffectiveUser } from "@/lib/impersonation";
 
 // GET /api/coach/athletes
 // Returns athletes from programs assigned to the current coach
 // (via ProgramStaff assignments or Event.coachId)
+// Supports superadmin impersonation via "view as coach" feature
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
@@ -12,9 +14,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!session.user.organizationId) {
+    // Get effective user (handles superadmin impersonation)
+    const effectiveUser = getEffectiveUser(session);
+    if (!effectiveUser?.organizationId) {
       return NextResponse.json({ data: [], total: 0 });
     }
+
+    const { userId, organizationId } = effectiveUser;
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
@@ -23,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // First, get the user's staff profile
     const staffProfile = await db.staffProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
     });
 
     // Find programs via ProgramStaff assignments
@@ -39,8 +45,8 @@ export async function GET(request: NextRequest) {
     // Get all events where this user is the coach
     const coachEvents = await db.event.findMany({
       where: {
-        coachId: session.user.id,
-        organizationId: session.user.organizationId,
+        coachId: userId,
+        organizationId,
       },
       select: {
         id: true,
@@ -64,7 +70,7 @@ export async function GET(request: NextRequest) {
         programId: { in: programIds },
         status: "ACTIVE",
         athlete: {
-          organizationId: session.user.organizationId,
+          organizationId,
           ...(search && {
             OR: [
               { name: { contains: search, mode: "insensitive" as const } },
@@ -120,7 +126,7 @@ export async function GET(request: NextRequest) {
         programId: { in: programIds },
         status: "ACTIVE",
         athlete: {
-          organizationId: session.user.organizationId,
+          organizationId,
           ...(search && {
             OR: [
               { name: { contains: search, mode: "insensitive" as const } },

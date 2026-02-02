@@ -65,6 +65,8 @@ import type {
   EvaluationTemplateWithSkills,
   EvaluationWithRelations,
   EvaluationStatus,
+  ScoringType,
+  CompletionType,
 } from "@/types/evaluations"
 
 const difficultyColors: Record<SkillDifficulty, string> = {
@@ -105,6 +107,18 @@ interface TemplateFormData {
   maxAge: string
   isActive: boolean
   skillIds: string[]
+  // Auto-sync configuration
+  autoSyncEnabled: boolean
+  autoSyncLevels: SkillDifficulty[]
+  autoSyncCategories: string[]
+  // Scoring configuration
+  scoringType: ScoringType
+  pointScaleMin: string
+  pointScaleMax: string
+  pointScalePassThreshold: string
+  // Completion requirements
+  completionType: CompletionType
+  completionThreshold: string
 }
 
 const initialFormData: TemplateFormData = {
@@ -115,6 +129,29 @@ const initialFormData: TemplateFormData = {
   maxAge: "",
   isActive: true,
   skillIds: [],
+  // Auto-sync defaults
+  autoSyncEnabled: false,
+  autoSyncLevels: [],
+  autoSyncCategories: [],
+  // Scoring defaults
+  scoringType: "PASS_FAIL",
+  pointScaleMin: "1",
+  pointScaleMax: "10",
+  pointScalePassThreshold: "7",
+  // Completion defaults
+  completionType: "PERCENTAGE",
+  completionThreshold: "80",
+}
+
+const scoringTypeLabels: Record<ScoringType, string> = {
+  PASS_FAIL: "Pass/Fail",
+  POINT_SCALE: "Point Scale",
+}
+
+const completionTypeLabels: Record<CompletionType, string> = {
+  PERCENTAGE: "Percentage",
+  COUNT: "Number of Skills",
+  ALL: "All Required Skills",
 }
 
 export default function EvaluationsPage() {
@@ -210,8 +247,14 @@ export default function EvaluationsPage() {
 
   // Handle create template
   const handleCreate = async () => {
-    if (!formData.name.trim() || formData.skillIds.length === 0) {
-      toast.error("Please fill in required fields and select at least one skill")
+    if (!formData.name.trim()) {
+      toast.error("Please fill in required fields")
+      return
+    }
+    
+    // Either auto-sync must be enabled or skills must be selected
+    if (!formData.autoSyncEnabled && formData.skillIds.length === 0) {
+      toast.error("Please enable auto-sync or select at least one skill")
       return
     }
 
@@ -224,7 +267,20 @@ export default function EvaluationsPage() {
         minAge: formData.minAge ? parseInt(formData.minAge) : undefined,
         maxAge: formData.maxAge ? parseInt(formData.maxAge) : undefined,
         isActive: formData.isActive,
-        skillIds: formData.skillIds,
+        // Auto-sync
+        autoSyncEnabled: formData.autoSyncEnabled,
+        autoSyncLevels: formData.autoSyncLevels,
+        autoSyncCategories: formData.autoSyncCategories,
+        // Scoring
+        scoringType: formData.scoringType,
+        pointScaleMin: formData.pointScaleMin ? parseInt(formData.pointScaleMin) : 1,
+        pointScaleMax: formData.pointScaleMax ? parseInt(formData.pointScaleMax) : 10,
+        pointScalePassThreshold: formData.pointScalePassThreshold ? parseInt(formData.pointScalePassThreshold) : 7,
+        // Completion
+        completionType: formData.completionType,
+        completionThreshold: formData.completionThreshold ? parseFloat(formData.completionThreshold) : 80,
+        // Skills (only if not auto-syncing)
+        skillIds: formData.autoSyncEnabled ? undefined : formData.skillIds,
       })
 
       toast.success("Evaluation template created successfully")
@@ -241,8 +297,14 @@ export default function EvaluationsPage() {
 
   // Handle update template
   const handleUpdate = async () => {
-    if (!selectedTemplate || !formData.name.trim() || formData.skillIds.length === 0) {
-      toast.error("Please fill in required fields and select at least one skill")
+    if (!selectedTemplate || !formData.name.trim()) {
+      toast.error("Please fill in required fields")
+      return
+    }
+    
+    // Either auto-sync must be enabled or skills must be selected
+    if (!formData.autoSyncEnabled && formData.skillIds.length === 0) {
+      toast.error("Please enable auto-sync or select at least one skill")
       return
     }
 
@@ -255,7 +317,20 @@ export default function EvaluationsPage() {
         minAge: formData.minAge ? parseInt(formData.minAge) : null,
         maxAge: formData.maxAge ? parseInt(formData.maxAge) : null,
         isActive: formData.isActive,
-        skillIds: formData.skillIds,
+        // Auto-sync
+        autoSyncEnabled: formData.autoSyncEnabled,
+        autoSyncLevels: formData.autoSyncLevels,
+        autoSyncCategories: formData.autoSyncCategories,
+        // Scoring
+        scoringType: formData.scoringType,
+        pointScaleMin: formData.pointScaleMin ? parseInt(formData.pointScaleMin) : 1,
+        pointScaleMax: formData.pointScaleMax ? parseInt(formData.pointScaleMax) : 10,
+        pointScalePassThreshold: formData.pointScalePassThreshold ? parseInt(formData.pointScalePassThreshold) : 7,
+        // Completion
+        completionType: formData.completionType,
+        completionThreshold: formData.completionThreshold ? parseFloat(formData.completionThreshold) : 80,
+        // Skills (only if not auto-syncing)
+        skillIds: formData.autoSyncEnabled ? undefined : formData.skillIds,
       })
 
       toast.success("Evaluation template updated successfully")
@@ -312,6 +387,18 @@ export default function EvaluationsPage() {
       maxAge: template.maxAge?.toString() || "",
       isActive: template.isActive,
       skillIds: template.skills.map((s) => s.skillId),
+      // Auto-sync
+      autoSyncEnabled: template.autoSyncEnabled || false,
+      autoSyncLevels: template.autoSyncLevels || [],
+      autoSyncCategories: template.autoSyncCategories || [],
+      // Scoring
+      scoringType: template.scoringType || "PASS_FAIL",
+      pointScaleMin: template.pointScaleMin?.toString() || "1",
+      pointScaleMax: template.pointScaleMax?.toString() || "10",
+      pointScalePassThreshold: template.pointScalePassThreshold?.toString() || "7",
+      // Completion
+      completionType: template.completionType || "PERCENTAGE",
+      completionThreshold: template.completionThreshold?.toString() || "80",
     })
     fetchSkills()
     setIsEditOpen(true)
@@ -440,12 +527,15 @@ export default function EvaluationsPage() {
                         <CardTitle className="text-lg">{template.name}</CardTitle>
                         <CardDescription>{getAgeRange(template)}</CardDescription>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
                         <Badge className={difficultyColors[template.difficultyLevel]}>
                           {difficultyLabels[template.difficultyLevel]}
                         </Badge>
                         {!template.isActive && (
                           <Badge variant="outline">Inactive</Badge>
+                        )}
+                        {template.autoSyncEnabled && (
+                          <Badge variant="secondary">Auto-sync</Badge>
                         )}
                       </div>
                     </div>
@@ -456,6 +546,18 @@ export default function EvaluationsPage() {
                         {template.description}
                       </p>
                     )}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <Badge variant="outline" className="text-xs">
+                        {scoringTypeLabels[template.scoringType || "PASS_FAIL"]}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {template.completionType === "ALL" 
+                          ? "All skills required" 
+                          : template.completionType === "PERCENTAGE"
+                            ? `${template.completionThreshold}% to pass`
+                            : `${template.completionThreshold} skills to pass`}
+                      </Badge>
+                    </div>
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>{template.skills.length} skills</span>
                       <span>{template._count?.evaluations || 0} evaluations</span>
@@ -642,6 +744,172 @@ export default function EvaluationsPage() {
                 onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
               />
             </div>
+
+            {/* Scoring Configuration */}
+            <div className="border rounded-lg p-4 space-y-4">
+              <h4 className="font-medium">Scoring Configuration</h4>
+              <div className="grid gap-2">
+                <Label htmlFor="scoringType">Scoring Type</Label>
+                <Select
+                  value={formData.scoringType}
+                  onValueChange={(value) => setFormData({ ...formData, scoringType: value as ScoringType })}
+                >
+                  <SelectTrigger id="scoringType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PASS_FAIL">Pass/Fail (3 states)</SelectItem>
+                    <SelectItem value="POINT_SCALE">Point Scale</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {formData.scoringType === "PASS_FAIL" 
+                    ? "Skills are marked as Not Attempted, Attempted, or Passed"
+                    : "Skills are scored on a numeric scale"}
+                </p>
+              </div>
+              {formData.scoringType === "POINT_SCALE" && (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="pointScaleMin">Min Score</Label>
+                    <Input
+                      id="pointScaleMin"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.pointScaleMin}
+                      onChange={(e) => setFormData({ ...formData, pointScaleMin: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="pointScaleMax">Max Score</Label>
+                    <Input
+                      id="pointScaleMax"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={formData.pointScaleMax}
+                      onChange={(e) => setFormData({ ...formData, pointScaleMax: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="pointScalePassThreshold">Pass Threshold</Label>
+                    <Input
+                      id="pointScalePassThreshold"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.pointScalePassThreshold}
+                      onChange={(e) => setFormData({ ...formData, pointScalePassThreshold: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Completion Requirements */}
+            <div className="border rounded-lg p-4 space-y-4">
+              <h4 className="font-medium">Completion Requirements</h4>
+              <div className="grid gap-2">
+                <Label htmlFor="completionType">Completion Type</Label>
+                <Select
+                  value={formData.completionType}
+                  onValueChange={(value) => setFormData({ ...formData, completionType: value as CompletionType })}
+                >
+                  <SelectTrigger id="completionType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PERCENTAGE">Percentage of Skills</SelectItem>
+                    <SelectItem value="COUNT">Number of Skills</SelectItem>
+                    <SelectItem value="ALL">All Required Skills</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.completionType !== "ALL" && (
+                <div className="grid gap-2">
+                  <Label htmlFor="completionThreshold">
+                    {formData.completionType === "PERCENTAGE" ? "Required Percentage" : "Required Count"}
+                  </Label>
+                  <Input
+                    id="completionThreshold"
+                    type="number"
+                    min="0"
+                    max={formData.completionType === "PERCENTAGE" ? "100" : "1000"}
+                    value={formData.completionThreshold}
+                    onChange={(e) => setFormData({ ...formData, completionThreshold: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {formData.completionType === "PERCENTAGE"
+                      ? `Athletes must pass ${formData.completionThreshold}% of required skills to complete this evaluation`
+                      : `Athletes must pass ${formData.completionThreshold} skills to complete this evaluation`}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Auto-Sync Configuration */}
+            <div className="border rounded-lg p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Auto-Sync Skills</h4>
+                  <p className="text-xs text-muted-foreground">Automatically include skills by level and category</p>
+                </div>
+                <Switch
+                  checked={formData.autoSyncEnabled}
+                  onCheckedChange={(checked) => setFormData({ ...formData, autoSyncEnabled: checked })}
+                />
+              </div>
+              {formData.autoSyncEnabled && (
+                <>
+                  <div className="grid gap-2">
+                    <Label>Difficulty Levels</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {(["BEGINNER", "INTERMEDIATE", "ADVANCED"] as SkillDifficulty[]).map((level) => (
+                        <label key={level} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={formData.autoSyncLevels.includes(level)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFormData({ ...formData, autoSyncLevels: [...formData.autoSyncLevels, level] })
+                              } else {
+                                setFormData({ ...formData, autoSyncLevels: formData.autoSyncLevels.filter((l) => l !== level) })
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{difficultyLabels[level]}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Categories</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.keys(skillsByCategory).map((category) => (
+                        <label key={category} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={formData.autoSyncCategories.includes(category)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFormData({ ...formData, autoSyncCategories: [...formData.autoSyncCategories, category] })
+                              } else {
+                                setFormData({ ...formData, autoSyncCategories: formData.autoSyncCategories.filter((c) => c !== category) })
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{category}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {Object.keys(skillsByCategory).length === 0 && (
+                      <p className="text-xs text-muted-foreground">No categories available</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {!formData.autoSyncEnabled && (
             <div className="grid gap-2">
               <Label>Skills * ({formData.skillIds.length} selected)</Label>
               {isLoadingSkills ? (
@@ -683,6 +951,7 @@ export default function EvaluationsPage() {
                 </div>
               )}
             </div>
+            )}
           </div>
           <SheetFooter>
             <Button onClick={handleCreate} disabled={isSaving}>
@@ -772,6 +1041,159 @@ export default function EvaluationsPage() {
                 onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
               />
             </div>
+
+            {/* Scoring Configuration */}
+            <div className="border rounded-lg p-4 space-y-4">
+              <h4 className="font-medium">Scoring Configuration</h4>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-scoringType">Scoring Type</Label>
+                <Select
+                  value={formData.scoringType}
+                  onValueChange={(value) => setFormData({ ...formData, scoringType: value as ScoringType })}
+                >
+                  <SelectTrigger id="edit-scoringType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PASS_FAIL">Pass/Fail (3 states)</SelectItem>
+                    <SelectItem value="POINT_SCALE">Point Scale</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.scoringType === "POINT_SCALE" && (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-pointScaleMin">Min Score</Label>
+                    <Input
+                      id="edit-pointScaleMin"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.pointScaleMin}
+                      onChange={(e) => setFormData({ ...formData, pointScaleMin: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-pointScaleMax">Max Score</Label>
+                    <Input
+                      id="edit-pointScaleMax"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={formData.pointScaleMax}
+                      onChange={(e) => setFormData({ ...formData, pointScaleMax: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-pointScalePassThreshold">Pass Threshold</Label>
+                    <Input
+                      id="edit-pointScalePassThreshold"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.pointScalePassThreshold}
+                      onChange={(e) => setFormData({ ...formData, pointScalePassThreshold: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Completion Requirements */}
+            <div className="border rounded-lg p-4 space-y-4">
+              <h4 className="font-medium">Completion Requirements</h4>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-completionType">Completion Type</Label>
+                <Select
+                  value={formData.completionType}
+                  onValueChange={(value) => setFormData({ ...formData, completionType: value as CompletionType })}
+                >
+                  <SelectTrigger id="edit-completionType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PERCENTAGE">Percentage of Skills</SelectItem>
+                    <SelectItem value="COUNT">Number of Skills</SelectItem>
+                    <SelectItem value="ALL">All Required Skills</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.completionType !== "ALL" && (
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-completionThreshold">
+                    {formData.completionType === "PERCENTAGE" ? "Required Percentage" : "Required Count"}
+                  </Label>
+                  <Input
+                    id="edit-completionThreshold"
+                    type="number"
+                    min="0"
+                    max={formData.completionType === "PERCENTAGE" ? "100" : "1000"}
+                    value={formData.completionThreshold}
+                    onChange={(e) => setFormData({ ...formData, completionThreshold: e.target.value })}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Auto-Sync Configuration */}
+            <div className="border rounded-lg p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Auto-Sync Skills</h4>
+                  <p className="text-xs text-muted-foreground">Automatically include skills by level and category</p>
+                </div>
+                <Switch
+                  checked={formData.autoSyncEnabled}
+                  onCheckedChange={(checked) => setFormData({ ...formData, autoSyncEnabled: checked })}
+                />
+              </div>
+              {formData.autoSyncEnabled && (
+                <>
+                  <div className="grid gap-2">
+                    <Label>Difficulty Levels</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {(["BEGINNER", "INTERMEDIATE", "ADVANCED"] as SkillDifficulty[]).map((level) => (
+                        <label key={level} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={formData.autoSyncLevels.includes(level)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFormData({ ...formData, autoSyncLevels: [...formData.autoSyncLevels, level] })
+                              } else {
+                                setFormData({ ...formData, autoSyncLevels: formData.autoSyncLevels.filter((l) => l !== level) })
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{difficultyLabels[level]}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Categories</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.keys(skillsByCategory).map((category) => (
+                        <label key={category} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={formData.autoSyncCategories.includes(category)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFormData({ ...formData, autoSyncCategories: [...formData.autoSyncCategories, category] })
+                              } else {
+                                setFormData({ ...formData, autoSyncCategories: formData.autoSyncCategories.filter((c) => c !== category) })
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{category}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {!formData.autoSyncEnabled && (
             <div className="grid gap-2">
               <Label>Skills * ({formData.skillIds.length} selected)</Label>
               {isLoadingSkills ? (
@@ -809,6 +1231,7 @@ export default function EvaluationsPage() {
                 </div>
               )}
             </div>
+            )}
           </div>
           <SheetFooter>
             <Button onClick={handleUpdate} disabled={isSaving}>

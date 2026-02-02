@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { api, ApiError } from "@/lib/api-client";
 import type {
@@ -27,10 +27,21 @@ interface UseCoachEventsReturn {
 /**
  * Hook for fetching events assigned to the current coach.
  * Automatically filters by the logged-in user's ID as coachId.
+ * Supports superadmin impersonation via "view as coach" feature.
  */
 export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEventsReturn {
   const { autoFetch = true, initialParams = {} } = options;
   const { data: session } = useSession();
+  
+  // Get effective coach ID (use impersonated ID if superadmin is viewing as coach)
+  const effectiveCoachId = useMemo(() => {
+    if (!session?.user) return null;
+    // If superadmin is impersonating a coach, use the impersonated coach's ID
+    if (session.user.isSuperAdmin && session.user.viewingAsCoachId) {
+      return session.user.viewingAsCoachId;
+    }
+    return session.user.id;
+  }, [session?.user]);
 
   const [events, setEvents] = useState<EventWithRelations[]>([]);
   const [total, setTotal] = useState(0);
@@ -45,7 +56,7 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
   }, []);
 
   const fetchEvents = useCallback(async (params?: Omit<EventsQueryParams, "coachId">) => {
-    if (!session?.user?.id) {
+    if (!effectiveCoachId) {
       setError("Not authenticated");
       return;
     }
@@ -61,10 +72,10 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
     setError(null);
 
     try {
-      // Add coachId to filter by current user
+      // Add coachId to filter by current user (or impersonated coach)
       const response = await api.get<EventsListResponse>("/api/events", {
         ...queryParams,
-        coachId: session.user.id,
+        coachId: effectiveCoachId,
       });
       setEvents(response.data);
       setTotal(response.total);
@@ -75,7 +86,7 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user?.id, setCurrentParams]);
+  }, [effectiveCoachId, setCurrentParams]);
 
   const refresh = useCallback(async () => {
     await fetchEvents(currentParams);
@@ -86,11 +97,11 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
   }, []);
 
   useEffect(() => {
-    if (autoFetch && session?.user?.id) {
+    if (autoFetch && effectiveCoachId) {
       fetchEvents(initialParams);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
+  }, [effectiveCoachId]);
 
   return {
     events,

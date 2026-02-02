@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import type { SkillAttemptStatus } from "@prisma/client";
+import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
+import { checkAndAwardAchievements } from "@/lib/services/achievement";
 
 const skillAttemptStatusEnum = z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]);
 const evaluationStatusEnum = z.enum(["PENDING", "IN_PROGRESS", "PASS", "RETRY", "EXCELLENT", "SATISFACTORY"]);
 
 const skillRatingSchema = z.object({
   skillId: z.string().min(1),
-  rating: z.number().int().min(1).max(5).optional().nullable(),
+  rating: z.number().int().min(1).max(5).optional().nullable(), // Legacy
+  pointScore: z.number().int().optional().nullable(), // For POINT_SCALE
   attemptStatus: skillAttemptStatusEnum.optional(),
+  passed: z.boolean().optional(), // Explicit pass flag
   comment: z.string().optional().nullable(),
 });
 
@@ -23,11 +26,27 @@ const updateEvaluationSchema = z.object({
   skillRatings: z.array(skillRatingSchema).optional(),
 });
 
+// Helper function to determine if a skill is passed based on scoring type
+function isSkillPassed(
+  scoringType: ScoringType,
+  attemptStatus: SkillAttemptStatus,
+  pointScore: number | null | undefined,
+  passThreshold: number
+): boolean {
+  if (scoringType === "PASS_FAIL") {
+    return attemptStatus === "SUCCEEDED";
+  } else {
+    // POINT_SCALE
+    return pointScore !== null && pointScore !== undefined && pointScore >= passThreshold;
+  }
+}
+
 // Helper function to update athlete skill progress
 async function updateAthleteSkillProgress(
   athleteId: string,
   skillId: string,
   attemptStatus: SkillAttemptStatus,
+  passed: boolean,
   evaluationId: string,
   evaluationDate: Date
 ) {
@@ -48,7 +67,7 @@ async function updateAthleteSkillProgress(
       updatedAt: now,
     };
 
-    if (attemptStatus === "ATTEMPTED") {
+    if (attemptStatus === "ATTEMPTED" || passed) {
       updateData.attemptCount = existingProgress.attemptCount + 1;
       if (!existingProgress.firstAttemptedAt) {
         updateData.firstAttemptedAt = evaluationDate;
@@ -57,12 +76,10 @@ async function updateAthleteSkillProgress(
       if (existingProgress.bestStatus === "NOT_ATTEMPTED") {
         updateData.bestStatus = "ATTEMPTED";
       }
-    } else if (attemptStatus === "SUCCEEDED") {
-      updateData.attemptCount = existingProgress.attemptCount + 1;
+    }
+    
+    if (attemptStatus === "SUCCEEDED" || passed) {
       updateData.successCount = existingProgress.successCount + 1;
-      if (!existingProgress.firstAttemptedAt) {
-        updateData.firstAttemptedAt = evaluationDate;
-      }
       if (!existingProgress.firstSucceededAt) {
         updateData.firstSucceededAt = evaluationDate;
       }
@@ -76,15 +93,18 @@ async function updateAthleteSkillProgress(
     });
   } else {
     // Create new progress record
+    const isPassed = attemptStatus === "SUCCEEDED" || passed;
+    const isAttempted = attemptStatus !== "NOT_ATTEMPTED" || passed;
+    
     await db.athleteSkillProgress.create({
       data: {
         athleteId,
         skillId,
-        bestStatus: attemptStatus,
-        firstAttemptedAt: attemptStatus !== "NOT_ATTEMPTED" ? evaluationDate : null,
-        firstSucceededAt: attemptStatus === "SUCCEEDED" ? evaluationDate : null,
-        attemptCount: attemptStatus !== "NOT_ATTEMPTED" ? 1 : 0,
-        successCount: attemptStatus === "SUCCEEDED" ? 1 : 0,
+        bestStatus: isPassed ? "SUCCEEDED" : (isAttempted ? "ATTEMPTED" : "NOT_ATTEMPTED"),
+        firstAttemptedAt: isAttempted ? evaluationDate : null,
+        firstSucceededAt: isPassed ? evaluationDate : null,
+        attemptCount: isAttempted ? 1 : 0,
+        successCount: isPassed ? 1 : 0,
         lastEvaluatedAt: evaluationDate,
         lastEvaluationId: evaluationId,
       },
@@ -152,11 +172,36 @@ export async function GET(
               },
               orderBy: { order: "asc" },
             },
+            achievements: {
+              select: {
+                id: true,
+                name: true,
+                badgeImageUrl: true,
+              },
+            },
+          },
+        },
+        program: {
+          select: {
+            id: true,
+            name: true,
+            level: true,
           },
         },
         skillRatings: {
           include: {
             skill: true,
+          },
+        },
+        athleteAchievements: {
+          include: {
+            achievement: {
+              select: {
+                id: true,
+                name: true,
+                badgeImageUrl: true,
+              },
+            },
           },
         },
       },
@@ -221,6 +266,12 @@ export async function PUT(
       },
       include: {
         skillRatings: true,
+        template: {
+          select: {
+            scoringType: true,
+            pointScalePassThreshold: true,
+          },
+        },
       },
     });
 
@@ -233,10 +284,25 @@ export async function PUT(
 
     const { skillRatings, ...evaluationData } = validatedData;
 
+    // Get template scoring configuration
+    const scoringType = existingEvaluation.template?.scoringType || "PASS_FAIL";
+    const passThreshold = existingEvaluation.template?.pointScalePassThreshold || 7;
+
     // Track which skills had status changes for progress updates
     const previousRatings = new Map(
-      existingEvaluation.skillRatings.map((sr) => [sr.skillId, sr.attemptStatus])
+      existingEvaluation.skillRatings.map((sr) => [sr.skillId, { attemptStatus: sr.attemptStatus, passed: sr.passed }])
     );
+
+    // Calculate passed status for each skill rating
+    const skillRatingsWithPassed = skillRatings?.map((sr) => {
+      const passed = sr.passed ?? isSkillPassed(
+        scoringType,
+        sr.attemptStatus || "NOT_ATTEMPTED",
+        sr.pointScore,
+        passThreshold
+      );
+      return { ...sr, passed };
+    });
 
     // Update evaluation and skill ratings in a transaction
     const evaluation = await db.$transaction(async (tx) => {
@@ -250,8 +316,8 @@ export async function PUT(
       });
 
       // If skillRatings provided, update them
-      if (skillRatings && skillRatings.length > 0) {
-        for (const sr of skillRatings) {
+      if (skillRatingsWithPassed && skillRatingsWithPassed.length > 0) {
+        for (const sr of skillRatingsWithPassed) {
           await tx.evaluationSkill.upsert({
             where: {
               evaluationId_skillId: {
@@ -261,14 +327,18 @@ export async function PUT(
             },
             update: {
               rating: sr.rating,
+              pointScore: sr.pointScore,
               attemptStatus: sr.attemptStatus,
+              passed: sr.passed,
               comment: sr.comment,
             },
             create: {
               evaluationId: id,
               skillId: sr.skillId,
               rating: sr.rating,
+              pointScore: sr.pointScore,
               attemptStatus: sr.attemptStatus || "NOT_ATTEMPTED",
+              passed: sr.passed,
               comment: sr.comment,
             },
           });
@@ -294,41 +364,145 @@ export async function PUT(
               avatar: true,
             },
           },
-          template: true,
+          template: {
+            select: {
+              id: true,
+              name: true,
+              difficultyLevel: true,
+              scoringType: true,
+              pointScaleMin: true,
+              pointScaleMax: true,
+              pointScalePassThreshold: true,
+            },
+          },
+          program: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           skillRatings: {
             include: {
               skill: true,
+            },
+          },
+          athleteAchievements: {
+            include: {
+              achievement: {
+                select: {
+                  id: true,
+                  name: true,
+                  badgeImageUrl: true,
+                },
+              },
             },
           },
         },
       });
     });
 
-    // Update athlete skill progress for skills that changed to ATTEMPTED or SUCCEEDED
+    // Update athlete skill progress for skills that changed
     // Only if evaluation is not PENDING
-    if (skillRatings && validatedData.status !== "PENDING" && evaluation) {
+    const newStatus = validatedData.status || existingEvaluation.status;
+    if (skillRatingsWithPassed && newStatus !== "PENDING" && evaluation) {
       const evalDate = validatedData.date 
         ? new Date(validatedData.date) 
         : existingEvaluation.date;
         
-      for (const sr of skillRatings) {
-        const previousStatus = previousRatings.get(sr.skillId) || "NOT_ATTEMPTED";
-        const newStatus = sr.attemptStatus || "NOT_ATTEMPTED";
+      for (const sr of skillRatingsWithPassed) {
+        const previous = previousRatings.get(sr.skillId);
+        const previousStatus = previous?.attemptStatus || "NOT_ATTEMPTED";
+        const previousPassed = previous?.passed || false;
+        const newAttemptStatus = sr.attemptStatus || "NOT_ATTEMPTED";
+        const newPassed = sr.passed;
         
         // Only update progress if status changed to something better
-        if (
-          newStatus !== "NOT_ATTEMPTED" &&
-          (previousStatus === "NOT_ATTEMPTED" || 
-           (previousStatus === "ATTEMPTED" && newStatus === "SUCCEEDED"))
-        ) {
+        const statusImproved = (
+          (newAttemptStatus !== "NOT_ATTEMPTED" && previousStatus === "NOT_ATTEMPTED") ||
+          (newAttemptStatus === "SUCCEEDED" && previousStatus === "ATTEMPTED") ||
+          (newPassed && !previousPassed)
+        );
+
+        if (statusImproved) {
           await updateAthleteSkillProgress(
             existingEvaluation.athleteId,
             sr.skillId,
-            newStatus,
+            newAttemptStatus,
+            newPassed,
             id,
             evalDate
           );
         }
+      }
+    }
+
+    // Check and award achievements if evaluation is being completed
+    const completedStatuses = ["PASS", "EXCELLENT", "SATISFACTORY"];
+    const wasNotCompleted = !completedStatuses.includes(existingEvaluation.status);
+    const isNowCompleted = completedStatuses.includes(newStatus);
+
+    if (wasNotCompleted && isNowCompleted && evaluation) {
+      const awardedAchievements = await checkAndAwardAchievements(id);
+      if (awardedAchievements.length > 0) {
+        // Fetch the updated evaluation with achievements
+        const updatedEvaluation = await db.evaluation.findUnique({
+          where: { id },
+          include: {
+            athlete: {
+              select: {
+                id: true,
+                name: true,
+                level: true,
+                avatar: true,
+              },
+            },
+            coach: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+            template: {
+              select: {
+                id: true,
+                name: true,
+                difficultyLevel: true,
+                scoringType: true,
+                pointScaleMin: true,
+                pointScaleMax: true,
+                pointScalePassThreshold: true,
+              },
+            },
+            program: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            skillRatings: {
+              include: {
+                skill: true,
+              },
+            },
+            athleteAchievements: {
+              include: {
+                achievement: {
+                  select: {
+                    id: true,
+                    name: true,
+                    badgeImageUrl: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        return NextResponse.json({
+          ...updatedEvaluation,
+          newAchievements: awardedAchievements,
+        });
       }
     }
 

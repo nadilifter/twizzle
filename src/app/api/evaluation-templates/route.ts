@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { syncTemplateSkills } from "@/lib/services/template-sync";
 
 const skillDifficultyEnum = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
+const scoringTypeEnum = z.enum(["PASS_FAIL", "POINT_SCALE"]);
+const completionTypeEnum = z.enum(["PERCENTAGE", "COUNT", "ALL"]);
 
 const createTemplateSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -12,8 +15,28 @@ const createTemplateSchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   isActive: z.boolean().optional().default(true),
-  skillIds: z.array(z.string()).min(1, "At least one skill is required"),
-});
+  
+  // Auto-sync configuration
+  autoSyncEnabled: z.boolean().optional().default(false),
+  autoSyncLevels: z.array(skillDifficultyEnum).optional().default([]),
+  autoSyncCategories: z.array(z.string()).optional().default([]),
+  
+  // Scoring configuration
+  scoringType: scoringTypeEnum.optional().default("PASS_FAIL"),
+  pointScaleMin: z.number().int().min(0).max(100).optional().default(1),
+  pointScaleMax: z.number().int().min(1).max(100).optional().default(10),
+  pointScalePassThreshold: z.number().int().min(0).max(100).optional().default(7),
+  
+  // Completion requirements
+  completionType: completionTypeEnum.optional().default("PERCENTAGE"),
+  completionThreshold: z.number().min(0).max(100).optional().default(80),
+  
+  // Skills (optional if auto-sync enabled)
+  skillIds: z.array(z.string()).optional(),
+}).refine(
+  (data) => data.autoSyncEnabled || (data.skillIds && data.skillIds.length > 0),
+  { message: "Either enable auto-sync or provide at least one skill" }
+);
 
 // GET /api/evaluation-templates
 export async function GET(request: NextRequest) {
@@ -29,6 +52,8 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get("isActive");
     const minAge = searchParams.get("minAge");
     const maxAge = searchParams.get("maxAge");
+    const scoringType = searchParams.get("scoringType");
+    const programId = searchParams.get("programId");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
@@ -42,6 +67,13 @@ export async function GET(request: NextRequest) {
       }),
       ...(difficultyLevel && { difficultyLevel: difficultyLevel as "BEGINNER" | "INTERMEDIATE" | "ADVANCED" }),
       ...(isActive !== null && isActive !== undefined && { isActive: isActive === "true" }),
+      ...(scoringType && { scoringType: scoringType as "PASS_FAIL" | "POINT_SCALE" }),
+      // Filter by program assignment
+      ...(programId && {
+        programTemplates: {
+          some: { programId },
+        },
+      }),
       // Filter templates appropriate for an athlete's age
       ...(minAge && {
         OR: [
@@ -66,6 +98,23 @@ export async function GET(request: NextRequest) {
               skill: true,
             },
             orderBy: { order: "asc" },
+          },
+          programTemplates: {
+            include: {
+              program: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          achievements: {
+            select: {
+              id: true,
+              name: true,
+              badgeImageUrl: true,
+            },
           },
           _count: {
             select: {
@@ -113,34 +162,58 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createTemplateSchema.parse(body);
 
-    // Verify all skills exist and belong to organization
-    const skills = await db.skill.findMany({
-      where: {
-        id: { in: validatedData.skillIds },
-        organizationId: session.user.organizationId,
-      },
-    });
+    const { skillIds, completionThreshold, ...templateData } = validatedData;
 
-    if (skills.length !== validatedData.skillIds.length) {
-      return NextResponse.json(
-        { error: "One or more skills not found" },
-        { status: 400 }
-      );
+    // If not using auto-sync, verify all skills exist and belong to organization
+    if (!validatedData.autoSyncEnabled && skillIds && skillIds.length > 0) {
+      const skills = await db.skill.findMany({
+        where: {
+          id: { in: skillIds },
+          organizationId: session.user.organizationId,
+        },
+      });
+
+      if (skills.length !== skillIds.length) {
+        return NextResponse.json(
+          { error: "One or more skills not found" },
+          { status: 400 }
+        );
+      }
     }
 
-    const { skillIds, ...templateData } = validatedData;
+    // Validate point scale configuration
+    if (templateData.scoringType === "POINT_SCALE") {
+      if (templateData.pointScaleMin >= templateData.pointScaleMax) {
+        return NextResponse.json(
+          { error: "Point scale minimum must be less than maximum" },
+          { status: 400 }
+        );
+      }
+      if (templateData.pointScalePassThreshold < templateData.pointScaleMin ||
+          templateData.pointScalePassThreshold > templateData.pointScaleMax) {
+        return NextResponse.json(
+          { error: "Pass threshold must be within the point scale range" },
+          { status: 400 }
+        );
+      }
+    }
 
+    // Create the template
     const template = await db.evaluationTemplate.create({
       data: {
         ...templateData,
+        completionThreshold,
         organizationId: session.user.organizationId,
-        skills: {
-          create: skillIds.map((skillId, index) => ({
-            skillId,
-            order: index,
-            isRequired: true,
-          })),
-        },
+        // Only add skills if not using auto-sync and skillIds provided
+        ...((!validatedData.autoSyncEnabled && skillIds && skillIds.length > 0) && {
+          skills: {
+            create: skillIds.map((skillId, index) => ({
+              skillId,
+              order: index,
+              isRequired: true,
+            })),
+          },
+        }),
       },
       include: {
         skills: {
@@ -149,6 +222,23 @@ export async function POST(request: NextRequest) {
           },
           orderBy: { order: "asc" },
         },
+        programTemplates: {
+          include: {
+            program: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        achievements: {
+          select: {
+            id: true,
+            name: true,
+            badgeImageUrl: true,
+          },
+        },
         _count: {
           select: {
             evaluations: true,
@@ -156,6 +246,48 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // If auto-sync is enabled, sync the skills now
+    if (validatedData.autoSyncEnabled) {
+      await syncTemplateSkills(template.id);
+      
+      // Fetch the updated template with synced skills
+      const updatedTemplate = await db.evaluationTemplate.findUnique({
+        where: { id: template.id },
+        include: {
+          skills: {
+            include: {
+              skill: true,
+            },
+            orderBy: { order: "asc" },
+          },
+          programTemplates: {
+            include: {
+              program: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          achievements: {
+            select: {
+              id: true,
+              name: true,
+              badgeImageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              evaluations: true,
+            },
+          },
+        },
+      });
+
+      return NextResponse.json(updatedTemplate);
+    }
 
     return NextResponse.json(template);
   } catch (error) {

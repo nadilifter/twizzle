@@ -48,6 +48,7 @@ model Organization {
   announcements Announcement[]
   websiteConfig WebsiteConfig?
   evaluationTemplates EvaluationTemplate[]
+  achievements Achievement[]
 
   // Financials
   discounts       Discount[]
@@ -135,6 +136,11 @@ model User {
   media         Media[]
   facilityAssignments FacilityAssignment[]
   staffProfile  StaffProfile?
+  
+  // Announcement relations
+  announcementReads       AnnouncementRead[] @relation("AnnouncementReads")
+  systemAnnouncementReads SystemAnnouncementRead[] @relation("SystemAnnouncementReads")
+  systemAnnouncementsCreated SystemAnnouncement[] @relation("SystemAnnouncementCreator")
 }
 
 model Session {
@@ -263,6 +269,7 @@ model Athlete {
   media            Media[]
   recurringCharges RecurringCharge[]
   skillProgress    AthleteSkillProgress[]
+  achievements     AthleteAchievement[]
   
   // Multi-family support
   guardians   AthleteGuardian[]
@@ -441,14 +448,16 @@ model Program {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  events       Event[]
-  lessonPlans  LessonPlan[]
-  enrollments  Enrollment[]
-  lineItems    LineItem[]
-  membershipTiers MembershipTier[] // Legacy
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events              Event[]
+  lessonPlans         LessonPlan[]
+  enrollments         Enrollment[]
+  lineItems           LineItem[]
+  membershipTiers     MembershipTier[] // Legacy
   staffAssignments    ProgramStaff[]
   requiredMemberships MembershipInstance[]
+  evaluations         Evaluation[]
+  evaluationTemplates ProgramEvaluationTemplate[]
 }
 
 enum ProgramStatus {
@@ -999,10 +1008,27 @@ model EvaluationTemplate {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
+  // Auto-sync configuration
+  autoSyncEnabled    Boolean   @default(false)
+  autoSyncLevels     String[]  @default([])  // e.g., ["BEGINNER", "INTERMEDIATE"]
+  autoSyncCategories String[]  @default([])  // e.g., ["Vault", "Bars"]
+
+  // Scoring configuration
+  scoringType             ScoringType    @default(PASS_FAIL)
+  pointScaleMin           Int            @default(1)
+  pointScaleMax           Int            @default(10)
+  pointScalePassThreshold Int            @default(7)
+
+  // Completion requirements for achievements
+  completionType      CompletionType @default(PERCENTAGE)
+  completionThreshold Decimal        @default(80) @db.Decimal(5, 2)
+
   // Relations
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  skills          EvaluationTemplateSkill[]
-  evaluations     Evaluation[]
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  skills           EvaluationTemplateSkill[]
+  evaluations      Evaluation[]
+  programTemplates ProgramEvaluationTemplate[]
+  achievements     Achievement[]
   
   @@index([organizationId])
 }
@@ -1025,6 +1051,25 @@ model EvaluationTemplateSkill {
   @@unique([templateId, skillId])
   @@index([templateId])
   @@index([skillId])
+}
+
+// Junction table for linking evaluation templates to programs
+model ProgramEvaluationTemplate {
+  id          String    @id @default(cuid())
+  programId   String
+  templateId  String
+  isRequired  Boolean   @default(false)
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  program     Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
+  template    EvaluationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, templateId])
+  @@index([programId])
+  @@index([templateId])
 }
 
 model LessonPlan {
@@ -1085,6 +1130,7 @@ model Evaluation {
   athleteId    String
   coachId      String
   templateId   String?          // Optional link to evaluation template
+  programId    String?          // Optional link to program
   date         DateTime
   level        String
   overallScore Decimal          @db.Decimal(3, 1)
@@ -1094,14 +1140,17 @@ model Evaluation {
   updatedAt    DateTime         @updatedAt
 
   // Relations
-  athlete      Athlete           @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  coach        User              @relation(fields: [coachId], references: [id])
-  template     EvaluationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  skillRatings EvaluationSkill[]
+  athlete             Athlete              @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  coach               User                 @relation(fields: [coachId], references: [id])
+  template            EvaluationTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  program             Program?             @relation(fields: [programId], references: [id], onDelete: SetNull)
+  skillRatings        EvaluationSkill[]
+  athleteAchievements AthleteAchievement[]
   
   @@index([athleteId])
   @@index([coachId])
   @@index([templateId])
+  @@index([programId])
 }
 
 enum EvaluationStatus {
@@ -1114,12 +1163,14 @@ enum EvaluationStatus {
 }
 
 model EvaluationSkill {
-  id           String             @id @default(cuid())
-  evaluationId String
-  skillId      String
-  rating       Int?               // 1-5, optional (can use attemptStatus instead)
+  id            String             @id @default(cuid())
+  evaluationId  String
+  skillId       String
+  rating        Int?               // Legacy: 1-5, optional (can use attemptStatus instead)
+  pointScore    Int?               // For POINT_SCALE scoring type
   attemptStatus SkillAttemptStatus @default(NOT_ATTEMPTED)
-  comment      String?
+  passed        Boolean            @default(false) // Computed based on scoring type
+  comment       String?
 
   // Relations
   evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
@@ -1134,6 +1185,19 @@ enum SkillAttemptStatus {
   NOT_ATTEMPTED
   ATTEMPTED
   SUCCEEDED
+}
+
+// Scoring types for evaluations
+enum ScoringType {
+  PASS_FAIL    // 3 states: NOT_ATTEMPTED, ATTEMPTED, PASSED
+  POINT_SCALE  // Configurable range with pass threshold
+}
+
+// Completion requirement types for achievements
+enum CompletionType {
+  PERCENTAGE   // e.g., 80% of skills passed
+  COUNT        // e.g., 15 skills passed
+  ALL          // All required skills passed
 }
 
 // Track athlete progress on individual skills across all evaluations
@@ -1160,6 +1224,49 @@ model AthleteSkillProgress {
   @@index([skillId])
 }
 
+// Achievement definitions linked to evaluation templates
+model Achievement {
+  id             String   @id @default(cuid())
+  templateId     String
+  name           String
+  description    String?  @db.Text
+  badgeImageUrl  String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  template            EvaluationTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  athleteAchievements AthleteAchievement[]
+
+  @@index([templateId])
+  @@index([organizationId])
+}
+
+// Track athlete achievements earned
+model AthleteAchievement {
+  id                    String   @id @default(cuid())
+  athleteId             String
+  achievementId         String
+  evaluationId          String?  // The evaluation that earned this achievement
+  earnedAt              DateTime @default(now())
+  
+  // Best results by category at time of earning
+  bestResultsByCategory Json?    // { "Vault": 9.5, "Bars": 8.0, ... }
+  overallScore          Decimal? @db.Decimal(5, 2)
+
+  // Relations
+  athlete     Athlete      @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  achievement Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  evaluation  Evaluation?  @relation(fields: [evaluationId], references: [id], onDelete: SetNull)
+
+  @@unique([athleteId, achievementId])
+  @@index([athleteId])
+  @@index([achievementId])
+  @@index([evaluationId])
+}
+
 // ============================================
 // PHASE 6: Communication
 // ============================================
@@ -1167,18 +1274,69 @@ model AthleteSkillProgress {
 model Announcement {
   id             String              @id @default(cuid())
   title          String
-  content        String
+  content        String              // HTML content from WYSIWYG
   targetScope    AnnouncementScope   @default(ALL)
   targetProgramId String?
   targetEventId  String?
   status         AnnouncementStatus  @default(DRAFT)
+  priority       AnnouncementPriority @default(NORMAL)
   publishedAt    DateTime?
+  expiresAt      DateTime?
   organizationId String
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  readBy       AnnouncementRead[]
+}
+
+model AnnouncementRead {
+  id             String   @id @default(cuid())
+  announcementId String
+  userId         String
+  readAt         DateTime @default(now())
+  
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User @relation("AnnouncementReads", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([announcementId, userId])
+  @@index([userId])
+  @@index([announcementId])
+}
+
+// System-wide announcements from superadmins (sent to all organizations)
+model SystemAnnouncement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text // HTML content from WYSIWYG
+  priority    AnnouncementPriority @default(NORMAL)
+  status      AnnouncementStatus @default(DRAFT)
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Track who created it
+  createdById String
+  createdBy   User @relation("SystemAnnouncementCreator", fields: [createdById], references: [id])
+  
+  // Read tracking
+  readBy      SystemAnnouncementRead[]
+}
+
+model SystemAnnouncementRead {
+  id             String   @id @default(cuid())
+  announcementId String
+  userId         String
+  readAt         DateTime @default(now())
+  
+  announcement   SystemAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User @relation("SystemAnnouncementReads", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([announcementId, userId])
+  @@index([userId])
+  @@index([announcementId])
 }
 
 enum AnnouncementScope {
@@ -1192,6 +1350,13 @@ enum AnnouncementStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum AnnouncementPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
 
 // ============================================
