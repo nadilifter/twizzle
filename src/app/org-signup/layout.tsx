@@ -1,6 +1,6 @@
 import { GradientBackground } from "@/components/ui/gradient-background"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
-import Image from "next/image"
+import { UplifterLogo } from "@/components/uplifter-logo"
 import Link from "next/link"
 
 export const metadata = {
@@ -36,13 +36,7 @@ export default function SignupsLayout({
       <header className="relative z-10 border-b bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Image
-              src="/uplifter-logo.svg"
-              alt="Uplifter"
-              width={90}
-              height={32}
-              className="dark:invert"
-            />
+            <UplifterLogo width={90} height={24} className="h-6" />
           </Link>
           <div className="flex items-center gap-4">
             <Link 

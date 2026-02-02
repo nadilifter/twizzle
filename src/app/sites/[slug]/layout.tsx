@@ -251,13 +251,32 @@ export default async function SiteLayout({
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">
                 <Link href="/" className="flex items-center">
-                    <Image 
-                        src={config.logo || config.favicon || "/favicon.ico"} 
-                        alt={config.organization.name} 
-                        width={40} 
-                        height={40} 
-                        className="object-contain h-10 w-auto" 
-                    />
+                    {config.logo ? (
+                        <Image 
+                            src={config.logo} 
+                            alt={config.organization.name} 
+                            width={40} 
+                            height={40} 
+                            className="object-contain h-10 w-auto" 
+                        />
+                    ) : (
+                        <>
+                            <Image 
+                                src="/uplifter-logo.svg"
+                                alt={config.organization.name} 
+                                width={100} 
+                                height={32} 
+                                className="object-contain h-8 w-auto dark:hidden" 
+                            />
+                            <Image 
+                                src="/uplifter-logo-dark.svg"
+                                alt={config.organization.name} 
+                                width={100} 
+                                height={32} 
+                                className="object-contain h-8 w-auto hidden dark:block" 
+                            />
+                        </>
+                    )}
                 </Link>
                 <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
                     <Link href="/" className="text-foreground/80 hover:text-primary transition-colors">Home</Link>

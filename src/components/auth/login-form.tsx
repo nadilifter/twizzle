@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +10,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { signIn, getCsrfToken } from "next-auth/react"
 import { toast } from "sonner"
+import { UplifterLogo } from "@/components/uplifter-logo"
 
 /**
  * Get the OAuth host URL based on environment.
@@ -199,13 +199,7 @@ export function LoginForm() {
         <Card className="relative overflow-hidden w-full max-w-[400px]">
           <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
           <CardHeader className="items-center pb-2">
-            <Image
-              src="/uplifter-logo.svg"
-              alt="Uplifter"
-              width={180}
-              height={36}
-              className="h-9 w-auto mb-2 dark:brightness-0 dark:invert"
-            />
+            <UplifterLogo width={180} height={36} className="h-9 mb-2" />
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <p className="text-sm text-muted-foreground">
               Login to your account

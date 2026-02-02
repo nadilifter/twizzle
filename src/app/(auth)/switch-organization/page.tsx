@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Check, ChevronsUpDown, Building2, Loader2, LogOut } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
@@ -24,6 +23,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { getUserOrganizations } from "@/app/actions/organization"
+import { UplifterLogo } from "@/components/uplifter-logo"
 
 type Organization = {
   id: string
@@ -98,13 +98,7 @@ function SwitchOrganizationForm() {
       <Card className="relative overflow-hidden w-full max-w-[400px]">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
-          <Image
-            src="/uplifter-logo.svg"
-            alt="Uplifter"
-            width={180}
-            height={36}
-            className="h-9 w-auto mb-2 dark:brightness-0 dark:invert"
-          />
+          <UplifterLogo width={180} height={36} className="h-9 mb-2" />
           <h1 className="text-2xl font-bold">
             {fetching ? "Loading Organizations..." : "Switching Organization"}
           </h1>
@@ -124,13 +118,7 @@ function SwitchOrganizationForm() {
       <Card className="relative overflow-hidden w-full max-w-[400px]">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
-          <Image
-            src="/uplifter-logo.svg"
-            alt="Uplifter"
-            width={180}
-            height={36}
-            className="h-9 w-auto mb-2 dark:brightness-0 dark:invert"
-          />
+          <UplifterLogo width={180} height={36} className="h-9 mb-2" />
           <h1 className="text-2xl font-bold">Switch Organization</h1>
           <p className="text-sm text-muted-foreground">
             Select an organization to switch to
