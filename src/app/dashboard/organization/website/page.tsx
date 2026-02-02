@@ -466,19 +466,6 @@ export default function WebsitePage() {
           
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Show Login</Label>
-              <p className="text-sm text-muted-foreground">Show login button in navigation.</p>
-            </div>
-            <Switch 
-              checked={config.showLogin !== false} 
-              onCheckedChange={(c) => updateConfig("showLogin", c)} 
-            />
-          </div>
-          
-          <Separator />
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
               <Label>Show Contact</Label>
               <p className="text-sm text-muted-foreground">Display contact information page.</p>
             </div>

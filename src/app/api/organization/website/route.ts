@@ -17,7 +17,6 @@ const websiteConfigSchema = z.object({
   heroLocation: z.string().optional().nullable(),
   showCalendar: z.boolean().optional(),
   showRegistration: z.boolean().optional(),
-  showLogin: z.boolean().optional(),
   showContact: z.boolean().optional(),
   domain: z.string().optional().nullable(),
   subdomain: z.string().optional().nullable(),

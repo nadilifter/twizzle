@@ -1555,7 +1555,6 @@ model WebsiteConfig {
   // Visibility
   showCalendar      Boolean  @default(true)
   showRegistration  Boolean  @default(true)
-  showLogin         Boolean  @default(true)
   showContact       Boolean  @default(true)
   
   // Domain
