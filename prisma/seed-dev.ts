@@ -2453,23 +2453,60 @@ async function main() {
   // ============================================
   console.log("\n🔒 Creating reserved domains...");
   const reservedDomainData = [
-    // System reserved - exact matches
+    // System portals - middleware routes (CRITICAL: these are routed by middleware)
+    { pattern: "login", type: "EXACT" as const, reason: "System use - login portal" },
     { pattern: "admin", type: "EXACT" as const, reason: "System use - admin portal" },
+    { pattern: "superadmin", type: "EXACT" as const, reason: "System use - superadmin portal" },
+    { pattern: "coach", type: "EXACT" as const, reason: "System use - coach portal" },
+    { pattern: "athletes", type: "EXACT" as const, reason: "System use - athletes portal" },
+    { pattern: "pos", type: "EXACT" as const, reason: "System use - POS portal" },
+    { pattern: "feedback", type: "EXACT" as const, reason: "System use - feedback portal" },
+    { pattern: "events", type: "EXACT" as const, reason: "System use - events portal" },
+    { pattern: "startup", type: "EXACT" as const, reason: "System use - org signup portal" },
+    
+    // Infrastructure
     { pattern: "api", type: "EXACT" as const, reason: "System use - API endpoint" },
     { pattern: "app", type: "EXACT" as const, reason: "System use - application" },
     { pattern: "www", type: "EXACT" as const, reason: "System use - main website" },
     { pattern: "mail", type: "EXACT" as const, reason: "System use - email services" },
+    { pattern: "cdn", type: "EXACT" as const, reason: "System use - content delivery" },
+    { pattern: "static", type: "EXACT" as const, reason: "System use - static assets" },
+    { pattern: "assets", type: "EXACT" as const, reason: "System use - asset hosting" },
+    { pattern: "images", type: "EXACT" as const, reason: "System use - image hosting" },
+    { pattern: "files", type: "EXACT" as const, reason: "System use - file hosting" },
+    { pattern: "download", type: "EXACT" as const, reason: "System use - downloads" },
+    { pattern: "upload", type: "EXACT" as const, reason: "System use - uploads" },
+    { pattern: "dashboard", type: "EXACT" as const, reason: "System use - dashboard routes" },
+    
+    // Support & Documentation
     { pattern: "help", type: "EXACT" as const, reason: "System use - help center" },
     { pattern: "support", type: "EXACT" as const, reason: "System use - support portal" },
     { pattern: "status", type: "EXACT" as const, reason: "System use - status page" },
     { pattern: "docs", type: "EXACT" as const, reason: "System use - documentation" },
+    { pattern: "blog", type: "EXACT" as const, reason: "System use - blog" },
+    
+    // Account management
+    { pattern: "signup", type: "EXACT" as const, reason: "System use - signup pages" },
+    { pattern: "register", type: "EXACT" as const, reason: "System use - registration" },
+    { pattern: "account", type: "EXACT" as const, reason: "System use - account management" },
+    { pattern: "settings", type: "EXACT" as const, reason: "System use - settings pages" },
+    { pattern: "billing", type: "EXACT" as const, reason: "System use - billing portal" },
+    { pattern: "payment", type: "EXACT" as const, reason: "System use - payment pages" },
+    { pattern: "checkout", type: "EXACT" as const, reason: "System use - checkout" },
+    
     // Brand protection
     { pattern: "uplifter", type: "EXACT" as const, reason: "Brand protection - Uplifter trademark" },
     { pattern: "leapfrog", type: "EXACT" as const, reason: "Brand protection - LeapFrog trademark" },
+    
+    // Reserved words - exact matches
+    { pattern: "test", type: "EXACT" as const, reason: "System use - reserved word" },
+    { pattern: "demo", type: "EXACT" as const, reason: "System use - reserved word" },
+    
     // Prefix reserved - blocks anything starting with pattern
     { pattern: "test-", type: "PREFIX" as const, reason: "System use - testing environments" },
     { pattern: "demo-", type: "PREFIX" as const, reason: "System use - demo environments" },
     { pattern: "staging-", type: "PREFIX" as const, reason: "System use - staging environments" },
+    { pattern: "dev-", type: "PREFIX" as const, reason: "System use - development environments" },
   ];
   for (const rd of reservedDomainData) {
     await prisma.reservedDomain.upsert({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { z } from "zod";
+import { isSubdomainReserved } from "@/lib/reserved-domains";
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,26 +59,4 @@ export async function GET(request: NextRequest) {
     console.error("Error checking subdomain:", error);
     return NextResponse.json({ error: "Failed to check subdomain" }, { status: 500 });
   }
-}
-
-// Check if a subdomain matches any reserved patterns
-async function isSubdomainReserved(subdomain: string): Promise<{ reserved: boolean; reason?: string }> {
-  // Get all reserved domains
-  const reservedDomains = await db.reservedDomain.findMany();
-
-  for (const reserved of reservedDomains) {
-    if (reserved.type === "EXACT") {
-      // Exact match
-      if (subdomain === reserved.pattern) {
-        return { reserved: true, reason: reserved.reason || "This subdomain is reserved" };
-      }
-    } else if (reserved.type === "PREFIX") {
-      // Prefix match
-      if (subdomain.startsWith(reserved.pattern)) {
-        return { reserved: true, reason: reserved.reason || "This subdomain prefix is reserved" };
-      }
-    }
-  }
-
-  return { reserved: false };
 }

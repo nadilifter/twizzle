@@ -219,24 +219,6 @@ export default function AdminReservedDomainsPage() {
         </Dialog>
       </div>
 
-      {/* Info Card */}
-      <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">How Reserved Domains Work</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>
-            <strong>Exact Match:</strong> Reserves the exact subdomain. For example, reserving "admin" 
-            will only block "admin.uplifterinc.com".
-          </p>
-          <p>
-            <strong>Prefix Match:</strong> Reserves all subdomains starting with the pattern. 
-            For example, reserving "test-" will block "test-site.uplifterinc.com", 
-            "test-demo.uplifterinc.com", etc.
-          </p>
-        </CardContent>
-      </Card>
-
       {/* Reserved Domains Table */}
       <Card>
         <CardHeader>

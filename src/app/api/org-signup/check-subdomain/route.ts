@@ -1,42 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-
-// Reserved subdomains that cannot be used
-const RESERVED_SUBDOMAINS = [
-  "admin",
-  "superadmin",
-  "coach",
-  "athletes",
-  "pos",
-  "feedback",
-  "events",
-  "signup",
-  "www",
-  "api",
-  "app",
-  "mail",
-  "help",
-  "support",
-  "blog",
-  "docs",
-  "status",
-  "cdn",
-  "static",
-  "assets",
-  "images",
-  "files",
-  "download",
-  "upload",
-  "dashboard",
-  "login",
-  "signup",
-  "register",
-  "account",
-  "settings",
-  "billing",
-  "payment",
-  "checkout",
-]
+import { isSubdomainReserved } from "@/lib/reserved-domains"
 
 export async function GET(request: NextRequest) {
   try {
@@ -81,11 +45,12 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Check if reserved
-    if (RESERVED_SUBDOMAINS.includes(normalizedSubdomain)) {
+    // Check against reserved domains (database-driven with EXACT and PREFIX matching)
+    const reservedCheck = await isSubdomainReserved(normalizedSubdomain)
+    if (reservedCheck.reserved) {
       return NextResponse.json({
         available: false,
-        reason: "This subdomain is reserved",
+        reason: reservedCheck.reason || "This subdomain is reserved",
       })
     }
 
@@ -110,18 +75,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         available: false,
         reason: "This subdomain is already taken",
-      })
-    }
-
-    // Also check reserved domains table
-    const reservedDomain = await db.reservedDomain.findFirst({
-      where: { pattern: normalizedSubdomain },
-    })
-
-    if (reservedDomain) {
-      return NextResponse.json({
-        available: false,
-        reason: "This subdomain is reserved",
       })
     }
 

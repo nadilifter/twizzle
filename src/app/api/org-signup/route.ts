@@ -2,43 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { hashPassword } from "@/lib/auth"
 import { z } from "zod"
-
-// Reserved subdomains that cannot be used
-const RESERVED_SUBDOMAINS = [
-  "admin",
-  "superadmin",
-  "coach",
-  "athletes",
-  "pos",
-  "feedback",
-  "events",
-  "signup",
-  "www",
-  "api",
-  "app",
-  "mail",
-  "help",
-  "support",
-  "blog",
-  "docs",
-  "status",
-  "cdn",
-  "static",
-  "assets",
-  "images",
-  "files",
-  "download",
-  "upload",
-  "dashboard",
-  "login",
-  "signup",
-  "register",
-  "account",
-  "settings",
-  "billing",
-  "payment",
-  "checkout",
-]
+import { isSubdomainReserved } from "@/lib/reserved-domains"
 
 const signupSchema = z.object({
   // User account
@@ -76,10 +40,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = signupSchema.parse(body)
 
-    // Check if subdomain is reserved
-    if (RESERVED_SUBDOMAINS.includes(validatedData.subdomain.toLowerCase())) {
+    // Check if subdomain is reserved (database-driven with EXACT and PREFIX matching)
+    const reservedCheck = await isSubdomainReserved(validatedData.subdomain.toLowerCase())
+    if (reservedCheck.reserved) {
       return NextResponse.json(
-        { error: "This subdomain is reserved and cannot be used" },
+        { error: reservedCheck.reason || "This subdomain is reserved and cannot be used" },
         { status: 400 }
       )
     }
