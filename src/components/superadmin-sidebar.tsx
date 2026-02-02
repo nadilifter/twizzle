@@ -39,41 +39,77 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// Quick link items for external pages
-const quickLinkItems = [
-  { title: "Landing Page", url: "/", icon: Home },
-  { title: "Login", url: "/login", icon: LogIn },
-  { title: "Signup", url: "/signup", icon: UserPlus },
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "POS Terminal", url: "/pos", icon: ShoppingCart },
-  { title: "Coach Portal", url: "/coach", icon: Users },
-  { title: "Athletes Portal", url: "/athletes", icon: Users },
-  { title: "Events Portal", url: "/events", icon: Calendar },
-  { title: "Campaigns", url: "/campaigns", icon: Megaphone },
-  { title: "Feedback", url: "/feedback", icon: MessageSquare },
+// Helper to construct subdomain URLs based on current hostname
+function getSubdomainUrl(subdomain: string | null): string {
+  if (typeof window === 'undefined') return '/'
+  
+  const { hostname, port, protocol } = window.location
+  
+  // Parse current hostname to extract base domain
+  const parts = hostname.split('.')
+  
+  // Handle local development (e.g., superadmin.uplifterinc.localhost:3000)
+  if (hostname.includes('localhost')) {
+    // Find the base domain pattern (e.g., uplifterinc.localhost)
+    const localhostIndex = parts.findIndex(p => p.includes('localhost'))
+    if (localhostIndex > 0) {
+      // Has subdomain structure like subdomain.uplifterinc.localhost
+      const baseParts = parts.slice(1) // Remove current subdomain
+      if (subdomain) {
+        return `${protocol}//${subdomain}.${baseParts.join('.')}${port && !hostname.includes(':') ? ':' + port : ''}`
+      } else {
+        // Main domain (no subdomain)
+        return `${protocol}//${baseParts.join('.')}${port && !hostname.includes(':') ? ':' + port : ''}`
+      }
+    }
+    // Fallback for plain localhost
+    return subdomain ? `${protocol}//${subdomain}.localhost:3000` : `${protocol}//localhost:3000`
+  }
+  
+  // Handle production/staging domains (e.g., superadmin.uplifterinc.com)
+  if (parts.length >= 2) {
+    const baseParts = parts.slice(1) // Remove current subdomain
+    if (subdomain) {
+      return `${protocol}//${subdomain}.${baseParts.join('.')}`
+    } else {
+      // Main domain (no subdomain)
+      return `${protocol}//${baseParts.join('.')}`
+    }
+  }
+  
+  return '/'
+}
+
+// Quick link configuration with subdomain info
+// subdomain: null = main domain, string = specific subdomain
+const quickLinkConfig = [
+  { title: "Landing Page", subdomain: null, path: "/", icon: Home },
+  { title: "Login", subdomain: "login", path: "/", icon: LogIn },
+  { title: "User Signup", subdomain: "login", path: "/signup", icon: UserPlus },
+  { title: "Dashboard", subdomain: "admin", path: "/", icon: LayoutDashboard },
+  { title: "POS Terminal", subdomain: "pos", path: "/", icon: ShoppingCart },
+  { title: "Coach Portal", subdomain: "coach", path: "/", icon: Users },
+  { title: "Athletes Portal", subdomain: "athletes", path: "/", icon: Users },
+  { title: "Events Portal", subdomain: "events", path: "/", icon: Calendar },
+  { title: "Campaigns", subdomain: null, path: "/campaigns", icon: Megaphone },
+  { title: "Feedback", subdomain: "feedback", path: "/", icon: MessageSquare },
 ]
 
-// Signup link component to handle SSR
-function SignupLink() {
-  const [signupUrl, setSignupUrl] = React.useState("https://signup.uplifterinc.com")
-  
-  React.useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hostname.includes("localhost")) {
-      setSignupUrl("http://signup.uplifterinc.localhost:3000")
-    }
-  }, [])
+// Org Signup link component (separate subdomain)
+function OrgSignupLink({ getUrl }: { getUrl: (subdomain: string | null) => string }) {
+  const url = getUrl("signup")
 
   return (
     <SidebarMenuButton asChild>
       <a 
-        href={signupUrl}
+        href={url}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center justify-between"
       >
         <span className="flex items-center gap-2">
           <UserPlus className="h-4 w-4" />
-          <span>Org Signup (Subdomain)</span>
+          <span>Org Signup</span>
         </span>
         <ExternalLink className="h-3 w-3 text-muted-foreground" />
       </a>
@@ -133,6 +169,17 @@ const navItems = [
 export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
+  const [quickLinks, setQuickLinks] = React.useState<Array<{ title: string; url: string; icon: typeof Home }>>([])
+
+  // Build quick links with proper subdomain URLs on client side
+  React.useEffect(() => {
+    const links = quickLinkConfig.map(item => ({
+      title: item.title,
+      url: getSubdomainUrl(item.subdomain) + (item.path === "/" ? "" : item.path),
+      icon: item.icon,
+    }))
+    setQuickLinks(links)
+  }, [])
 
   // Get user data from session
   const user = session?.user ? {
@@ -184,7 +231,7 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
           <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {quickLinkItems.map((item) => (
+              {quickLinks.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <a href={item.url} className="flex items-center justify-between">
@@ -198,7 +245,7 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>
-                <SignupLink />
+                <OrgSignupLink getUrl={getSubdomainUrl} />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
