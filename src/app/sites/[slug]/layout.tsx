@@ -12,6 +12,7 @@ import { MarketingAnnouncementBell } from "@/components/marketing-announcement-b
 import { CartProvider } from "@/components/sites/cart-context";
 import { CartSheet } from "@/components/sites/cart-sheet";
 import { CartFloatingButton } from "@/components/sites/cart-floating-button";
+import { QueueProvider } from "@/components/sites/queue-context";
 import { VisitorTracker } from "@/components/sites/visitor-tracker";
 import { CookieNotice } from "@/components/sites/cookie-notice";
 import { SiteStructuredData } from "@/components/sites/structured-data";
@@ -218,6 +219,7 @@ export default async function SiteLayout({
       enableSystem
       disableTransitionOnChange
     >
+    <QueueProvider organizationSlug={subdomain}>
     <CartProvider>
     <div className="min-h-screen flex flex-col bg-background font-sans">
         <CartSheet />
@@ -304,6 +306,7 @@ export default async function SiteLayout({
         <CookieNotice />
     </div>
     </CartProvider>
+    </QueueProvider>
     </ThemeProvider>
   );
 }

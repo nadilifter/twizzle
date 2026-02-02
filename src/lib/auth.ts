@@ -5,10 +5,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "./db";
+import { getEnvConfig, getCurrentEnvironment, getSubdomainUrl } from "./env-domains";
 
 /**
  * Creates a signed bridge token for cross-domain session transfer
- * Used when OAuth completes on localhost:3000 but session needs to be on uplifterinc.localhost
+ * Used when OAuth completes on localhost:3000 but session needs to be on the local subdomain
  */
 function createBridgeToken(email: string, secret: string): string {
   const exp = Date.now() + 60 * 1000; // 60 seconds
@@ -19,6 +20,23 @@ function createBridgeToken(email: string, secret: string): string {
 
   const tokenData = { email, exp, signature };
   return Buffer.from(JSON.stringify(tokenData)).toString("base64url");
+}
+
+/**
+ * Get the cookie domain based on the current environment
+ */
+function getCookieDomain(): string | undefined {
+  const currentEnv = getCurrentEnvironment();
+  
+  // In local development, don't set a domain - this allows the cookie to be set on
+  // localhost:3000 when OAuth completes, then session-bridge transfers the
+  // session to local subdomains with the correct domain.
+  if (currentEnv === 'local') {
+    return undefined;
+  }
+  
+  // For cloud environments, use the configured cookie domain
+  return getEnvConfig().cookieDomain;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -34,16 +52,14 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
-        // Production: Share cookies across all uplifterinc.com subdomains
-        // Development: Don't set a domain - this allows the cookie to be set on
-        // localhost:3000 when OAuth completes, then session-bridge transfers the
-        // session to uplifterinc.localhost subdomains with the correct domain.
-        // Setting domain to ".uplifterinc.localhost" would prevent cookies from
-        // being set/read on localhost:3000 (required for Google OAuth).
-        domain: process.env.NODE_ENV === "production" 
-          ? ".uplifterinc.com" 
-          : undefined
+        // Use HTTPS in cloud environments, HTTP locally
+        secure: getCurrentEnvironment() !== 'local',
+        // Cookie domain based on environment:
+        // - Production: .uplifterinc.com (shared across all subdomains)
+        // - Staging: .upliftergymnastics.com
+        // - Development: .uplifterdev.com
+        // - Local: undefined (allows localhost:3000 for Google OAuth)
+        domain: getCookieDomain()
       }
     }
   },
@@ -364,13 +380,17 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       // Handle cross-domain OAuth redirect
-      // When OAuth completes on localhost:3000 but the callbackUrl is for uplifterinc.localhost,
+      // When OAuth completes on localhost:3000 but the callbackUrl is for a local subdomain,
       // we need to redirect through the session bridge to set the cookie on the correct domain
       
-      const isLocalhost = baseUrl.includes("localhost:3000") && !baseUrl.includes("uplifterinc.localhost");
-      const callbackIsUplifterSubdomain = url.includes("uplifterinc.localhost");
+      const config = getEnvConfig();
+      const currentEnv = getCurrentEnvironment();
+      const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
       
-      if (isLocalhost && callbackIsUplifterSubdomain) {
+      const isLocalhost = baseUrl.includes("localhost:3000") && !baseUrl.includes(baseDomain);
+      const callbackIsLocalSubdomain = currentEnv === 'local' && url.includes(baseDomain);
+      
+      if (isLocalhost && callbackIsLocalSubdomain) {
         // Extract the original callback URL
         // The URL might be the full callback URL or contain a callbackUrl param
         let finalCallback = url;
@@ -393,10 +413,7 @@ export const authOptions: NextAuthOptions = {
           const callbackHost = callbackUrlObj.hostname;
           if (callbackHost.startsWith("login.")) {
             // Replace login subdomain with admin subdomain
-            const isLocal = callbackHost.includes("localhost");
-            finalCallback = isLocal 
-              ? "http://admin.uplifterinc.localhost:3000/"
-              : "https://admin.uplifterinc.com/";
+            finalCallback = getSubdomainUrl("admin") + "/";
             console.log("Redirect callback: Callback was login portal, redirecting to admin instead");
           }
         } catch {
@@ -421,8 +438,8 @@ export const authOptions: NextAuthOptions = {
       else if (new URL(url).origin === baseUrl) {
         return url;
       }
-      // Allow callback URLs to uplifterinc.localhost subdomains (trusted)
-      else if (url.includes("uplifterinc.localhost") || url.includes("uplifterinc.com")) {
+      // Allow callback URLs to the current environment's domain (trusted)
+      else if (url.includes(baseDomain)) {
         return url;
       }
       return baseUrl;

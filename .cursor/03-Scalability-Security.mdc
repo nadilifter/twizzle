@@ -2,8 +2,37 @@
 description: Security, authentication, and scalability requirements
 globs: ["**/*.ts", "**/*.tsx", ".env*"]
 ---
-# 03-Scalability-Security## Mandates
+# 03-Scalability-Security
 
-- **Transactions**: All Stripe payment logic and webhook handlers must be robust, idempotent, and secure.
-- **Authentication**: All user state must be managed via an external provider (Auth.js/Clerk).
-- **Environment**: All configuration must be manageable via environment variables (.env).
+## Mandates
+
+### Scaling Strategy
+- **Horizontal First**: Add pods/replicas before scaling vertically.
+- **Auto-scaling**: ECS/EKS HPA based on CPU (70%) and memory (80%) targets.
+- **Baseline Capacity**: Always maintain minimum 2 replicas in production for HA.
+- **Spot Instances**: Use Fargate Spot / EC2 Spot for 60-70% of capacity in production.
+
+### Database Scaling
+- **Read Replicas**: Production uses RDS read replicas for read-heavy workloads.
+- **Connection Pooling**: Use PgBouncer or Prisma connection pool in production.
+- **Upgrade Path**: Aurora PostgreSQL Serverless v2 for auto-scaling at scale.
+
+### Security
+- **Payments**: All Adyen/Stripe payment logic and webhook handlers must be idempotent and secure.
+- **Webhook Verification**: Always verify signatures (HMAC for Adyen, timestamp-based for Stripe).
+- **Authentication**: NextAuth.js with JWT sessions, cookie domain scoped per environment.
+- **Environment Isolation**: Each environment (prod/staging/dev) has separate:
+  - Database instance
+  - Redis cluster
+  - S3 buckets
+  - API keys (TEST vs LIVE mode)
+
+### Environment Configuration
+- **Secrets**: Store in AWS Secrets Manager, inject via ECS task definitions or K8s External Secrets.
+- **Variables**: All configuration via environment variables, documented in `.env.example`.
+- **Environment Identifier**: `APP_ENVIRONMENT` controls all environment-specific behavior.
+
+### CSP and Headers
+- **HSTS**: Enabled for all cloud environments (not local).
+- **CSP**: Dynamic based on environment - allows localhost/MinIO in local, S3/CDN in cloud.
+- **CORS**: Scoped to current environment's domain and subdomains.

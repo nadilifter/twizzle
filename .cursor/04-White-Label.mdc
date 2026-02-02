@@ -1,9 +1,31 @@
 ---
 description: White-labeling and localization requirements
-globs: ["apps/**/*", "packages/ui/**/*"]
+globs: ["apps/**/*", "packages/ui/**/*", "src/lib/env-domains.ts"]
 ---
-# 04-White-Label## Mandates
+# 04-White-Label
 
+## Mandates
+
+### Theming
 - **Design**: Design all components for easy theme/style overrides using CSS variables defined by `shadcn/ui`/`Tailwind`.
 - **Localization**: Ensure all user-facing strings are wrapped for i18n/localization support.
-- **Domains**: Code must support custom domain mapping for white-labeled instances.
+
+### Multi-Domain Architecture
+- **Custom Domains**: Code supports custom domain mapping for white-labeled instances via wildcard subdomains.
+- **Environment Domains**: Each environment has its own base domain:
+  - Production: `*.uplifterinc.com`
+  - Staging: `*.upliftergymnastics.com`
+  - Development: `*.uplifterdev.com`
+  - Local: `*.uplifterinc.localhost:3000`
+
+### Tenant Assets
+- **S3 Storage**: Organization logos, favicons, hero images stored in S3 under `organizations/{orgId}/`.
+- **CDN Delivery**: Production assets served via CloudFront CDN.
+- **Local Dev**: MinIO provides S3-compatible storage locally.
+
+### Domain Resolution
+- **Configuration Module**: `src/lib/env-domains.ts` provides:
+  - `getEnvConfig()` - Current environment configuration
+  - `getSubdomainUrl(subdomain)` - Build subdomain URLs
+  - `extractSubdomain(hostname)` - Parse subdomains from requests
+  - `isValidDomain(hostname)` - Validate domain ownership

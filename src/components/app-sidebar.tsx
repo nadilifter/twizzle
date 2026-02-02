@@ -173,6 +173,20 @@ const data = {
       ],
     },
     {
+      title: "Registrations",
+      url: "/dashboard/registrations",
+      items: [
+        {
+          title: "Programs",
+          url: "/dashboard/registrations/programs",
+        },
+        {
+          title: "Queues",
+          url: "/dashboard/registrations/queues",
+        },
+      ],
+    },
+    {
       title: "Training",
       url: "/dashboard/training",
       items: [
@@ -183,10 +197,6 @@ const data = {
         {
           title: "Plans",
           url: "/dashboard/training/plans",
-        },
-        {
-          title: "Programs",
-          url: "/dashboard/training/programs",
         },
         {
           title: "Rotations",

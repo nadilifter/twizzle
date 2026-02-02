@@ -1,24 +1,93 @@
 /** @type {import('next').NextConfig} */
 
-// Determine CSP directives based on environment
-// In development, we need to allow connections/forms to localhost:3000 for Google OAuth
-// (Google doesn't allow localhost subdomains as OAuth redirect URIs)
-// In production, everything goes through the login subdomain directly
-const getFormActionCsp = () => {
-  if (process.env.NODE_ENV === "production") {
-    return "form-action 'self' https://login.uplifterinc.com https://accounts.google.com";
+/**
+ * Environment Configuration for CSP Headers
+ * 
+ * APP_ENVIRONMENT can be: production, staging, development, local
+ * Each environment has its own domain configuration
+ */
+const ENV_CONFIG = {
+  production: {
+    baseDomain: 'uplifterinc.com',
+    useHttps: true,
+    cdnDomain: 'cdn.uplifterinc.com',
+  },
+  staging: {
+    baseDomain: 'upliftergymnastics.com',
+    useHttps: true,
+    cdnDomain: 'cdn.upliftergymnastics.com',
+  },
+  development: {
+    baseDomain: 'uplifterdev.com',
+    useHttps: true,
+    cdnDomain: null,
+  },
+  local: {
+    baseDomain: 'uplifterinc.localhost:3000',
+    useHttps: false,
+    cdnDomain: null,
+  },
+};
+
+// Determine current environment
+const getCurrentEnvironment = () => {
+  const env = process.env.APP_ENVIRONMENT;
+  if (env && env in ENV_CONFIG) {
+    return env;
   }
-  // Development: allow localhost:3000 for OAuth
-  return "form-action 'self' http://localhost:3000 https://accounts.google.com";
+  if (process.env.NODE_ENV === 'production') {
+    return 'production';
+  }
+  return 'local';
+};
+
+const currentEnv = getCurrentEnvironment();
+const envConfig = ENV_CONFIG[currentEnv];
+const isLocal = currentEnv === 'local';
+const protocol = envConfig.useHttps ? 'https' : 'http';
+
+// Determine CSP directives based on environment
+// In local dev, we need to allow connections/forms to localhost:3000 for Google OAuth
+// (Google doesn't allow localhost subdomains as OAuth redirect URIs)
+// In cloud environments, everything goes through the login subdomain directly
+const getFormActionCsp = () => {
+  if (isLocal) {
+    // Local development: allow localhost:3000 for OAuth
+    return "form-action 'self' http://localhost:3000 https://accounts.google.com";
+  }
+  // Cloud environments: use the environment's login subdomain
+  return `form-action 'self' ${protocol}://login.${envConfig.baseDomain} https://accounts.google.com`;
 };
 
 const getConnectSrcCsp = () => {
   const base = "'self' https://*.adyen.com https://*.upstash.io wss:";
-  if (process.env.NODE_ENV === "production") {
-    return `connect-src ${base}`;
+  
+  // Add CDN domain if configured
+  const cdnSrc = envConfig.cdnDomain ? ` https://${envConfig.cdnDomain}` : '';
+  
+  // Add S3 for cloud environments
+  const s3Src = !isLocal ? ' https://*.s3.amazonaws.com https://*.s3.*.amazonaws.com' : '';
+  
+  // Add MinIO for local environment
+  const minioSrc = isLocal ? ' http://localhost:9000' : '';
+  
+  if (isLocal) {
+    // Local: allow fetching CSRF token from localhost:3000 and MinIO
+    return `connect-src ${base}${cdnSrc}${minioSrc} http://localhost:3000`;
   }
-  // Development: allow fetching CSRF token from localhost:3000
-  return `connect-src ${base} http://localhost:3000`;
+  
+  return `connect-src ${base}${cdnSrc}${s3Src}`;
+};
+
+const getImgSrcCsp = () => {
+  const base = "'self' data: blob: https:";
+  
+  // Add MinIO for local environment
+  if (isLocal) {
+    return `img-src ${base} http://localhost:9000`;
+  }
+  
+  return `img-src ${base}`;
 };
 
 const nextConfig = {
@@ -93,7 +162,7 @@ const nextConfig = {
           "default-src 'self'",
           "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pay.google.com https://*.adyen.com",
           "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data: blob: https:",
+          getImgSrcCsp(),
           "font-src 'self' data:",
           getConnectSrcCsp(),
           "frame-src 'self' https://*.adyen.com https://pay.google.com",
@@ -103,8 +172,8 @@ const nextConfig = {
           "object-src 'none'",
         ].join("; "),
       },
-      // Strict Transport Security (HSTS) - only in production
-      ...(process.env.NODE_ENV === "production"
+      // Strict Transport Security (HSTS) - only in cloud environments with HTTPS
+      ...(!isLocal
         ? [
             {
               key: "Strict-Transport-Security",

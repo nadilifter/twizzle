@@ -408,12 +408,14 @@ export default function MedicalSettingsPage() {
   }
 
   return (
-    <div className="container max-w-4xl py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Medical Information Settings</h1>
-        <p className="text-muted-foreground">
-          Configure what medical information to collect from athletes
-        </p>
+    <div className="flex flex-col gap-6 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Medical Information Settings</h1>
+          <p className="text-muted-foreground">
+            Configure what medical information to collect from athletes
+          </p>
+        </div>
       </div>
 
       {/* Standard Questions */}

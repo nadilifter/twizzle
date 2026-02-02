@@ -1,0 +1,63 @@
+# Production environment values for Uplifter
+
+replicaCount: 2
+
+image:
+  repository: "YOUR_AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/uplifter"
+  tag: ""  # Set by CI/CD pipeline
+
+env:
+  NODE_ENV: "production"
+  APP_ENVIRONMENT: "production"
+  AWS_S3_REGION: "us-east-1"
+  AWS_S3_BUCKET: "uplifter-assets-prod"
+  ADYEN_ENVIRONMENT: "LIVE"
+  TWILIO_ENVIRONMENT: "LIVE"
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:ACCOUNT:certificate/CERT_ID"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/group.name: "uplifter-production"
+  hosts:
+    - host: "*.uplifterinc.com"
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: "uplifterinc.com"
+      paths:
+        - path: /
+          pathType: Prefix
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 50
+  targetCPUUtilizationPercentage: 70
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+externalServices:
+  database:
+    host: "production-postgres.xxxxxx.us-east-1.rds.amazonaws.com"
+    port: 5432
+  redis:
+    host: "production-redis.xxxxxx.cache.amazonaws.com"
+    port: 6379
+  s3:
+    bucket: "uplifter-assets-prod"
+    region: "us-east-1"
+
+secrets:
+  name: "uplifter-production-secrets"

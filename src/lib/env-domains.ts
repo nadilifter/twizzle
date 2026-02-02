@@ -1,0 +1,174 @@
+/**
+ * Environment-based domain and service configuration
+ * 
+ * This module provides centralized configuration for all environment-specific
+ * settings including domains, S3 buckets, CDN URLs, and service endpoints.
+ */
+
+export type Environment = 'production' | 'staging' | 'development' | 'local';
+
+export interface EnvironmentConfig {
+  /** Base domain without protocol (e.g., 'uplifterinc.com') */
+  baseDomain: string;
+  /** Cookie domain for session sharing across subdomains */
+  cookieDomain: string;
+  /** S3 bucket name for assets */
+  s3Bucket: string;
+  /** S3 bucket name for documents (private files) */
+  s3DocumentsBucket: string;
+  /** CDN URL for public assets (null if no CDN) */
+  cdnUrl: string | null;
+  /** Whether this environment uses HTTPS */
+  useHttps: boolean;
+  /** List of allowed CORS origins */
+  corsOrigins: string[];
+}
+
+export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
+  production: {
+    baseDomain: 'uplifterinc.com',
+    cookieDomain: '.uplifterinc.com',
+    s3Bucket: 'uplifter-assets-prod',
+    s3DocumentsBucket: 'uplifter-documents-prod',
+    cdnUrl: 'https://cdn.uplifterinc.com',
+    useHttps: true,
+    corsOrigins: [
+      'https://uplifterinc.com',
+      'https://*.uplifterinc.com',
+    ],
+  },
+  staging: {
+    baseDomain: 'upliftergymnastics.com',
+    cookieDomain: '.upliftergymnastics.com',
+    s3Bucket: 'uplifter-assets-staging',
+    s3DocumentsBucket: 'uplifter-documents-staging',
+    cdnUrl: 'https://cdn.upliftergymnastics.com',
+    useHttps: true,
+    corsOrigins: [
+      'https://upliftergymnastics.com',
+      'https://*.upliftergymnastics.com',
+    ],
+  },
+  development: {
+    baseDomain: 'uplifterdev.com',
+    cookieDomain: '.uplifterdev.com',
+    s3Bucket: 'uplifter-assets-dev',
+    s3DocumentsBucket: 'uplifter-documents-dev',
+    cdnUrl: null,
+    useHttps: true,
+    corsOrigins: [
+      'https://uplifterdev.com',
+      'https://*.uplifterdev.com',
+    ],
+  },
+  local: {
+    baseDomain: 'uplifterinc.localhost:3000',
+    cookieDomain: 'localhost',
+    s3Bucket: 'local-assets',
+    s3DocumentsBucket: 'local-documents',
+    cdnUrl: null,
+    useHttps: false,
+    corsOrigins: [
+      'http://localhost:3000',
+      'http://*.localhost:3000',
+      'http://uplifterinc.localhost:3000',
+      'http://*.uplifterinc.localhost:3000',
+    ],
+  },
+};
+
+/**
+ * Get the current environment from APP_ENVIRONMENT env var
+ * Defaults to 'local' if not set
+ */
+export function getCurrentEnvironment(): Environment {
+  const env = process.env.APP_ENVIRONMENT;
+  if (env && env in ENV_CONFIG) {
+    return env as Environment;
+  }
+  // Fallback detection based on NODE_ENV
+  if (process.env.NODE_ENV === 'production') {
+    return 'production';
+  }
+  return 'local';
+}
+
+/**
+ * Get the configuration for the current environment
+ */
+export function getEnvConfig(): EnvironmentConfig {
+  return ENV_CONFIG[getCurrentEnvironment()];
+}
+
+/**
+ * Get the full URL for a subdomain in the current environment
+ */
+export function getSubdomainUrl(subdomain: string): string {
+  const config = getEnvConfig();
+  const protocol = config.useHttps ? 'https' : 'http';
+  return `${protocol}://${subdomain}.${config.baseDomain}`;
+}
+
+/**
+ * Get the base URL for the current environment (no subdomain)
+ */
+export function getBaseUrl(): string {
+  const config = getEnvConfig();
+  const protocol = config.useHttps ? 'https' : 'http';
+  return `${protocol}://${config.baseDomain}`;
+}
+
+/**
+ * Get the login portal URL
+ */
+export function getLoginUrl(callbackUrl?: string): string {
+  const loginUrl = getSubdomainUrl('login');
+  if (callbackUrl) {
+    return `${loginUrl}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  }
+  return loginUrl;
+}
+
+/**
+ * Check if a hostname belongs to the current environment's domain
+ */
+export function isValidDomain(hostname: string): boolean {
+  const config = getEnvConfig();
+  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
+  return hostname === baseDomain || 
+         hostname.endsWith(`.${baseDomain}`) ||
+         hostname === `www.${baseDomain}`;
+}
+
+/**
+ * Extract subdomain from a full hostname
+ * Returns null if no subdomain or invalid domain
+ */
+export function extractSubdomain(hostname: string): string | null {
+  const config = getEnvConfig();
+  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
+  
+  if (hostname === baseDomain || hostname === `www.${baseDomain}`) {
+    return null;
+  }
+  
+  if (hostname.endsWith(`.${baseDomain}`)) {
+    const subdomain = hostname.slice(0, -(baseDomain.length + 1));
+    return subdomain || null;
+  }
+  
+  return null;
+}
+
+/**
+ * Get the public URL for an asset (uses CDN if available)
+ */
+export function getAssetUrl(path: string): string {
+  const config = getEnvConfig();
+  if (config.cdnUrl) {
+    return `${config.cdnUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  }
+  // Fallback to direct S3 URL
+  const region = process.env.AWS_S3_REGION || 'us-east-1';
+  return `https://${config.s3Bucket}.s3.${region}.amazonaws.com${path.startsWith('/') ? path : `/${path}`}`;
+}

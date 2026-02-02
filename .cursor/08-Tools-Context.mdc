@@ -5,14 +5,54 @@ globs: ["**/*"]
 # Tools & MCP
 
 ## Essential Development Tools
-- **Docker / Docker Compose**: Containerization for all services.
-- **Git & GitHub/GitLab**: Version control and CI/CD.
-- **Sentry / Datadog / New Relic**: APM and error tracking.
-- **Vercel / Cloudflare / AWS**: Hosting.
-- **Postman / Thunder Client**: API testing.
+
+### Local Development
+- **Docker / Docker Compose**: Local development with PostgreSQL, Redis, MinIO, MailHog
+- **pnpm**: Package manager (use `corepack enable`)
+- **Node.js**: LTS version required
+
+### Infrastructure
+- **Terraform**: Infrastructure as Code for AWS (v1.5+)
+- **Helm**: Kubernetes package manager for deployments
+- **ArgoCD**: GitOps continuous delivery
+- **kubectl**: Kubernetes CLI
+
+### Cloud Services (AWS)
+- **ECS Fargate**: Container orchestration (Phase 2)
+- **EKS**: Kubernetes orchestration (Phase 3)
+- **RDS**: Managed PostgreSQL
+- **ElastiCache**: Managed Redis
+- **S3 / CloudFront**: Storage and CDN
+- **SES**: Transactional email
+- **Secrets Manager**: Secret storage
+
+### Observability
+- **Groundcover**: eBPF-based observability for EKS
+- **CloudWatch**: AWS-native logging and metrics
+- **Sentry**: Error tracking (recommended)
+
+### API Testing
+- **Postman / Thunder Client**: API testing
+- **ngrok**: Local webhook testing
 
 ## Model Context Protocol (MCP)
-Usage of MCP is crucial for providing up-to-date context.- **GitHub/GitLab MCP Server**: Connects repository for real-time context.
+
+Usage of MCP is crucial for providing up-to-date context.
+
+- **GitHub MCP Server**: Connects repository for real-time context.
 - **Filesystem MCP Server**: Provides access to relevant files (architecture, rules, config).
 - **Memory/Context Portal MCP**: Stores/retrieves long-term context about architecture and decisions.
-- **GrepMCP**: A powerful search tool that helps find working code samples and implementation patterns from external GitHub repositories. Use this when you are stuck or need reference implementations.
+- **GrepMCP**: Find working code samples and implementation patterns from external repositories.
+
+## Key Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/env-domains.ts` | Environment configuration |
+| `src/lib/storage.ts` | S3/MinIO storage abstraction |
+| `src/lib/email.ts` | SES/MailHog email service |
+| `src/lib/services-config.ts` | External service configuration |
+| `src/lib/webhooks.ts` | Webhook URL management |
+| `infrastructure/` | Terraform modules |
+| `charts/uplifter/` | Helm chart |
+| `gitops/` | ArgoCD applications |

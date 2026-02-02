@@ -87,6 +87,9 @@ model Organization {
   // Medical
   medicalFormConfig      MedicalFormConfig?
   customMedicalQuestions CustomMedicalQuestion[]
+  
+  // Registration Queues
+  queueConfigs           RegistrationQueueConfig[]
 }
 
 model OrganizationMember {
@@ -458,6 +461,10 @@ model Program {
   requiredMemberships MembershipInstance[]
   evaluations         Evaluation[]
   evaluationTemplates ProgramEvaluationTemplate[]
+  
+  // Registration Queue
+  queueConfigs        RegistrationQueueConfig[]
+  queueReservations   QueueReservation[]
 }
 
 enum ProgramStatus {
@@ -2127,4 +2134,115 @@ model StaffAvailability {
 
   @@unique([staffProfileId, dayOfWeek]) // One entry per day per staff
   @@index([staffProfileId])
+}
+
+// ============================================
+// PHASE 10: Registration Queue System
+// ============================================
+
+// Queue configuration per organization or program
+model RegistrationQueueConfig {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  programId          String?  // null = org-wide default
+  
+  // Queue settings
+  isEnabled          Boolean  @default(false)
+  reservationMinutes Int      @default(10)  // How long a spot is reserved
+  maxConcurrent      Int      @default(50)  // Max users in registration at once
+  
+  // Activation rules
+  activationType       QueueActivationType @default(ALWAYS)
+  activationThreshold  Int?     // For THRESHOLD type: activate when X users waiting
+  scheduledStart       DateTime? // For SCHEDULED type
+  scheduledEnd         DateTime?
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program            Program?     @relation(fields: [programId], references: [id], onDelete: Cascade)
+  entries            QueueEntry[]
+
+  @@unique([organizationId, programId])
+  @@index([organizationId])
+  @@index([programId])
+}
+
+enum QueueActivationType {
+  ALWAYS        // Queue always active when enabled
+  THRESHOLD     // Activate when concurrent users exceed threshold
+  SCHEDULED     // Active during scheduled time windows
+}
+
+// Track users waiting in queue
+model QueueEntry {
+  id             String   @id @default(cuid())
+  queueConfigId  String
+  sessionToken   String   @unique  // Browser session identifier
+  
+  // User info (may be anonymous until they identify)
+  email          String?
+  familyId       String?
+  
+  // Queue status
+  position       Int      // Current position in queue
+  status         QueueEntryStatus @default(WAITING)
+  
+  // Timing
+  enteredAt      DateTime @default(now())
+  admittedAt     DateTime?
+  exitedAt       DateTime?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  queueConfig    RegistrationQueueConfig @relation(fields: [queueConfigId], references: [id], onDelete: Cascade)
+  reservation    QueueReservation?
+
+  @@index([queueConfigId, status])
+  @@index([sessionToken])
+  @@index([status])
+}
+
+enum QueueEntryStatus {
+  WAITING       // In queue
+  ADMITTED      // Let through, has active reservation
+  COMPLETED     // Successfully registered
+  EXPIRED       // Reservation timed out
+  ABANDONED     // Left the queue
+}
+
+// Active reservations for users in registration
+model QueueReservation {
+  id            String   @id @default(cuid())
+  queueEntryId  String   @unique
+  programId     String
+  
+  // Timing
+  startedAt     DateTime @default(now())
+  expiresAt     DateTime
+  completedAt   DateTime?
+  
+  // Status
+  status        ReservationStatus @default(ACTIVE)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  queueEntry    QueueEntry @relation(fields: [queueEntryId], references: [id], onDelete: Cascade)
+  program       Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId, status])
+  @@index([expiresAt])
+  @@index([status])
+}
+
+enum ReservationStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
 }

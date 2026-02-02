@@ -4,7 +4,30 @@ globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "package.json"]
 ---
 # 01-Tech-Stack
 
-## Mandates- **Primary Framework**: Use Next.js 14+ with the App Router.
+## Mandates
+
+### Frontend
+- **Primary Framework**: Use Next.js 14+ with the App Router.
 - **Components**: All UI must be built using `shadcn/ui` and `Tailwind CSS`.
 - **Language**: Strictly use TypeScript for all new code.
-- **DB/ORM**: Use Prisma or Drizzle (select one) for all database operations with PostgreSQL.
+
+### Backend & Database
+- **DB/ORM**: Use Prisma with PostgreSQL 16 for all database operations.
+- **Caching**: Redis (ElastiCache in cloud, Docker locally) via `@upstash/redis` or direct Redis client.
+
+### Cloud Services (AWS)
+- **Storage**: S3 for file uploads, MinIO for local S3-compatible development.
+- **Email**: Amazon SES for transactional emails, MailHog for local email catching.
+- **Compute**: ECS Fargate (Phase 2), EKS (Phase 3).
+
+### Key Libraries
+- **AWS SDK**: `@aws-sdk/client-s3`, `@aws-sdk/client-ses`, `@aws-sdk/s3-request-presigner`
+- **Authentication**: NextAuth.js with JWT sessions
+- **Payments**: Adyen, Stripe (future)
+- **SMS**: Twilio
+
+### Environment Configuration
+- **Module**: `src/lib/env-domains.ts` for environment-aware domain/service configuration
+- **Storage**: `src/lib/storage.ts` for S3/MinIO abstraction
+- **Email**: `src/lib/email.ts` for SES/MailHog abstraction
+- **Services**: `src/lib/services-config.ts` for external service configuration

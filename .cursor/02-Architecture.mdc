@@ -2,8 +2,52 @@
 description: Architectural principles and separation of concerns
 globs: ["**/*"]
 ---
-# 02-Architecture## Mandates
+# 02-Architecture
 
-- **Structure**: Use a Monorepo for code-sharing between the core SaaS app and white-label/customer sites.
+## Mandates
+
+### Code Structure
+- **Monorepo**: Use a Monorepo for code-sharing between the core SaaS app and white-label/customer sites.
 - **Core Principle**: Enforce strict separation of concerns (frontend/backend).
-- **Logic Placement**: Keep all business logic and external API calls (especially Stripe) in Server Components or dedicated API Routes/Server Actions.
+- **Logic Placement**: Keep all business logic and external API calls in Server Components or dedicated API Routes/Server Actions.
+
+### Multi-Environment Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    DNS (Route 53)                           │
+│  uplifterinc.com │ upliftergymnastics.com │ uplifterdev.com │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────┐
+│                    CloudFront CDN                           │
+│            (S3 static assets + ALB dynamic)                 │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────┐
+│              ECS Fargate / EKS Cluster                      │
+│    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐         │
+│    │ production  │ │  staging    │ │ development │         │
+│    │ namespace   │ │  namespace  │ │  namespace  │         │
+│    └─────────────┘ └─────────────┘ └─────────────┘         │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+    ┌────────────────────────┼────────────────────────┐
+    │                        │                        │
+┌───▼────┐            ┌──────▼──────┐          ┌─────▼─────┐
+│  RDS   │            │ ElastiCache │          │    S3     │
+│ (per   │            │   Redis     │          │ (per env) │
+│  env)  │            │ (per env)   │          │           │
+└────────┘            └─────────────┘          └───────────┘
+```
+
+### Multi-Tenant Data Model
+- **Single Database**: Each environment has one database with row-level tenant isolation.
+- **Organization ID**: All tenant data includes `organizationId` foreign key.
+- **Scoped Queries**: Use `getScopedDb()` for automatic tenant filtering.
+- **Superadmin**: Bypasses tenant scoping for cross-organization queries.
+
+### Environment-Aware Configuration
+- **Domain Resolution**: `src/lib/env-domains.ts` provides `getEnvConfig()` for environment detection.
+- **Middleware**: Dynamically routes based on subdomain and environment.
+- **Services**: External services (Adyen, Twilio, SES) switch TEST/LIVE mode per environment.

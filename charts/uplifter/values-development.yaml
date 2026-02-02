@@ -1,0 +1,64 @@
+# Development environment values for Uplifter
+
+replicaCount: 1
+
+image:
+  repository: "YOUR_AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/uplifter"
+  tag: ""  # Set by CI/CD pipeline
+
+env:
+  NODE_ENV: "production"
+  APP_ENVIRONMENT: "development"
+  AWS_S3_REGION: "us-east-1"
+  AWS_S3_BUCKET: "uplifter-assets-dev"
+  ADYEN_ENVIRONMENT: "TEST"
+  TWILIO_ENVIRONMENT: "TEST"
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:ACCOUNT:certificate/DEV_CERT_ID"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/group.name: "uplifter-development"
+  hosts:
+    - host: "*.uplifterdev.com"
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: "uplifterdev.com"
+      paths:
+        - path: /
+          pathType: Prefix
+
+autoscaling:
+  enabled: false
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+externalServices:
+  database:
+    host: "development-postgres.xxxxxx.us-east-1.rds.amazonaws.com"
+    port: 5432
+  redis:
+    host: ""  # Use Upstash for dev
+    port: 6379
+  s3:
+    bucket: "uplifter-assets-dev"
+    region: "us-east-1"
+
+secrets:
+  name: "uplifter-development-secrets"
+
+# Disable PDB for dev
+podDisruptionBudget:
+  enabled: false

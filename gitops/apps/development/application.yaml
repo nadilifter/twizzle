@@ -1,0 +1,47 @@
+# ArgoCD Application for Development Environment
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: uplifter-development
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/YOUR_ORG/uplifter.git
+    targetRevision: develop  # Deploy from develop branch
+    path: charts/uplifter
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-development.yaml
+      parameters:
+        - name: image.tag
+          value: "latest"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: development
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m
+
+  info:
+    - name: environment
+      value: development
+    - name: domain
+      value: uplifterdev.com

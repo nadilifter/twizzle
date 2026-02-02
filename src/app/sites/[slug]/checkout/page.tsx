@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useCart } from "@/components/sites/cart-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +11,9 @@ import { Loader2, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
+import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate"
+import { ReservationTimer } from "@/components/sites/reservation-timer"
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const { items, subtotal, removeItem, clearCart } = useCart()
@@ -28,6 +30,10 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [discountCode, setDiscountCode] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(null)
+
+  // Queue gate - check if user has valid reservation
+  const { isChecking, isAllowed, hasReservation, reservation } = useQueueGate(params.slug)
+  const { complete: completeRegistration } = useCompleteRegistration(params.slug)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -66,11 +72,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     }
   }
 
-  const handlePaymentCompleted = (result: any) => {
+  const handlePaymentCompleted = async (result: any) => {
      // Adyen handles the redirect usually, but we can also handle it here
      // If resultCode is Authorised, clear cart and redirect
      if (result.resultCode === "Authorised" || result.resultCode === "Pending" || result.resultCode === "Received") {
          clearCart()
+         // Complete the queue registration to free up the spot
+         await completeRegistration()
          // The returnUrl in the session will handle the redirect, but Adyen Web might expect us to do something if not configured to redirect
          // For 'dropin', it usually redirects or we handle it.
          // We set returnUrl in the API, so Adyen should use it.
@@ -80,6 +88,26 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const taxRate = 0.13 // Mock HST
   const taxAmount = subtotal * taxRate
   const total = subtotal + taxAmount
+
+  // Show loading while checking queue status
+  if (isChecking) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+        <p className="text-muted-foreground">Checking availability...</p>
+      </div>
+    )
+  }
+
+  // Redirect is happening if not allowed
+  if (!isAllowed) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+        <p className="text-muted-foreground">Redirecting to queue...</p>
+      </div>
+    )
+  }
 
   if (items.length === 0) {
     return (
@@ -294,6 +322,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           </Card>
         </div>
       </div>
+      
+      {/* Reservation Timer - shows countdown when user has a queue reservation */}
+      {hasReservation && reservation && (
+        <ReservationTimer 
+          expiresAt={reservation.expiresAt} 
+          organizationSlug={params.slug}
+        />
+      )}
     </div>
   )
 }

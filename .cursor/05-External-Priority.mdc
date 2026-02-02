@@ -4,8 +4,34 @@ globs: ["**/*"]
 ---
 # 05-External-Priority
 
-## Mandates- **Integration**: Prioritize the use of external, production-grade tools over custom-built internal solutions.
-  - Hosting: Vercel / Cloudflare
-  - Error Tracking: Sentry
-  - Email: Resend
-  - Auth: Dedicated Auth provider
+## Mandates
+
+**Integration**: Prioritize the use of external, production-grade tools over custom-built internal solutions.
+
+### Cloud Infrastructure (AWS)
+- **Compute**: ECS Fargate (Phase 2), EKS with ArgoCD (Phase 3)
+- **Database**: RDS PostgreSQL 16 with read replicas
+- **Caching**: ElastiCache Redis (cloud), Upstash (dev), Docker Redis (local)
+- **Storage**: S3 for file uploads, CloudFront CDN for delivery
+- **Email**: Amazon SES (cloud), MailHog (local)
+
+### External Services
+- **Payments**: Adyen (primary), Stripe (future)
+- **SMS**: Twilio
+- **Authentication**: NextAuth.js with Google OAuth
+- **Error Tracking**: Sentry (recommended)
+
+### Infrastructure as Code
+- **Terraform**: All AWS resources defined in `infrastructure/modules/`
+- **Helm**: Kubernetes deployments via `charts/uplifter/`
+- **ArgoCD**: GitOps deployments from `gitops/`
+
+### Observability
+- **Groundcover**: eBPF-based observability for EKS
+- **CloudWatch**: Logs and metrics for AWS services
+- **Container Insights**: ECS/EKS monitoring
+
+### Local Development
+- **MinIO**: S3-compatible local storage
+- **MailHog**: Email catching with web UI at `localhost:8025`
+- **Docker Redis**: Local caching

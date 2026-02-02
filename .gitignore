@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Reference directory
 /_reference_lwtfc_registration/
+
+# Local environment file
+.env

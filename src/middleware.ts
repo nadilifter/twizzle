@@ -2,21 +2,78 @@ import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
+ * Environment Configuration
+ * 
+ * Note: We inline the config here instead of importing from @/lib/env-domains
+ * because middleware runs in the Edge runtime and has limited module support.
+ */
+type Environment = 'production' | 'staging' | 'development' | 'local';
+
+interface EnvironmentConfig {
+  baseDomain: string;
+  useHttps: boolean;
+}
+
+const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
+  production: {
+    baseDomain: 'uplifterinc.com',
+    useHttps: true,
+  },
+  staging: {
+    baseDomain: 'upliftergymnastics.com',
+    useHttps: true,
+  },
+  development: {
+    baseDomain: 'uplifterdev.com',
+    useHttps: true,
+  },
+  local: {
+    baseDomain: 'uplifterinc.localhost:3000',
+    useHttps: false,
+  },
+};
+
+function getCurrentEnvironment(): Environment {
+  const env = process.env.APP_ENVIRONMENT;
+  if (env && env in ENV_CONFIG) {
+    return env as Environment;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return 'production';
+  }
+  return 'local';
+}
+
+function getEnvConfig(): EnvironmentConfig {
+  return ENV_CONFIG[getCurrentEnvironment()];
+}
+
+/**
  * Allowed origins for CORS
- * In production, only uplifterinc.com and its subdomains are allowed
- * In development, localhost variations are also allowed
+ * Based on the current environment configuration
  */
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
   
-  // Development origins
-  if (process.env.NODE_ENV === "development") {
+  const config = getEnvConfig();
+  const currentEnv = getCurrentEnvironment();
+  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
+  
+  // Local environment allows localhost variations
+  if (currentEnv === 'local') {
     if (origin.includes("localhost")) return true;
     if (origin.includes("uplifterinc.localhost")) return true;
   }
   
-  // Production origins - uplifterinc.com and all subdomains
-  if (origin.endsWith(".uplifterinc.com") || origin === "https://uplifterinc.com") {
+  // Check against the current environment's domain
+  const protocol = config.useHttps ? 'https' : 'http';
+  if (origin === `${protocol}://${baseDomain}` || 
+      origin === `${protocol}://www.${baseDomain}`) {
+    return true;
+  }
+  
+  // Check subdomains
+  if (origin.endsWith(`.${baseDomain}`)) {
     return true;
   }
   
@@ -65,38 +122,48 @@ export async function middleware(req: NextRequest) {
   // Get auth token for protected routes
   const token = await getToken({ req });
 
-  // 1. Domain Parsing
-  const isLocal = hostname.includes("localhost");
-  // We allow both uplifterinc.localhost:3000 (preferred) and localhost:3000 (legacy)
-  const localRoot = "uplifterinc.localhost:3000"; 
+  // 1. Domain Parsing - Environment Aware
+  const config = getEnvConfig();
+  const currentEnv = getCurrentEnvironment();
+  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
+  const isLocal = currentEnv === 'local';
+  
+  // For local environment, support both uplifterinc.localhost:3000 and localhost:3000
+  const localRoot = config.baseDomain;
   let currentHost = hostname;
 
+  // Parse subdomain from hostname
   if (isLocal) {
-    if (hostname === "localhost:3000" || hostname === localRoot) {
+    // Local environment
+    if (hostname === "localhost:3000" || hostname === localRoot || hostname === `www.${localRoot}`) {
       currentHost = "main";
-    } else {
+    } else if (hostname.endsWith(localRoot)) {
       // Handle admin.uplifterinc.localhost:3000 -> admin
-      if (hostname.endsWith(localRoot)) {
-          currentHost = hostname.replace(`.${localRoot}`, "");
-      } else {
-          // Handle admin.localhost:3000 -> admin (fallback)
-          currentHost = hostname.replace(`.localhost:3000`, "");
-      }
+      currentHost = hostname.replace(`.${localRoot}`, "");
+    } else if (hostname.endsWith(".localhost:3000")) {
+      // Handle admin.localhost:3000 -> admin (legacy fallback)
+      currentHost = hostname.replace(".localhost:3000", "");
+    } else {
+      currentHost = "main";
     }
   } else {
-    if (hostname === "uplifterinc.com" || hostname === "www.uplifterinc.com") {
+    // Cloud environments (production, staging, development)
+    if (hostname === baseDomain || hostname === `www.${baseDomain}`) {
       currentHost = "main";
+    } else if (hostname.endsWith(`.${baseDomain}`)) {
+      currentHost = hostname.replace(`.${baseDomain}`, "");
     } else {
-      currentHost = hostname.replace(`.uplifterinc.com`, "");
+      // Unknown domain - treat as main
+      currentHost = "main";
     }
   }
 
   // 2. Portal Routing
   
-  // LOGIN PORTAL (login.uplifterinc.com) -> /(auth)/*
+  // LOGIN PORTAL (login.{baseDomain}) -> /(auth)/*
   // In local dev, Google OAuth must go through localhost:3000 (Google's restriction)
   // The login form handles this by posting OAuth to localhost:3000, then session-bridge
-  // transfers the session back to uplifterinc.localhost subdomains
+  // transfers the session back to the local subdomains
   if (currentHost === "login") {
     let newPath = path;
     if (path === "/") {
@@ -108,17 +175,22 @@ export async function middleware(req: NextRequest) {
   }
 
   // Helper to get the login host based on environment
-  const getLoginHost = () => isLocal ? "login.uplifterinc.localhost:3000" : "login.uplifterinc.com";
+  const getLoginHost = () => `login.${config.baseDomain}`;
+  
+  // Helper to get a subdomain host
+  const getSubdomainHost = (subdomain: string) => `${subdomain}.${config.baseDomain}`;
+  
+  // Get protocol based on environment
+  const protocol = config.useHttps ? 'https:' : 'http:';
 
-  // ADMIN PORTAL (admin.uplifterinc.com) -> /dashboard
+  // ADMIN PORTAL (admin.{baseDomain}) -> /dashboard
   if (currentHost === "admin") {
     // Redirect /login to centralized login portal
     if (path.startsWith("/login")) {
-         const protocol = req.nextUrl.protocol;
          const loginHost = getLoginHost();
          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
          // Redirect to root of admin portal after login, or preserve callback
-         const adminHost = isLocal ? `admin.${localRoot}` : "admin.uplifterinc.com";
+         const adminHost = getSubdomainHost("admin");
          const existingCallback = req.nextUrl.searchParams.get("callbackUrl");
          loginUrl.searchParams.set("callbackUrl", existingCallback || `${protocol}//${adminHost}/`);
          return NextResponse.redirect(loginUrl);
@@ -126,7 +198,6 @@ export async function middleware(req: NextRequest) {
 
     // Auth Check for Admin
     if (!token && !path.startsWith("/login")) {
-      const protocol = req.nextUrl.protocol;
       const loginHost = getLoginHost();
       const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
       loginUrl.searchParams.set("callbackUrl", req.url);
@@ -154,21 +225,19 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // SUPER ADMIN (superadmin.uplifterinc.com) -> /superadmin
+  // SUPER ADMIN (superadmin.{baseDomain}) -> /superadmin
   if (currentHost === "superadmin") {
       // Redirect /login to centralized login portal
       if (path.startsWith("/login")) {
-         const protocol = req.nextUrl.protocol;
          const loginHost = getLoginHost();
          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
-         const superAdminHost = isLocal ? `superadmin.${localRoot}` : "superadmin.uplifterinc.com";
+         const superAdminHost = getSubdomainHost("superadmin");
          const existingCallback = req.nextUrl.searchParams.get("callbackUrl");
          loginUrl.searchParams.set("callbackUrl", existingCallback || `${protocol}//${superAdminHost}/`);
          return NextResponse.redirect(loginUrl);
       }
 
       if (!token?.isSuperAdmin && !path.startsWith("/login")) {
-         const protocol = req.nextUrl.protocol;
          const loginHost = getLoginHost();
          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
          loginUrl.searchParams.set("callbackUrl", req.url);
@@ -185,7 +254,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.rewrite(url);
   }
 
-  // COACH PORTAL (coach.uplifterinc.com) -> /coach
+  // COACH PORTAL (coach.{baseDomain}) -> /coach
   if (currentHost === "coach") {
       let newPath = path;
       if (path === "/") {
@@ -197,7 +266,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.rewrite(url);
   }
 
-  // ATHLETE PORTAL (athletes.uplifterinc.com) -> /athletes
+  // ATHLETE PORTAL (athletes.{baseDomain}) -> /athletes
   if (currentHost === "athletes") {
       let newPath = path;
       if (path === "/") {
@@ -209,14 +278,13 @@ export async function middleware(req: NextRequest) {
       return NextResponse.rewrite(url);
   }
 
-  // POS PORTAL (pos.uplifterinc.com) -> /pos
+  // POS PORTAL (pos.{baseDomain}) -> /pos
   if (currentHost === "pos") {
       // Redirect /login to centralized login portal
       if (path.startsWith("/login")) {
-          const protocol = req.nextUrl.protocol;
           const loginHost = getLoginHost();
           const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
-          const posHost = isLocal ? `pos.${localRoot}` : "pos.uplifterinc.com";
+          const posHost = getSubdomainHost("pos");
           
           // Preserve existing callback or set default, including orgId param if present
           const existingCallback = req.nextUrl.searchParams.get("callbackUrl");
@@ -233,7 +301,6 @@ export async function middleware(req: NextRequest) {
 
       // Auth Check for POS - redirect unauthenticated users to login
       if (!token && !path.startsWith("/login")) {
-          const protocol = req.nextUrl.protocol;
           const loginHost = getLoginHost();
           const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
           
@@ -254,7 +321,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.rewrite(url);
   }
 
-  // FEEDBACK PORTAL (feedback.uplifterinc.com) -> /feedback
+  // FEEDBACK PORTAL (feedback.{baseDomain}) -> /feedback
   if (currentHost === "feedback") {
       let newPath = path;
       if (path === "/") {
@@ -266,7 +333,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.rewrite(url);
   }
 
-  // EVENTS PORTAL (events.uplifterinc.com) -> /events
+  // EVENTS PORTAL (events.{baseDomain}) -> /events
   if (currentHost === "events") {
       let newPath = path;
       if (path === "/") {
@@ -278,7 +345,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.rewrite(url);
   }
 
-  // SIGNUP PORTAL (signup.uplifterinc.com) -> /org-signup
+  // SIGNUP PORTAL (signup.{baseDomain}) -> /org-signup
   // No auth required - public organization registration page
   if (currentHost === "signup") {
       let newPath = path;
@@ -301,8 +368,7 @@ export async function middleware(req: NextRequest) {
   if (currentHost === "main" || currentHost === "www") {
       // Redirect /dashboard to admin subdomain
       if (path.startsWith("/dashboard")) {
-         const protocol = req.nextUrl.protocol;
-         const adminHost = isLocal ? `admin.${localRoot}` : "admin.uplifterinc.com";
+         const adminHost = getSubdomainHost("admin");
          const newPath = path.replace("/dashboard", "") || "/";
          return NextResponse.redirect(`${protocol}//${adminHost}${newPath}`);
       }

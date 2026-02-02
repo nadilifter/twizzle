@@ -6,6 +6,7 @@ import {
   Bell,
   Building2, 
   CreditCard,
+  DollarSign,
   Eye,
   Globe, 
   LayoutDashboard, 
@@ -101,6 +102,11 @@ const navItems = [
     title: "Billing",
     url: "/superadmin/billing",
     icon: CreditCard,
+  },
+  {
+    title: "Revenue",
+    url: "/superadmin/revenue",
+    icon: DollarSign,
   },
   {
     title: "Plans",
