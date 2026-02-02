@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getEffectiveUser } from "@/lib/impersonation";
 
 // GET /api/coach/programs
 // Returns programs assigned to the current coach (via ProgramStaff or Event.coachId)
+// Supports superadmin impersonation via "view as coach" feature
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
@@ -11,13 +13,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!session.user.organizationId) {
+    // Get effective user (handles superadmin impersonation)
+    const effectiveUser = getEffectiveUser(session);
+    if (!effectiveUser?.organizationId) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
+    const { userId, organizationId } = effectiveUser;
+
     // First, get the user's staff profile
     const staffProfile = await db.staffProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
     });
 
     // Find programs via ProgramStaff assignments
@@ -33,8 +39,8 @@ export async function GET(request: NextRequest) {
     // Find programs via Event.coachId
     const coachEvents = await db.event.findMany({
       where: {
-        coachId: session.user.id,
-        organizationId: session.user.organizationId,
+        coachId: userId,
+        organizationId,
         programId: { not: null },
       },
       select: {
@@ -58,7 +64,7 @@ export async function GET(request: NextRequest) {
     const programs = await db.program.findMany({
       where: {
         id: { in: allProgramIds },
-        organizationId: session.user.organizationId,
+        organizationId,
       },
       include: {
         staffAssignments: {

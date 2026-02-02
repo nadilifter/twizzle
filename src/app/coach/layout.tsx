@@ -1,6 +1,7 @@
 import { CoachSidebar } from "@/components/coach-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { ImpersonationBanner } from "@/components/impersonation-banner"
 import { getAuthSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
 
@@ -16,14 +17,17 @@ export default async function CoachLayout({
   }
 
   return (
-    <SidebarProvider>
-      <CoachSidebar />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <>
+      <ImpersonationBanner />
+      <SidebarProvider>
+        <CoachSidebar />
+        <SidebarInset>
+          <SiteHeader />
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </>
   )
 }

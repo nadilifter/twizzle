@@ -10,6 +10,11 @@ declare module "next-auth" {
       organizationName: string;
       permissions: string[];
       isSuperAdmin: boolean;
+      // Impersonation fields (superadmin "view as coach" feature)
+      viewingAsCoachId?: string;
+      viewingAsCoachName?: string;
+      viewingAsOrganizationId?: string;
+      viewingAsOrganizationName?: string;
     } & DefaultSession["user"];
   }
 
@@ -30,5 +35,10 @@ declare module "next-auth/jwt" {
     organizationName: string;
     permissions: string[];
     isSuperAdmin: boolean;
+    // Impersonation fields (superadmin "view as coach" feature)
+    viewingAsCoachId?: string;
+    viewingAsCoachName?: string;
+    viewingAsOrganizationId?: string;
+    viewingAsOrganizationName?: string;
   }
 }

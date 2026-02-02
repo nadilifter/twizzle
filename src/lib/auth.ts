@@ -35,15 +35,15 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        // Share cookies across all subdomains
-        // This is required for:
-        // 1. Session sharing across admin.*, pos.*, etc.
-        // 2. Proper signOut from any subdomain (must match the domain the cookie was set on)
-        // Note: OAuth on localhost:3000 sets cookies on localhost, but session-bridge
-        // handles transferring the session to uplifterinc.localhost subdomains
+        // Production: Share cookies across all uplifterinc.com subdomains
+        // Development: Don't set a domain - this allows the cookie to be set on
+        // localhost:3000 when OAuth completes, then session-bridge transfers the
+        // session to uplifterinc.localhost subdomains with the correct domain.
+        // Setting domain to ".uplifterinc.localhost" would prevent cookies from
+        // being set/read on localhost:3000 (required for Google OAuth).
         domain: process.env.NODE_ENV === "production" 
           ? ".uplifterinc.com" 
-          : ".uplifterinc.localhost"
+          : undefined
       }
     }
   },
@@ -312,11 +312,24 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        // Handle session updates (e.g., switching organizations)
+        // Handle session updates (e.g., switching organizations or impersonation)
         if (trigger === "update" && session) {
           console.log("JWT callback: Session update", session);
-          token.organizationId = session.organizationId;
-          token.organizationName = session.organizationName;
+          
+          // Handle organization switching
+          if (session.organizationId !== undefined) {
+            token.organizationId = session.organizationId;
+            token.organizationName = session.organizationName;
+          }
+          
+          // Handle impersonation (superadmin "view as coach" feature)
+          // Only allow if user is a superadmin
+          if (token.isSuperAdmin && session.viewingAsCoachId !== undefined) {
+            token.viewingAsCoachId = session.viewingAsCoachId || undefined;
+            token.viewingAsCoachName = session.viewingAsCoachName || undefined;
+            token.viewingAsOrganizationId = session.viewingAsOrganizationId || undefined;
+            token.viewingAsOrganizationName = session.viewingAsOrganizationName || undefined;
+          }
         }
 
         // console.log("JWT callback returning token:", JSON.stringify(token, null, 2));
@@ -336,6 +349,12 @@ export const authOptions: NextAuthOptions = {
           session.user.organizationName = token.organizationName as string;
           session.user.permissions = token.permissions as string[];
           session.user.isSuperAdmin = token.isSuperAdmin as boolean;
+          
+          // Include impersonation fields
+          session.user.viewingAsCoachId = token.viewingAsCoachId as string | undefined;
+          session.user.viewingAsCoachName = token.viewingAsCoachName as string | undefined;
+          session.user.viewingAsOrganizationId = token.viewingAsOrganizationId as string | undefined;
+          session.user.viewingAsOrganizationName = token.viewingAsOrganizationName as string | undefined;
         }
         return session;
       } catch (error) {
@@ -367,22 +386,27 @@ export const authOptions: NextAuthOptions = {
           // URL parsing failed, use as-is
         }
         
-        // We need to get the user's email to create the bridge token
-        // This is set by the jwt callback and stored in a temporary way
-        // Since we can't access the token here directly, we'll use a different approach:
-        // Store the email in a query param that we set during the Google signin
+        // Prevent redirect loop: if callback is the login portal, redirect to admin instead
+        // This can happen if someone directly navigates to the login portal and logs in
+        try {
+          const callbackUrlObj = new URL(finalCallback);
+          const callbackHost = callbackUrlObj.hostname;
+          if (callbackHost.startsWith("login.")) {
+            // Replace login subdomain with admin subdomain
+            const isLocal = callbackHost.includes("localhost");
+            finalCallback = isLocal 
+              ? "http://admin.uplifterinc.localhost:3000/"
+              : "https://admin.uplifterinc.com/";
+            console.log("Redirect callback: Callback was login portal, redirecting to admin instead");
+          }
+        } catch {
+          // URL parsing failed, continue with original
+        }
         
-        // For now, redirect to the session bridge with the callback URL
-        // The bridge will need to get the email from somewhere else
-        // Actually, we need to modify this approach...
-        
-        // The redirect callback doesn't have access to the user info
-        // So we need a different approach: create a custom callback route
         console.log("Redirect callback: Detected cross-domain OAuth, redirecting to bridge");
-        console.log("Redirect callback: baseUrl=", baseUrl, "url=", url);
+        console.log("Redirect callback: baseUrl=", baseUrl, "url=", url, "finalCallback=", finalCallback);
         
-        // Since we can't create the bridge token here (no access to user email),
-        // we'll redirect to a special endpoint that will handle the bridge
+        // Redirect to oauth-bridge which will get the session and transfer it
         const bridgeUrl = new URL("/api/auth/oauth-bridge", "http://localhost:3000");
         bridgeUrl.searchParams.set("callbackUrl", finalCallback);
         return bridgeUrl.toString();

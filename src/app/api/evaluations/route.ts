@@ -2,21 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import type { SkillAttemptStatus } from "@prisma/client";
+import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
+import { checkAndAwardAchievements } from "@/lib/services/achievement";
 
 const skillAttemptStatusEnum = z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]);
 const evaluationStatusEnum = z.enum(["PENDING", "IN_PROGRESS", "PASS", "RETRY", "EXCELLENT", "SATISFACTORY"]);
 
 const skillRatingSchema = z.object({
   skillId: z.string().min(1),
-  rating: z.number().int().min(1).max(5).optional().nullable(),
+  rating: z.number().int().min(1).max(5).optional().nullable(), // Legacy
+  pointScore: z.number().int().optional().nullable(), // For POINT_SCALE
   attemptStatus: skillAttemptStatusEnum.optional().default("NOT_ATTEMPTED"),
+  passed: z.boolean().optional(), // Explicit pass flag
   comment: z.string().optional(),
 });
 
 const createEvaluationSchema = z.object({
   athleteId: z.string().min(1, "Athlete is required"),
   templateId: z.string().optional(), // Optional - can create from template
+  programId: z.string().optional(), // Optional - link to program
   date: z.string().min(1, "Date is required"),
   level: z.string().optional(), // Optional if using template
   overallScore: z.number().min(0).max(10).optional().default(0),
@@ -25,11 +29,27 @@ const createEvaluationSchema = z.object({
   skillRatings: z.array(skillRatingSchema).optional(),
 });
 
+// Helper function to determine if a skill is passed based on scoring type
+function isSkillPassed(
+  scoringType: ScoringType,
+  attemptStatus: SkillAttemptStatus,
+  pointScore: number | null | undefined,
+  passThreshold: number
+): boolean {
+  if (scoringType === "PASS_FAIL") {
+    return attemptStatus === "SUCCEEDED";
+  } else {
+    // POINT_SCALE
+    return pointScore !== null && pointScore !== undefined && pointScore >= passThreshold;
+  }
+}
+
 // Helper function to update athlete skill progress
 async function updateAthleteSkillProgress(
   athleteId: string,
   skillId: string,
   attemptStatus: SkillAttemptStatus,
+  passed: boolean,
   evaluationId: string,
   evaluationDate: Date
 ) {
@@ -50,7 +70,7 @@ async function updateAthleteSkillProgress(
       updatedAt: now,
     };
 
-    if (attemptStatus === "ATTEMPTED") {
+    if (attemptStatus === "ATTEMPTED" || passed) {
       updateData.attemptCount = existingProgress.attemptCount + 1;
       if (!existingProgress.firstAttemptedAt) {
         updateData.firstAttemptedAt = evaluationDate;
@@ -59,12 +79,10 @@ async function updateAthleteSkillProgress(
       if (existingProgress.bestStatus === "NOT_ATTEMPTED") {
         updateData.bestStatus = "ATTEMPTED";
       }
-    } else if (attemptStatus === "SUCCEEDED") {
-      updateData.attemptCount = existingProgress.attemptCount + 1;
+    }
+    
+    if (attemptStatus === "SUCCEEDED" || passed) {
       updateData.successCount = existingProgress.successCount + 1;
-      if (!existingProgress.firstAttemptedAt) {
-        updateData.firstAttemptedAt = evaluationDate;
-      }
       if (!existingProgress.firstSucceededAt) {
         updateData.firstSucceededAt = evaluationDate;
       }
@@ -78,15 +96,18 @@ async function updateAthleteSkillProgress(
     });
   } else {
     // Create new progress record
+    const isPassed = attemptStatus === "SUCCEEDED" || passed;
+    const isAttempted = attemptStatus !== "NOT_ATTEMPTED" || passed;
+    
     await db.athleteSkillProgress.create({
       data: {
         athleteId,
         skillId,
-        bestStatus: attemptStatus,
-        firstAttemptedAt: attemptStatus !== "NOT_ATTEMPTED" ? evaluationDate : null,
-        firstSucceededAt: attemptStatus === "SUCCEEDED" ? evaluationDate : null,
-        attemptCount: attemptStatus !== "NOT_ATTEMPTED" ? 1 : 0,
-        successCount: attemptStatus === "SUCCEEDED" ? 1 : 0,
+        bestStatus: isPassed ? "SUCCEEDED" : (isAttempted ? "ATTEMPTED" : "NOT_ATTEMPTED"),
+        firstAttemptedAt: isAttempted ? evaluationDate : null,
+        firstSucceededAt: isPassed ? evaluationDate : null,
+        attemptCount: isAttempted ? 1 : 0,
+        successCount: isPassed ? 1 : 0,
         lastEvaluatedAt: evaluationDate,
         lastEvaluationId: evaluationId,
       },
@@ -106,6 +127,7 @@ export async function GET(request: NextRequest) {
     const athleteId = searchParams.get("athleteId");
     const coachId = searchParams.get("coachId");
     const templateId = searchParams.get("templateId");
+    const programId = searchParams.get("programId");
     const status = searchParams.get("status");
     const level = searchParams.get("level");
     const startDate = searchParams.get("startDate");
@@ -136,6 +158,7 @@ export async function GET(request: NextRequest) {
       ...(athleteId && { athleteId }),
       ...(coachId && { coachId }),
       ...(templateId && { templateId }),
+      ...(programId && { programId }),
       ...(status && { status: status as "PENDING" | "IN_PROGRESS" | "PASS" | "RETRY" | "EXCELLENT" | "SATISFACTORY" }),
       ...(level && { level }),
       ...(startDate && endDate && {
@@ -170,11 +193,35 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               difficultyLevel: true,
+              scoringType: true,
+              pointScaleMin: true,
+              pointScaleMax: true,
+              pointScalePassThreshold: true,
+              completionType: true,
+              completionThreshold: true,
+            },
+          },
+          program: {
+            select: {
+              id: true,
+              name: true,
+              level: true,
             },
           },
           skillRatings: {
             include: {
               skill: true,
+            },
+          },
+          athleteAchievements: {
+            include: {
+              achievement: {
+                select: {
+                  id: true,
+                  name: true,
+                  badgeImageUrl: true,
+                },
+              },
             },
           },
         },
@@ -241,9 +288,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
-    // If template provided, load template skills
+    // If programId provided, verify it exists and athlete is enrolled
+    if (validatedData.programId) {
+      const program = await db.program.findFirst({
+        where: {
+          id: validatedData.programId,
+          organizationId: session.user.organizationId,
+        },
+      });
+
+      if (!program) {
+        return NextResponse.json({ error: "Program not found" }, { status: 404 });
+      }
+
+      const enrollment = await db.enrollment.findFirst({
+        where: {
+          programId: validatedData.programId,
+          athleteId: validatedData.athleteId,
+          status: "ACTIVE",
+        },
+      });
+
+      if (!enrollment) {
+        return NextResponse.json(
+          { error: "Athlete is not enrolled in this program" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // If template provided, load template details
     let templateSkillIds: string[] = [];
     let level = validatedData.level;
+    let scoringType: ScoringType = "PASS_FAIL";
+    let pointScalePassThreshold = 7;
     
     if (validatedData.templateId) {
       const template = await db.evaluationTemplate.findFirst({
@@ -264,6 +342,8 @@ export async function POST(request: NextRequest) {
       }
 
       templateSkillIds = template.skills.map((s) => s.skillId);
+      scoringType = template.scoringType;
+      pointScalePassThreshold = template.pointScalePassThreshold;
       
       // Use template's difficulty level if level not provided
       if (!level) {
@@ -279,24 +359,39 @@ export async function POST(request: NextRequest) {
       skillRatingsToCreate = templateSkillIds.map((skillId) => ({
         skillId,
         attemptStatus: "NOT_ATTEMPTED" as const,
+        passed: false,
       }));
     }
+
+    // Calculate passed status for each skill rating
+    const skillRatingsWithPassed = skillRatingsToCreate.map((sr) => {
+      const passed = sr.passed ?? isSkillPassed(
+        scoringType,
+        sr.attemptStatus || "NOT_ATTEMPTED",
+        sr.pointScore,
+        pointScalePassThreshold
+      );
+      return { ...sr, passed };
+    });
 
     const evaluation = await db.evaluation.create({
       data: {
         athleteId: validatedData.athleteId,
         coachId: session.user.id,
         templateId: validatedData.templateId,
+        programId: validatedData.programId,
         date: new Date(validatedData.date),
         level: level || athlete.level,
         overallScore: validatedData.overallScore || 0,
         status: validatedData.status || "PENDING",
         notes: validatedData.notes,
-        skillRatings: skillRatingsToCreate.length > 0 ? {
-          create: skillRatingsToCreate.map((sr) => ({
+        skillRatings: skillRatingsWithPassed.length > 0 ? {
+          create: skillRatingsWithPassed.map((sr) => ({
             skillId: sr.skillId,
             rating: sr.rating,
+            pointScore: sr.pointScore,
             attemptStatus: sr.attemptStatus || "NOT_ATTEMPTED",
+            passed: sr.passed,
             comment: sr.comment,
           })),
         } : undefined,
@@ -317,7 +412,23 @@ export async function POST(request: NextRequest) {
             avatar: true,
           },
         },
-        template: true,
+        template: {
+          select: {
+            id: true,
+            name: true,
+            difficultyLevel: true,
+            scoringType: true,
+            pointScaleMin: true,
+            pointScaleMax: true,
+            pointScalePassThreshold: true,
+          },
+        },
+        program: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         skillRatings: {
           include: {
             skill: true,
@@ -328,15 +439,83 @@ export async function POST(request: NextRequest) {
 
     // Update athlete skill progress for each skill rating (only if not PENDING)
     if (validatedData.status && validatedData.status !== "PENDING") {
-      for (const sr of skillRatingsToCreate) {
-        if (sr.attemptStatus && sr.attemptStatus !== "NOT_ATTEMPTED") {
+      for (const sr of skillRatingsWithPassed) {
+        if ((sr.attemptStatus && sr.attemptStatus !== "NOT_ATTEMPTED") || sr.passed) {
           await updateAthleteSkillProgress(
             validatedData.athleteId,
             sr.skillId,
-            sr.attemptStatus,
+            sr.attemptStatus || "NOT_ATTEMPTED",
+            sr.passed,
             evaluation.id,
             new Date(validatedData.date)
           );
+        }
+      }
+
+      // Check and award achievements if evaluation is completed
+      const completedStatuses = ["PASS", "EXCELLENT", "SATISFACTORY"];
+      if (completedStatuses.includes(validatedData.status)) {
+        const awardedAchievements = await checkAndAwardAchievements(evaluation.id);
+        if (awardedAchievements.length > 0) {
+          // Fetch the updated evaluation with achievements
+          const updatedEvaluation = await db.evaluation.findUnique({
+            where: { id: evaluation.id },
+            include: {
+              athlete: {
+                select: {
+                  id: true,
+                  name: true,
+                  level: true,
+                  avatar: true,
+                },
+              },
+              coach: {
+                select: {
+                  id: true,
+                  name: true,
+                  avatar: true,
+                },
+              },
+              template: {
+                select: {
+                  id: true,
+                  name: true,
+                  difficultyLevel: true,
+                  scoringType: true,
+                  pointScaleMin: true,
+                  pointScaleMax: true,
+                  pointScalePassThreshold: true,
+                },
+              },
+              program: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              skillRatings: {
+                include: {
+                  skill: true,
+                },
+              },
+              athleteAchievements: {
+                include: {
+                  achievement: {
+                    select: {
+                      id: true,
+                      name: true,
+                      badgeImageUrl: true,
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          return NextResponse.json({
+            ...updatedEvaluation,
+            newAchievements: awardedAchievements,
+          });
         }
       }
     }

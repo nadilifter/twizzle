@@ -3,8 +3,10 @@
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import { 
+  Bell,
   Building2, 
   CreditCard,
+  Eye,
   Globe, 
   LayoutDashboard, 
   Package,
@@ -109,6 +111,16 @@ const navItems = [
     title: "Domains",
     url: "/superadmin/domains",
     icon: Globe,
+  },
+  {
+    title: "Announcements",
+    url: "/superadmin/announcements",
+    icon: Bell,
+  },
+  {
+    title: "View as Coach",
+    url: "/superadmin/view-as-coach",
+    icon: Eye,
   },
 ]
 

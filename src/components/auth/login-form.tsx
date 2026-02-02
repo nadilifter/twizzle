@@ -38,10 +38,41 @@ function getOAuthHost(): string {
   }
 }
 
+/**
+ * Get the default callback URL based on current domain.
+ * 
+ * For uplifterinc.localhost subdomains, we need to return an absolute URL
+ * so that after OAuth on localhost:3000, the redirect callback can detect
+ * we need to go through the session bridge to set cookies on the correct domain.
+ */
+function getDefaultCallbackUrl(): string {
+  if (typeof window === "undefined") return "/";
+  
+  const hostname = window.location.hostname;
+  
+  // If on uplifterinc.localhost subdomain, default to admin portal
+  if (hostname.endsWith("uplifterinc.localhost")) {
+    return "http://admin.uplifterinc.localhost:3000/";
+  }
+  
+  // Production: return admin subdomain
+  if (hostname.endsWith("uplifterinc.com")) {
+    return "https://admin.uplifterinc.com/";
+  }
+  
+  return "/";
+}
+
 export function LoginForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const callbackUrl = searchParams.get("callbackUrl") || "/"
+  const urlCallbackParam = searchParams.get("callbackUrl")
+  
+  // Use URL param if provided, otherwise compute default based on domain
+  const callbackUrl = useMemo(() => {
+    if (urlCallbackParam) return urlCallbackParam;
+    return getDefaultCallbackUrl();
+  }, [urlCallbackParam])
   const [email, setEmail] = useState(searchParams.get("email") || "")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)

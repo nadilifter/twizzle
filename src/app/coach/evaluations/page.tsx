@@ -57,7 +57,9 @@ import type {
   EvaluationTemplateWithSkills, 
   EvaluationStatus,
   SkillAttemptStatus,
+  ScoringType,
 } from "@/types/evaluations";
+import { Slider } from "@/components/ui/slider";
 
 const statusColors: Record<EvaluationStatus, string> = {
   PENDING: "bg-slate-500/10 text-slate-700 dark:text-slate-400",
@@ -116,6 +118,7 @@ export default function CoachEvaluationsPage() {
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationWithRelations | null>(null);
   const [skillRatings, setSkillRatings] = useState<Record<string, SkillAttemptStatus>>({});
+  const [skillPointScores, setSkillPointScores] = useState<Record<string, number>>({});
   const [skillComments, setSkillComments] = useState<Record<string, string>>({});
   const [overallStatus, setOverallStatus] = useState<EvaluationStatus>("SATISFACTORY");
   const [overallNotes, setOverallNotes] = useState("");
@@ -216,16 +219,23 @@ export default function CoachEvaluationsPage() {
     
     // Initialize skill ratings from existing data
     const ratings: Record<string, SkillAttemptStatus> = {};
+    const pointScores: Record<string, number> = {};
     const comments: Record<string, string> = {};
+    
+    // Get default values based on template scoring config
+    const template = evaluation.template;
+    const defaultPointScore = template?.pointScaleMin || 1;
     
     evaluation.skillRatings?.forEach((sr) => {
       ratings[sr.skillId] = sr.attemptStatus;
+      pointScores[sr.skillId] = sr.pointScore ?? defaultPointScore;
       if (sr.comment) {
         comments[sr.skillId] = sr.comment;
       }
     });
     
     setSkillRatings(ratings);
+    setSkillPointScores(pointScores);
     setSkillComments(comments);
     setOverallStatus(evaluation.status === "PENDING" || evaluation.status === "IN_PROGRESS" 
       ? "SATISFACTORY" 
@@ -240,24 +250,62 @@ export default function CoachEvaluationsPage() {
 
     setIsRecording(true);
     try {
-      // Calculate overall score based on skill attempt statuses
+      const template = selectedEvaluation.template;
+      const scoringType: ScoringType = template?.scoringType || "PASS_FAIL";
+      const passThreshold = template?.pointScalePassThreshold || 7;
+      
+      // Calculate overall score based on scoring type
+      let overallScore = 0;
       const skillCount = Object.keys(skillRatings).length;
-      const succeededCount = Object.values(skillRatings).filter(s => s === "SUCCEEDED").length;
-      const attemptedCount = Object.values(skillRatings).filter(s => s === "ATTEMPTED").length;
-      const overallScore = skillCount > 0 
-        ? Math.round((succeededCount * 10 + attemptedCount * 5) / skillCount * 10) / 10
-        : 0;
+      
+      if (scoringType === "POINT_SCALE") {
+        // Average of point scores
+        const pointScoresValues = Object.values(skillPointScores);
+        if (pointScoresValues.length > 0) {
+          overallScore = Math.round(
+            pointScoresValues.reduce((a, b) => a + b, 0) / pointScoresValues.length * 10
+          ) / 10;
+        }
+      } else {
+        // Pass/fail: calculate based on attempt status
+        const succeededCount = Object.values(skillRatings).filter(s => s === "SUCCEEDED").length;
+        const attemptedCount = Object.values(skillRatings).filter(s => s === "ATTEMPTED").length;
+        overallScore = skillCount > 0 
+          ? Math.round((succeededCount * 10 + attemptedCount * 5) / skillCount * 10) / 10
+          : 0;
+      }
 
-      await api.put(`/api/evaluations/${selectedEvaluation.id}`, {
+      // Build skill ratings with appropriate scoring
+      const skillRatingsPayload = Object.entries(skillRatings).map(([skillId, attemptStatus]) => {
+        const pointScore = skillPointScores[skillId];
+        const passed = scoringType === "POINT_SCALE" 
+          ? pointScore >= passThreshold 
+          : attemptStatus === "SUCCEEDED";
+        
+        return {
+          skillId,
+          attemptStatus,
+          pointScore: scoringType === "POINT_SCALE" ? pointScore : undefined,
+          passed,
+          comment: skillComments[skillId] || undefined,
+        };
+      });
+
+      const response = await api.put(`/api/evaluations/${selectedEvaluation.id}`, {
         status: overallStatus,
         overallScore,
         notes: overallNotes || undefined,
-        skillRatings: Object.entries(skillRatings).map(([skillId, attemptStatus]) => ({
-          skillId,
-          attemptStatus,
-          comment: skillComments[skillId] || undefined,
-        })),
+        skillRatings: skillRatingsPayload,
       });
+      
+      // Check for newly awarded achievements
+      if (response.newAchievements && response.newAchievements.length > 0) {
+        response.newAchievements.forEach((achievement: { achievementName: string }) => {
+          toast.success(`Achievement unlocked: ${achievement.achievementName}!`, {
+            duration: 5000,
+          });
+        });
+      }
       
       toast.success("Evaluation results recorded successfully");
       setIsRecordOpen(false);
@@ -582,52 +630,114 @@ export default function CoachEvaluationsPage() {
           
           <ScrollArea className="h-[calc(100vh-200px)] pr-4">
             <div className="space-y-6 py-4">
+              {/* Scoring Type Info */}
+              {selectedEvaluation?.template && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-sm font-medium">
+                    Scoring: {selectedEvaluation.template.scoringType === "POINT_SCALE" 
+                      ? `Point Scale (${selectedEvaluation.template.pointScaleMin}-${selectedEvaluation.template.pointScaleMax}, pass at ${selectedEvaluation.template.pointScalePassThreshold}+)` 
+                      : "Pass/Fail"}
+                  </p>
+                </div>
+              )}
+              
               {/* Skills */}
               <div className="space-y-4">
                 <Label className="text-base">Skills Assessment</Label>
-                {selectedEvaluation?.skillRatings?.map((sr) => (
-                  <Card key={sr.id}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">{sr.skill.name}</CardTitle>
-                      <CardDescription className="text-xs">
-                        {sr.skill.category} • {sr.skill.difficultyLevel}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <RadioGroup
-                        value={skillRatings[sr.skillId] || "NOT_ATTEMPTED"}
-                        onValueChange={(value) => 
-                          setSkillRatings(prev => ({ ...prev, [sr.skillId]: value as SkillAttemptStatus }))
-                        }
-                        className="flex gap-4"
-                      >
-                        {(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"] as SkillAttemptStatus[]).map((status) => {
-                          const Icon = attemptStatusIcons[status];
-                          return (
-                            <div key={status} className="flex items-center space-x-2">
-                              <RadioGroupItem value={status} id={`${sr.skillId}-${status}`} />
-                              <Label 
-                                htmlFor={`${sr.skillId}-${status}`}
-                                className={`flex items-center gap-1 cursor-pointer ${attemptStatusColors[status]}`}
-                              >
-                                <Icon className="h-4 w-4" />
-                                <span className="text-xs">{attemptStatusLabels[status]}</span>
-                              </Label>
+                {selectedEvaluation?.skillRatings?.map((sr) => {
+                  const template = selectedEvaluation.template;
+                  const scoringType: ScoringType = template?.scoringType || "PASS_FAIL";
+                  const pointMin = template?.pointScaleMin || 1;
+                  const pointMax = template?.pointScaleMax || 10;
+                  const passThreshold = template?.pointScalePassThreshold || 7;
+                  const currentPointScore = skillPointScores[sr.skillId] ?? pointMin;
+                  const isPassing = scoringType === "POINT_SCALE" 
+                    ? currentPointScore >= passThreshold 
+                    : skillRatings[sr.skillId] === "SUCCEEDED";
+                  
+                  return (
+                    <Card key={sr.id}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-sm font-medium">{sr.skill.name}</CardTitle>
+                            <CardDescription className="text-xs">
+                              {sr.skill.category} • {sr.skill.difficultyLevel}
+                            </CardDescription>
+                          </div>
+                          {isPassing && (
+                            <Badge className="bg-green-500/10 text-green-700 dark:text-green-400">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Pass
+                            </Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {scoringType === "POINT_SCALE" ? (
+                          // Point Scale UI
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">
+                                Score: {currentPointScore}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                Pass: {passThreshold}+
+                              </span>
                             </div>
-                          );
-                        })}
-                      </RadioGroup>
-                      <Input
-                        placeholder="Optional comment..."
-                        value={skillComments[sr.skillId] || ""}
-                        onChange={(e) => 
-                          setSkillComments(prev => ({ ...prev, [sr.skillId]: e.target.value }))
-                        }
-                        className="text-sm"
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
+                            <Slider
+                              value={[currentPointScore]}
+                              onValueChange={(value) => 
+                                setSkillPointScores(prev => ({ ...prev, [sr.skillId]: value[0] }))
+                              }
+                              min={pointMin}
+                              max={pointMax}
+                              step={1}
+                              className={isPassing ? "[&_[role=slider]]:bg-green-500" : ""}
+                            />
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>{pointMin}</span>
+                              <span>{pointMax}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          // Pass/Fail UI
+                          <RadioGroup
+                            value={skillRatings[sr.skillId] || "NOT_ATTEMPTED"}
+                            onValueChange={(value) => 
+                              setSkillRatings(prev => ({ ...prev, [sr.skillId]: value as SkillAttemptStatus }))
+                            }
+                            className="flex gap-4"
+                          >
+                            {(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"] as SkillAttemptStatus[]).map((status) => {
+                              const Icon = attemptStatusIcons[status];
+                              return (
+                                <div key={status} className="flex items-center space-x-2">
+                                  <RadioGroupItem value={status} id={`${sr.skillId}-${status}`} />
+                                  <Label 
+                                    htmlFor={`${sr.skillId}-${status}`}
+                                    className={`flex items-center gap-1 cursor-pointer ${attemptStatusColors[status]}`}
+                                  >
+                                    <Icon className="h-4 w-4" />
+                                    <span className="text-xs">{attemptStatusLabels[status]}</span>
+                                  </Label>
+                                </div>
+                              );
+                            })}
+                          </RadioGroup>
+                        )}
+                        <Input
+                          placeholder="Optional comment..."
+                          value={skillComments[sr.skillId] || ""}
+                          onChange={(e) => 
+                            setSkillComments(prev => ({ ...prev, [sr.skillId]: e.target.value }))
+                          }
+                          className="text-sm"
+                        />
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
 
               {/* Overall Status */}
@@ -699,8 +809,19 @@ export default function CoachEvaluationsPage() {
                 {/* Skills */}
                 <div className="space-y-3">
                   <Label className="text-base">Skills Results</Label>
+                  {viewEvaluation.template?.scoringType === "POINT_SCALE" && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Pass threshold: {viewEvaluation.template.pointScalePassThreshold}+
+                    </p>
+                  )}
                   {viewEvaluation.skillRatings?.map((sr) => {
                     const Icon = attemptStatusIcons[sr.attemptStatus];
+                    const scoringType = viewEvaluation.template?.scoringType || "PASS_FAIL";
+                    const passThreshold = viewEvaluation.template?.pointScalePassThreshold || 7;
+                    const isPassing = scoringType === "POINT_SCALE" 
+                      ? (sr.pointScore ?? 0) >= passThreshold 
+                      : sr.attemptStatus === "SUCCEEDED";
+                    
                     return (
                       <div key={sr.id} className="flex items-center justify-between py-2 border-b">
                         <div>
@@ -709,9 +830,20 @@ export default function CoachEvaluationsPage() {
                             <p className="text-xs text-muted-foreground">{sr.comment}</p>
                           )}
                         </div>
-                        <div className={`flex items-center gap-1 ${attemptStatusColors[sr.attemptStatus]}`}>
-                          <Icon className="h-4 w-4" />
-                          <span className="text-sm">{attemptStatusLabels[sr.attemptStatus]}</span>
+                        <div className="flex items-center gap-2">
+                          {scoringType === "POINT_SCALE" ? (
+                            <Badge className={isPassing 
+                              ? "bg-green-500/10 text-green-700 dark:text-green-400" 
+                              : "bg-slate-500/10 text-slate-700 dark:text-slate-400"
+                            }>
+                              {sr.pointScore ?? "-"} / {viewEvaluation.template?.pointScaleMax || 10}
+                            </Badge>
+                          ) : (
+                            <div className={`flex items-center gap-1 ${attemptStatusColors[sr.attemptStatus]}`}>
+                              <Icon className="h-4 w-4" />
+                              <span className="text-sm">{attemptStatusLabels[sr.attemptStatus]}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

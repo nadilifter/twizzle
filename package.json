@@ -12,8 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "db:seed:dev": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed-dev.ts",
-    "db:reset": "prisma migrate reset --force && pnpm db:seed:dev",
+    "db:reset": "prisma migrate reset --force",
     "secrets:decrypt": "./scripts/secrets-decrypt.sh",
     "secrets:encrypt": "./scripts/secrets-encrypt.sh",
     "secrets:edit": "./scripts/secrets-edit.sh"

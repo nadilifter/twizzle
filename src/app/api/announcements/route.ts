@@ -9,6 +9,7 @@ const createAnnouncementSchema = z.object({
   targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "FAMILY"]).default("ALL"),
   targetProgramId: z.string().optional().nullable(),
   targetEventId: z.string().optional().nullable(),
+  priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
 });
 
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
         targetScope: validatedData.targetScope,
         targetProgramId: validatedData.targetProgramId,
         targetEventId: validatedData.targetEventId,
+        priority: validatedData.priority,
         status: validatedData.status,
         publishedAt: validatedData.status === "PUBLISHED" ? new Date() : null,
         organizationId: session.user.organizationId,

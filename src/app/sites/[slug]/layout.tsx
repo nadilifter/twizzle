@@ -8,6 +8,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MarketingAnnouncementBell } from "@/components/marketing-announcement-bell";
 import { CartProvider } from "@/components/sites/cart-context";
 import { CartSheet } from "@/components/sites/cart-sheet";
 import { CartFloatingButton } from "@/components/sites/cart-floating-button";
@@ -263,6 +264,7 @@ export default async function SiteLayout({
                     {config.showContact && <Link href="/contact" className="text-foreground/80 hover:text-primary transition-colors">Contact</Link>}
                 </nav>
                 <div className="flex items-center gap-3 text-sm">
+                    <MarketingAnnouncementBell organizationId={config.organizationId} />
                     <ThemeToggle />
                     <Button asChild size="sm" className="text-sm font-medium">
                         <Link href={loginUrl}>Login</Link>
