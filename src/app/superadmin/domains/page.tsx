@@ -55,7 +55,7 @@ export default async function AdminDomainsPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/admin/domains/reserved">
+          <Link href="/superadmin/domains/reserved">
             <Shield className="mr-2 h-4 w-4" />
             Manage Reserved Domains
           </Link>
@@ -130,7 +130,7 @@ export default async function AdminDomainsPage() {
                   <TableRow key={config.id}>
                     <TableCell className="font-medium">
                       <Link 
-                        href={`/admin/organizations/${config.organization.id}`}
+                        href={`/superadmin/organizations/${config.organization.id}`}
                         className="text-primary hover:underline"
                       >
                         {config.organization.name}
