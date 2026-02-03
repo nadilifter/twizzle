@@ -62,6 +62,18 @@ export default async function AdminDashboardPage() {
                 <span className="font-medium">Campaigns Section</span> (/campaigns) - 
                 <span className="text-muted-foreground ml-2">Hidden from sidebar until ready for release. Includes Advertising, Donation, Merchandise, and Sponsorship.</span>
               </li>
+              <li>
+                <span className="font-medium">Chat</span> (/dashboard/communication/chat) - 
+                <span className="text-muted-foreground ml-2">Hidden from Communication section in admin sidebar.</span>
+              </li>
+              <li>
+                <span className="font-medium">App</span> (/dashboard/organization/app) - 
+                <span className="text-muted-foreground ml-2">Hidden from My Organization section in admin sidebar.</span>
+              </li>
+              <li>
+                <span className="font-medium">Events Section</span> (/dashboard/events, /dashboard/events/calendar) - 
+                <span className="text-muted-foreground ml-2">Hidden from admin sidebar. Calendar and Upcoming events.</span>
+              </li>
             </ul>
           </CardContent>
         </Card>

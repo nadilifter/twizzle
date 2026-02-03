@@ -213,30 +213,12 @@ const data = {
       ],
     },
     {
-      title: "Events",
-      url: "/dashboard/events",
-      items: [
-        {
-          title: "Calendar",
-          url: "/dashboard/events/calendar",
-        },
-        {
-          title: "Upcoming",
-          url: "/dashboard/events",
-        },
-      ],
-    },
-    {
       title: "Communication",
       url: "/dashboard/communication",
       items: [
         {
           title: "Announcements",
           url: "/dashboard/communication/announcements",
-        },
-        {
-          title: "Chat",
-          url: "/dashboard/communication/chat",
         },
         {
           title: "Email",
@@ -256,10 +238,6 @@ const data = {
       title: "My Organization",
       url: "/dashboard/organization",
       items: [
-        {
-          title: "App",
-          url: "/dashboard/organization/app",
-        },
         {
           title: "Facilities",
           url: "/dashboard/organization/facilities",

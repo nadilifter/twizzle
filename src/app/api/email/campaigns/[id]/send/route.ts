@@ -36,7 +36,18 @@ export async function POST(
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
-    // Only allow sending DRAFT or SCHEDULED campaigns
+    // Idempotent: if already sending or completed, return success (e.g. create + sendImmediately race)
+    if (campaign.status === "SENDING" || campaign.status === "COMPLETED") {
+      return NextResponse.json({
+        success: true,
+        message:
+          campaign.status === "SENDING"
+            ? "Campaign is already being sent"
+            : "Campaign has already been sent",
+        totalRecipients: campaign.totalRecipients ?? 0,
+      });
+    }
+
     if (campaign.status !== "DRAFT" && campaign.status !== "SCHEDULED") {
       return NextResponse.json(
         { error: `Cannot send campaign with status: ${campaign.status}` },

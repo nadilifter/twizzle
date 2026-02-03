@@ -47,6 +47,7 @@ import {
 } from "lucide-react"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Calendar } from "@/components/ui/calendar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 
 interface EmailCampaign {
@@ -282,12 +283,11 @@ export default function EmailPage() {
 
       const result = await createResponse.json()
 
-      // If sending immediately, trigger send
+      // When sendImmediately: create API already starts sending in background; calling send is idempotent (returns success if already SENDING)
       if (sendImmediately && result.campaignId) {
         const sendResponse = await fetch(`/api/email/campaigns/${result.campaignId}/send`, {
           method: "POST",
         })
-
         if (!sendResponse.ok) {
           const error = await sendResponse.json()
           throw new Error(error.error || "Failed to send campaign")
@@ -659,10 +659,19 @@ export default function EmailPage() {
                   <Mail className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{usage?.used || 0}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {usage?.included ? `of ${usage.included} included this month` : "this month"}
-                  </p>
+                  {isLoading ? (
+                    <>
+                      <Skeleton className="h-8 w-16 mb-2" />
+                      <Skeleton className="h-3 w-24" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{usage?.used ?? 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {usage?.included ? `of ${usage.included} included this month` : "this month"}
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               <Card>
@@ -671,10 +680,19 @@ export default function EmailPage() {
                   <MailOpen className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{avgOpenRate}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    {totalOpened} total opens
-                  </p>
+                  {isLoading ? (
+                    <>
+                      <Skeleton className="h-8 w-12 mb-2" />
+                      <Skeleton className="h-3 w-20" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{avgOpenRate}%</div>
+                      <p className="text-xs text-muted-foreground">
+                        {totalOpened} total opens
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               <Card>
@@ -683,10 +701,19 @@ export default function EmailPage() {
                   <MousePointerClick className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{avgClickRate}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    {totalClicked} total clicks
-                  </p>
+                  {isLoading ? (
+                    <>
+                      <Skeleton className="h-8 w-12 mb-2" />
+                      <Skeleton className="h-3 w-24" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{avgClickRate}%</div>
+                      <p className="text-xs text-muted-foreground">
+                        {totalClicked} total clicks
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               <Card>
@@ -695,10 +722,19 @@ export default function EmailPage() {
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{campaigns.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {campaigns.filter(c => c.status === "COMPLETED").length} completed
-                  </p>
+                  {isLoading ? (
+                    <>
+                      <Skeleton className="h-8 w-8 mb-2" />
+                      <Skeleton className="h-3 w-20" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{campaigns.length}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {campaigns.filter(c => c.status === "COMPLETED").length} completed
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
