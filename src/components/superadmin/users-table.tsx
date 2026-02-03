@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Users } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Users, MoreHorizontal, KeyRound } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
 import { Badge } from "@/components/ui/badge"
@@ -34,7 +34,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { toast } from "sonner"
 
 // Type definitions
 interface OrganizationMembership {
@@ -153,6 +161,23 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
   const [roleFilter, setRoleFilter] = React.useState<string>("all")
   const [orgFilter, setOrgFilter] = React.useState<string>("all")
   const [statusFilter, setStatusFilter] = React.useState<string>("all")
+
+  const handleSendPasswordReset = async (user: User) => {
+    try {
+      const response = await fetch(`/api/superadmin/users/${user.id}/send-password-reset`, {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to send password reset email")
+      }
+
+      toast.success(`Password reset email sent to ${user.email}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send password reset email")
+    }
+  }
 
   // Filter data based on all filters
   const filteredData = React.useMemo(() => {
@@ -282,6 +307,30 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
           <span className="text-sm text-muted-foreground">
             {formatCreatedDate(row.original.createdAt)}
           </span>
+        )
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const user = row.original
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleSendPasswordReset(user)}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                Send Password Reset
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )
       },
     },

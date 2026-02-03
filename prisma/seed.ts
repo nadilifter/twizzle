@@ -67,45 +67,66 @@ async function main() {
   // Use slug for where clause to be idempotent regardless of IDs
   const freePlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "free" },
-    update: {},
+    update: {
+      // Update existing plans with email limits
+      emailIncluded: null, // No email campaigns on free plan
+      emailOverageRate: null,
+    },
     create: {
       name: "Free", slug: "free", description: "Perfect for getting started",
       monthlyPrice: 0, yearlyPrice: 0, transactionFee: 0.05, perTransactionFee: 0.50,
       maxAthletes: 25, maxUsers: 2, maxEvents: 10,
+      smsIncluded: null, smsOverageRate: null,
+      emailIncluded: null, emailOverageRate: null, // No email campaigns on free plan
       features: ["Basic scheduling", "Up to 25 athletes", "Email support"],
       isPopular: false, displayOrder: 0, isActive: true, isPublic: true,
     },
   });
   const starterPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "starter" },
-    update: {},
+    update: {
+      emailIncluded: 500, // 500 emails/month
+      emailOverageRate: 0.005, // $0.005 per email over limit
+    },
     create: {
       name: "Starter", slug: "starter", description: "For growing organizations",
       monthlyPrice: 49, yearlyPrice: 470, transactionFee: 0.035, perTransactionFee: 0.35,
       maxAthletes: 100, maxUsers: 5, maxEvents: 50,
-      features: ["Advanced scheduling", "Up to 100 athletes", "Priority email support", "Basic reporting"],
+      smsIncluded: 100, smsOverageRate: 0.05,
+      emailIncluded: 500, emailOverageRate: 0.005, // 500 emails/month, $0.005 per extra
+      features: ["Advanced scheduling", "Up to 100 athletes", "Priority email support", "Basic reporting", "500 email campaigns/month"],
       isPopular: false, displayOrder: 1, isActive: true, isPublic: true,
     },
   });
   const goldPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "gold" },
-    update: {},
+    update: {
+      emailIncluded: 2500, // 2500 emails/month
+      emailOverageRate: 0.003, // $0.003 per email over limit
+    },
     create: {
       name: "Gold", slug: "gold", description: "Most popular for established clubs",
       monthlyPrice: 149, yearlyPrice: 1430, transactionFee: 0.029, perTransactionFee: 0.30,
       maxAthletes: 500, maxUsers: 15, maxEvents: null,
-      features: ["Unlimited events", "Up to 500 athletes", "Phone support", "Advanced reporting", "Custom branding"],
+      smsIncluded: 500, smsOverageRate: 0.04,
+      emailIncluded: 2500, emailOverageRate: 0.003, // 2500 emails/month, $0.003 per extra
+      features: ["Unlimited events", "Up to 500 athletes", "Phone support", "Advanced reporting", "Custom branding", "2,500 email campaigns/month"],
       isPopular: true, displayOrder: 2, isActive: true, isPublic: true,
     },
   });
   const platinumPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "platinum" },
-    update: {},
+    update: {
+      emailIncluded: 10000, // 10000 emails/month
+      emailOverageRate: 0.002, // $0.002 per email over limit
+    },
     create: {
       name: "Platinum", slug: "platinum", description: "Enterprise-grade solution",
       monthlyPrice: 349, yearlyPrice: 3350, transactionFee: 0.025, perTransactionFee: 0.25,
       maxAthletes: null, maxUsers: null, maxEvents: null,
-      features: ["Unlimited everything", "Dedicated support", "Custom integrations", "White-label options", "SLA guarantee"],
+      smsIncluded: 2000, smsOverageRate: 0.03,
+      emailIncluded: 10000, emailOverageRate: 0.002, // 10000 emails/month, $0.002 per extra
+      features: ["Unlimited everything", "Dedicated support", "Custom integrations", "White-label options", "SLA guarantee", "10,000 email campaigns/month"],
       isPopular: false, displayOrder: 3, isActive: true, isPublic: true,
     },
   });

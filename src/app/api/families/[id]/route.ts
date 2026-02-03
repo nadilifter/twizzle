@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const updateFamilySchema = z.object({
-  name: z.string().min(1).optional(),
-  primaryContact: z.string().min(1).optional(),
-  email: z.string().email().optional(),
-  phone: z.string().min(1).optional(),
-  address: z.string().optional(),
+  name: z.string().min(1, "Name is required").optional(),
+  primaryContact: z.string().min(1, "Primary contact is required").optional(),
+  email: z.string().email("Invalid email").optional(),
+  phone: z.string().min(1, "Phone is required").optional(),
+  address: z.string().optional().nullable(),
 });
 
-// GET /api/families/[id]
+// GET /api/families/[id] - Get a single family with full details
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -22,20 +22,41 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!session.user.organizationId) {
+      return NextResponse.json(
+        { error: "Please select an organization first" },
+        { status: 400 }
+      );
+    }
+
     const { id } = await params;
-    const family = await db.family.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId,
-      },
+    const scopedDb = getScopedDb(session.user.organizationId);
+
+    const family = await scopedDb.family.findUnique({
+      where: { id },
       include: {
         guardians: {
           include: {
             athlete: {
-              include: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                level: true,
+                group: true,
+                status: true,
+                avatar: true,
+                birthDate: true,
                 enrollments: {
                   include: {
-                    program: true,
+                    program: {
+                      select: {
+                        id: true,
+                        name: true,
+                        level: true,
+                        status: true,
+                      },
+                    },
                   },
                 },
               },
@@ -44,11 +65,11 @@ export async function GET(
         },
         paymentMethods: true,
         invoices: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
           include: {
             lineItems: true,
           },
+          orderBy: { createdAt: "desc" },
+          take: 10,
         },
       },
     });
@@ -57,9 +78,10 @@ export async function GET(
       return NextResponse.json({ error: "Family not found" }, { status: 404 });
     }
 
+    // Transform the response to match the expected type
     const transformedFamily = {
       ...family,
-      athletes: family.guardians.map(g => g.athlete),
+      athletes: family.guardians.map((g) => g.athlete),
     };
 
     return NextResponse.json(transformedFamily);
@@ -72,7 +94,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/families/[id]
+// PATCH /api/families/[id] - Update a family
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -83,13 +105,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Super admins bypass permission checks
+    if (!session.user.organizationId) {
+      return NextResponse.json(
+        { error: "Please select an organization first" },
+        { status: 400 }
+      );
+    }
+
+    // Check permissions
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
     if (
       !isSuperAdmin &&
       !permissions.includes("*") &&
-      !permissions.includes("families.edit")
+      !permissions.includes("families.update")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -97,33 +126,44 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const validatedData = updateFamilySchema.parse(body);
+    const scopedDb = getScopedDb(session.user.organizationId);
 
-    const existing = await db.family.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId,
-      },
+    // Check if family exists
+    const existingFamily = await scopedDb.family.findUnique({
+      where: { id },
     });
 
-    if (!existing) {
+    if (!existingFamily) {
       return NextResponse.json({ error: "Family not found" }, { status: 404 });
     }
 
-    const family = await db.family.update({
+    const updatedFamily = await scopedDb.family.update({
       where: { id },
       data: validatedData,
       include: {
         guardians: {
           include: {
-            athlete: true,
+            athlete: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            invoices: true,
+            paymentMethods: true,
           },
         },
       },
     });
 
     const transformedFamily = {
-      ...family,
-      athletes: family.guardians.map(g => g.athlete),
+      ...updatedFamily,
+      athletes: updatedFamily.guardians.map((g) => g.athlete),
     };
 
     return NextResponse.json(transformedFamily);
@@ -142,7 +182,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/families/[id]
+// DELETE /api/families/[id] - Delete a family
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -153,7 +193,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Super admins bypass permission checks
+    if (!session.user.organizationId) {
+      return NextResponse.json(
+        { error: "Please select an organization first" },
+        { status: 400 }
+      );
+    }
+
+    // Check permissions
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
     if (
@@ -165,19 +212,20 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const scopedDb = getScopedDb(session.user.organizationId);
 
-    const existing = await db.family.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId,
-      },
+    // Check if family exists
+    const existingFamily = await scopedDb.family.findUnique({
+      where: { id },
     });
 
-    if (!existing) {
+    if (!existingFamily) {
       return NextResponse.json({ error: "Family not found" }, { status: 404 });
     }
 
-    await db.family.delete({ where: { id } });
+    await scopedDb.family.delete({
+      where: { id },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

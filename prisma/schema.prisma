@@ -84,6 +84,11 @@ model Organization {
   smsCampaigns      SmsCampaign[]
   smsUsage          SmsUsage[]
   
+  // Email
+  emailMessages     EmailMessage[]
+  emailCampaigns    EmailCampaign[]
+  emailUsage        EmailUsage[]
+  
   // Medical
   medicalFormConfig      MedicalFormConfig?
   customMedicalQuestions CustomMedicalQuestion[]
@@ -280,6 +285,10 @@ model Family {
   // SMS Preferences
   smsOptOut      Boolean  @default(false) // True if family has opted out of SMS
   smsOptOutAt    DateTime?               // When they opted out
+  
+  // Email Preferences
+  emailOptOut    Boolean  @default(false) // True if family has opted out of marketing emails
+  emailOptOutAt  DateTime?               // When they opted out
 
   // Relations
   organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -291,6 +300,7 @@ model Family {
   enrollments      Enrollment[] // Enrollments paid/managed by this family
   recurringCharges RecurringCharge[]
   smsMessages      SmsMessage[]
+  emailMessages    EmailMessage[]
 
   // Auth Link
   userId         String?   @unique
@@ -1581,6 +1591,178 @@ model SmsUsage {
 }
 
 // ============================================
+// Email Campaigns
+// ============================================
+
+model EmailMessage {
+  id             String           @id @default(cuid())
+  organizationId String
+  familyId       String?          // Recipient family
+  campaignId     String?          // Part of a campaign
+  
+  // Message details
+  to             String           // Recipient email address
+  from           String           // Sender email (org's from address)
+  subject        String
+  htmlBody       String           @db.Text
+  textBody       String?          @db.Text
+  
+  // SES tracking
+  sesMessageId   String?          @unique // SES message ID for tracking
+  status         EmailStatus      @default(QUEUED)
+  
+  // Classification
+  classification EmailClassification @default(GENERAL)
+  
+  // Engagement tracking
+  openedAt       DateTime?
+  openCount      Int              @default(0)
+  clickedAt      DateTime?
+  clickCount     Int              @default(0)
+  
+  // Timestamps
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  bouncedAt      DateTime?
+  complainedAt   DateTime?
+  failedAt       DateTime?
+  
+  // Error handling
+  bounceType     String?          // "Permanent" or "Transient"
+  bounceSubType  String?          // e.g., "General", "NoEmail", "Suppressed"
+  errorCode      String?
+  errorMessage   String?
+  
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family         Family?          @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  campaign       EmailCampaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([familyId])
+  @@index([campaignId])
+  @@index([sesMessageId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum EmailStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  COMPLAINED
+  FAILED
+}
+
+enum EmailClassification {
+  GENERAL
+  PROGRAM_UPDATE
+  EVENT_UPDATE
+  MEMBERSHIP
+  BILLING
+  NEWSLETTER
+}
+
+model EmailCampaign {
+  id              String              @id @default(cuid())
+  organizationId  String
+  name            String
+  subject         String
+  htmlBody        String              @db.Text
+  textBody        String?             @db.Text
+  classification  EmailClassification @default(GENERAL)
+  
+  // Targeting - reuse AnnouncementScope enum
+  targetScope     AnnouncementScope   @default(ALL)
+  targetProgramId String?
+  targetEventId   String?
+  
+  // Additional targeting options
+  targetMembershipStatus String?      // "ACTIVE", "EXPIRED", or null for all
+  
+  // Status
+  status          EmailCampaignStatus @default(DRAFT)
+  
+  // Statistics
+  totalRecipients Int                 @default(0)
+  sentCount       Int                 @default(0)
+  deliveredCount  Int                 @default(0)
+  openedCount     Int                 @default(0)
+  clickedCount    Int                 @default(0)
+  bouncedCount    Int                 @default(0)
+  complainedCount Int                 @default(0)
+  failedCount     Int                 @default(0)
+  
+  // Scheduling
+  scheduledAt     DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  
+  // Author
+  createdById     String?
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages        EmailMessage[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum EmailCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model EmailUsage {
+  id               String   @id @default(cuid())
+  organizationId   String
+  
+  // Period tracking
+  periodStart      DateTime
+  periodEnd        DateTime
+  
+  // Counts
+  emailsSent       Int      @default(0)
+  emailsDelivered  Int      @default(0)
+  emailsOpened     Int      @default(0)
+  emailsClicked    Int      @default(0)
+  emailsBounced    Int      @default(0)
+  emailsComplained Int      @default(0)
+  emailsFailed     Int      @default(0)
+  
+  // Plan-based tracking
+  includedEmails   Int      @default(0) // From plan
+  overageEmails    Int      @default(0) // Beyond plan limit
+  overageCost      Decimal  @default(0) @db.Decimal(10, 2)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, periodStart])
+  @@index([organizationId])
+  @@index([periodStart])
+}
+
+// ============================================
 // PHASE 7: Website Builder
 // ============================================
 
@@ -1970,6 +2152,10 @@ model SubscriptionPlan {
   // SMS Limits
   smsIncluded       Int?     // Messages included per month (null = no SMS)
   smsOverageRate    Decimal? @db.Decimal(10, 4) // Cost per message over limit (e.g., 0.05 for $0.05)
+  
+  // Email Limits
+  emailIncluded     Int?     // Emails included per month (null = no email campaigns)
+  emailOverageRate  Decimal? @db.Decimal(10, 4) // Cost per email over limit
   
   // Features (stored as JSON for flexibility)
   features          Json     // Array of feature strings

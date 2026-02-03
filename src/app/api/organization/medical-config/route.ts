@@ -72,18 +72,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    // Check if user has admin permissions
-    const membership = await db.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: organizationId,
-          userId: session.user.id,
+    // Super admins bypass permission checks
+    const isSuperAdmin = session.user.isSuperAdmin === true;
+    
+    if (!isSuperAdmin) {
+      // Check if user has admin permissions
+      const membership = await db.organizationMember.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId: organizationId,
+            userId: session.user.id,
+          },
         },
-      },
-    });
+      });
 
-    if (!membership || membership.role !== "ADMIN") {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+      if (!membership || membership.role !== "ADMIN") {
+        return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+      }
     }
 
     const body = await request.json();

@@ -134,7 +134,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Chat feature uses sample conversations",
   },
   "/dashboard/communication/email": {
-    status: "demo",
+    status: "live",
     description: "Email management uses sample data",
   },
   "/dashboard/communication/notifications": {
@@ -159,6 +159,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   "/dashboard/organization/facilities": {
     status: "live",
     description: "Facility management with full CRUD operations",
+  },
+  "/dashboard/organization/medical": {
+    status: "live",
+    description: "Medical form configuration and custom questions management",
+    apiRoutes: ["/api/organization/medical-config", "/api/organization/medical-questions", "/api/athletes/[id]/medical"],
   },
   "/dashboard/organization/schedules": {
     status: "live",

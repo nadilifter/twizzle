@@ -8,7 +8,6 @@ import {
   MoreHorizontal, 
   Mail, 
   Phone, 
-  CreditCard,
   Users,
   Loader2,
   AlertCircle
@@ -34,13 +33,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import { useFamilies } from "@/hooks/use-families"
+import { FamilyDialog } from "@/components/families/family-dialog"
+import type { FamilyWithRelations, CreateFamilyPayload, UpdateFamilyPayload } from "@/types/families"
 
 export default function FamiliesPage() {
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [editingFamily, setEditingFamily] = React.useState<FamilyWithRelations | null>(null)
   
-  const { families, isLoading, error, fetchFamilies } = useFamilies()
+  const { families, isLoading, isCreating, isUpdating, error, fetchFamilies, createFamily, updateFamily } = useFamilies()
 
   // Debounced search effect
   React.useEffect(() => {
@@ -51,6 +53,23 @@ export default function FamiliesPage() {
     return () => clearTimeout(timer)
   }, [searchTerm, fetchFamilies])
 
+  const handleAddFamily = () => {
+    setEditingFamily(null)
+    setDialogOpen(true)
+  }
+
+  const handleEditFamily = (family: FamilyWithRelations) => {
+    setEditingFamily(family)
+    setDialogOpen(true)
+  }
+
+  const handleSubmit = async (data: CreateFamilyPayload | UpdateFamilyPayload) => {
+    if (editingFamily) {
+      return updateFamily(editingFamily.id, data as UpdateFamilyPayload)
+    }
+    return createFamily(data as CreateFamilyPayload)
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
@@ -60,7 +79,7 @@ export default function FamiliesPage() {
             Manage family accounts, billing, and contact information.
           </p>
         </div>
-        <Button>
+        <Button onClick={handleAddFamily}>
           <Plus className="mr-2 h-4 w-4" />
           Add Family
         </Button>
@@ -167,7 +186,9 @@ export default function FamiliesPage() {
                             View Details
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Edit Family</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditFamily(family)}>
+                          Edit Family
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>Create Invoice</DropdownMenuItem>
                         <DropdownMenuItem>Process Payment</DropdownMenuItem>
@@ -187,6 +208,14 @@ export default function FamiliesPage() {
           </Table>
         </div>
       )}
+
+      <FamilyDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        family={editingFamily}
+        onSubmit={handleSubmit}
+        isSubmitting={isCreating || isUpdating}
+      />
     </div>
   )
 }

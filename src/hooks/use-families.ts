@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import type {
   FamilyWithRelations,
@@ -53,12 +53,15 @@ export function useFamilies(options: UseFamiliesOptions = {}): UseFamiliesReturn
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentParams, setCurrentParams] = useState<FamiliesQueryParams>(initialParams);
+  
+  // Use ref to store current params to avoid infinite loops
+  // (fetchFamilies can read it without it being a dependency)
+  const currentParamsRef = useRef<FamiliesQueryParams>(initialParams);
 
   // Fetch families list
   const fetchFamilies = useCallback(async (params?: FamiliesQueryParams) => {
-    const queryParams = params ?? currentParams;
-    setCurrentParams(queryParams);
+    const queryParams = params ?? currentParamsRef.current;
+    currentParamsRef.current = queryParams;
     setIsLoading(true);
     setError(null);
 
@@ -73,7 +76,7 @@ export function useFamilies(options: UseFamiliesOptions = {}): UseFamiliesReturn
     } finally {
       setIsLoading(false);
     }
-  }, [currentParams]);
+  }, []);
 
   // Create family
   const createFamily = useCallback(async (data: CreateFamilyPayload): Promise<FamilyWithRelations | null> => {
@@ -158,8 +161,8 @@ export function useFamilies(options: UseFamiliesOptions = {}): UseFamiliesReturn
 
   // Refresh current data
   const refresh = useCallback(async () => {
-    await fetchFamilies(currentParams);
-  }, [fetchFamilies, currentParams]);
+    await fetchFamilies(currentParamsRef.current);
+  }, [fetchFamilies]);
 
   // Clear error
   const clearError = useCallback(() => {

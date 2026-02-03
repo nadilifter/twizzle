@@ -9,7 +9,8 @@ import {
   Shield, 
   Mail,
   Check,
-  Loader2
+  Loader2,
+  KeyRound
 } from "lucide-react"
 
 import {
@@ -277,6 +278,23 @@ export default function UsersPage() {
     }
   }
 
+  const handleSendPasswordReset = async (user: User) => {
+    try {
+      const response = await fetch(`/api/users/${user.id}/send-password-reset`, {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to send password reset email")
+      }
+
+      toast.success(`Password reset email sent to ${user.email}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send password reset email")
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
@@ -402,6 +420,10 @@ export default function UsersPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => handleEditUser(user)}>
                               Edit Permissions
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendPasswordReset(user)}>
+                              <KeyRound className="mr-2 h-4 w-4" />
+                              Send Password Reset
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-destructive"
