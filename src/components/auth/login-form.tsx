@@ -6,37 +6,51 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { signIn, getCsrfToken } from "next-auth/react"
 import { toast } from "sonner"
 import { UplifterLogo } from "@/components/uplifter-logo"
 
 /**
- * Get the OAuth host URL based on environment.
+ * Check if we're on a local subdomain (e.g., login.uplifterinc.localhost)
+ * vs localhost:3000 directly
+ */
+function isLocalSubdomain(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.location.hostname.endsWith("uplifterinc.localhost");
+}
+
+/**
+ * KNOWN ISSUE: Google OAuth on local subdomains (e.g., login.uplifterinc.localhost:3000)
  * 
- * LOCAL DEVELOPMENT:
- *   Google OAuth doesn't allow subdomains on localhost (e.g., login.uplifterinc.localhost).
- *   So we must use localhost:3000 for OAuth callbacks, then the session-bridge
- *   transfers the session to the uplifterinc.localhost subdomains.
+ * STATUS: Not fully working in local development. Works in production.
+ * 
+ * PROBLEM:
+ * Google OAuth requires localhost:3000 as the callback URL (Google doesn't allow
+ * localhost subdomains like login.uplifterinc.localhost). We tried several approaches:
+ * 
+ * 1. Cross-origin CSRF fetch: Fetch CSRF token from localhost:3000, submit form there.
+ *    FAILED: SameSite=Lax cookies prevent the CSRF cookie from being set cross-origin.
+ * 
+ * 2. Redirect-then-auto-trigger: Redirect to localhost:3000/login?provider=google,
+ *    auto-submit the OAuth form from there.
+ *    PARTIALLY WORKS: Redirects correctly but OAuth flow may still have issues.
+ * 
+ * WORKAROUND FOR LOCAL DEV:
+ * - Use credentials (email/password) login instead of Google OAuth
+ * - Or navigate directly to localhost:3000/login and use Google OAuth from there
  * 
  * PRODUCTION:
- *   OAuth goes directly through login.uplifterinc.com.
+ * This issue does NOT affect production. In production, OAuth goes through
+ * login.uplifterinc.com directly with proper cookie handling.
+ * 
+ * TODO: Investigate further if Google OAuth on local subdomains becomes critical.
+ * Possible solutions:
+ * - Use a tunneling service (ngrok) for local development
+ * - Set up a proper local domain with SSL (requires hosts file + mkcert)
+ * - Accept the limitation and use credentials login for local dev
  */
-function getOAuthHost(): string {
-  if (typeof window === "undefined") return "http://localhost:3000";
-  
-  const hostname = window.location.hostname;
-  const isLocal = hostname.includes("localhost");
-  
-  if (isLocal) {
-    // Google OAuth must go through localhost:3000 (not subdomains)
-    return "http://localhost:3000";
-  } else {
-    // Production: OAuth goes through the login subdomain
-    return "https://login.uplifterinc.com";
-  }
-}
 
 /**
  * Get the default callback URL based on current domain.
@@ -67,6 +81,9 @@ export function LoginForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const urlCallbackParam = searchParams.get("callbackUrl")
+  const providerParam = searchParams.get("provider")
+  const googleFormRef = useRef<HTMLFormElement>(null)
+  const [autoGoogleTriggered, setAutoGoogleTriggered] = useState(false)
   
   // Use URL param if provided, otherwise compute default based on domain
   const callbackUrl = useMemo(() => {
@@ -78,34 +95,33 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [csrfToken, setCsrfToken] = useState<string>("")
   const [googleCsrfToken, setGoogleCsrfToken] = useState<string>("")
-  
-  // Determine OAuth host based on environment
-  const oauthHost = useMemo(() => getOAuthHost(), [])
 
   useEffect(() => {
-    // Get CSRF token for current domain (credentials login)
+    // Get CSRF token for current domain
+    // This works for both credentials login AND Google OAuth when on localhost:3000
     getCsrfToken().then((token) => {
-      if (token) setCsrfToken(token)
+      if (token) {
+        setCsrfToken(token)
+        // In local dev, use same token for Google OAuth since we redirect to localhost:3000 first
+        // In production, same origin so this works directly
+        setGoogleCsrfToken(token)
+      }
     })
-    
-    // Get CSRF token from the OAuth host for Google OAuth
-    // In local dev, this is localhost:3000 (Google's restriction)
-    // In production, this is login.uplifterinc.com
-    fetch(`${oauthHost}/api/auth/csrf`, {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.csrfToken) setGoogleCsrfToken(data.csrfToken)
-      })
-      .catch((err) => {
-        console.error("Failed to fetch Google CSRF token:", err)
-        // Fallback to regular token (may work if same secret is used)
-        getCsrfToken().then((token) => {
-          if (token) setGoogleCsrfToken(token)
-        })
-      })
-  }, [oauthHost])
+  }, [])
+  
+  // Auto-trigger Google OAuth if redirected here with provider=google
+  // This happens when a local subdomain redirects to localhost:3000 for OAuth
+  useEffect(() => {
+    if (providerParam === "google" && googleCsrfToken && !autoGoogleTriggered && googleFormRef.current) {
+      // Only auto-trigger on localhost:3000 (not on subdomains)
+      // Subdomains redirect here, then we trigger OAuth from localhost:3000
+      if (!isLocalSubdomain()) {
+        setAutoGoogleTriggered(true)
+        setIsLoading(true)
+        googleFormRef.current.submit()
+      }
+    }
+  }, [providerParam, googleCsrfToken, autoGoogleTriggered])
   
   // Check for OAuth errors in URL params
   const urlError = searchParams.get("error")
@@ -221,19 +237,39 @@ export function LoginForm() {
   const handleGoogleSignIn = () => {
     setIsLoading(true)
     setError(null)
-    // Submit the hidden Google form
-    const form = document.getElementById('google-signin-form') as HTMLFormElement
-    if (form) form.submit()
+    
+    // LOCAL DEVELOPMENT FLOW:
+    // When on a local subdomain (e.g., login.uplifterinc.localhost), we can't submit
+    // the Google OAuth form directly because:
+    // 1. Google only allows localhost:3000 as OAuth callback (not subdomains)
+    // 2. CSRF tokens/cookies can't be shared cross-origin with SameSite=Lax
+    //
+    // Solution: Redirect to localhost:3000/login?provider=google first.
+    // The login page on localhost:3000 will auto-trigger Google OAuth.
+    if (isLocalSubdomain()) {
+      const redirectUrl = new URL("http://localhost:3000/login")
+      redirectUrl.searchParams.set("provider", "google")
+      redirectUrl.searchParams.set("callbackUrl", callbackUrl)
+      window.location.href = redirectUrl.toString()
+      return
+    }
+    
+    // On localhost:3000 or production: submit the form directly
+    if (googleFormRef.current) {
+      googleFormRef.current.submit()
+    }
   }
 
   return (
     <>
         {/* Hidden form for Google OAuth
-            - Local dev: Posts to localhost:3000 (Google doesn't allow localhost subdomains)
-            - Production: Posts to login.uplifterinc.com */}
+            - On localhost:3000: Posts directly to /api/auth/signin/google
+            - On production: Posts directly to /api/auth/signin/google
+            - On local subdomains: handleGoogleSignIn redirects to localhost:3000 first */}
         <form 
+          ref={googleFormRef}
           id="google-signin-form"
-          action={`${oauthHost}/api/auth/signin/google`}
+          action="/api/auth/signin/google"
           method="POST"
           style={{ display: 'none' }}
         >
