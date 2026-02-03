@@ -36,6 +36,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Debug: Log all cookies to diagnose session issues
+    const allCookies = req.cookies.getAll();
+    console.log("Credentials bridge: All cookies:", allCookies.map(c => c.name));
+    
+    const sessionCookie = req.cookies.get("next-auth.session-token");
+    console.log("Credentials bridge: Session cookie present:", !!sessionCookie);
+    
     // Get the JWT token from the current session
     const token = await getToken({ 
       req, 
@@ -43,8 +50,12 @@ export async function GET(req: NextRequest) {
       cookieName: "next-auth.session-token",
     });
 
+    console.log("Credentials bridge: Token result:", token ? `Found (email: ${token.email})` : "Not found");
+
     if (!token || !token.email) {
       console.error("Credentials bridge: No valid session found");
+      console.error("Credentials bridge: Request origin:", req.nextUrl.origin);
+      console.error("Credentials bridge: Request host:", req.headers.get("host"));
       const loginUrl = new URL("/login", req.nextUrl.origin);
       loginUrl.searchParams.set("error", "SessionMissing");
       return NextResponse.redirect(loginUrl);
