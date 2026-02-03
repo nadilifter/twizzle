@@ -141,28 +141,74 @@ export function LoginForm() {
     setError(null)
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        // Clear password on failed attempt
-        setPassword("")
-        // Show user-friendly error message
-        const errorMessage = result.error === "CredentialsSignin" 
-          ? "Invalid email or password. Please try again."
-          : result.error
-        setError(errorMessage)
-        toast.error(errorMessage)
+      const hostname = window.location.hostname
+      const isLocalSubdomain = hostname.endsWith("uplifterinc.localhost")
+      
+      // For local subdomains, we need to make a direct fetch to the current origin
+      // because next-auth's signIn() uses NEXTAUTH_URL (localhost:3000) as the base URL,
+      // which would set the cookie on the wrong domain.
+      if (isLocalSubdomain) {
+        // Make a direct POST to the current origin's callback endpoint
+        const response = await fetch("/api/auth/callback/credentials", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            csrfToken: csrfToken,
+            email: email,
+            password: password,
+            json: "true",
+          }),
+          credentials: "include",
+        })
+        
+        const data = await response.json()
+        
+        if (data.url && !data.url.includes("error=")) {
+          // Success - now go through the credentials-bridge to set the shared domain cookie
+          const destination = callbackUrl.startsWith("http") ? callbackUrl : `http://admin.uplifterinc.localhost:3000${callbackUrl}`
+          window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(destination)}`
+        } else {
+          // Error response
+          setPassword("")
+          const errorMessage = "Invalid email or password. Please try again."
+          setError(errorMessage)
+          toast.error(errorMessage)
+        }
       } else {
-        // Redirect to root - middleware will handle routing to
-        // /switch-organization (if multi-org) or /dashboard (if single org)
-        router.push("/")
-        router.refresh()
+        // For localhost:3000 or production, use the standard signIn function
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        })
+
+        if (result?.error) {
+          // Clear password on failed attempt
+          setPassword("")
+          // Show user-friendly error message
+          const errorMessage = result.error === "CredentialsSignin" 
+            ? "Invalid email or password. Please try again."
+            : result.error
+          setError(errorMessage)
+          toast.error(errorMessage)
+        } else {
+          // Production or localhost:3000 - redirect normally
+          const isLocal = hostname.includes("localhost")
+          if (isLocal) {
+            // On localhost:3000, use credentials-bridge for subdomain redirect
+            const destination = callbackUrl.startsWith("http") ? callbackUrl : `http://admin.uplifterinc.localhost:3000${callbackUrl}`
+            window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(destination)}`
+          } else {
+            // Production - middleware will handle routing
+            router.push("/")
+            router.refresh()
+          }
+        }
       }
-    } catch {
+    } catch (err) {
+      console.error("Login error:", err)
       setPassword("")
       const errorMessage = "An error occurred. Please try again."
       setError(errorMessage)
