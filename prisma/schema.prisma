@@ -98,6 +98,10 @@ model Organization {
   
   // Invitations
   invitations            OrganizationInvitation[]
+  
+  // Notification Rules
+  notificationRules      NotificationRule[]
+  notificationLogs       NotificationLog[]
 }
 
 model OrganizationMember {
@@ -2524,4 +2528,231 @@ enum ReservationStatus {
   ACTIVE
   COMPLETED
   EXPIRED
+}
+
+// ============================================
+// PHASE 11: Notification Rules System
+// ============================================
+
+// Notification trigger types - what events can trigger a notification
+enum NotificationTriggerType {
+  // Membership-related
+  MEMBERSHIP_EXPIRY         // Membership is expiring
+  MEMBERSHIP_EXPIRED        // Membership has expired
+  
+  // Payment-related
+  PAYMENT_DUE               // Payment is due
+  PAYMENT_OVERDUE           // Payment is overdue
+  PAYMENT_RECEIVED          // Payment was received
+  
+  // Program-related
+  PROGRAM_REMINDER          // Upcoming class/session reminder
+  PROGRAM_ENROLLMENT        // Athlete enrolled in program
+  PROGRAM_CANCELLATION      // Program/class cancelled
+  
+  // Event-related
+  EVENT_REMINDER            // Upcoming event reminder
+  EVENT_REGISTRATION_OPEN   // Registration opens for an event
+  EVENT_REGISTRATION_CLOSE  // Registration closing soon
+  
+  // Athlete-related
+  ATTENDANCE_MISSED         // Athlete missed attendance
+  SKILL_ACHIEVED            // New skill achievement
+  EVALUATION_DUE            // Evaluation is due
+  EVALUATION_COMPLETED      // Evaluation was completed
+  BIRTHDAY                  // Athlete birthday
+  
+  // Administrative
+  WAITLIST_OPENING          // Spot available from waitlist
+  CONTRACT_RENEWAL          // Contract up for renewal
+  MAKEUP_CLASS_EXPIRING     // Makeup class credit expiring
+  
+  // Custom
+  CUSTOM                    // Custom/manual trigger
+}
+
+// Action types - what happens when notification triggers
+enum NotificationActionType {
+  ANNOUNCEMENT              // Post an in-app announcement
+  EMAIL                     // Send an email
+  SMS                       // Send an SMS message
+  // PUSH                   // Push notification (future - for mobile app)
+}
+
+// Recipient types - who receives the notification
+enum NotificationRecipientType {
+  ALL_FAMILIES              // All families in organization
+  ALL_ATHLETES              // All athletes (via their guardians)
+  PROGRAM_MEMBERS           // Athletes/families in specific programs
+  MEMBERSHIP_HOLDERS        // Athletes with specific memberships
+  INTERNAL_USERS            // Staff, coaches, admins
+  CUSTOM                    // Custom filter combination
+}
+
+// Timing direction - before or after the trigger event
+enum NotificationTimingDirection {
+  BEFORE                    // X days/hours before event
+  AFTER                     // X days/hours after event
+  AT                        // At the time of event (0 offset)
+}
+
+// Timing unit
+enum NotificationTimingUnit {
+  MINUTES
+  HOURS
+  DAYS
+  WEEKS
+  MONTHS
+}
+
+// Notification Rule - defines when and how to send notifications
+model NotificationRule {
+  id             String   @id @default(cuid())
+  organizationId String
+  
+  // Rule identification
+  name           String
+  description    String?  @db.Text
+  
+  // Trigger configuration
+  triggerType    NotificationTriggerType
+  
+  // Timing configuration
+  timingValue    Int      @default(0)  // e.g., 3 (days)
+  timingUnit     NotificationTimingUnit @default(DAYS)
+  timingDirection NotificationTimingDirection @default(BEFORE)
+  
+  // Action configuration
+  actionType     NotificationActionType
+  
+  // System flag - true for mandatory rules that cannot be disabled/deleted
+  isSystem       Boolean  @default(false)
+  
+  // Status
+  isActive       Boolean  @default(true)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template       NotificationTemplate?
+  recipientConfig NotificationRecipientConfig?
+  logs           NotificationLog[]
+
+  @@index([organizationId])
+  @@index([triggerType])
+  @@index([isSystem])
+  @@index([isActive])
+}
+
+// Notification Template - the message content with placeholders
+model NotificationTemplate {
+  id                String   @id @default(cuid())
+  notificationRuleId String  @unique
+  
+  // Email-specific fields
+  subject           String?  // Email subject line (with placeholders)
+  
+  // Message content
+  body              String   @db.Text  // Main message body (with placeholders)
+  
+  // SMS-specific (shorter version)
+  smsBody           String?  @db.Text  // SMS-optimized version (shorter)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  notificationRule  NotificationRule @relation(fields: [notificationRuleId], references: [id], onDelete: Cascade)
+}
+
+// Notification Recipient Config - who receives the notification
+model NotificationRecipientConfig {
+  id                String   @id @default(cuid())
+  notificationRuleId String  @unique
+  
+  // Primary recipient type
+  recipientType     NotificationRecipientType @default(ALL_FAMILIES)
+  
+  // Filters (JSON for flexibility)
+  // Structure: {
+  //   programIds?: string[],
+  //   membershipGroupIds?: string[],
+  //   membershipStatuses?: string[],
+  //   athleteStatuses?: string[],
+  //   userRoles?: string[],
+  //   includeInactive?: boolean
+  // }
+  filters           Json?
+  
+  // Include CC recipients (e.g., always CC the admin)
+  ccEmails          String[] @default([])
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  notificationRule  NotificationRule @relation(fields: [notificationRuleId], references: [id], onDelete: Cascade)
+}
+
+// Notification Log - tracks sent notifications for auditing
+model NotificationLog {
+  id                String   @id @default(cuid())
+  organizationId    String
+  notificationRuleId String?
+  
+  // What was sent
+  triggerType       NotificationTriggerType
+  actionType        NotificationActionType
+  
+  // Who received it
+  recipientEmail    String?
+  recipientPhone    String?
+  recipientName     String?
+  familyId          String?
+  athleteId         String?
+  userId            String?
+  
+  // Message content (rendered)
+  subject           String?
+  body              String   @db.Text
+  
+  // Status
+  status            NotificationLogStatus @default(PENDING)
+  
+  // Links to actual message records
+  emailMessageId    String?
+  smsMessageId      String?
+  announcementId    String?
+  
+  // Error tracking
+  errorMessage      String?  @db.Text
+  
+  // Timing
+  scheduledFor      DateTime?
+  sentAt            DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  notificationRule  NotificationRule? @relation(fields: [notificationRuleId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([notificationRuleId])
+  @@index([status])
+  @@index([triggerType])
+  @@index([createdAt])
+  @@index([familyId])
+  @@index([athleteId])
+}
+
+enum NotificationLogStatus {
+  PENDING           // Queued but not sent
+  SENT              // Successfully sent
+  DELIVERED         // Confirmed delivered
+  FAILED            // Failed to send
+  SKIPPED           // Skipped (e.g., recipient opted out)
 }

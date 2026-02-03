@@ -138,8 +138,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Email management uses sample data",
   },
   "/dashboard/communication/notifications": {
-    status: "demo",
-    description: "Notifications use sample data",
+    status: "live",
+    description: "Notification rules management with templates and recipient configuration",
+    apiRoutes: ["/api/notifications/rules", "/api/notifications/placeholders", "/api/notifications/preview", "/api/notifications/logs"],
   },
   "/dashboard/communication/sms": {
     status: "live",

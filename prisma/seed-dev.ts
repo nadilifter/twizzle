@@ -2645,6 +2645,415 @@ async function main() {
   console.log(`  ✓ Created ${reservedDomainData.length} reserved domains`);
 
   // ============================================
+  // NOTIFICATION RULES
+  // ============================================
+  console.log("\n🔔 Creating notification rules...");
+
+  // Helper function to create notification rules with templates
+  const createNotificationRule = async (data: {
+    id: string;
+    organizationId: string;
+    name: string;
+    description: string;
+    triggerType: string;
+    timingValue: number;
+    timingUnit: string;
+    timingDirection: string;
+    actionType: string;
+    isSystem: boolean;
+    subject?: string;
+    body: string;
+    smsBody?: string;
+    recipientType: string;
+  }) => {
+    const rule = await prisma.notificationRule.upsert({
+      where: { id: data.id },
+      update: {},
+      create: {
+        id: data.id,
+        organizationId: data.organizationId,
+        name: data.name,
+        description: data.description,
+        triggerType: data.triggerType as any,
+        timingValue: data.timingValue,
+        timingUnit: data.timingUnit as any,
+        timingDirection: data.timingDirection as any,
+        actionType: data.actionType as any,
+        isSystem: data.isSystem,
+        isActive: true,
+      },
+    });
+
+    // Create template
+    await prisma.notificationTemplate.upsert({
+      where: { notificationRuleId: rule.id },
+      update: {},
+      create: {
+        notificationRuleId: rule.id,
+        subject: data.subject,
+        body: data.body,
+        smsBody: data.smsBody,
+      },
+    });
+
+    // Create recipient config
+    await prisma.notificationRecipientConfig.upsert({
+      where: { notificationRuleId: rule.id },
+      update: {},
+      create: {
+        notificationRuleId: rule.id,
+        recipientType: data.recipientType as any,
+        filters: {},
+      },
+    });
+
+    return rule;
+  };
+
+  // System notification rules for Sunrise Gymnastics
+  const sunriseNotificationRules = [
+    {
+      id: `${ORG1_ID}-notif-payment-reminder`,
+      organizationId: ORG1_ID,
+      name: "Payment Reminder",
+      description: "Reminder sent 3 days before payment is due",
+      triggerType: "PAYMENT_DUE",
+      timingValue: 3,
+      timingUnit: "DAYS",
+      timingDirection: "BEFORE",
+      actionType: "EMAIL",
+      isSystem: true,
+      subject: "Payment Reminder - {{invoiceReference}}",
+      body: `Dear {{primaryContact}},
+
+This is a friendly reminder that payment of {{invoiceAmount}} for {{invoiceDescription}} is due on {{dueDate}}.
+
+Invoice Reference: {{invoiceReference}}
+Amount Due: {{invoiceAmount}}
+Due Date: {{dueDate}}
+
+To make a payment, please visit: {{paymentUrl}}
+
+If you have already made this payment, please disregard this notice.
+
+Thank you,
+{{organizationName}}`,
+      smsBody: `{{organizationName}}: Payment of {{invoiceAmount}} ({{invoiceReference}}) is due {{dueDate}}. Pay now: {{paymentUrl}}`,
+      recipientType: "ALL_FAMILIES",
+    },
+    {
+      id: `${ORG1_ID}-notif-payment-urgent`,
+      organizationId: ORG1_ID,
+      name: "Payment Reminder Urgent",
+      description: "Urgent reminder sent 1 day after payment is overdue",
+      triggerType: "PAYMENT_OVERDUE",
+      timingValue: 1,
+      timingUnit: "DAYS",
+      timingDirection: "AFTER",
+      actionType: "EMAIL",
+      isSystem: true,
+      subject: "URGENT: Payment Overdue - {{invoiceReference}}",
+      body: `Dear {{primaryContact}},
+
+This is an urgent reminder that payment of {{invoiceAmount}} for {{invoiceDescription}} is now overdue.
+
+Invoice Reference: {{invoiceReference}}
+Amount Due: {{invoiceAmount}}
+Original Due Date: {{dueDate}}
+
+Please make payment immediately to avoid any service interruptions: {{paymentUrl}}
+
+If you need to discuss payment options, please contact us at {{organizationEmail}}.
+
+Thank you,
+{{organizationName}}`,
+      smsBody: `URGENT from {{organizationName}}: Payment of {{invoiceAmount}} is overdue. Please pay now: {{paymentUrl}}`,
+      recipientType: "ALL_FAMILIES",
+    },
+    {
+      id: `${ORG1_ID}-notif-membership-warning`,
+      organizationId: ORG1_ID,
+      name: "Membership Expiry Warning",
+      description: "Warning sent 7 days before membership expires",
+      triggerType: "MEMBERSHIP_EXPIRY",
+      timingValue: 7,
+      timingUnit: "DAYS",
+      timingDirection: "BEFORE",
+      actionType: "EMAIL",
+      isSystem: true,
+      subject: "Your Membership is Expiring Soon - {{athleteName}}",
+      body: `Dear {{primaryContact}},
+
+This is a reminder that {{athleteName}}'s {{membershipName}} will expire on {{membershipEndDate}}.
+
+Membership: {{membershipName}}
+Athlete: {{athleteName}}
+Expiration Date: {{membershipEndDate}}
+Days Remaining: {{membershipDaysRemaining}}
+
+To ensure uninterrupted participation in classes and events, please renew the membership before it expires.
+
+If you have any questions, please contact us at {{organizationEmail}}.
+
+Thank you for being part of the Sunrise Gymnastics family!
+{{organizationName}}`,
+      smsBody: `{{organizationName}}: {{athleteName}}'s {{membershipName}} expires {{membershipEndDate}}. Please renew to continue participation.`,
+      recipientType: "MEMBERSHIP_HOLDERS",
+    },
+    {
+      id: `${ORG1_ID}-notif-membership-urgent`,
+      organizationId: ORG1_ID,
+      name: "Membership Expiry Urgent",
+      description: "Urgent notice sent 1 day after membership expires",
+      triggerType: "MEMBERSHIP_EXPIRED",
+      timingValue: 1,
+      timingUnit: "DAYS",
+      timingDirection: "AFTER",
+      actionType: "EMAIL",
+      isSystem: true,
+      subject: "URGENT: Membership Expired - {{athleteName}}",
+      body: `Dear {{primaryContact}},
+
+This is an urgent notice that {{athleteName}}'s {{membershipName}} has expired.
+
+Membership: {{membershipName}}
+Athlete: {{athleteName}}
+Expired On: {{membershipEndDate}}
+
+{{athleteName}} will not be able to participate in programs until the membership is renewed.
+
+Please renew as soon as possible to avoid any disruption. Contact us at {{organizationEmail}} if you need assistance.
+
+Thank you,
+{{organizationName}}`,
+      smsBody: `URGENT from {{organizationName}}: {{athleteName}}'s membership has EXPIRED. Please renew immediately to continue participation.`,
+      recipientType: "MEMBERSHIP_HOLDERS",
+    },
+    {
+      id: `${ORG1_ID}-notif-program-reminder`,
+      organizationId: ORG1_ID,
+      name: "Program Reminder",
+      description: "Reminder sent 1 day before class/event",
+      triggerType: "PROGRAM_REMINDER",
+      timingValue: 1,
+      timingUnit: "DAYS",
+      timingDirection: "BEFORE",
+      actionType: "EMAIL",
+      isSystem: true,
+      subject: "Reminder: {{programName}} Tomorrow - {{eventDate}}",
+      body: `Dear {{primaryContact}},
+
+This is a reminder that {{athleteName}} has {{programName}} tomorrow.
+
+Program: {{programName}}
+Date: {{eventDate}}
+Time: {{eventTime}}
+Location: {{eventLocation}}
+
+Please ensure {{athleteFirstName}} arrives on time and has all necessary equipment (leotard, water bottle, hair tied back).
+
+See you at the gym!
+{{organizationName}}`,
+      smsBody: `{{organizationName}}: Reminder - {{athleteFirstName}} has {{programName}} on {{eventDate}} at {{eventTime}}.`,
+      recipientType: "PROGRAM_MEMBERS",
+    },
+    // Custom notification for Sunrise
+    {
+      id: `${ORG1_ID}-notif-birthday`,
+      organizationId: ORG1_ID,
+      name: "Birthday Wishes",
+      description: "Birthday greeting sent on athlete's birthday",
+      triggerType: "BIRTHDAY",
+      timingValue: 0,
+      timingUnit: "DAYS",
+      timingDirection: "AT",
+      actionType: "EMAIL",
+      isSystem: false,
+      subject: "Happy Birthday, {{athleteFirstName}}! 🎂",
+      body: `Dear {{primaryContact}},
+
+Happy Birthday to {{athleteName}}! 🎉
+
+Everyone at Sunrise Gymnastics wishes {{athleteFirstName}} a wonderful birthday filled with flips, tumbles, and lots of fun!
+
+As a special birthday treat, {{athleteFirstName}} will receive a small gift at their next class.
+
+Best wishes,
+The Sunrise Gymnastics Team
+{{organizationName}}`,
+      smsBody: `🎂 Happy Birthday, {{athleteFirstName}}! From your friends at {{organizationName}}!`,
+      recipientType: "ALL_FAMILIES",
+    },
+  ];
+
+  for (const rule of sunriseNotificationRules) {
+    await createNotificationRule(rule);
+  }
+  console.log(`  ✓ Created ${sunriseNotificationRules.length} notification rules for Sunrise Gymnastics`);
+
+  // System notification rules for Metro Sports
+  const metroNotificationRules = [
+    {
+      id: `${ORG2_ID}-notif-payment-reminder`,
+      organizationId: ORG2_ID,
+      name: "Payment Reminder",
+      description: "Reminder sent 3 days before payment is due",
+      triggerType: "PAYMENT_DUE",
+      timingValue: 3,
+      timingUnit: "DAYS",
+      timingDirection: "BEFORE",
+      actionType: "EMAIL",
+      isSystem: true,
+      subject: "Payment Reminder - {{invoiceReference}}",
+      body: `Dear {{primaryContact}},
+
+This is a friendly reminder that payment of {{invoiceAmount}} is due on {{dueDate}}.
+
+Invoice Reference: {{invoiceReference}}
+Amount Due: {{invoiceAmount}}
+Due Date: {{dueDate}}
+
+Pay online at: {{paymentUrl}}
+
+Questions? Contact us at {{organizationEmail}}.
+
+Thanks,
+{{organizationName}}`,
+      smsBody: `Metro Sports: Payment of {{invoiceAmount}} due {{dueDate}}. Pay now: {{paymentUrl}}`,
+      recipientType: "ALL_FAMILIES",
+    },
+    {
+      id: `${ORG2_ID}-notif-payment-urgent`,
+      organizationId: ORG2_ID,
+      name: "Payment Reminder Urgent",
+      description: "Urgent reminder sent 1 day after payment is overdue",
+      triggerType: "PAYMENT_OVERDUE",
+      timingValue: 1,
+      timingUnit: "DAYS",
+      timingDirection: "AFTER",
+      actionType: "SMS",
+      isSystem: true,
+      subject: "URGENT: Payment Overdue",
+      body: `Dear {{primaryContact}},
+
+Your payment of {{invoiceAmount}} is now overdue. Please pay immediately to continue participating in programs.
+
+Pay now: {{paymentUrl}}
+
+Contact {{organizationEmail}} for questions.
+
+{{organizationName}}`,
+      smsBody: `URGENT Metro Sports: Payment of {{invoiceAmount}} overdue. Pay now to avoid service interruption: {{paymentUrl}}`,
+      recipientType: "ALL_FAMILIES",
+    },
+    {
+      id: `${ORG2_ID}-notif-membership-warning`,
+      organizationId: ORG2_ID,
+      name: "Membership Expiry Warning",
+      description: "Warning sent 7 days before membership expires",
+      triggerType: "MEMBERSHIP_EXPIRY",
+      timingValue: 7,
+      timingUnit: "DAYS",
+      timingDirection: "BEFORE",
+      actionType: "EMAIL",
+      isSystem: true,
+      subject: "Membership Expiring - {{athleteName}}",
+      body: `Hi {{primaryContactFirstName}},
+
+{{athleteName}}'s membership at Metro Sports is expiring on {{membershipEndDate}}.
+
+Membership: {{membershipName}}
+Days Remaining: {{membershipDaysRemaining}}
+
+Renew now to continue enjoying our facilities and programs!
+
+Best,
+{{organizationName}}`,
+      smsBody: `Metro Sports: {{athleteName}}'s membership expires {{membershipEndDate}}. Renew now!`,
+      recipientType: "MEMBERSHIP_HOLDERS",
+    },
+    {
+      id: `${ORG2_ID}-notif-membership-urgent`,
+      organizationId: ORG2_ID,
+      name: "Membership Expiry Urgent",
+      description: "Urgent notice sent 1 day after membership expires",
+      triggerType: "MEMBERSHIP_EXPIRED",
+      timingValue: 1,
+      timingUnit: "DAYS",
+      timingDirection: "AFTER",
+      actionType: "SMS",
+      isSystem: true,
+      subject: "Membership Expired - Action Required",
+      body: `Hi {{primaryContactFirstName}},
+
+{{athleteName}}'s membership has expired. Please renew to continue participation.
+
+Contact us at {{organizationEmail}}.
+
+{{organizationName}}`,
+      smsBody: `Metro Sports: {{athleteName}}'s membership EXPIRED. Renew immediately at {{organizationEmail}}`,
+      recipientType: "MEMBERSHIP_HOLDERS",
+    },
+    {
+      id: `${ORG2_ID}-notif-program-reminder`,
+      organizationId: ORG2_ID,
+      name: "Program Reminder",
+      description: "Reminder sent 1 day before class/event",
+      triggerType: "PROGRAM_REMINDER",
+      timingValue: 1,
+      timingUnit: "DAYS",
+      timingDirection: "BEFORE",
+      actionType: "SMS",
+      isSystem: true,
+      subject: "{{programName}} Tomorrow",
+      body: `Hi {{primaryContactFirstName}},
+
+Reminder: {{athleteFirstName}} has {{programName}} tomorrow at {{eventTime}}.
+
+Location: {{eventLocation}}
+
+See you there!
+{{organizationName}}`,
+      smsBody: `Metro Sports: {{athleteFirstName}} has {{programName}} tomorrow at {{eventTime}} - {{eventLocation}}`,
+      recipientType: "PROGRAM_MEMBERS",
+    },
+    // Custom notification for Metro Sports
+    {
+      id: `${ORG2_ID}-notif-registration-open`,
+      organizationId: ORG2_ID,
+      name: "Registration Opening",
+      description: "Notification when registration opens for a new season",
+      triggerType: "EVENT_REGISTRATION_OPEN",
+      timingValue: 2,
+      timingUnit: "DAYS",
+      timingDirection: "BEFORE",
+      actionType: "EMAIL",
+      isSystem: false,
+      subject: "Registration Opens Soon: {{eventName}}",
+      body: `Dear {{primaryContact}},
+
+We're excited to announce that registration for {{eventName}} opens in 2 days!
+
+Event: {{eventName}}
+Registration Opens: {{eventDate}}
+
+Mark your calendar and register early - spots fill up fast!
+
+Visit {{websiteUrl}} to register.
+
+See you at Metro Sports!
+{{organizationName}}`,
+      smsBody: `Metro Sports: {{eventName}} registration opens {{eventDate}}! Register early at {{websiteUrl}}`,
+      recipientType: "ALL_FAMILIES",
+    },
+  ];
+
+  for (const rule of metroNotificationRules) {
+    await createNotificationRule(rule);
+  }
+  console.log(`  ✓ Created ${metroNotificationRules.length} notification rules for Metro Sports`);
+
+  // ============================================
   // COMPLETE
   // ============================================
   console.log("\n" + "=".repeat(50));
@@ -2678,6 +3087,7 @@ async function main() {
   console.log("  • 2 medical form configs with custom questions");
   console.log("  • 6 athlete medical info records with responses");
   console.log("  • 14 reserved domains");
+  console.log("  • 12 notification rules (system + custom for both orgs)");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (password: password123):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");
