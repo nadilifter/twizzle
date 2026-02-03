@@ -382,15 +382,24 @@ export const authOptions: NextAuthOptions = {
       // Handle cross-domain OAuth redirect
       // When OAuth completes on localhost:3000 but the callbackUrl is for a local subdomain,
       // we need to redirect through the session bridge to set the cookie on the correct domain
+      //
+      // IMPORTANT: This should ONLY trigger for OAuth logins (which must go through localhost:3000
+      // due to Google's restrictions), NOT for credentials logins on subdomains.
       
       const config = getEnvConfig();
       const currentEnv = getCurrentEnvironment();
       const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
       
-      const isLocalhost = baseUrl.includes("localhost:3000") && !baseUrl.includes(baseDomain);
+      // Only trigger OAuth bridge when:
+      // 1. We're in local development
+      // 2. The request is coming from localhost:3000 (OAuth callback)
+      // 3. The callback URL is for a local subdomain
+      // 4. The URL doesn't already contain oauth-bridge (prevent loops)
+      const isLocalhost = baseUrl === "http://localhost:3000";
       const callbackIsLocalSubdomain = currentEnv === 'local' && url.includes(baseDomain);
+      const isNotAlreadyBridge = !url.includes("oauth-bridge");
       
-      if (isLocalhost && callbackIsLocalSubdomain) {
+      if (isLocalhost && callbackIsLocalSubdomain && isNotAlreadyBridge) {
         // Extract the original callback URL
         // The URL might be the full callback URL or contain a callbackUrl param
         let finalCallback = url;
@@ -406,15 +415,15 @@ export const authOptions: NextAuthOptions = {
           // URL parsing failed, use as-is
         }
         
-        // Prevent redirect loop: if callback is the login portal, redirect to admin instead
-        // This can happen if someone directly navigates to the login portal and logs in
+        // Prevent redirect loop: if callback is the login portal or a login page, redirect to admin instead
         try {
           const callbackUrlObj = new URL(finalCallback);
           const callbackHost = callbackUrlObj.hostname;
-          if (callbackHost.startsWith("login.")) {
-            // Replace login subdomain with admin subdomain
+          const callbackPath = callbackUrlObj.pathname;
+          if (callbackHost.startsWith("login.") || callbackPath === "/login") {
+            // Replace with admin subdomain
             finalCallback = getSubdomainUrl("admin") + "/";
-            console.log("Redirect callback: Callback was login portal, redirecting to admin instead");
+            console.log("Redirect callback: Callback was login page, redirecting to admin instead");
           }
         } catch {
           // URL parsing failed, continue with original
@@ -469,4 +478,9 @@ export async function verifyPassword(
   hashedPassword: string
 ): Promise<boolean> {
   return bcrypt.compare(password, hashedPassword);
+}
+
+// Helper to check if email is an Uplifter staff email (super admin eligible)
+export function isUplifterEmail(email: string): boolean {
+  return email.toLowerCase().endsWith("@uplifterinc.com");
 }

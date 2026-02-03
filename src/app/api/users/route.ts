@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession, hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ROLE_PERMISSIONS } from "@/lib/permissions";
+import { sendTemplatedEmail } from "@/lib/email";
+import { getBaseUrl } from "@/lib/env-domains";
 import { z } from "zod";
+import crypto from "crypto";
 
 const createUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -19,36 +22,37 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const users = await db.user.findMany({
+    // Get users who are members of this organization
+    const members = await db.organizationMember.findMany({
       where: {
         organizationId: session.user.organizationId,
-        // Exclude Uplifter staff (super admins) from organization user lists
-        NOT: {
-          email: {
-            endsWith: "@uplifterinc.com",
+      },
+      include: {
+        user: {
+          include: {
+            permissions: true,
           },
         },
       },
-      include: {
-        permissions: true,
-      },
       orderBy: {
-        createdAt: "desc",
+        joinedAt: "desc",
       },
     });
 
-    // Transform to match frontend expectations
-    const transformedUsers = users.map((user) => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      avatar: user.avatar,
-      role: user.role.toLowerCase(),
-      permissions: user.permissions.map((p) => p.permission),
-      status: user.status.toLowerCase(),
-      joinedDate: user.createdAt,
-      lastActive: user.lastActiveAt || user.createdAt,
-    }));
+    // Transform to match frontend expectations, excluding Uplifter staff
+    const transformedUsers = members
+      .filter((m) => !m.user.email.endsWith("@uplifterinc.com"))
+      .map((member) => ({
+        id: member.user.id,
+        name: member.user.name,
+        email: member.user.email,
+        avatar: member.user.avatar,
+        role: member.role.toLowerCase(),
+        permissions: member.user.permissions.map((p) => p.permission),
+        status: member.status.toLowerCase(),
+        joinedDate: member.joinedAt,
+        lastActive: member.user.lastActiveAt || member.joinedAt,
+      }));
 
     return NextResponse.json(transformedUsers);
   } catch (error) {
@@ -79,17 +83,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createUserSchema.parse(body);
 
-    // Check if email already exists
-    const existingUser = await db.user.findUnique({
-      where: { email: validatedData.email },
+    // Get organization details for the email
+    const organization = await db.organization.findUnique({
+      where: { id: session.user.organizationId },
+      select: { id: true, name: true },
     });
 
-    if (existingUser) {
+    if (!organization) {
       return NextResponse.json(
-        { error: "A user with this email already exists" },
-        { status: 400 }
+        { error: "Organization not found" },
+        { status: 404 }
       );
     }
+
+    // Check if user already exists
+    const existingUser = await db.user.findUnique({
+      where: { email: validatedData.email },
+      include: { memberships: true },
+    });
 
     // Get default permissions for role if not provided
     const permissions =
@@ -97,38 +108,133 @@ export async function POST(request: NextRequest) {
       ROLE_PERMISSIONS[validatedData.role] ||
       [];
 
-    // Create user with temporary password (they'll reset it)
-    const tempPassword = await hashPassword(Math.random().toString(36));
+    // Generate invitation token
+    const invitationToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    const user = await db.user.create({
-      data: {
-        name: validatedData.name,
-        email: validatedData.email,
-        passwordHash: tempPassword,
-        role: validatedData.role as "ADMIN" | "COACH" | "VOLUNTEER" | "ACCOUNTANT" | "CUSTOM",
-        status: "INVITED",
-        organizationId: session.user.organizationId,
-        permissions: {
-          create: permissions.map((p) => ({ permission: p })),
-        },
-      },
-      include: {
-        permissions: true,
-      },
-    });
+    // Get base URL for invitation link
+    const baseUrl = getBaseUrl();
+    const inviteUrl = `${baseUrl}/accept-invitation?token=${invitationToken}`;
 
-    // TODO: Send invitation email
+    if (existingUser) {
+      // EXISTING USER FLOW
+      // Check if already a member of this organization
+      const existingMembership = existingUser.memberships.find(
+        (m) => m.organizationId === session.user.organizationId
+      );
 
-    return NextResponse.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role.toLowerCase(),
-      permissions: user.permissions.map((p) => p.permission),
-      status: user.status.toLowerCase(),
-      joinedDate: user.createdAt,
-      lastActive: user.createdAt,
-    });
+      if (existingMembership) {
+        return NextResponse.json(
+          { error: "User is already a member of this organization" },
+          { status: 400 }
+        );
+      }
+
+      // Create membership + invitation in transaction
+      await db.$transaction(async (tx) => {
+        await tx.organizationMember.create({
+          data: {
+            organizationId: session.user.organizationId,
+            userId: existingUser.id,
+            role: validatedData.role as "ADMIN" | "COACH" | "VOLUNTEER" | "ACCOUNTANT" | "CUSTOM",
+            status: "INVITED",
+          },
+        });
+
+        await tx.organizationInvitation.create({
+          data: {
+            email: validatedData.email,
+            token: invitationToken,
+            organizationId: session.user.organizationId,
+            role: validatedData.role as "ADMIN" | "COACH" | "VOLUNTEER" | "ACCOUNTANT" | "CUSTOM",
+            invitedById: session.user.id,
+            expiresAt,
+          },
+        });
+      });
+
+      // Send "Join Organization" email for existing users
+      await sendTemplatedEmail("invitation-existing-user", [existingUser.email], {
+        name: existingUser.name,
+        inviterName: session.user.name || "A team member",
+        organizationName: organization.name,
+        joinUrl: inviteUrl,
+      });
+
+      return NextResponse.json({
+        id: existingUser.id,
+        name: existingUser.name,
+        email: existingUser.email,
+        role: validatedData.role.toLowerCase(),
+        permissions: existingUser.memberships.length > 0 ? [] : permissions, // Existing user keeps their permissions
+        status: "invited",
+        joinedDate: new Date(),
+        lastActive: existingUser.lastActiveAt || new Date(),
+        isExistingUser: true,
+      });
+    } else {
+      // NEW USER FLOW
+      // Create user + membership + invitation in transaction
+      const newUser = await db.$transaction(async (tx) => {
+        // Create user with no password (they'll set it when accepting)
+        const user = await tx.user.create({
+          data: {
+            name: validatedData.name,
+            email: validatedData.email,
+            role: validatedData.role as "ADMIN" | "COACH" | "VOLUNTEER" | "ACCOUNTANT" | "CUSTOM",
+            status: "INVITED",
+            organizationId: session.user.organizationId,
+            permissions: {
+              create: permissions.map((p) => ({ permission: p })),
+            },
+          },
+          include: {
+            permissions: true,
+          },
+        });
+
+        await tx.organizationMember.create({
+          data: {
+            organizationId: session.user.organizationId,
+            userId: user.id,
+            role: validatedData.role as "ADMIN" | "COACH" | "VOLUNTEER" | "ACCOUNTANT" | "CUSTOM",
+            status: "INVITED",
+          },
+        });
+
+        await tx.organizationInvitation.create({
+          data: {
+            email: validatedData.email,
+            token: invitationToken,
+            organizationId: session.user.organizationId,
+            role: validatedData.role as "ADMIN" | "COACH" | "VOLUNTEER" | "ACCOUNTANT" | "CUSTOM",
+            invitedById: session.user.id,
+            expiresAt,
+          },
+        });
+
+        return user;
+      });
+
+      // Send "Setup Account" email for new users
+      await sendTemplatedEmail("invitation", [newUser.email], {
+        inviterName: session.user.name || "A team member",
+        organizationName: organization.name,
+        inviteUrl,
+      });
+
+      return NextResponse.json({
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role.toLowerCase(),
+        permissions: newUser.permissions.map((p) => p.permission),
+        status: newUser.status.toLowerCase(),
+        joinedDate: newUser.createdAt,
+        lastActive: newUser.createdAt,
+        isExistingUser: false,
+      });
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

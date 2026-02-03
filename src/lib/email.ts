@@ -3,20 +3,24 @@
  * 
  * This module provides a unified interface for sending emails that works with:
  * - Amazon SES in cloud environments (production, staging, development)
- * - MailHog in local development (catches all emails for inspection)
+ * - MailHog in local development via SMTP (catches all emails for inspection)
  */
 
-import { SESClient, SendEmailCommand, SendRawEmailCommand } from '@aws-sdk/client-ses';
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { getSESConfig } from './services-config';
 import { getCurrentEnvironment } from './env-domains';
 import { logger } from './logger';
 
-// SES Client singleton
+// SES Client singleton (for cloud environments)
 let sesClient: SESClient | null = null;
 
+// Nodemailer transporter singleton (for local development)
+let smtpTransporter: Transporter | null = null;
+
 /**
- * Get or create the SES client
- * Configures for MailHog in local environment
+ * Get or create the SES client for cloud environments
  */
 function getSESClient(): SESClient {
   if (sesClient) {
@@ -24,20 +28,11 @@ function getSESClient(): SESClient {
   }
 
   const config = getSESConfig();
-  const isLocal = getCurrentEnvironment() === 'local';
 
   sesClient = new SESClient({
     region: config.region,
-    // For local development with MailHog
-    ...(isLocal && config.endpoint && {
-      endpoint: config.endpoint,
-      credentials: {
-        accessKeyId: 'test',
-        secretAccessKey: 'test',
-      },
-    }),
     // For cloud environments, use standard credentials
-    ...(!isLocal && process.env.AWS_ACCESS_KEY_ID && {
+    ...(process.env.AWS_ACCESS_KEY_ID && {
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
@@ -46,6 +41,28 @@ function getSESClient(): SESClient {
   });
 
   return sesClient;
+}
+
+/**
+ * Get or create the nodemailer SMTP transporter for local development
+ * Connects to MailHog on localhost:1025
+ */
+function getSMTPTransporter(): Transporter {
+  if (smtpTransporter) {
+    return smtpTransporter;
+  }
+
+  const smtpHost = process.env.SMTP_HOST || 'localhost';
+  const smtpPort = parseInt(process.env.SMTP_PORT || '1025', 10);
+
+  smtpTransporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: false, // MailHog doesn't use TLS
+    ignoreTLS: true,
+  });
+
+  return smtpTransporter;
 }
 
 /**
@@ -80,23 +97,81 @@ export interface SendEmailResult {
 }
 
 /**
- * Send an email using SES or MailHog
+ * Send an email using SMTP (local) or SES (cloud)
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const config = getSESConfig();
   const currentEnv = getCurrentEnvironment();
-  const client = getSESClient();
-
   const fromAddress = options.from || config.fromEmail;
 
-  // In local mode, log the email details
+  // Local development: Use nodemailer with SMTP to MailHog
   if (currentEnv === 'local') {
-    logger.info('[EMAIL] Sending email via MailHog', {
-      to: options.to,
+    return sendEmailViaSMTP(options, fromAddress);
+  }
+
+  // Cloud environments: Use AWS SES
+  return sendEmailViaSES(options, fromAddress, config);
+}
+
+/**
+ * Send email via SMTP (for local development with MailHog)
+ */
+async function sendEmailViaSMTP(
+  options: SendEmailOptions,
+  fromAddress: string
+): Promise<SendEmailResult> {
+  const transporter = getSMTPTransporter();
+
+  logger.info('[EMAIL] Sending email via SMTP/MailHog', {
+    to: options.to,
+    from: fromAddress,
+    subject: options.subject,
+  });
+
+  try {
+    const result = await transporter.sendMail({
       from: fromAddress,
+      to: options.to.join(', '),
+      cc: options.cc?.join(', '),
+      bcc: options.bcc?.join(', '),
+      replyTo: options.replyTo,
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+    });
+
+    logger.info('[EMAIL] Email sent successfully via SMTP', {
+      messageId: result.messageId,
+      to: options.to,
+    });
+
+    return {
+      success: true,
+      messageId: result.messageId,
+    };
+  } catch (error: any) {
+    logger.error('[EMAIL] Failed to send email via SMTP', {
+      error: error.message,
+      to: options.to,
       subject: options.subject,
     });
+
+    return {
+      success: false,
+      error: error.message,
+    };
   }
+}
+
+/**
+ * Send email via AWS SES (for cloud environments)
+ */
+async function sendEmailViaSES(
+  options: SendEmailOptions,
+  fromAddress: string,
+  config: ReturnType<typeof getSESConfig>
+): Promise<SendEmailResult> {
+  const client = getSESClient();
 
   // In sandbox mode, check if recipients are verified
   if (config.mode === 'sandbox') {
@@ -136,7 +211,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
 
     const response = await client.send(command);
 
-    logger.info('[EMAIL] Email sent successfully', {
+    logger.info('[EMAIL] Email sent successfully via SES', {
       messageId: response.MessageId,
       to: options.to,
     });
@@ -146,7 +221,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       messageId: response.MessageId,
     };
   } catch (error: any) {
-    logger.error('[EMAIL] Failed to send email', {
+    logger.error('[EMAIL] Failed to send email via SES', {
       error: error.message,
       to: options.to,
       subject: options.subject,
@@ -184,7 +259,9 @@ export async function sendTemplatedEmail(
 export type EmailTemplate = 
   | 'welcome'
   | 'password-reset'
+  | 'no-account'
   | 'invitation'
+  | 'invitation-existing-user'
   | 'registration-confirmation'
   | 'payment-confirmation'
   | 'announcement'
@@ -231,12 +308,17 @@ function renderTemplate(
     'password-reset': {
       subject: 'Reset Your Password',
       html: `
-        <h1>Password Reset Request</h1>
-        <p>Hello {{name}},</p>
-        <p>We received a request to reset your password. Click the link below to create a new password:</p>
-        <p><a href="{{resetUrl}}">Reset Password</a></p>
-        <p>This link will expire in {{expiresIn}}.</p>
-        <p>If you didn't request this, you can safely ignore this email.</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #1f2937;">Password Reset Request</h1>
+          <p>Hello {{name}},</p>
+          <p>We received a request to reset your password. Click the button below to create a new password:</p>
+          <p style="margin: 24px 0;">
+            <a href="{{resetUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Reset Password</a>
+          </p>
+          <p style="color: #6b7280; font-size: 14px;">This link will expire in {{expiresIn}}.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #6b7280; font-size: 12px;">If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+        </div>
       `,
       text: `
         Password Reset Request
@@ -249,17 +331,61 @@ function renderTemplate(
         
         This link will expire in {{expiresIn}}.
         
+        If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
+      `,
+    },
+    'no-account': {
+      subject: 'Password Reset Attempted',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #1f2937;">Password Reset Attempted</h1>
+          <p>Hello,</p>
+          <p>Someone (hopefully you) tried to reset the password for this email address, but we don't have an account associated with <strong>{{email}}</strong>.</p>
+          <p>If you're trying to access an organization's platform, you may need to:</p>
+          <ul style="color: #4b5563;">
+            <li>Contact your club or organization administrator to get an invitation</li>
+            <li>Sign up through your organization's website</li>
+          </ul>
+          <p>If you want to create a new organization on Uplifter, you can get started here:</p>
+          <p style="margin: 24px 0;">
+            <a href="{{signupUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Create an Organization</a>
+          </p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #6b7280; font-size: 12px;">If you didn't request this, you can safely ignore this email.</p>
+        </div>
+      `,
+      text: `
+        Password Reset Attempted
+        
+        Hello,
+        
+        Someone (hopefully you) tried to reset the password for this email address, but we don't have an account associated with {{email}}.
+        
+        If you're trying to access an organization's platform, you may need to:
+        - Contact your club or organization administrator to get an invitation
+        - Sign up through your organization's website
+        
+        If you want to create a new organization on Uplifter, you can get started here:
+        {{signupUrl}}
+        
         If you didn't request this, you can safely ignore this email.
       `,
     },
     'invitation': {
       subject: 'You\'ve been invited to join {{organizationName}}',
       html: `
-        <h1>You've Been Invited!</h1>
-        <p>Hello,</p>
-        <p>{{inviterName}} has invited you to join {{organizationName}}.</p>
-        <p>Click the link below to accept the invitation:</p>
-        <p><a href="{{inviteUrl}}">Accept Invitation</a></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #1f2937;">You've Been Invited!</h1>
+          <p>Hello,</p>
+          <p>{{inviterName}} has invited you to join <strong>{{organizationName}}</strong>.</p>
+          <p>Click the button below to set up your account and get started:</p>
+          <p style="margin: 24px 0;">
+            <a href="{{inviteUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Set Up Your Account</a>
+          </p>
+          <p style="color: #6b7280; font-size: 14px;">This invitation will expire in 7 days.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #6b7280; font-size: 12px;">If you didn't expect this invitation, you can safely ignore this email.</p>
+        </div>
       `,
       text: `
         You've Been Invited!
@@ -268,9 +394,45 @@ function renderTemplate(
         
         {{inviterName}} has invited you to join {{organizationName}}.
         
-        Click the link below to accept the invitation:
+        Click the link below to set up your account and get started:
         
         {{inviteUrl}}
+        
+        This invitation will expire in 7 days.
+        
+        If you didn't expect this invitation, you can safely ignore this email.
+      `,
+    },
+    'invitation-existing-user': {
+      subject: '{{inviterName}} invited you to join {{organizationName}}',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #1f2937;">You've Been Invited to Join {{organizationName}}</h1>
+          <p>Hi {{name}},</p>
+          <p>{{inviterName}} has invited you to join <strong>{{organizationName}}</strong> on Uplifter.</p>
+          <p>Since you already have an account, just click the button below to accept:</p>
+          <p style="margin: 24px 0;">
+            <a href="{{joinUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Accept Invitation</a>
+          </p>
+          <p style="color: #6b7280; font-size: 14px;">This invitation will expire in 7 days.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #6b7280; font-size: 12px;">If you didn't expect this invitation, you can safely ignore this email.</p>
+        </div>
+      `,
+      text: `
+        You've Been Invited to Join {{organizationName}}
+        
+        Hi {{name}},
+        
+        {{inviterName}} has invited you to join {{organizationName}} on Uplifter.
+        
+        Since you already have an account, just click the link below to accept:
+        
+        {{joinUrl}}
+        
+        This invitation will expire in 7 days.
+        
+        If you didn't expect this invitation, you can safely ignore this email.
       `,
     },
     'registration-confirmation': {

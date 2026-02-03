@@ -90,6 +90,9 @@ model Organization {
   
   // Registration Queues
   queueConfigs           RegistrationQueueConfig[]
+  
+  // Invitations
+  invitations            OrganizationInvitation[]
 }
 
 model OrganizationMember {
@@ -149,6 +152,9 @@ model User {
   featureRequests         FeatureRequest[] @relation("FeatureRequestAuthor")
   featureVotes            FeatureVote[] @relation("FeatureVotes")
   featureComments         FeatureComment[] @relation("FeatureComments")
+  
+  // Invitations sent by this user
+  invitationsSent         OrganizationInvitation[] @relation("InvitationsSent")
 }
 
 model Session {
@@ -187,6 +193,19 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Password Reset Tokens - for forgot password functionality
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  email     String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
 model UserPermission {
   id         String @id @default(cuid())
   userId     String
@@ -195,6 +214,35 @@ model UserPermission {
   user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([userId, permission])
+}
+
+// Organization Invitations - tracks pending and accepted invitations
+model OrganizationInvitation {
+  id             String                       @id @default(cuid())
+  email          String
+  token          String                       @unique
+  organizationId String
+  role           Role                         @default(COACH)
+  status         OrganizationInvitationStatus @default(PENDING)
+  invitedById    String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  organization   Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy      User                         @relation("InvitationsSent", fields: [invitedById], references: [id])
+
+  @@index([email])
+  @@index([organizationId])
+  @@index([token])
+}
+
+enum OrganizationInvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
 }
 
 enum Role {

@@ -287,6 +287,12 @@ export default async function SiteLayout({
                 <div className="flex items-center gap-3 text-sm">
                     <MarketingAnnouncementBell organizationId={config.organizationId} />
                     <ThemeToggle />
+                    <Link 
+                        href="/signup" 
+                        className="text-foreground/80 hover:text-primary transition-colors font-medium"
+                    >
+                        Sign Up
+                    </Link>
                     <Button asChild size="sm" className="text-sm font-medium">
                         <Link href={loginUrl}>Login</Link>
                     </Button>
