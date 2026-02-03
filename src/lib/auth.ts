@@ -32,11 +32,14 @@ function getCookieDomain(): string | undefined {
   // localhost:3000 when OAuth completes, then session-bridge transfers the
   // session to local subdomains with the correct domain.
   if (currentEnv === 'local') {
+    console.log("Auth: getCookieDomain() returning undefined for local env");
     return undefined;
   }
   
   // For cloud environments, use the configured cookie domain
-  return getEnvConfig().cookieDomain;
+  const domain = getEnvConfig().cookieDomain;
+  console.log(`Auth: getCookieDomain() returning '${domain}' for env '${currentEnv}'`);
+  return domain;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -46,19 +49,55 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   cookies: {
+    // All cookies need the same domain for OAuth to work across subdomains
+    // (login.domain.com initiates OAuth, domain.com receives callback)
     sessionToken: {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        // Use HTTPS in cloud environments, HTTP locally
         secure: getCurrentEnvironment() !== 'local',
-        // Cookie domain based on environment:
-        // - Production: .uplifterinc.com (shared across all subdomains)
-        // - Staging: .upliftergymnastics.com
-        // - Development: .uplifterdev.com
-        // - Local: undefined (allows localhost:3000 for Google OAuth)
+        domain: getCookieDomain()
+      }
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: getCurrentEnvironment() !== 'local',
+        domain: getCookieDomain()
+      }
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: getCurrentEnvironment() !== 'local',
+        domain: getCookieDomain()
+      }
+    },
+    state: {
+      name: `next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: getCurrentEnvironment() !== 'local',
+        domain: getCookieDomain()
+      }
+    },
+    pkceCodeVerifier: {
+      name: `next-auth.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: getCurrentEnvironment() !== 'local',
         domain: getCookieDomain()
       }
     }

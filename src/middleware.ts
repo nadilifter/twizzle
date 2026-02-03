@@ -120,7 +120,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // Get auth token for protected routes
-  const token = await getToken({ req });
+  // Explicitly pass secret and cookie name to handle edge runtime properly
+  const token = await getToken({ 
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: "next-auth.session-token",
+  });
 
   // 1. Domain Parsing - Environment Aware
   const config = getEnvConfig();
@@ -160,8 +165,15 @@ export async function middleware(req: NextRequest) {
 
   // Debug: log token retrieval for auth troubleshooting
   const sessionCookie = req.cookies.get("next-auth.session-token");
-  if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos") {
-    console.log(`Middleware: host=${currentHost}, path=${path}, hasCookie=${!!sessionCookie}, hasToken=${!!token}`);
+  const secureCookie = req.cookies.get("__Secure-next-auth.session-token");
+  const allCookieNames = req.cookies.getAll().map(c => c.name);
+  if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos" || currentHost === "login") {
+    console.log(`Middleware: host=${currentHost}, path=${path}, env=${currentEnv}`);
+    console.log(`Middleware: cookies=${JSON.stringify(allCookieNames)}`);
+    console.log(`Middleware: hasCookie=${!!sessionCookie}, hasSecureCookie=${!!secureCookie}, hasToken=${!!token}`);
+    if (token) {
+      console.log(`Middleware: tokenEmail=${token.email}`);
+    }
   }
 
   // 2. Portal Routing
@@ -210,7 +222,10 @@ export async function middleware(req: NextRequest) {
       console.log(`Middleware [admin]: No token found, redirecting to login`);
       const loginHost = getLoginHost();
       const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
-      loginUrl.searchParams.set("callbackUrl", req.url);
+      // Construct the external callback URL (req.url gives internal Docker URL)
+      const adminHost = getSubdomainHost("admin");
+      const externalCallbackUrl = `${protocol}//${adminHost}${path}${url.search}`;
+      loginUrl.searchParams.set("callbackUrl", externalCallbackUrl);
       return NextResponse.redirect(loginUrl);
     }
 
@@ -250,7 +265,10 @@ export async function middleware(req: NextRequest) {
       if (!token?.isSuperAdmin && !path.startsWith("/login")) {
          const loginHost = getLoginHost();
          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
-         loginUrl.searchParams.set("callbackUrl", req.url);
+         // Construct the external callback URL (req.url gives internal Docker URL)
+         const superAdminHost = getSubdomainHost("superadmin");
+         const externalCallbackUrl = `${protocol}//${superAdminHost}${path}${url.search}`;
+         loginUrl.searchParams.set("callbackUrl", externalCallbackUrl);
          return NextResponse.redirect(loginUrl);
       }
       
@@ -314,10 +332,11 @@ export async function middleware(req: NextRequest) {
           const loginHost = getLoginHost();
           const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
           
-          // Preserve orgId in callback URL if present
-          const callbackUrl = req.url;
+          // Construct the external callback URL (req.url gives internal Docker URL)
+          const posHost = getSubdomainHost("pos");
+          const externalCallbackUrl = `${protocol}//${posHost}${path}${url.search}`;
           
-          loginUrl.searchParams.set("callbackUrl", callbackUrl);
+          loginUrl.searchParams.set("callbackUrl", externalCallbackUrl);
           return NextResponse.redirect(loginUrl);
       }
 
