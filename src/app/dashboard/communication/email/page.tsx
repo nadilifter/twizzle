@@ -474,12 +474,15 @@ export default function EmailPage() {
 
                     <div className="grid gap-2">
                       <Label>Membership Status (Optional)</Label>
-                      <Select value={targetMembershipStatus} onValueChange={setTargetMembershipStatus}>
+                      <Select 
+                        value={targetMembershipStatus || "ANY"} 
+                        onValueChange={(val) => setTargetMembershipStatus(val === "ANY" ? "" : val)}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Any membership status" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Any Status</SelectItem>
+                          <SelectItem value="ANY">Any Status</SelectItem>
                           <SelectItem value="ACTIVE">Active Members Only</SelectItem>
                           <SelectItem value="EXPIRED">Expired Members Only</SelectItem>
                         </SelectContent>

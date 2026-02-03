@@ -2588,6 +2588,274 @@ async function main() {
   console.log(`  ✓ Created ${reservedDomainData.length} reserved domains`);
 
   // ============================================
+  // EMAIL CAMPAIGNS & USAGE
+  // ============================================
+  console.log("\n📧 Creating email campaigns and usage...");
+
+  // Get the current billing period
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // Create email usage records for both orgs
+  await prisma.emailUsage.upsert({
+    where: {
+      organizationId_periodStart: {
+        organizationId: ORG1_ID,
+        periodStart: periodStart,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: ORG1_ID,
+      periodStart: periodStart,
+      periodEnd: periodEnd,
+      emailsSent: 156,
+      emailsDelivered: 152,
+      emailsOpened: 89,
+      emailsClicked: 34,
+      emailsBounced: 3,
+      emailsComplained: 0,
+      emailsFailed: 1,
+      includedEmails: 2500,
+      overageEmails: 0,
+      overageCost: 0,
+    },
+  });
+
+  await prisma.emailUsage.upsert({
+    where: {
+      organizationId_periodStart: {
+        organizationId: ORG2_ID,
+        periodStart: periodStart,
+      },
+    },
+    update: {},
+    create: {
+      organizationId: ORG2_ID,
+      periodStart: periodStart,
+      periodEnd: periodEnd,
+      emailsSent: 87,
+      emailsDelivered: 85,
+      emailsOpened: 52,
+      emailsClicked: 18,
+      emailsBounced: 1,
+      emailsComplained: 0,
+      emailsFailed: 1,
+      includedEmails: 500,
+      overageEmails: 0,
+      overageCost: 0,
+    },
+  });
+
+  // Sample email campaigns for Sunrise Gymnastics
+  const sunriseCampaigns = [
+    {
+      id: "seed-email-campaign-1",
+      organizationId: ORG1_ID,
+      name: "January Newsletter",
+      subject: "Happy New Year from Sunrise Gymnastics! 🎉",
+      htmlBody: `<h2>Happy New Year, Sunrise Family!</h2>
+<p>We hope you had a wonderful holiday season. As we kick off 2026, we're excited to share what's coming up:</p>
+<ul>
+<li><strong>Winter Session</strong> begins January 13th</li>
+<li><strong>Open Gym</strong> every Saturday 2-4pm</li>
+<li><strong>Competition Team tryouts</strong> February 1st</li>
+</ul>
+<p>Don't forget to register early - spots fill up fast!</p>
+<p>See you at the gym!</p>`,
+      textBody: "Happy New Year from Sunrise Gymnastics! Winter session begins January 13th.",
+      classification: "NEWSLETTER" as const,
+      targetScope: "ALL" as const,
+      status: "COMPLETED" as const,
+      totalRecipients: 89,
+      sentCount: 89,
+      deliveredCount: 87,
+      openedCount: 54,
+      clickedCount: 23,
+      bouncedCount: 2,
+      complainedCount: 0,
+      failedCount: 0,
+      startedAt: daysAgo(15),
+      completedAt: daysAgo(15),
+      createdAt: daysAgo(16),
+    },
+    {
+      id: "seed-email-campaign-2",
+      organizationId: ORG1_ID,
+      name: "Competition Team Update",
+      subject: "Important: Regional Competition Details",
+      htmlBody: `<h2>Regional Competition - February 15th</h2>
+<p>Dear Competition Team Families,</p>
+<p>Here are the details for the upcoming regional competition:</p>
+<ul>
+<li><strong>Date:</strong> Saturday, February 15th</li>
+<li><strong>Location:</strong> Springfield Sports Center</li>
+<li><strong>Check-in:</strong> 7:30 AM</li>
+<li><strong>Competition starts:</strong> 9:00 AM</li>
+</ul>
+<p>Please make sure your athlete's competition leotard is ready. Let us know if you have any questions!</p>`,
+      textBody: "Regional Competition - February 15th at Springfield Sports Center. Check-in at 7:30 AM.",
+      classification: "EVENT_UPDATE" as const,
+      targetScope: "PROGRAM" as const,
+      targetProgramId: `${ORG1_ID}-prog-jo`, // JO Competition Team
+      status: "COMPLETED" as const,
+      totalRecipients: 24,
+      sentCount: 24,
+      deliveredCount: 24,
+      openedCount: 22,
+      clickedCount: 8,
+      bouncedCount: 0,
+      complainedCount: 0,
+      failedCount: 0,
+      startedAt: daysAgo(5),
+      completedAt: daysAgo(5),
+      createdAt: daysAgo(6),
+    },
+    {
+      id: "seed-email-campaign-3",
+      organizationId: ORG1_ID,
+      name: "Spring Registration Reminder",
+      subject: "Spring Session Registration Now Open!",
+      htmlBody: `<h2>Spring Session Registration</h2>
+<p>Registration for our Spring session is now open!</p>
+<p><strong>Spring Session Dates:</strong> March 10 - May 30</p>
+<p>Current families get priority registration through February 1st. After that, registration opens to the public.</p>
+<p>New this spring:</p>
+<ul>
+<li>Tumbling & Trampoline class (Ages 8-12)</li>
+<li>Parent & Tot sessions on Wednesdays</li>
+<li>Extended summer camp options</li>
+</ul>
+<p>Register now to secure your spot!</p>`,
+      textBody: "Spring Session Registration is now open! March 10 - May 30. Register now to secure your spot.",
+      classification: "PROGRAM_UPDATE" as const,
+      targetScope: "ALL" as const,
+      status: "SCHEDULED" as const,
+      totalRecipients: 89,
+      sentCount: 0,
+      deliveredCount: 0,
+      openedCount: 0,
+      clickedCount: 0,
+      bouncedCount: 0,
+      complainedCount: 0,
+      failedCount: 0,
+      scheduledAt: daysFromNow(2),
+      createdAt: daysAgo(1),
+    },
+    {
+      id: "seed-email-campaign-4",
+      organizationId: ORG1_ID,
+      name: "Membership Renewal",
+      subject: "Your Annual Membership is Expiring Soon",
+      htmlBody: `<h2>Membership Renewal Reminder</h2>
+<p>Your annual membership at Sunrise Gymnastics is expiring soon.</p>
+<p>Renew before the end of the month to:</p>
+<ul>
+<li>Lock in current rates</li>
+<li>Get priority class registration</li>
+<li>Receive 10% off summer camps</li>
+</ul>
+<p>Thank you for being part of our gymnastics family!</p>`,
+      textBody: "Your annual membership is expiring soon. Renew before the end of the month to lock in current rates.",
+      classification: "MEMBERSHIP" as const,
+      targetScope: "ALL" as const,
+      targetMembershipStatus: "EXPIRED",
+      status: "DRAFT" as const,
+      totalRecipients: 0,
+      sentCount: 0,
+      deliveredCount: 0,
+      openedCount: 0,
+      clickedCount: 0,
+      bouncedCount: 0,
+      complainedCount: 0,
+      failedCount: 0,
+      createdAt: daysAgo(1),
+    },
+  ];
+
+  for (const campaign of sunriseCampaigns) {
+    await prisma.emailCampaign.upsert({
+      where: { id: campaign.id },
+      update: {},
+      create: campaign,
+    });
+  }
+  console.log(`  ✓ Created ${sunriseCampaigns.length} email campaigns for Sunrise Gymnastics`);
+
+  // Sample email campaigns for Metro Sports
+  const metroCampaigns = [
+    {
+      id: "seed-email-campaign-5",
+      organizationId: ORG2_ID,
+      name: "February Programs",
+      subject: "New Programs Starting in February",
+      htmlBody: `<h2>Exciting New Programs at Metro Sports!</h2>
+<p>Check out what's new this February:</p>
+<ul>
+<li><strong>Youth Basketball League</strong> - Saturdays 9am-12pm</li>
+<li><strong>Adult Fitness Bootcamp</strong> - Mon/Wed/Fri 6am</li>
+<li><strong>Family Swim Nights</strong> - Fridays 6-8pm</li>
+</ul>
+<p>Early bird pricing available through January 31st!</p>`,
+      textBody: "New programs starting in February at Metro Sports. Youth Basketball, Adult Fitness, Family Swim Nights.",
+      classification: "NEWSLETTER" as const,
+      targetScope: "ALL" as const,
+      status: "COMPLETED" as const,
+      totalRecipients: 67,
+      sentCount: 67,
+      deliveredCount: 65,
+      openedCount: 38,
+      clickedCount: 12,
+      bouncedCount: 1,
+      complainedCount: 0,
+      failedCount: 1,
+      startedAt: daysAgo(10),
+      completedAt: daysAgo(10),
+      createdAt: daysAgo(11),
+    },
+    {
+      id: "seed-email-campaign-6",
+      organizationId: ORG2_ID,
+      name: "Swim Team Practice Update",
+      subject: "Updated Practice Schedule - Swim Team",
+      htmlBody: `<h2>Swim Team Practice Schedule Update</h2>
+<p>Starting next week, we're adjusting practice times:</p>
+<ul>
+<li><strong>Monday/Wednesday:</strong> 4:00 PM - 5:30 PM (was 4:30 PM)</li>
+<li><strong>Friday:</strong> 3:30 PM - 5:00 PM (no change)</li>
+<li><strong>Saturday:</strong> 8:00 AM - 10:00 AM (no change)</li>
+</ul>
+<p>Please update your calendars accordingly. See you at the pool!</p>`,
+      textBody: "Updated swim team practice times starting next week. Monday/Wednesday now 4:00 PM - 5:30 PM.",
+      classification: "PROGRAM_UPDATE" as const,
+      targetScope: "PROGRAM" as const,
+      targetProgramId: `${ORG2_ID}-prog-swim`, // Swim Team
+      status: "COMPLETED" as const,
+      totalRecipients: 20,
+      sentCount: 20,
+      deliveredCount: 20,
+      openedCount: 14,
+      clickedCount: 6,
+      bouncedCount: 0,
+      complainedCount: 0,
+      failedCount: 0,
+      startedAt: daysAgo(3),
+      completedAt: daysAgo(3),
+      createdAt: daysAgo(4),
+    },
+  ];
+
+  for (const campaign of metroCampaigns) {
+    await prisma.emailCampaign.upsert({
+      where: { id: campaign.id },
+      update: {},
+      create: campaign,
+    });
+  }
+  console.log(`  ✓ Created ${metroCampaigns.length} email campaigns for Metro Sports`);
+
+  // ============================================
   // COMPLETE
   // ============================================
   console.log("\n" + "=".repeat(50));
@@ -2621,6 +2889,8 @@ async function main() {
   console.log("  • 2 medical form configs with custom questions");
   console.log("  • 6 athlete medical info records with responses");
   console.log("  • 14 reserved domains");
+  console.log("  • 6 email campaigns (newsletters, program updates, scheduled)");
+  console.log("  • Email usage tracking for both organizations");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (password: password123):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");
