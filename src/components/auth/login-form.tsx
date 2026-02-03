@@ -64,17 +64,62 @@ function getDefaultCallbackUrl(): string {
   
   const hostname = window.location.hostname;
   
-  // If on uplifterinc.localhost subdomain, default to admin portal
+  // Local development
   if (hostname.endsWith("uplifterinc.localhost")) {
     return "http://admin.uplifterinc.localhost:3000/";
   }
   
-  // Production: return admin subdomain
+  // Production
   if (hostname.endsWith("uplifterinc.com")) {
     return "https://admin.uplifterinc.com/";
   }
   
+  // Staging
+  if (hostname.endsWith("upliftergymnastics.com")) {
+    return "https://admin.upliftergymnastics.com/";
+  }
+  
+  // Development
+  if (hostname.endsWith("uplifterdev.com")) {
+    return "https://admin.uplifterdev.com/";
+  }
+  
   return "/";
+}
+
+/**
+ * Get the signup URL based on current domain.
+ * 
+ * Individual users cannot self-register - they must be invited by an organization admin.
+ * The signup link directs to the organization startup portal where new organizations
+ * can register.
+ */
+function getSignupUrl(): string {
+  if (typeof window === "undefined") return "/signup";
+  
+  const hostname = window.location.hostname;
+  
+  // Local development
+  if (hostname.endsWith("uplifterinc.localhost")) {
+    return "http://startup.uplifterinc.localhost:3000/";
+  }
+  
+  // Production
+  if (hostname.endsWith("uplifterinc.com")) {
+    return "https://startup.uplifterinc.com/";
+  }
+  
+  // Staging
+  if (hostname.endsWith("upliftergymnastics.com")) {
+    return "https://startup.upliftergymnastics.com/";
+  }
+  
+  // Development
+  if (hostname.endsWith("uplifterdev.com")) {
+    return "https://startup.uplifterdev.com/";
+  }
+  
+  return "/signup";
 }
 
 export function LoginForm() {
@@ -362,9 +407,9 @@ export function LoginForm() {
             </div>
             <div className="text-center text-sm">
               Don&apos;t have an account?{" "}
-              <Link href={`/signup?email=${encodeURIComponent(email)}`} className="underline">
+              <a href={getSignupUrl()} className="underline">
                 Sign up
-              </Link>
+              </a>
             </div>
             </form>
           </CardContent>
