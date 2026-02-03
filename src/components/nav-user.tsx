@@ -29,7 +29,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useRouter } from "next/navigation"
-import { signOut } from "next-auth/react"
+import { logout } from "@/lib/logout"
 
 export function NavUser({
   user,
@@ -56,7 +56,7 @@ export function NavUser({
   }
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: "/login" })
+    logout("/login")
   }
 
   return (

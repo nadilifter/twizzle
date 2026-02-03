@@ -4,7 +4,8 @@ import * as React from "react"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Check, ChevronsUpDown, Building2, Loader2, LogOut, CreditCard } from "lucide-react"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
+import { logout } from "@/lib/logout"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -119,7 +120,7 @@ function POSSelectOrganizationForm() {
   }
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: "/login" })
+    logout("/login")
   }
 
   if (isLoading || fetching) {

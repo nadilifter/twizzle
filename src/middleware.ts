@@ -158,6 +158,12 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // Debug: log token retrieval for auth troubleshooting
+  const sessionCookie = req.cookies.get("next-auth.session-token");
+  if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos") {
+    console.log(`Middleware: host=${currentHost}, path=${path}, hasCookie=${!!sessionCookie}, hasToken=${!!token}`);
+  }
+
   // 2. Portal Routing
   
   // LOGIN PORTAL (login.{baseDomain}) -> /(auth)/*
@@ -185,6 +191,9 @@ export async function middleware(req: NextRequest) {
 
   // ADMIN PORTAL (admin.{baseDomain}) -> /dashboard
   if (currentHost === "admin") {
+    // Debug logging for auth issues
+    console.log(`Middleware [admin]: path=${path}, hasToken=${!!token}, tokenEmail=${token?.email || 'none'}`);
+    
     // Redirect /login to centralized login portal
     if (path.startsWith("/login")) {
          const loginHost = getLoginHost();
@@ -198,6 +207,7 @@ export async function middleware(req: NextRequest) {
 
     // Auth Check for Admin
     if (!token && !path.startsWith("/login")) {
+      console.log(`Middleware [admin]: No token found, redirecting to login`);
       const loginHost = getLoginHost();
       const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
       loginUrl.searchParams.set("callbackUrl", req.url);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { encode } from "next-auth/jwt";
 import { db } from "@/lib/db";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getCurrentEnvironment, getEnvConfig } from "@/lib/env-domains";
 
 /**
  * Session Bridge Endpoint
@@ -136,8 +137,20 @@ export async function GET(req: NextRequest) {
     });
 
     // Determine cookie domain based on environment
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieDomain = isProduction ? ".uplifterinc.com" : ".uplifterinc.localhost";
+    // Use the same environment detection as the logout route for consistency
+    const currentEnv = getCurrentEnvironment();
+    const config = getEnvConfig();
+    
+    let cookieDomain: string;
+    if (currentEnv === 'local') {
+      // In local dev, use the shared local domain
+      cookieDomain = ".uplifterinc.localhost";
+    } else {
+      // In cloud environments, use the configured cookie domain
+      cookieDomain = config.cookieDomain;
+    }
+    
+    const isSecure = currentEnv !== 'local';
 
     // Create response with redirect
     const response = NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
@@ -147,10 +160,12 @@ export async function GET(req: NextRequest) {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      secure: isProduction,
+      secure: isSecure,
       domain: cookieDomain,
       maxAge: 30 * 24 * 60 * 60, // 30 days
     });
+    
+    console.log(`Session bridge: Setting cookie on domain ${cookieDomain}, secure: ${isSecure}`);
 
     console.log("Session bridge: Successfully created session for:", email);
     return response;

@@ -3,7 +3,8 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { Check, ChevronsUpDown, Building2, Loader2, LogOut } from "lucide-react"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
+import { logout } from "@/lib/logout"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -90,7 +91,7 @@ function SwitchOrganizationForm() {
   }
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: "/login" })
+    logout("/login")
   }
 
   if (isLoading || fetching) {
