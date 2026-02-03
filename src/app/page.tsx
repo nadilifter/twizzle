@@ -22,12 +22,12 @@ export default async function Home() {
       // Normal flow - redirect to dashboard (middleware handles subdomain routing)
       redirect("/dashboard")
     }
-  } else {
-    // No session - redirect to login portal
-    // If on localhost:3000, redirect to login.uplifterinc.localhost for consistent login experience
-    if (isLocalhostOnly) {
-      redirect("http://login.uplifterinc.localhost:3000")
-    }
-    redirect("/login")
   }
+  
+  // Unauthenticated users should have been redirected by middleware
+  // This is a fallback in case middleware doesn't catch them
+  if (isLocalhostOnly) {
+    redirect("http://login.uplifterinc.localhost:3000")
+  }
+  redirect("/login")
 }

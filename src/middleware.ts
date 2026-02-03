@@ -383,6 +383,26 @@ export async function middleware(req: NextRequest) {
          const newPath = path.replace("/dashboard", "") || "/";
          return NextResponse.redirect(`${protocol}//${adminHost}${newPath}`);
       }
+      
+      // Redirect all auth routes to the login subdomain
+      // This ensures login only happens through the centralized login portal
+      const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email"];
+      if (authPaths.some(authPath => path === authPath || path.startsWith(authPath + "/"))) {
+          const loginHost = getLoginHost();
+          const loginUrl = new URL(path, `${protocol}//${loginHost}`);
+          // Preserve query parameters (like callbackUrl)
+          req.nextUrl.searchParams.forEach((value, key) => {
+              loginUrl.searchParams.set(key, value);
+          });
+          return NextResponse.redirect(loginUrl);
+      }
+      
+      // Redirect unauthenticated users from root to login subdomain
+      if (path === "/" && !token) {
+          const loginHost = getLoginHost();
+          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
+          return NextResponse.redirect(loginUrl);
+      }
   }
 
   return NextResponse.next();
