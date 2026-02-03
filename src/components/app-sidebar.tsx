@@ -3,7 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { ChevronRight, LifeBuoy, Send, FlaskConical, Zap, CalendarCheck, ShoppingCart, UserCheck, Globe } from "lucide-react"
+import { ChevronRight, LifeBuoy, Send, FlaskConical, CalendarCheck, ShoppingCart, UserCheck, Globe } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 import { NavSecondary } from "@/components/nav-secondary"
@@ -35,7 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getFeatureStatus, type FeatureStatus } from "@/lib/feature-status"
+import { getFeatureStatus } from "@/lib/feature-status"
 import { cn } from "@/lib/utils"
 import { getOrganizationWebsiteSubdomain } from "@/app/actions/organization"
 
@@ -64,32 +64,12 @@ function getAccessPointUrl(subdomain: string, organizationId?: string): string {
   return `/${subdomain}`
 }
 
-// Status indicator component for nav items
+// Status indicator: show only beta/demo (not live) so sidebar is less noisy
 function FeatureStatusIndicator({ url }: { url: string }) {
   const config = getFeatureStatus(url)
-  
   if (!config) return null
-  
-  if (config.status === "live") {
-    return (
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="ml-auto">
-              <Zap className="h-3 w-3 text-emerald-500" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="max-w-[200px]">
-            <p className="font-medium text-xs">Live Feature</p>
-            <p className="text-xs opacity-80">
-              {config.description || "Connected to backend services"}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    )
-  }
-  
+  // Hide live indicator; only show beta/demo
+  if (config.status === "live") return null
   if (config.status === "demo") {
     return (
       <TooltipProvider delayDuration={300}>
@@ -100,7 +80,7 @@ function FeatureStatusIndicator({ url }: { url: string }) {
             </span>
           </TooltipTrigger>
           <TooltipContent side="right" className="max-w-[200px]">
-            <p className="font-medium text-xs">Demo Data</p>
+            <p className="font-medium text-xs">Beta</p>
             <p className="text-xs opacity-80">
               {config.description || "Using sample data for preview"}
             </p>
@@ -109,21 +89,19 @@ function FeatureStatusIndicator({ url }: { url: string }) {
       </TooltipProvider>
     )
   }
-  
-  // Partial status
+  // Partial: show only beta indicator
   return (
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="ml-auto flex gap-0.5">
-            <Zap className="h-3 w-3 text-emerald-500" />
+          <span className="ml-auto">
             <FlaskConical className="h-3 w-3 text-amber-500" />
           </span>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-[200px]">
-          <p className="font-medium text-xs">Partial Implementation</p>
+          <p className="font-medium text-xs">Beta</p>
           <p className="text-xs opacity-80">
-            {config.description || "Some features use real data, others are demo"}
+            {config.description || "Some features use real data, others are in beta"}
           </p>
         </TooltipContent>
       </Tooltip>
@@ -139,10 +117,14 @@ const data = {
       url: "/dashboard",
       items: [
         {
-          title: "Overview",
+          title: "Dashboard",
           url: "/dashboard",
         },
         /*
+        {
+          title: "Overview",
+          url: "/dashboard",
+        },
         {
           title: "Analytics",
           url: "/dashboard/analytics",
@@ -190,18 +172,6 @@ const data = {
       title: "Training",
       url: "/dashboard/training",
       items: [
-        {
-          title: "Overview",
-          url: "/dashboard/training",
-        },
-        {
-          title: "Plans",
-          url: "/dashboard/training/plans",
-        },
-        {
-          title: "Rotations",
-          url: "/dashboard/training/rotations",
-        },
         {
           title: "Skills",
           url: "/dashboard/training/skills",

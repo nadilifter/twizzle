@@ -42,10 +42,21 @@ export default async function AdminDashboardPage() {
         <h2 className="text-xl font-bold mb-4">Stashed Functionality</h2>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Hidden Pages</CardTitle>
+            <CardTitle className="text-base">Hidden from sidebar</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Live feature indicators are hidden in the dashboard sidebar; only beta/demo features show an indicator (flask icon).
+            </p>
             <ul className="list-disc pl-5 space-y-2">
+              <li>
+                <span className="font-medium">Dashboard Overview</span> (/dashboard) - 
+                <span className="text-muted-foreground ml-2">Sidebar shows &quot;Dashboard&quot; link only; Overview label removed.</span>
+              </li>
+              <li>
+                <span className="font-medium">Training Overview, Plans, Rotations</span> (/dashboard/training, /dashboard/training/plans, /dashboard/training/rotations) - 
+                <span className="text-muted-foreground ml-2">Hidden from Training section. Only Skills and Evaluations shown.</span>
+              </li>
               <li>
                 <span className="font-medium">Microsoft & Facebook Login</span> (login/signup forms) - 
                 <span className="text-muted-foreground ml-2">OAuth buttons hidden until integration is implemented. Only Google OAuth is active.</span>
