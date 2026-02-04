@@ -89,8 +89,9 @@ source ~/.env.uplifter
 set +a
 
 # Run migrations using the container (pin to Prisma 6 to match project version)
+# Use the network created by docker-compose (prefixed with directory name)
 sudo docker run --rm \
-    --network uplifter-network \
+    --network uplifter_uplifter-network \
     -e DATABASE_URL="postgresql://uplifter:${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter" \
     uplifter:latest \
     npx prisma@^6 migrate deploy
