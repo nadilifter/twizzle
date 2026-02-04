@@ -139,7 +139,6 @@ export async function middleware(req: NextRequest) {
 
   // 1. Domain Parsing - Environment Aware
   const config = getEnvConfig();
-  const currentEnv = getCurrentEnvironment();
   const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
   const isLocal = currentEnv === 'local';
   
