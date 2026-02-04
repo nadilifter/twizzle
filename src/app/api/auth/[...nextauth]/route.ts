@@ -22,6 +22,17 @@ function addCorsHeaders(request: NextRequest, response: Response): Response {
     newHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     newHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     
+    // Explicitly copy Set-Cookie to avoid it being dropped during cloning
+    // Note: Headers.get() might merge multiple Set-Cookie headers, but for Auth 
+    // we usually care about the session cookie.
+    const setCookie = response.headers.get("Set-Cookie");
+    if (setCookie) {
+      // If newHeaders lost it (some environments), put it back
+      if (!newHeaders.has("Set-Cookie")) {
+         newHeaders.set("Set-Cookie", setCookie);
+      }
+    }
+    
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -105,6 +116,11 @@ export async function POST(request: NextRequest, context: { params: { nextauth: 
   const action = context.params.nextauth?.[0];
   console.log(`Auth API [POST]: action=${action}, origin=${request.headers.get("origin")}`);
   
+  // Handle _log action to prevent 404s from NextAuth client logger
+  if (action === "_log") {
+    return new NextResponse(null, { status: 200 });
+  }
+  
   // Apply strict rate limiting for credential sign-in attempts
   if (action === "callback" || action === "signin") {
     const rateLimitResponse = await checkAuthRateLimit(request, RATE_LIMITS.auth);
@@ -114,6 +130,14 @@ export async function POST(request: NextRequest, context: { params: { nextauth: 
   }
 
   const response = await nextAuthHandler(request, context);
+  
+  // Debug: Log headers from NextAuth response before processing
+  const rawSetCookie = response.headers.get("Set-Cookie");
+  console.log(`Auth API [POST]: Raw NextAuth Set-Cookie present=${!!rawSetCookie}`);
+  if (rawSetCookie) {
+    console.log(`Auth API [POST]: Raw NextAuth Set-Cookie length=${rawSetCookie.length}`);
+  }
+
   const finalResponse = addCorsHeaders(request, response);
   logResponse(`POST ${action}`, finalResponse);
   return finalResponse;

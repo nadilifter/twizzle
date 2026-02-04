@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import crypto from "crypto";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { getCurrentEnvironment, getEnvConfig } from "@/lib/env-domains";
+import { getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib/env-domains";
 
 /**
  * Credentials Bridge Endpoint

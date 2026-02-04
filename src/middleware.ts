@@ -101,6 +101,12 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // Bypass rewriting for /api/auth routes to ensure they hit the global API handlers
+  // This prevents them from being rewritten to /dashboard/api/auth/... on admin subdomain, etc.
+  if (path.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
   // 2. Portal Routing
   
   // LOGIN PORTAL (login.{baseDomain}) -> /(auth)/*
