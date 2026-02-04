@@ -57,46 +57,6 @@ export const authOptions: NextAuthOptions = {
         secure: getCurrentEnvironment() !== 'local',
         domain: getCookieDomain()
       }
-    },
-    callbackUrl: {
-      name: getCurrentEnvironment() === 'local' ? `next-auth.callback-url` : `__Secure-next-auth.callback-url`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: getCurrentEnvironment() !== 'local',
-        domain: getCookieDomain()
-      }
-    },
-    csrfToken: {
-      name: getCurrentEnvironment() === 'local' ? `next-auth.csrf-token` : `__Host-next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: getCurrentEnvironment() !== 'local',
-        domain: getCookieDomain()
-      }
-    },
-    state: {
-      name: getCurrentEnvironment() === 'local' ? `next-auth.state` : `__Secure-next-auth.state`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: getCurrentEnvironment() !== 'local',
-        domain: getCookieDomain()
-      }
-    },
-    pkceCodeVerifier: {
-      name: getCurrentEnvironment() === 'local' ? `next-auth.pkce.code_verifier` : `__Secure-next-auth.pkce.code_verifier`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: getCurrentEnvironment() !== 'local',
-        domain: getCookieDomain()
-      }
     }
   },
   pages: {
