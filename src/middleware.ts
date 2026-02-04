@@ -31,7 +31,8 @@ export async function middleware(req: NextRequest) {
   }
 
   // Add CORS headers to API responses
-  if (path.startsWith("/api")) {
+  // Skip /api/auth as it handles its own CORS to ensure headers propagate correctly
+  if (path.startsWith("/api") && !path.startsWith("/api/auth")) {
     const response = NextResponse.next();
     return handleCors(req, response);
   }
@@ -91,8 +92,8 @@ export async function middleware(req: NextRequest) {
   // Debug: log token retrieval for auth troubleshooting
   const sessionCookie = req.cookies.get(cookieName);
   const allCookieNames = req.cookies.getAll().map(c => c.name);
-  if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos" || currentHost === "login") {
-    console.log(`Middleware: host=${currentHost}, path=${path}, env=${currentEnv}`);
+  if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos" || currentHost === "login" || path.startsWith("/api/auth")) {
+    console.log(`Middleware: method=${req.method}, host=${currentHost}, path=${path}, env=${currentEnv}`);
     console.log(`Middleware: cookies=${JSON.stringify(allCookieNames)}`);
     console.log(`Middleware: looking for cookie=${cookieName}, found=${!!sessionCookie}, hasToken=${!!token}`);
     if (token) {
