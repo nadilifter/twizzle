@@ -59,7 +59,7 @@ export const authOptions: NextAuthOptions = {
       }
     },
     callbackUrl: {
-      name: `next-auth.callback-url`,
+      name: getCurrentEnvironment() === 'local' ? `next-auth.callback-url` : `__Secure-next-auth.callback-url`,
       options: {
         httpOnly: true,
         sameSite: "lax",
@@ -69,7 +69,7 @@ export const authOptions: NextAuthOptions = {
       }
     },
     csrfToken: {
-      name: `next-auth.csrf-token`,
+      name: getCurrentEnvironment() === 'local' ? `next-auth.csrf-token` : `__Host-next-auth.csrf-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",
@@ -79,7 +79,7 @@ export const authOptions: NextAuthOptions = {
       }
     },
     state: {
-      name: `next-auth.state`,
+      name: getCurrentEnvironment() === 'local' ? `next-auth.state` : `__Secure-next-auth.state`,
       options: {
         httpOnly: true,
         sameSite: "lax",
@@ -89,7 +89,7 @@ export const authOptions: NextAuthOptions = {
       }
     },
     pkceCodeVerifier: {
-      name: `next-auth.pkce.code_verifier`,
+      name: getCurrentEnvironment() === 'local' ? `next-auth.pkce.code_verifier` : `__Secure-next-auth.pkce.code_verifier`,
       options: {
         httpOnly: true,
         sameSite: "lax",
