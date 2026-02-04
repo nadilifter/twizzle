@@ -20,6 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { getUserOrganizations } from "@/app/actions/organization"
+import { getClientSubdomainUrl } from "@/lib/client-domains"
 
 type Organization = {
     id: string
@@ -128,7 +129,13 @@ export function OrganizationSwitcher() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2">
+            <DropdownMenuItem 
+              className="gap-2 p-2"
+              onClick={() => {
+                const startupUrl = getClientSubdomainUrl("startup")
+                window.location.href = startupUrl
+              }}
+            >
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                 <Plus className="size-4" />
               </div>

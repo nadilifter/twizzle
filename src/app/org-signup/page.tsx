@@ -51,7 +51,7 @@ const COUNTRIES = [
   { code: "CA", name: "Canada" },
 ]
 
-const MAX_NAME_LENGTH = 255
+const MAX_NAME_LENGTH = 50
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
 
 // US: 12345 or 12345-6789; Canada: A1A 1A1 (letter-digit-letter digit-letter-digit)

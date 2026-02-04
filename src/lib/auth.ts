@@ -32,14 +32,11 @@ function getCookieDomain(): string | undefined {
   // localhost:3000 when OAuth completes, then session-bridge transfers the
   // session to local subdomains with the correct domain.
   if (currentEnv === 'local') {
-    console.log("Auth: getCookieDomain() returning undefined for local env");
     return undefined;
   }
   
   // For cloud environments, use the configured cookie domain
-  const domain = getEnvConfig().cookieDomain;
-  console.log(`Auth: getCookieDomain() returning '${domain}' for env '${currentEnv}'`);
-  return domain;
+  return getEnvConfig().cookieDomain;
 }
 
 export const authOptions: NextAuthOptions = {

@@ -127,7 +127,7 @@ export default async function AdminDomainsPage() {
                   <TableRow key={config.id}>
                     <TableCell className="font-medium">
                       <Link 
-                        href={`/superadmin/organizations/${config.organization.id}`}
+                        href={`/superadmin/organizations/${config.organization.slug}`}
                         className="text-primary hover:underline"
                       >
                         {config.organization.name}

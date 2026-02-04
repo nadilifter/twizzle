@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { Metadata } from "next"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -36,15 +37,27 @@ function getAdminDashboardSwitchUrl(orgId: string, orgName: string): string {
   return `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const organization = await db.organization.findUnique({
+    where: { slug },
+    select: { name: true }
+  })
+  
+  return {
+    title: organization ? `${organization.name} | Superadmin` : 'Organization | Superadmin'
+  }
+}
+
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }
 
 export default async function OrganizationDetailPage({ params }: Props) {
-  const { id } = await params
+  const { slug } = await params
   
   const organization = await db.organization.findUnique({
-    where: { id },
+    where: { slug },
     include: {
       _count: {
         select: { 
@@ -132,7 +145,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href={`/superadmin/organizations/${id}/members`}>
+        <Link href={`/superadmin/organizations/${slug}/members`}>
           <Card className="cursor-pointer transition-colors hover:bg-muted/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Members</CardTitle>
@@ -145,7 +158,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
           </Card>
         </Link>
 
-        <Link href={`/superadmin/organizations/${id}/invoices`}>
+        <Link href={`/superadmin/organizations/${slug}/invoices`}>
           <Card className="cursor-pointer transition-colors hover:bg-muted/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Invoices</CardTitle>
@@ -239,7 +252,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
               <CardDescription>Latest members to join</CardDescription>
             </div>
             <Link 
-              href={`/superadmin/organizations/${id}/members`}
+              href={`/superadmin/organizations/${slug}/members`}
               className="text-sm text-primary hover:underline"
             >
               View all
@@ -275,7 +288,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
             <CardDescription>Latest invoices for this organization</CardDescription>
           </div>
           <Link 
-            href={`/superadmin/organizations/${id}/invoices`}
+            href={`/superadmin/organizations/${slug}/invoices`}
             className="text-sm text-primary hover:underline"
           >
             View all

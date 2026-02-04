@@ -12,6 +12,7 @@ import {
   LayoutDashboard, 
   Package,
   ShieldCheck, 
+  Timer,
   Users,
   ExternalLink,
   UserPlus,
@@ -127,6 +128,11 @@ const navItems = [
     title: "Organizations",
     url: "/superadmin/organizations",
     icon: Building2,
+  },
+  {
+    title: "Trials",
+    url: "/superadmin/trials",
+    icon: Timer,
   },
   {
     title: "Users",

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { Metadata } from "next"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,15 +22,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const organization = await db.organization.findUnique({
+    where: { slug },
+    select: { name: true }
+  })
+  
+  return {
+    title: organization ? `${organization.name} - Members | Superadmin` : 'Members | Superadmin'
+  }
+}
+
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }
 
 export default async function OrganizationMembersPage({ params }: Props) {
-  const { id } = await params
+  const { slug } = await params
   
   const organization = await db.organization.findUnique({
-    where: { id },
+    where: { slug },
     include: {
       members: {
         include: {
@@ -93,7 +106,7 @@ export default async function OrganizationMembersPage({ params }: Props) {
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href={`/superadmin/organizations/${id}`}>{organization.name}</Link>
+              <Link href={`/superadmin/organizations/${slug}`}>{organization.name}</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

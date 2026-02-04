@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -310,11 +310,10 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="config-desc">Description</Label>
-                        <Textarea 
-                            id="config-desc" 
-                            value={formData.description} 
-                            onChange={(e) => setFormData({...formData, description: e.target.value})}
-                            className="min-h-[100px] resize-none"
+                        <RichTextEditor 
+                            value={formData.description || ""} 
+                            onChange={(value) => setFormData({...formData, description: value})}
+                            placeholder="Enter program description..."
                         />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -69,6 +69,8 @@ const COUNTRIES = [
   { code: "IN", name: "India" },
 ]
 
+const MAX_NAME_LENGTH = 50
+
 export default function SignupPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = React.useState(false)
@@ -178,6 +180,8 @@ export default function SignupPage() {
     // User account validation
     if (!formData.name.trim()) {
       newErrors.name = "Your name is required"
+    } else if (formData.name.length > MAX_NAME_LENGTH) {
+      newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or less`
     }
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"
@@ -291,9 +295,11 @@ export default function SignupPage() {
                   placeholder="John Smith"
                   value={formData.name}
                   onChange={handleInputChange}
+                  maxLength={MAX_NAME_LENGTH}
                   className={errors.name ? "border-destructive" : ""}
                 />
                 {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                <p className="text-xs text-muted-foreground">{formData.name.length}/{MAX_NAME_LENGTH}</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>

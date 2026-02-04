@@ -52,7 +52,7 @@ export default async function AdminOrganizationsPage() {
                 <TableRow key={org.id}>
                   <TableCell className="font-medium">
                     <Link 
-                      href={`/superadmin/organizations/${org.id}`}
+                      href={`/superadmin/organizations/${org.slug}`}
                       className="text-primary hover:underline"
                     >
                       {org.name}
@@ -61,7 +61,7 @@ export default async function AdminOrganizationsPage() {
                   <TableCell>{org.slug}</TableCell>
                   <TableCell>
                     <Link 
-                      href={`/superadmin/organizations/${org.id}/members`}
+                      href={`/superadmin/organizations/${org.slug}/members`}
                       className="text-primary hover:underline"
                     >
                       {org._count.members}
@@ -69,7 +69,7 @@ export default async function AdminOrganizationsPage() {
                   </TableCell>
                   <TableCell>
                     <Link 
-                      href={`/superadmin/organizations/${org.id}/invoices`}
+                      href={`/superadmin/organizations/${org.slug}/invoices`}
                       className="text-primary hover:underline"
                     >
                       {org._count.invoices}

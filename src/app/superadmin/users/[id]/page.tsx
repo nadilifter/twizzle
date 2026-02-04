@@ -332,7 +332,7 @@ export default async function UserDetailPage({ params }: Props) {
                     <TableRow key={membership.id}>
                       <TableCell>
                         <Link 
-                          href={`/superadmin/organizations/${membership.organization.id}`}
+                          href={`/superadmin/organizations/${membership.organization.slug}`}
                           className="font-medium hover:underline"
                         >
                           {membership.organization.name}
