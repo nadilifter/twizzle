@@ -1,8 +1,9 @@
+import { headers } from "next/headers"
 import { GradientBackground } from "@/components/ui/gradient-background"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 import { UplifterLogo } from "@/components/uplifter-logo"
 import Link from "next/link"
-import { getLoginUrl } from "@/lib/env-domains"
+import { getLoginUrlForHost } from "@/lib/env-domains"
 
 export const metadata = {
   title: "Sign Up - Uplifter",
@@ -12,12 +13,13 @@ export const metadata = {
   },
 }
 
-export default function SignupsLayout({
+export default async function SignupsLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const loginUrl = getLoginUrl()  // Uses environment-aware domain config
+  const headersList = await headers()
+  const loginUrl = getLoginUrlForHost(headersList.get("host"))
   
   return (
     <div className="flex flex-col min-h-screen bg-background relative overflow-hidden">

@@ -2728,6 +2728,7 @@ model NotificationRule {
   template       NotificationTemplate?
   recipientConfig NotificationRecipientConfig?
   logs           NotificationLog[]
+  deduplicationRecords NotificationDeduplication[]
 
   @@index([organizationId])
   @@index([triggerType])
@@ -2844,4 +2845,21 @@ enum NotificationLogStatus {
   DELIVERED         // Confirmed delivered
   FAILED            // Failed to send
   SKIPPED           // Skipped (e.g., recipient opted out)
+}
+
+// Notification Deduplication - prevents sending same notification twice for same entity
+model NotificationDeduplication {
+  id          String   @id @default(cuid())
+  ruleId      String
+  entityType  String   // "membership", "invoice", "event", "athlete" (for birthday), etc.
+  entityId    String   // The specific entity ID
+  familyId    String
+  sentAt      DateTime @default(now())
+
+  // Relations
+  rule        NotificationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleId, entityType, entityId, familyId])
+  @@index([ruleId])
+  @@index([sentAt])
 }

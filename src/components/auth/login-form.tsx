@@ -215,9 +215,15 @@ export function LoginForm() {
             const destination = callbackUrl.startsWith("http") ? callbackUrl : `http://admin.uplifterinc.localhost:3000${callbackUrl}`
             window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(destination)}`
           } else {
-            // Production - middleware will handle routing
-            router.push("/")
-            router.refresh()
+            // Production - redirect to callback URL (usually admin subdomain)
+            // We use window.location.href to ensure a full page navigation across subdomains
+            if (callbackUrl && callbackUrl !== "/") {
+                window.location.href = callbackUrl
+            } else {
+                // Fallback to default callback if somehow we have "/" or empty
+                // This ensures we don't stay on the login subdomain
+                window.location.href = getDefaultCallbackUrl()
+            }
           }
         }
       }

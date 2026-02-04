@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/expire-reservations",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/process-notifications",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

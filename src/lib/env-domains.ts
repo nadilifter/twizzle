@@ -119,6 +119,14 @@ export function getBaseUrl(): string {
 }
 
 /**
+ * Production marketing site URLs (docs, contact).
+ * Use these for help/documentation/contact links so they always point to the real
+ * marketing site, not a nonexistent staging/dev marketing site.
+ */
+export const MARKETING_DOCS_URL = 'https://learn.uplifterinc.com/';
+export const MARKETING_CONTACT_URL = 'https://www.uplifterinc.com/contact-us';
+
+/**
  * Get the login portal URL
  */
 export function getLoginUrl(callbackUrl?: string): string {
@@ -127,6 +135,29 @@ export function getLoginUrl(callbackUrl?: string): string {
     return `${loginUrl}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
   }
   return loginUrl;
+}
+
+/**
+ * Build login URL from the request Host header so the Sign in link stays in the
+ * same environment (e.g. on startup.upliftergymnastics.com -> login.upliftergymnastics.com).
+ * Use this in server components that render the startup/org-signup pages.
+ */
+export function getLoginUrlForHost(hostHeader: string | null): string {
+  if (!hostHeader) {
+    return getLoginUrl();
+  }
+  const [hostname, port] = hostHeader.split(':');
+  const parts = hostname.split('.');
+  const useHttps = !hostname.includes('localhost');
+  const protocol = useHttps ? 'https' : 'http';
+  let baseDomain: string;
+  if (hostname.includes('localhost')) {
+    baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : 'uplifterinc.localhost';
+    if (port) baseDomain += `:${port}`;
+  } else {
+    baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : 'uplifterinc.com';
+  }
+  return `${protocol}://login.${baseDomain}`;
 }
 
 /**

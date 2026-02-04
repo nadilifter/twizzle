@@ -183,6 +183,13 @@ export async function middleware(req: NextRequest) {
   // The login form handles this by posting OAuth to localhost:3000, then session-bridge
   // transfers the session back to the local subdomains
   if (currentHost === "login") {
+    // If user is already authenticated and visiting root, redirect to admin dashboard
+    // This prevents users from seeing the login form when they are already logged in
+    if (token && path === "/") {
+       const adminHost = getSubdomainHost("admin");
+       return NextResponse.redirect(`${protocol}//${adminHost}/`);
+    }
+
     let newPath = path;
     if (path === "/") {
       newPath = "/login"; // Default to login page

@@ -450,6 +450,7 @@ export default function UsersPage() {
             <DialogTitle>User Details</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1 px-6 min-h-0">
+            <div className="pr-4">
             {viewingUser && (
               <div className="flex flex-col gap-6 pb-6">
                 <div className="flex flex-col items-center gap-4 p-6 bg-muted/30 rounded-lg">
@@ -510,8 +511,9 @@ export default function UsersPage() {
                 </div>
               </div>
             )}
+            </div>
           </ScrollArea>
-          <div className="px-6 pb-6 pt-4 border-t">
+          <div className="px-6 pb-6 pt-4 border-t flex-shrink-0">
             {viewingUser && (
               <div className="flex justify-end">
                 <Button onClick={() => {
@@ -528,16 +530,17 @@ export default function UsersPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 gap-0">
-          <form onSubmit={handleSaveUser} className="flex flex-col h-full overflow-hidden">
-            <DialogHeader className="p-6 pb-2">
+        <DialogContent className="sm:max-w-[700px] h-[90vh] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <form onSubmit={handleSaveUser} className="flex flex-col h-full min-h-0 overflow-hidden">
+            <DialogHeader className="p-6 pb-2 flex-shrink-0">
               <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
               <DialogDescription>
                 Configure user details and granular permissions.
               </DialogDescription>
             </DialogHeader>
             
-            <ScrollArea className="flex-1 px-6">
+            <ScrollArea className="flex-1 px-6 min-h-0">
+              <div className="pr-4">
               <div className="grid gap-6 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -609,9 +612,10 @@ export default function UsersPage() {
                   </div>
                 </div>
               </div>
+              </div>
             </ScrollArea>
 
-            <DialogFooter className="p-6 pt-2 border-t mt-auto bg-background">
+            <DialogFooter className="p-6 pt-2 border-t flex-shrink-0 bg-background">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>

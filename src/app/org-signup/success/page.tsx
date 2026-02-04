@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { getBaseDomainFromHostname } from "@/lib/client-domains"
+import { MARKETING_DOCS_URL, MARKETING_CONTACT_URL } from "@/lib/env-domains"
 
 function SuccessContent() {
   const searchParams = useSearchParams()
@@ -141,9 +142,9 @@ function SuccessContent() {
 
       <p className="text-sm text-muted-foreground mt-8">
         Need help? Check out our{" "}
-        <a href="https://learn.uplifterinc.com/" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">documentation</a>
+        <a href={MARKETING_DOCS_URL} className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">documentation</a>
         {" "}or{" "}
-        <a href="https://www.uplifterinc.com/contact-us" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">contact support</a>.
+        <a href={MARKETING_CONTACT_URL} className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">contact support</a>.
       </p>
     </div>
   )
