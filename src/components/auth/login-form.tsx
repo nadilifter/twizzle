@@ -165,26 +165,11 @@ export function LoginForm() {
       
       // Use standard NextAuth signIn for all environments
       // This ensures consistent behavior and proper cookie setting
-      console.log("[Login] Attempting signIn with email:", email)
-      console.log("[Login] CSRF token state:", csrfToken ? "loaded" : "missing")
-      console.log("[Login] Current URL:", window.location.href)
-      
-      // First, verify we can get providers (this helps diagnose config issues)
-      const { getProviders } = await import("next-auth/react")
-      const providers = await getProviders()
-      console.log("[Login] Available providers:", providers ? Object.keys(providers) : "null")
-      
-      if (!providers || !providers.credentials) {
-        console.error("[Login] Credentials provider not found! Check NEXTAUTH_URL configuration.")
-        throw new Error("Authentication not configured correctly. Please contact support.")
-      }
-      
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       })
-      console.log("[Login] signIn result:", result === undefined ? "undefined" : JSON.stringify(result, null, 2))
 
       // Check both result.error AND result.ok for proper validation
       // signIn returns { error, status, ok, url } when redirect: false
@@ -197,10 +182,8 @@ export function LoginForm() {
           : result?.error || "Authentication failed. Please try again."
         setError(errorMessage)
         toast.error(errorMessage)
-        console.error("[Login] Auth failed:", { error: result?.error, ok: result?.ok, status: result?.status })
       } else {
         // Success! result.ok is true and no error
-        console.log("[Login] Auth succeeded, redirecting...")
         
         // LOCAL DEVELOPMENT ONLY: Use credentials-bridge for cookie domain transfer
         // This is needed because NextAuth sets cookies on the exact hostname in local dev,
