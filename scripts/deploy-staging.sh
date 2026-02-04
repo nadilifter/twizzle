@@ -127,6 +127,28 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     exit 1
 fi
 
+# Clean up Docker resources to prevent disk space buildup
+log_info "Cleaning up Docker resources..."
+
+# Remove dangling images (old builds)
+DANGLING=$(sudo docker images -f "dangling=true" -q | wc -l)
+if [ "$DANGLING" -gt 0 ]; then
+    sudo docker image prune -f > /dev/null 2>&1
+    log_info "Removed $DANGLING dangling image(s)"
+fi
+
+# Prune build cache (keep recent layers for faster builds)
+CACHE_SIZE=$(sudo docker system df --format '{{.Size}}' | tail -1)
+sudo docker builder prune -f --keep-storage 2GB > /dev/null 2>&1
+log_info "Pruned build cache (was: $CACHE_SIZE)"
+
+# Remove unused networks
+sudo docker network prune -f > /dev/null 2>&1
+
+# Show current disk usage
+log_info "Docker disk usage:"
+sudo docker system df --format "table {{.Type}}\t{{.Size}}\t{{.Reclaimable}}"
+
 echo ""
 log_info "Deployment successful!"
 sudo docker ps --filter "name=uplifter" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
