@@ -88,12 +88,12 @@ set -a
 source ~/.env.uplifter
 set +a
 
-# Run migrations using the container
+# Run migrations using the container (pin to Prisma 6 to match project version)
 sudo docker run --rm \
     --network uplifter-network \
     -e DATABASE_URL="postgresql://uplifter:${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter" \
     uplifter:latest \
-    npx prisma migrate deploy
+    npx prisma@^6 migrate deploy
 
 log_info "Restarting application..."
 cd ~/uplifter
