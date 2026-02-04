@@ -202,6 +202,51 @@ export function extractSubdomain(hostname: string): string | null {
 }
 
 /**
+ * Check if an origin is allowed for CORS/Auth
+ * Based on the current environment configuration
+ */
+export function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  
+  const config = getEnvConfig();
+  const currentEnv = getCurrentEnvironment();
+  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
+  
+  // Local environment allows localhost variations
+  if (currentEnv === 'local') {
+    if (origin.includes("localhost")) return true;
+    if (origin.includes("uplifterinc.localhost")) return true;
+  }
+  
+  // Check against the current environment's domain
+  const protocol = config.useHttps ? 'https' : 'http';
+  if (origin === `${protocol}://${baseDomain}` || 
+      origin === `${protocol}://www.${baseDomain}`) {
+    return true;
+  }
+  
+  // Check subdomains
+  if (origin.endsWith(`.${baseDomain}`)) {
+    return true;
+  }
+  
+  // Check explicitly configured CORS origins
+  if (config.corsOrigins.includes(origin)) {
+    return true;
+  }
+  
+  // Wildcard check for corsOrigins
+  for (const allowed of config.corsOrigins) {
+    if (allowed.includes('*')) {
+      const regex = new RegExp('^' + allowed.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
+      if (regex.test(origin)) return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
  * Get the public URL for an asset (uses CDN if available)
  */
 export function getAssetUrl(path: string): string {

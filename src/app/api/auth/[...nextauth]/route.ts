@@ -2,35 +2,9 @@ import NextAuth from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { isAllowedOrigin } from "@/lib/env-domains";
 
 const nextAuthHandler = NextAuth(authOptions);
-
-/**
- * Check if origin is allowed for CORS
- * This mirrors the logic in middleware.ts but is needed here because
- * middleware headers set via NextResponse.next() don't reliably propagate
- * to the actual response from route handlers.
- */
-function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return false;
-  
-  const env = process.env.APP_ENVIRONMENT;
-  const isLocal = !env || env === 'local' || process.env.NODE_ENV !== 'production';
-  
-  // Local environment allows localhost variations
-  if (isLocal) {
-    if (origin.includes("localhost")) return true;
-    if (origin.includes("uplifterinc.localhost")) return true;
-  }
-  
-  // Production environments
-  const baseDomains = ['uplifterinc.com', 'upliftergymnastics.com', 'uplifterdev.com'];
-  for (const domain of baseDomains) {
-    if (origin.includes(domain)) return true;
-  }
-  
-  return false;
-}
 
 /**
  * Add CORS headers to response for cross-origin requests

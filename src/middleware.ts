@@ -1,84 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-
-/**
- * Environment Configuration
- * 
- * Note: We inline the config here instead of importing from @/lib/env-domains
- * because middleware runs in the Edge runtime and has limited module support.
- */
-type Environment = 'production' | 'staging' | 'development' | 'local';
-
-interface EnvironmentConfig {
-  baseDomain: string;
-  useHttps: boolean;
-}
-
-const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
-  production: {
-    baseDomain: 'uplifterinc.com',
-    useHttps: true,
-  },
-  staging: {
-    baseDomain: 'upliftergymnastics.com',
-    useHttps: true,
-  },
-  development: {
-    baseDomain: 'uplifterdev.com',
-    useHttps: true,
-  },
-  local: {
-    baseDomain: 'uplifterinc.localhost:3000',
-    useHttps: false,
-  },
-};
-
-function getCurrentEnvironment(): Environment {
-  const env = process.env.APP_ENVIRONMENT;
-  if (env && env in ENV_CONFIG) {
-    return env as Environment;
-  }
-  if (process.env.NODE_ENV === 'production') {
-    return 'production';
-  }
-  return 'local';
-}
-
-function getEnvConfig(): EnvironmentConfig {
-  return ENV_CONFIG[getCurrentEnvironment()];
-}
-
-/**
- * Allowed origins for CORS
- * Based on the current environment configuration
- */
-function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return false;
-  
-  const config = getEnvConfig();
-  const currentEnv = getCurrentEnvironment();
-  const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
-  
-  // Local environment allows localhost variations
-  if (currentEnv === 'local') {
-    if (origin.includes("localhost")) return true;
-    if (origin.includes("uplifterinc.localhost")) return true;
-  }
-  
-  // Check against the current environment's domain
-  const protocol = config.useHttps ? 'https' : 'http';
-  if (origin === `${protocol}://${baseDomain}` || 
-      origin === `${protocol}://www.${baseDomain}`) {
-    return true;
-  }
-  
-  // Check subdomains
-  if (origin.endsWith(`.${baseDomain}`)) {
-    return true;
-  }
-  
-  return false;
-}
+import { getEnvConfig, getCurrentEnvironment, getSessionCookieName, isAllowedOrigin } from "@/lib/env-domains";
 
 /**
  * Handle CORS preflight and add CORS headers
@@ -95,12 +17,6 @@ function handleCors(req: NextRequest, response: NextResponse): NextResponse {
   }
   
   return response;
-}
-
-// Helper to get session cookie name based on environment
-// Duplicated from env-domains.ts because middleware runs in Edge runtime
-function getSessionCookieName(env: Environment): string {
-  return env === 'local' ? "next-auth.session-token" : "__Secure-next-auth.session-token";
 }
 
 export async function middleware(req: NextRequest) {
@@ -126,8 +42,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Determine current environment for cookie name
-  const currentEnv = getCurrentEnvironment();
-  const cookieName = getSessionCookieName(currentEnv);
+  const cookieName = getSessionCookieName();
 
   // Get auth token for protected routes
   // Explicitly pass secret and cookie name to handle edge runtime properly
