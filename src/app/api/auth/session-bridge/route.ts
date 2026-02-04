@@ -7,16 +7,22 @@ import { getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib
 /**
  * Session Bridge Endpoint
  * 
- * This endpoint handles cross-domain authentication for Google OAuth.
+ * LOCAL DEVELOPMENT ONLY:
+ * This endpoint handles cross-domain authentication for Google OAuth and credentials login.
  * Since Google OAuth only accepts localhost:3000 as an authorized origin,
  * but our app runs on *.uplifterinc.localhost subdomains, we need to:
  * 
- * 1. Complete OAuth on localhost:3000
+ * 1. Complete OAuth/credentials login on localhost:3000
  * 2. Pass a signed bridge token to this endpoint on uplifterinc.localhost
  * 3. This endpoint verifies the token and sets the session cookie for .uplifterinc.localhost
  * 
  * The bridge token contains the user's email (signed with NEXTAUTH_SECRET)
  * and is only valid for a short time (60 seconds).
+ * 
+ * PRODUCTION/STAGING:
+ * In production/staging, cookies are set with domain=.upliftergymnastics.com
+ * which is automatically shared across all subdomains. This bridge is not needed.
+ * If no token is provided and we're not in local development, redirect to callback.
  */
 
 const BRIDGE_TOKEN_MAX_AGE = 60; // 60 seconds
@@ -28,6 +34,7 @@ export async function GET(req: NextRequest) {
     return rateLimitResponse;
   }
 
+  const currentEnv = getCurrentEnvironment();
   const searchParams = req.nextUrl.searchParams;
   const bridgeToken = searchParams.get("token");
   const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -38,6 +45,15 @@ export async function GET(req: NextRequest) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("error", error);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // PRODUCTION/STAGING PASSTHROUGH:
+  // In production/staging, if there's no bridge token, just redirect to callback.
+  // This can happen if someone bookmarks a bridge URL or there's a redirect loop.
+  // The session cookie is already set with the correct domain, so no action needed.
+  if (!bridgeToken && currentEnv !== 'local') {
+    console.log(`Session bridge: Production passthrough (no token), redirecting to ${callbackUrl}`);
+    return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
   }
 
   if (!bridgeToken) {

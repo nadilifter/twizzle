@@ -15,6 +15,11 @@ import { getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib
  * 
  * This is needed because NextAuth sets cookies on the exact hostname by default
  * in local development, but we need cookies shared across all subdomains.
+ * 
+ * PRODUCTION/STAGING:
+ * In production/staging, cookies are set with domain=.upliftergymnastics.com
+ * which is automatically shared across all subdomains. This bridge is not needed
+ * and will simply redirect to the callback URL (passthrough mode).
  */
 
 export async function GET(req: NextRequest) {
@@ -29,9 +34,11 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
-  // Only needed in local development
+  // PRODUCTION/STAGING PASSTHROUGH:
+  // In production/staging, cookies are already shared across subdomains via the
+  // domain attribute (.upliftergymnastics.com). No bridge is needed - just redirect.
   if (currentEnv !== 'local') {
-    // In production, just redirect directly - cookies are already shared
+    console.log(`Credentials bridge: Production passthrough, redirecting to ${callbackUrl}`);
     return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
   }
 

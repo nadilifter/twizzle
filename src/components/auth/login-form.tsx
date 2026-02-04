@@ -156,75 +156,48 @@ export function LoginForm() {
 
     try {
       const hostname = window.location.hostname
-      const isLocalSubdomain = hostname.endsWith("uplifterinc.localhost")
       
-      // For local subdomains, we need to make a direct fetch to the current origin
-      // because next-auth's signIn() uses NEXTAUTH_URL (localhost:3000) as the base URL,
-      // which would set the cookie on the wrong domain.
-      if (isLocalSubdomain) {
-        // Make a direct POST to the current origin's callback endpoint
-        const response = await fetch("/api/auth/callback/credentials", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            csrfToken: csrfToken,
-            email: email,
-            password: password,
-            json: "true",
-          }),
-          credentials: "include",
-        })
+      // Detect if we're in local development
+      // Local subdomains (*.uplifterinc.localhost) need special handling due to cookie domain issues
+      const isLocalEnv = hostname.includes("localhost")
+      const isLocalSubdomain = hostname.endsWith("uplifterinc.localhost") || 
+                               (hostname.endsWith(".localhost") && hostname !== "localhost")
+      
+      // Use standard NextAuth signIn for all environments
+      // This ensures consistent behavior and proper cookie setting
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        // Clear password on failed attempt
+        setPassword("")
+        // Show user-friendly error message
+        const errorMessage = result.error === "CredentialsSignin" 
+          ? "Invalid email or password. Please try again."
+          : result.error
+        setError(errorMessage)
+        toast.error(errorMessage)
+      } else {
+        // Success! Now redirect to the appropriate destination
         
-        const data = await response.json()
-        
-        if (data.url && !data.url.includes("error=")) {
-          // Success - now go through the credentials-bridge to set the shared domain cookie
-          const destination = callbackUrl.startsWith("http") ? callbackUrl : `http://admin.uplifterinc.localhost:3000${callbackUrl}`
+        // LOCAL DEVELOPMENT ONLY: Use credentials-bridge for cookie domain transfer
+        // This is needed because NextAuth sets cookies on the exact hostname in local dev,
+        // but we need them shared across all local subdomains
+        if (isLocalEnv) {
+          const destination = callbackUrl.startsWith("http") 
+            ? callbackUrl 
+            : `http://admin.uplifterinc.localhost:3000${callbackUrl}`
           window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(destination)}`
         } else {
-          // Error response
-          setPassword("")
-          const errorMessage = "Invalid email or password. Please try again."
-          setError(errorMessage)
-          toast.error(errorMessage)
-        }
-      } else {
-        // For localhost:3000 or production, use the standard signIn function
-        const result = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
-        })
-
-        if (result?.error) {
-          // Clear password on failed attempt
-          setPassword("")
-          // Show user-friendly error message
-          const errorMessage = result.error === "CredentialsSignin" 
-            ? "Invalid email or password. Please try again."
-            : result.error
-          setError(errorMessage)
-          toast.error(errorMessage)
-        } else {
-          // Production or localhost:3000 - redirect normally
-          const isLocal = hostname.includes("localhost")
-          if (isLocal) {
-            // On localhost:3000, use credentials-bridge for subdomain redirect
-            const destination = callbackUrl.startsWith("http") ? callbackUrl : `http://admin.uplifterinc.localhost:3000${callbackUrl}`
-            window.location.href = `/api/auth/credentials-bridge?callbackUrl=${encodeURIComponent(destination)}`
-          } else {
-            // Production - redirect to callback URL (usually admin subdomain)
-            // We use window.location.href to ensure a full page navigation across subdomains
-            if (callbackUrl && callbackUrl !== "/") {
-                window.location.href = callbackUrl
-            } else {
-                // Fallback to default callback if somehow we have "/" or empty
-                // This ensures we don't stay on the login subdomain
-                window.location.href = getDefaultCallbackUrl()
-            }
-          }
+          // PRODUCTION/STAGING: Direct redirect - cookies are already shared via domain attribute
+          // The cookie is set with domain=.upliftergymnastics.com so it works across all subdomains
+          const destination = callbackUrl && callbackUrl !== "/" 
+            ? callbackUrl 
+            : getDefaultCallbackUrl()
+          window.location.href = destination
         }
       }
     } catch (err) {

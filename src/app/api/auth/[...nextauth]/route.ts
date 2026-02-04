@@ -2,9 +2,28 @@ import NextAuth from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { isAllowedOrigin } from "@/lib/env-domains";
+import { isAllowedOrigin, getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib/env-domains";
 
 const nextAuthHandler = NextAuth(authOptions);
+
+/**
+ * Debug logging helper for auth troubleshooting
+ * Logs detailed request and response information for diagnosing auth issues
+ */
+function logAuthDebug(phase: string, details: Record<string, unknown>) {
+  const env = getCurrentEnvironment();
+  const config = getEnvConfig();
+  
+  // Always log in staging for debugging, only in development for local
+  if (env === 'staging' || env === 'development' || process.env.NODE_ENV === 'development') {
+    console.log(`[Auth Debug][${env}][${phase}]`, JSON.stringify({
+      ...details,
+      env,
+      cookieDomain: config.cookieDomain,
+      sessionCookieName: getSessionCookieName(),
+    }, null, 2));
+  }
+}
 
 /**
  * Add CORS headers to response for cross-origin requests
@@ -75,11 +94,29 @@ function handlePreflight(request: NextRequest): NextResponse | null {
  * headers don't reliably propagate through to the NextAuth response.
  */
 export async function GET(request: NextRequest, context: { params: { nextauth: string[] } }) {
+  const action = context.params.nextauth?.[0];
+  
   // Handle CORS preflight
   const preflightResponse = handlePreflight(request);
   if (preflightResponse) return preflightResponse;
   
+  // Log GET requests for session/csrf which are critical for auth flow
+  if (action === 'session' || action === 'csrf') {
+    logAuthDebug(`Request-GET`, {
+      action,
+      host: request.headers.get("host"),
+      origin: request.headers.get("origin"),
+      cookies: request.cookies.getAll().map(c => c.name),
+    });
+  }
+  
   const response = await nextAuthHandler(request, context);
+  
+  // Log session/csrf responses for debugging
+  if (action === 'session' || action === 'csrf') {
+    logResponse(`GET-${action}`, response, request);
+  }
+  
   return addCorsHeaders(request, response);
 }
 
@@ -100,21 +137,67 @@ export async function OPTIONS(request: NextRequest) {
  */
 // ... imports
 
+// Helper to parse and log cookie details for debugging
+function parseCookieDetails(setCookieHeader: string | null): Record<string, unknown>[] {
+  if (!setCookieHeader) return [];
+  
+  // Split by comma but be careful about commas in expires dates
+  const cookies = setCookieHeader.split(/,(?=[^;]*=)/);
+  
+  return cookies.map(cookie => {
+    const parts = cookie.trim().split(';').map(p => p.trim());
+    const [nameValue, ...attributes] = parts;
+    const [name] = nameValue.split('=');
+    
+    const attrs: Record<string, string | boolean> = {};
+    for (const attr of attributes) {
+      const [key, value] = attr.split('=');
+      attrs[key.toLowerCase()] = value || true;
+    }
+    
+    return {
+      name: name.trim(),
+      hasValue: nameValue.includes('=') && nameValue.split('=')[1]?.length > 0,
+      domain: attrs['domain'] || '(not set - uses exact host)',
+      secure: !!attrs['secure'],
+      httpOnly: !!attrs['httponly'],
+      sameSite: attrs['samesite'] || '(not set)',
+      path: attrs['path'] || '/',
+      maxAge: attrs['max-age'] || '(session)',
+    };
+  });
+}
+
 // Helper to log response details
-function logResponse(action: string, response: Response) {
+function logResponse(action: string, response: Response, request?: NextRequest) {
   const setCookie = response.headers.get("Set-Cookie");
   const allowOrigin = response.headers.get("Access-Control-Allow-Origin");
-  const cookieNames = setCookie ? setCookie.split(',').map(c => c.split('=')[0]).join(', ') : 'none';
+  const cookieDetails = parseCookieDetails(setCookie);
   
-  console.log(`Auth API [${action}]: Status=${response.status}`);
-  console.log(`Auth API [${action}]: Set-Cookie names=${cookieNames}`);
-  if (setCookie) console.log(`Auth API [${action}]: Set-Cookie full=${setCookie.substring(0, 100)}...`); // Log start of cookie for debugging attributes
-  console.log(`Auth API [${action}]: Access-Control-Allow-Origin=${allowOrigin}`);
+  logAuthDebug(`Response-${action}`, {
+    status: response.status,
+    corsOrigin: allowOrigin,
+    cookiesSet: cookieDetails.length,
+    cookies: cookieDetails,
+    requestHost: request?.headers.get("host"),
+    requestOrigin: request?.headers.get("origin"),
+  });
 }
 
 export async function POST(request: NextRequest, context: { params: { nextauth: string[] } }) {
   const action = context.params.nextauth?.[0];
-  console.log(`Auth API [POST]: action=${action}, origin=${request.headers.get("origin")}`);
+  const subAction = context.params.nextauth?.[1]; // e.g., "credentials" for callback/credentials
+  
+  // Log incoming request details
+  logAuthDebug(`Request-POST`, {
+    action,
+    subAction,
+    host: request.headers.get("host"),
+    origin: request.headers.get("origin"),
+    referer: request.headers.get("referer"),
+    userAgent: request.headers.get("user-agent")?.substring(0, 50),
+    cookies: request.cookies.getAll().map(c => c.name),
+  });
   
   // Handle _log action to prevent 404s from NextAuth client logger
   if (action === "_log") {
@@ -125,6 +208,7 @@ export async function POST(request: NextRequest, context: { params: { nextauth: 
   if (action === "callback" || action === "signin") {
     const rateLimitResponse = await checkAuthRateLimit(request, RATE_LIMITS.auth);
     if (rateLimitResponse) {
+      logAuthDebug(`RateLimited`, { action, subAction });
       return addCorsHeaders(request, rateLimitResponse);
     }
   }
@@ -133,12 +217,16 @@ export async function POST(request: NextRequest, context: { params: { nextauth: 
   
   // Debug: Log headers from NextAuth response before processing
   const rawSetCookie = response.headers.get("Set-Cookie");
-  console.log(`Auth API [POST]: Raw NextAuth Set-Cookie present=${!!rawSetCookie}`);
-  if (rawSetCookie) {
-    console.log(`Auth API [POST]: Raw NextAuth Set-Cookie length=${rawSetCookie.length}`);
-  }
+  logAuthDebug(`NextAuthResponse`, {
+    action,
+    subAction,
+    status: response.status,
+    hasCookies: !!rawSetCookie,
+    cookieLength: rawSetCookie?.length || 0,
+    rawCookiePreview: rawSetCookie?.substring(0, 200),
+  });
 
   const finalResponse = addCorsHeaders(request, response);
-  logResponse(`POST ${action}`, finalResponse);
+  logResponse(`POST-${action}`, finalResponse, request);
   return finalResponse;
 }

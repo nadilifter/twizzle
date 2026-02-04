@@ -68,12 +68,16 @@ export const authOptions: NextAuthOptions = {
       }
     },
     csrfToken: {
-      name: getCurrentEnvironment() === 'local' ? 'next-auth.csrf-token' : '__Host-next-auth.csrf-token',
+      // Use __Secure- instead of __Host- to allow domain sharing across subdomains
+      // __Host- prefix requires NO domain attribute and can only be set on exact host
+      // __Secure- prefix allows domain attribute for cross-subdomain sharing
+      name: getCurrentEnvironment() === 'local' ? 'next-auth.csrf-token' : '__Secure-next-auth.csrf-token',
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: getCurrentEnvironment() !== 'local'
+        secure: getCurrentEnvironment() !== 'local',
+        domain: getCookieDomain() // Allow CSRF token to be shared across subdomains
       }
     }
   },
