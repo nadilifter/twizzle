@@ -130,6 +130,13 @@ fi
 # Clean up Docker resources to prevent disk space buildup
 log_info "Cleaning up Docker resources..."
 
+# Remove stopped containers (excluding running ones)
+STOPPED=$(sudo docker ps -a -f "status=exited" -f "status=created" -q | wc -l)
+if [ "$STOPPED" -gt 0 ]; then
+    sudo docker container prune -f > /dev/null 2>&1
+    log_info "Removed $STOPPED stopped container(s)"
+fi
+
 # Remove dangling images (old builds)
 DANGLING=$(sudo docker images -f "dangling=true" -q | wc -l)
 if [ "$DANGLING" -gt 0 ]; then
