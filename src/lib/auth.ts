@@ -45,6 +45,10 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  // Trust the Host header from the reverse proxy (Nginx)
+  // This is critical for multi-tenant apps where the host (e.g. login.domain.com)
+  // differs from the canonical NEXTAUTH_URL
+  trustHost: true,
   cookies: {
     // All cookies need the same domain for OAuth to work across subdomains
     // (login.domain.com initiates OAuth, domain.com receives callback)
