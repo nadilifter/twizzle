@@ -45,10 +45,6 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
-  // Trust the Host header from the reverse proxy (Nginx)
-  // This is critical for multi-tenant apps where the host (e.g. login.domain.com)
-  // differs from the canonical NEXTAUTH_URL
-  trustHost: true,
   cookies: {
     // All cookies need the same domain for OAuth to work across subdomains
     // (login.domain.com initiates OAuth, domain.com receives callback)
@@ -60,6 +56,24 @@ export const authOptions: NextAuthOptions = {
         path: "/",
         secure: getCurrentEnvironment() !== 'local',
         domain: getCookieDomain()
+      }
+    },
+    callbackUrl: {
+      name: getCurrentEnvironment() === 'local' ? 'next-auth.callback-url' : '__Secure-next-auth.callback-url',
+      options: {
+        sameSite: "lax",
+        path: "/",
+        secure: getCurrentEnvironment() !== 'local',
+        domain: getCookieDomain()
+      }
+    },
+    csrfToken: {
+      name: getCurrentEnvironment() === 'local' ? 'next-auth.csrf-token' : '__Host-next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: getCurrentEnvironment() !== 'local'
       }
     }
   },
