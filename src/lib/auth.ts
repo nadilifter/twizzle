@@ -5,7 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "./db";
-import { getEnvConfig, getCurrentEnvironment, getSubdomainUrl } from "./env-domains";
+import { getEnvConfig, getCurrentEnvironment, getSubdomainUrl, getSessionCookieName } from "./env-domains";
 
 /**
  * Creates a signed bridge token for cross-domain session transfer
