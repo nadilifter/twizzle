@@ -8,14 +8,17 @@
  * For server-side code, use the functions in env-domains.ts instead.
  */
 
+import { getEnvConfig } from "./env-domains"
+
 /**
  * Get the base domain from the current hostname
  * Detects the environment based on the URL the user is currently on
  */
 export function getBaseDomainFromHostname(): { baseDomain: string; protocol: string } {
   if (typeof window === "undefined") {
-    // Default to production for SSR
-    return { baseDomain: "uplifterinc.com", protocol: "https" }
+    // Use environment config for SSR to match client behavior
+    const config = getEnvConfig()
+    return { baseDomain: config.baseDomain, protocol: config.useHttps ? "https" : "http" }
   }
   
   const hostname = window.location.hostname

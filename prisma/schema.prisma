@@ -102,6 +102,9 @@ model Organization {
   // Notification Rules
   notificationRules      NotificationRule[]
   notificationLogs       NotificationLog[]
+  
+  // Levels
+  levels                 Level[]
 }
 
 model OrganizationMember {
@@ -507,18 +510,61 @@ enum PaymentMethodType {
 // PHASE 2: Programs & Memberships
 // ============================================
 
-model Program {
+// Organization-defined levels for programs and skills
+model Level {
   id             String   @id @default(cuid())
-  name           String
-  description    String?
-  level          String
-  status         ProgramStatus @default(ACTIVE)
   organizationId String
+  name           String   // e.g., "Bronze", "Level 1", "Beginner"
+  description    String?
+  order          Int      @default(0)  // Display order
+  color          String?  // Optional hex color for UI
+  isDefault      Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  programs       Program[]
+  skills         Skill[]    @relation("SkillLevel")
+
+  @@index([organizationId])
+  @@index([order])
+}
+
+model Program {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  level          String   // Legacy field - kept for backwards compatibility
+  status         ProgramStatus @default(ACTIVE)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Program Type
+  programType       ProgramType @default(SUBSCRIPTION)
+  
+  // Pricing Configuration
+  pricingModel      PricingModel @default(FLAT_RATE)
+  basePrice         Decimal?  @db.Decimal(10, 2)  // For flat-rate pricing
+  perSessionPrice   Decimal?  @db.Decimal(10, 2)  // For per-session pricing
+  
+  // Schedule Configuration (for recurring programs)
+  startDate         DateTime?
+  endDate           DateTime?
+  schedulePattern   Json?  // { days: ["MON", "WED", "FRI"], time: "09:00" }
+  
+  // Capacity (for drop-in classes)
+  capacity          Int?
+  
+  // Level Configuration
+  levelId           String?   // FK to Level model
+  showLevelOnSite   Boolean   @default(true)
+  showCoachOnSite   Boolean   @default(true)
+
+  // Relations
   organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  programLevel        Level?       @relation(fields: [levelId], references: [id], onDelete: SetNull)
   events              Event[]
   lessonPlans         LessonPlan[]
   enrollments         Enrollment[]
@@ -528,16 +574,53 @@ model Program {
   requiredMemberships MembershipInstance[]
   evaluations         Evaluation[]
   evaluationTemplates ProgramEvaluationTemplate[]
+  bulkDiscounts       ProgramBulkDiscount[]
   
   // Registration Queue
   queueConfigs        RegistrationQueueConfig[]
   queueReservations   QueueReservation[]
+  
+  @@index([levelId])
 }
 
 enum ProgramStatus {
   ACTIVE
   INACTIVE
   ARCHIVED
+}
+
+enum ProgramType {
+  SINGLE_INSTANCE   // One-off class/event
+  SUBSCRIPTION      // Recurring within period (annual membership style)
+  DROP_IN           // Individually purchased classes
+}
+
+enum PricingModel {
+  FLAT_RATE         // Fixed price for entire program
+  PER_SESSION       // Price calculated per session
+}
+
+// Program Bulk Discounts - for family and multi-session discounts
+model ProgramBulkDiscount {
+  id             String   @id @default(cuid())
+  programId      String
+  type           BulkDiscountType
+  minQuantity    Int      // e.g., 2 for 2nd child, 10 for 10-pack
+  discountType   DiscountType  // PERCENTAGE, FIXED_AMOUNT
+  discountValue  Decimal  @db.Decimal(10, 2)
+  description    String?  // Display text for marketing site
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  program        Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+}
+
+enum BulkDiscountType {
+  FAMILY_SIBLING    // Nth child discount
+  MULTI_SESSION     // Buy X, save Y
 }
 
 // Legacy - to be deprecated
@@ -1042,7 +1125,7 @@ model Skill {
   id             String   @id @default(cuid())
   name           String
   category       String   // e.g., "Vault", "Bars", "Beam", "Floor"
-  level          String?  // Legacy field
+  level          String?  // Legacy field - kept for backwards compatibility
   description    String?  @db.Text
   organizationId String
   createdAt      DateTime @default(now())
@@ -1054,13 +1137,19 @@ model Skill {
   maxAge          Int?     // Suggested maximum age
   videoUrl        String?  // Demo video URL
   imageUrl        String?  // Demo image URL
+  
+  // Level reference (new system)
+  levelId         String?  // FK to Level model
 
   // Relations
   organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  skillLevel       Level?             @relation("SkillLevel", fields: [levelId], references: [id], onDelete: SetNull)
   evaluationSkills EvaluationSkill[]
   rotationSkills   RotationSkill[]
   templateSkills   EvaluationTemplateSkill[]
   athleteProgress  AthleteSkillProgress[]
+  
+  @@index([levelId])
 }
 
 enum SkillDifficulty {

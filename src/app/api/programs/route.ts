@@ -6,8 +6,20 @@ import { z } from "zod";
 const createProgramSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  level: z.string().min(1, "Level is required"),
+  level: z.string().min(1, "Level is required"), // Legacy field
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).default("ACTIVE"),
+  // New fields
+  programType: z.enum(["SINGLE_INSTANCE", "SUBSCRIPTION", "DROP_IN"]).default("SUBSCRIPTION"),
+  pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).default("FLAT_RATE"),
+  basePrice: z.number().min(0).optional().nullable(),
+  perSessionPrice: z.number().min(0).optional().nullable(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
+  schedulePattern: z.any().optional().nullable(),
+  capacity: z.number().int().min(1).optional().nullable(),
+  levelId: z.string().optional().nullable(),
+  showLevelOnSite: z.boolean().default(true),
+  showCoachOnSite: z.boolean().default(true),
 });
 
 // GET /api/programs
@@ -47,6 +59,10 @@ export async function GET(request: NextRequest) {
             },
           },
           membershipTiers: true,
+          programLevel: true,
+          bulkDiscounts: {
+            orderBy: [{ type: "asc" }, { minQuantity: "asc" }],
+          },
         },
         orderBy: { name: "asc" },
         take: limit,
@@ -91,10 +107,26 @@ export async function POST(request: NextRequest) {
 
     const program = await scopedDb.program.create({
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        description: validatedData.description,
+        level: validatedData.level,
+        status: validatedData.status,
+        programType: validatedData.programType,
+        pricingModel: validatedData.pricingModel,
+        basePrice: validatedData.basePrice,
+        perSessionPrice: validatedData.perSessionPrice,
+        startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
+        endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
+        schedulePattern: validatedData.schedulePattern,
+        capacity: validatedData.capacity,
+        levelId: validatedData.levelId,
+        showLevelOnSite: validatedData.showLevelOnSite,
+        showCoachOnSite: validatedData.showCoachOnSite,
       },
       include: {
         membershipTiers: true,
+        programLevel: true,
+        bulkDiscounts: true,
         _count: {
           select: {
             enrollments: true,

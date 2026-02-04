@@ -180,6 +180,10 @@ const data = {
           title: "Evaluations",
           url: "/dashboard/training/evaluations",
         },
+        {
+          title: "Levels",
+          url: "/dashboard/training/levels",
+        },
       ],
     },
     {

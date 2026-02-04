@@ -550,21 +550,117 @@ async function main() {
   console.log(`  ✓ Created ${paymentMethodData.length} payment methods`);
 
   // ============================================
+  // LEVELS
+  // ============================================
+  console.log("\n🏅 Creating levels...");
+  const levelData = [
+    // Org1 Levels (Gymnastics)
+    { id: `${ORG1_ID}-level-preschool`, organizationId: ORG1_ID, name: "Preschool", description: "Ages 2-4, parent-child classes", order: 0, color: "#f472b6", isDefault: false },
+    { id: `${ORG1_ID}-level-bronze`, organizationId: ORG1_ID, name: "Bronze", description: "Beginner recreational level", order: 1, color: "#cd7f32", isDefault: true },
+    { id: `${ORG1_ID}-level-silver`, organizationId: ORG1_ID, name: "Silver", description: "Intermediate recreational level", order: 2, color: "#c0c0c0", isDefault: false },
+    { id: `${ORG1_ID}-level-gold`, organizationId: ORG1_ID, name: "Gold", description: "Advanced recreational level", order: 3, color: "#ffd700", isDefault: false },
+    { id: `${ORG1_ID}-level-competitive`, organizationId: ORG1_ID, name: "Competitive", description: "Competition track athletes", order: 4, color: "#8b5cf6", isDefault: false },
+    // Org2 Levels (Multi-sport)
+    { id: `${ORG2_ID}-level-beginner`, organizationId: ORG2_ID, name: "Beginner", description: "New to the sport", order: 0, color: "#22c55e", isDefault: true },
+    { id: `${ORG2_ID}-level-intermediate`, organizationId: ORG2_ID, name: "Intermediate", description: "Some experience required", order: 1, color: "#3b82f6", isDefault: false },
+    { id: `${ORG2_ID}-level-advanced`, organizationId: ORG2_ID, name: "Advanced", description: "Experienced athletes", order: 2, color: "#8b5cf6", isDefault: false },
+    { id: `${ORG2_ID}-level-competitive`, organizationId: ORG2_ID, name: "Competitive", description: "Competition level", order: 3, color: "#ef4444", isDefault: false },
+  ];
+  for (const level of levelData) {
+    await prisma.level.upsert({ where: { id: level.id }, update: {}, create: level });
+  }
+  console.log(`  ✓ Created ${levelData.length} levels`);
+
+  // ============================================
   // PROGRAMS
   // ============================================
   console.log("\n📚 Creating programs...");
   await Promise.all([
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-bronze` }, update: {}, create: { id: `${ORG1_ID}-prog-rec-bronze`, name: "Recreational Bronze", description: "Introduction to gymnastics for beginners ages 5-7", level: "Bronze", status: "ACTIVE", organizationId: ORG1_ID } }),
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-silver` }, update: {}, create: { id: `${ORG1_ID}-prog-rec-silver`, name: "Recreational Silver", description: "Intermediate recreational program for ages 7-10", level: "Silver", status: "ACTIVE", organizationId: ORG1_ID } }),
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-gold` }, update: {}, create: { id: `${ORG1_ID}-prog-rec-gold`, name: "Recreational Gold", description: "Advanced recreational program for ages 10+", level: "Gold", status: "ACTIVE", organizationId: ORG1_ID } }),
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-jo` }, update: {}, create: { id: `${ORG1_ID}-prog-jo`, name: "Junior Olympics Team", description: "Competitive gymnastics program - Levels 4-10", level: "Competitive", status: "ACTIVE", organizationId: ORG1_ID } }),
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-preschool` }, update: {}, create: { id: `${ORG1_ID}-prog-preschool`, name: "Tiny Tumblers", description: "Parent-child gymnastics for ages 2-4", level: "Preschool", status: "ACTIVE", organizationId: ORG1_ID } }),
-    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-soccer` }, update: {}, create: { id: `${ORG2_ID}-prog-soccer`, name: "Youth Soccer League", description: "Recreational soccer for ages 6-14", level: "All Levels", status: "ACTIVE", organizationId: ORG2_ID } }),
-    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-basketball` }, update: {}, create: { id: `${ORG2_ID}-prog-basketball`, name: "Teen Basketball", description: "Basketball skills and games for ages 12-18", level: "Intermediate", status: "ACTIVE", organizationId: ORG2_ID } }),
-    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-swim` }, update: {}, create: { id: `${ORG2_ID}-prog-swim`, name: "Swim Team", description: "Competitive swimming for all ages", level: "Competitive", status: "ACTIVE", organizationId: ORG2_ID } }),
-    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-fitness` }, update: {}, create: { id: `${ORG2_ID}-prog-fitness`, name: "Kids Fitness", description: "General fitness and movement for ages 5-10", level: "Beginner", status: "ACTIVE", organizationId: ORG2_ID } }),
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-bronze` }, update: {}, create: { 
+      id: `${ORG1_ID}-prog-rec-bronze`, name: "Recreational Bronze", description: "Introduction to gymnastics for beginners ages 5-7", 
+      level: "Bronze", status: "ACTIVE", organizationId: ORG1_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 85,
+      levelId: `${ORG1_ID}-level-bronze`, showLevelOnSite: true, showCoachOnSite: true,
+      startDate: daysAgo(30), endDate: daysFromNow(335),
+    }}),
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-silver` }, update: {}, create: { 
+      id: `${ORG1_ID}-prog-rec-silver`, name: "Recreational Silver", description: "Intermediate recreational program for ages 7-10", 
+      level: "Silver", status: "ACTIVE", organizationId: ORG1_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 115,
+      levelId: `${ORG1_ID}-level-silver`, showLevelOnSite: true, showCoachOnSite: true,
+      startDate: daysAgo(30), endDate: daysFromNow(335),
+    }}),
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-gold` }, update: {}, create: { 
+      id: `${ORG1_ID}-prog-rec-gold`, name: "Recreational Gold", description: "Advanced recreational program for ages 10+", 
+      level: "Gold", status: "ACTIVE", organizationId: ORG1_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 145,
+      levelId: `${ORG1_ID}-level-gold`, showLevelOnSite: true, showCoachOnSite: true,
+      startDate: daysAgo(30), endDate: daysFromNow(335),
+    }}),
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-jo` }, update: {}, create: { 
+      id: `${ORG1_ID}-prog-jo`, name: "Junior Olympics Team", description: "Competitive gymnastics program - Levels 4-10", 
+      level: "Competitive", status: "ACTIVE", organizationId: ORG1_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 2400,
+      levelId: `${ORG1_ID}-level-competitive`, showLevelOnSite: true, showCoachOnSite: true,
+      startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 30,
+    }}),
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-preschool` }, update: {}, create: { 
+      id: `${ORG1_ID}-prog-preschool`, name: "Tiny Tumblers", description: "Parent-child gymnastics for ages 2-4", 
+      level: "Preschool", status: "ACTIVE", organizationId: ORG1_ID,
+      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 25,
+      levelId: `${ORG1_ID}-level-preschool`, showLevelOnSite: true, showCoachOnSite: false,
+      capacity: 12,
+    }}),
+    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-soccer` }, update: {}, create: { 
+      id: `${ORG2_ID}-prog-soccer`, name: "Youth Soccer League", description: "Recreational soccer for ages 6-14", 
+      level: "All Levels", status: "ACTIVE", organizationId: ORG2_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 175,
+      levelId: `${ORG2_ID}-level-beginner`, showLevelOnSite: false, showCoachOnSite: true,
+      startDate: daysAgo(15), endDate: daysFromNow(90),
+    }}),
+    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-basketball` }, update: {}, create: { 
+      id: `${ORG2_ID}-prog-basketball`, name: "Teen Basketball", description: "Basketball skills and games for ages 12-18", 
+      level: "Intermediate", status: "ACTIVE", organizationId: ORG2_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 95,
+      levelId: `${ORG2_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true,
+      startDate: daysAgo(30), endDate: daysFromNow(60),
+    }}),
+    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-swim` }, update: {}, create: { 
+      id: `${ORG2_ID}-prog-swim`, name: "Swim Team", description: "Competitive swimming for all ages", 
+      level: "Competitive", status: "ACTIVE", organizationId: ORG2_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 1200,
+      levelId: `${ORG2_ID}-level-competitive`, showLevelOnSite: true, showCoachOnSite: true,
+      startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 40,
+    }}),
+    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-fitness` }, update: {}, create: { 
+      id: `${ORG2_ID}-prog-fitness`, name: "Kids Fitness", description: "General fitness and movement for ages 5-10", 
+      level: "Beginner", status: "ACTIVE", organizationId: ORG2_ID,
+      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15,
+      levelId: `${ORG2_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: false,
+      capacity: 20,
+    }}),
   ]);
   console.log("  ✓ Created 9 programs");
+
+  // ============================================
+  // PROGRAM BULK DISCOUNTS
+  // ============================================
+  console.log("\n💰 Creating bulk discounts...");
+  const bulkDiscountData = [
+    // Org1 family discounts
+    { id: `${ORG1_ID}-discount-1`, programId: `${ORG1_ID}-prog-rec-bronze`, type: "FAMILY_SIBLING" as const, minQuantity: 2, discountType: "PERCENTAGE" as const, discountValue: 10, description: "2nd child 10% off" },
+    { id: `${ORG1_ID}-discount-2`, programId: `${ORG1_ID}-prog-rec-bronze`, type: "FAMILY_SIBLING" as const, minQuantity: 3, discountType: "PERCENTAGE" as const, discountValue: 15, description: "3rd child 15% off" },
+    { id: `${ORG1_ID}-discount-3`, programId: `${ORG1_ID}-prog-rec-silver`, type: "FAMILY_SIBLING" as const, minQuantity: 2, discountType: "PERCENTAGE" as const, discountValue: 10, description: "Sibling discount" },
+    { id: `${ORG1_ID}-discount-4`, programId: `${ORG1_ID}-prog-preschool`, type: "MULTI_SESSION" as const, minQuantity: 10, discountType: "PERCENTAGE" as const, discountValue: 15, description: "10-class pack 15% off" },
+    // Org2 multi-session discounts
+    { id: `${ORG2_ID}-discount-1`, programId: `${ORG2_ID}-prog-fitness`, type: "MULTI_SESSION" as const, minQuantity: 5, discountType: "FIXED_AMOUNT" as const, discountValue: 10, description: "5-session: $10 off" },
+    { id: `${ORG2_ID}-discount-2`, programId: `${ORG2_ID}-prog-fitness`, type: "MULTI_SESSION" as const, minQuantity: 10, discountType: "FIXED_AMOUNT" as const, discountValue: 25, description: "10-session: $25 off" },
+    { id: `${ORG2_ID}-discount-3`, programId: `${ORG2_ID}-prog-soccer`, type: "FAMILY_SIBLING" as const, minQuantity: 2, discountType: "FIXED_AMOUNT" as const, discountValue: 25, description: "2nd child $25 off" },
+  ];
+  for (const discount of bulkDiscountData) {
+    await prisma.programBulkDiscount.upsert({ where: { id: discount.id }, update: {}, create: discount });
+  }
+  console.log(`  ✓ Created ${bulkDiscountData.length} bulk discounts`);
 
   // ============================================
   // MEMBERSHIP TIERS (Legacy)

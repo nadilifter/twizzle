@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarDays, Users, ShoppingCart, User, AlertCircle, Star } from "lucide-react";
 import { useCart } from "@/components/sites/cart-context";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MembershipRequirementDialog } from "@/components/sites/membership-requirement-dialog";
 import { useState } from "react";
 
 interface MembershipTier {
@@ -42,6 +43,21 @@ interface RequiredMembership {
   };
 }
 
+interface ProgramLevel {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+interface BulkDiscount {
+  id: string;
+  type: "FAMILY_SIBLING" | "MULTI_SESSION";
+  minQuantity: number;
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue: number | string;
+  description: string | null;
+}
+
 interface ProgramCardProps {
   program: {
     id: string;
@@ -51,6 +67,15 @@ interface ProgramCardProps {
     membershipTiers?: MembershipTier[];
     staffAssignments?: StaffAssignment[];
     requiredMemberships?: RequiredMembership[];
+    // New fields
+    programLevel?: ProgramLevel | null;
+    showLevelOnSite?: boolean;
+    showCoachOnSite?: boolean;
+    bulkDiscounts?: BulkDiscount[];
+    programType?: string;
+    pricingModel?: string;
+    basePrice?: number | string | null;
+    perSessionPrice?: number | string | null;
   };
   primaryColor?: string;
 }
@@ -71,10 +96,21 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   const membershipTiers = program.membershipTiers || [];
   const staffAssignments = program.staffAssignments || [];
   const requiredMemberships = program.requiredMemberships || [];
+  const bulkDiscounts = program.bulkDiscounts || [];
+  
+  // Display options default to true for backwards compatibility
+  const showLevel = program.showLevelOnSite !== false;
+  const showCoach = program.showCoachOnSite !== false;
+  
+  // Get display level - prefer programLevel if available
+  const displayLevel = program.programLevel?.name || program.level;
+  const levelColor = program.programLevel?.color || null;
   
   const [selectedTierId, setSelectedTierId] = useState<string>(
     membershipTiers.length === 1 ? membershipTiers[0].id : ""
   );
+  const [showMembershipDialog, setShowMembershipDialog] = useState(false);
+  const [pendingCartAdd, setPendingCartAdd] = useState<{ tier: MembershipTier } | null>(null);
 
   const handleAddToCart = () => {
     if (!selectedTierId) return;
@@ -82,6 +118,20 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
     const tier = membershipTiers.find((t) => t.id === selectedTierId);
     if (!tier) return;
 
+    // Check if there are required memberships
+    if (requiredMemberships.length > 0) {
+      // Check if any required membership is already in cart
+      // For now, we show the dialog - in a full implementation, we'd check user's existing memberships
+      setPendingCartAdd({ tier });
+      setShowMembershipDialog(true);
+      return;
+    }
+
+    // No membership required, add directly
+    addProgramToCart(tier);
+  };
+
+  const addProgramToCart = (tier: MembershipTier) => {
     addItem({
       referenceId: tier.id,
       type: "program",
@@ -98,6 +148,37 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
     });
   };
 
+  const handleMembershipDialogCancel = () => {
+    setShowMembershipDialog(false);
+    setPendingCartAdd(null);
+  };
+
+  const handleAddMembership = (membership: RequiredMembership) => {
+    // Add the membership to cart
+    addItem({
+      referenceId: membership.id,
+      type: "membership",
+      name: membership.name,
+      description: `${membership.group.name} Membership`,
+      price: typeof membership.price === "string" ? parseFloat(membership.price) : membership.price,
+      quantity: 1,
+      details: {
+        membershipInstanceId: membership.id,
+        groupId: membership.group.id,
+        groupName: membership.group.name,
+        billingInterval: membership.billingInterval,
+      }
+    });
+
+    // Also add the program if there was a pending add
+    if (pendingCartAdd) {
+      addProgramToCart(pendingCartAdd.tier);
+    }
+
+    setShowMembershipDialog(false);
+    setPendingCartAdd(null);
+  };
+
   const lowestPrice = membershipTiers.length > 0
     ? Math.min(...membershipTiers.map(t => typeof t.price === "string" ? parseFloat(t.price) : t.price))
     : null;
@@ -109,9 +190,15 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           <h3 className="font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
             {program.name}
           </h3>
-          <Badge variant="secondary" className="shrink-0 text-xs">
-            {program.level}
-          </Badge>
+          {showLevel && displayLevel && (
+            <Badge 
+              variant="secondary" 
+              className="shrink-0 text-xs"
+              style={levelColor ? { backgroundColor: `${levelColor}20`, color: levelColor, borderColor: levelColor } : undefined}
+            >
+              {displayLevel}
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
@@ -123,10 +210,12 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
         )}
 
         <div className="mt-4 flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
-            <span>{program.level}</span>
-          </div>
+          {showLevel && displayLevel && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Users className="h-3.5 w-3.5" />
+              <span>{displayLevel}</span>
+            </div>
+          )}
           {membershipTiers.length > 0 && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5" />
@@ -135,8 +224,30 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           )}
         </div>
 
+        {/* Bulk Discounts Section */}
+        {bulkDiscounts.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {bulkDiscounts.map((discount) => {
+              const value = typeof discount.discountValue === "string" 
+                ? parseFloat(discount.discountValue) 
+                : discount.discountValue;
+              const label = discount.discountType === "PERCENTAGE" 
+                ? `${value}% off` 
+                : `$${value} off`;
+              return (
+                <Badge key={discount.id} variant="outline" className="text-xs text-green-600 border-green-200 bg-green-50">
+                  {discount.type === "FAMILY_SIBLING" 
+                    ? `${discount.minQuantity}+ kids: ${label}`
+                    : `${discount.minQuantity}+ sessions: ${label}`
+                  }
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+
         {/* Coaches Section */}
-        {staffAssignments.length > 0 && (
+        {showCoach && staffAssignments.length > 0 && (
           <div className="mt-4 pt-3 border-t">
             <p className="text-xs text-muted-foreground mb-2">Coached by</p>
             <div className="flex items-center gap-2">
@@ -216,6 +327,16 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           Add to Cart
         </Button>
       </CardFooter>
+      
+      {/* Membership Requirement Dialog */}
+      <MembershipRequirementDialog
+        open={showMembershipDialog}
+        onOpenChange={setShowMembershipDialog}
+        programName={program.name}
+        requiredMemberships={requiredMemberships}
+        onCancel={handleMembershipDialogCancel}
+        onAddMembership={handleAddMembership}
+      />
     </Card>
   );
 }

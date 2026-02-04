@@ -6,8 +6,20 @@ import { z } from "zod";
 const updateProgramSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  level: z.string().min(1).optional(),
+  level: z.string().min(1).optional(), // Legacy field
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
+  // New fields
+  programType: z.enum(["SINGLE_INSTANCE", "SUBSCRIPTION", "DROP_IN"]).optional(),
+  pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).optional(),
+  basePrice: z.number().min(0).optional().nullable(),
+  perSessionPrice: z.number().min(0).optional().nullable(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
+  schedulePattern: z.any().optional().nullable(),
+  capacity: z.number().int().min(1).optional().nullable(),
+  levelId: z.string().optional().nullable(),
+  showLevelOnSite: z.boolean().optional(),
+  showCoachOnSite: z.boolean().optional(),
 });
 
 // GET /api/programs/[id]
@@ -29,6 +41,10 @@ export async function GET(
       },
       include: {
         membershipTiers: true,
+        programLevel: true, // New: Level reference
+        bulkDiscounts: { // New: Bulk discounts
+          orderBy: [{ type: "asc" }, { minQuantity: "asc" }],
+        },
         staffAssignments: {
           include: {
             staffProfile: {
@@ -154,11 +170,34 @@ export async function PATCH(
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
     }
 
+    // Prepare update data with proper type handling
+    const updateData: Record<string, unknown> = {};
+    
+    if (validatedData.name !== undefined) updateData.name = validatedData.name;
+    if (validatedData.description !== undefined) updateData.description = validatedData.description;
+    if (validatedData.level !== undefined) updateData.level = validatedData.level;
+    if (validatedData.status !== undefined) updateData.status = validatedData.status;
+    if (validatedData.programType !== undefined) updateData.programType = validatedData.programType;
+    if (validatedData.pricingModel !== undefined) updateData.pricingModel = validatedData.pricingModel;
+    if (validatedData.basePrice !== undefined) updateData.basePrice = validatedData.basePrice;
+    if (validatedData.perSessionPrice !== undefined) updateData.perSessionPrice = validatedData.perSessionPrice;
+    if (validatedData.startDate !== undefined) updateData.startDate = validatedData.startDate ? new Date(validatedData.startDate) : null;
+    if (validatedData.endDate !== undefined) updateData.endDate = validatedData.endDate ? new Date(validatedData.endDate) : null;
+    if (validatedData.schedulePattern !== undefined) updateData.schedulePattern = validatedData.schedulePattern;
+    if (validatedData.capacity !== undefined) updateData.capacity = validatedData.capacity;
+    if (validatedData.levelId !== undefined) updateData.levelId = validatedData.levelId;
+    if (validatedData.showLevelOnSite !== undefined) updateData.showLevelOnSite = validatedData.showLevelOnSite;
+    if (validatedData.showCoachOnSite !== undefined) updateData.showCoachOnSite = validatedData.showCoachOnSite;
+
     const program = await db.program.update({
       where: { id },
-      data: validatedData,
+      data: updateData,
       include: {
         membershipTiers: true,
+        programLevel: true,
+        bulkDiscounts: {
+          orderBy: [{ type: "asc" }, { minQuantity: "asc" }],
+        },
         staffAssignments: {
           include: {
             staffProfile: {

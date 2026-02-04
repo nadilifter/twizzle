@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Trash2, Save, Loader2, DollarSign, User, Star, AlertTriangle } from "lucide-react"
+import { Plus, Trash2, Save, Loader2, DollarSign, User, Star, AlertTriangle, Eye, EyeOff, Settings, Percent } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { usePrograms } from "@/hooks/use-programs"
 import { useStaff } from "@/hooks/use-staff"
@@ -45,7 +46,52 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     description: program.description || "",
     level: program.level || "",
     status: program.status || "ACTIVE",
+    // New fields
+    programType: program.programType || "SUBSCRIPTION",
+    pricingModel: program.pricingModel || "FLAT_RATE",
+    basePrice: program.basePrice ? Number(program.basePrice) : null,
+    perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
+    startDate: program.startDate ? new Date(program.startDate).toISOString().split('T')[0] : "",
+    endDate: program.endDate ? new Date(program.endDate).toISOString().split('T')[0] : "",
+    capacity: program.capacity || null,
+    levelId: program.levelId || null,
+    showLevelOnSite: program.showLevelOnSite ?? true,
+    showCoachOnSite: program.showCoachOnSite ?? true,
   })
+  
+  // State for levels
+  const [levels, setLevels] = useState<any[]>([])
+  const [loadingLevels, setLoadingLevels] = useState(true)
+  
+  // State for bulk discounts
+  const [bulkDiscounts, setBulkDiscounts] = useState<any[]>(program.bulkDiscounts || [])
+  const [isAddingDiscount, setIsAddingDiscount] = useState(false)
+  const [isDeletingDiscount, setIsDeletingDiscount] = useState<string | null>(null)
+  const [newBulkDiscount, setNewBulkDiscount] = useState({
+    type: "FAMILY_SIBLING" as "FAMILY_SIBLING" | "MULTI_SESSION",
+    minQuantity: 2,
+    discountType: "PERCENTAGE" as "PERCENTAGE" | "FIXED_AMOUNT",
+    discountValue: 10,
+    description: "",
+  })
+  
+  // Fetch levels
+  useEffect(() => {
+    const fetchLevels = async () => {
+      try {
+        const response = await fetch("/api/levels")
+        if (response.ok) {
+          const data = await response.json()
+          setLevels(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch levels:", error)
+      } finally {
+        setLoadingLevels(false)
+      }
+    }
+    fetchLevels()
+  }, [])
 
   // State for membership tiers
   const [tiers, setTiers] = useState<any[]>(program.membershipTiers || [])
@@ -227,6 +273,63 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     }
   }
   
+  // Bulk discount handlers
+  const handleAddBulkDiscount = async () => {
+    if (newBulkDiscount.discountValue <= 0) {
+      toast.error("Discount value must be greater than 0")
+      return
+    }
+
+    setIsAddingDiscount(true)
+    try {
+      const response = await fetch(`/api/programs/${program.id}/bulk-discounts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newBulkDiscount),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to add discount")
+      }
+
+      const addedDiscount = await response.json()
+      setBulkDiscounts([...bulkDiscounts, addedDiscount])
+      setNewBulkDiscount({
+        type: "FAMILY_SIBLING",
+        minQuantity: 2,
+        discountType: "PERCENTAGE",
+        discountValue: 10,
+        description: "",
+      })
+      toast.success("Bulk discount added")
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || "Failed to add bulk discount")
+    } finally {
+      setIsAddingDiscount(false)
+    }
+  }
+
+  const handleRemoveBulkDiscount = async (discountId: string) => {
+    setIsDeletingDiscount(discountId)
+    try {
+      const response = await fetch(`/api/programs/${program.id}/bulk-discounts/${discountId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) throw new Error("Failed to remove discount")
+
+      setBulkDiscounts(bulkDiscounts.filter(d => d.id !== discountId))
+      toast.success("Bulk discount removed")
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to remove bulk discount")
+    } finally {
+      setIsDeletingDiscount(null)
+    }
+  }
+
   // Requirements handlers
   const handleAddRequirement = async () => {
     if (!selectedMembershipInstance) {
@@ -291,9 +394,12 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
         <div className="px-6 py-2 border-b bg-muted/30">
             <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
                 <TabsTrigger value="general">General</TabsTrigger>
+                <TabsTrigger value="pricing">Pricing</TabsTrigger>
+                <TabsTrigger value="discounts">Discounts</TabsTrigger>
                 <TabsTrigger value="memberships">Memberships</TabsTrigger>
                 <TabsTrigger value="requirements">Requirements</TabsTrigger>
                 <TabsTrigger value="coaches">Coaches</TabsTrigger>
+                <TabsTrigger value="display">Display</TabsTrigger>
             </TabsList>
         </div>
 
@@ -318,12 +424,20 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="config-level">Level</Label>
-                            <Input 
-                                id="config-level" 
-                                value={formData.level} 
-                                onChange={(e) => setFormData({...formData, level: e.target.value})}
-                            />
+                            <Label htmlFor="config-type">Program Type</Label>
+                            <Select 
+                                value={formData.programType} 
+                                onValueChange={(val) => setFormData({...formData, programType: val})}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="SINGLE_INSTANCE">Single Instance (One-off)</SelectItem>
+                                    <SelectItem value="SUBSCRIPTION">Subscription (Recurring)</SelectItem>
+                                    <SelectItem value="DROP_IN">Drop-In (Per Class)</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="config-status">Status</Label>
@@ -342,6 +456,72 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                             </Select>
                         </div>
                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="config-level-select">Level</Label>
+                            <Select 
+                                value={formData.levelId || "none"} 
+                                onValueChange={(val) => setFormData({...formData, levelId: val === "none" ? null : val})}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a level" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No Level</SelectItem>
+                                    {levels.map((level) => (
+                                        <SelectItem key={level.id} value={level.id}>
+                                            <div className="flex items-center gap-2">
+                                                <div 
+                                                    className="w-3 h-3 rounded-full" 
+                                                    style={{ backgroundColor: level.color || "#64748b" }}
+                                                />
+                                                {level.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Input 
+                                placeholder="Or enter level text (legacy)"
+                                value={formData.level} 
+                                onChange={(e) => setFormData({...formData, level: e.target.value})}
+                                className="text-sm"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="config-capacity">Capacity (optional)</Label>
+                            <Input 
+                                id="config-capacity" 
+                                type="number"
+                                min="1"
+                                placeholder="Unlimited"
+                                value={formData.capacity || ""} 
+                                onChange={(e) => setFormData({...formData, capacity: e.target.value ? parseInt(e.target.value) : null})}
+                            />
+                        </div>
+                    </div>
+                    {(formData.programType === "SUBSCRIPTION" || formData.programType === "SINGLE_INSTANCE") && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="config-start">Start Date</Label>
+                                <Input 
+                                    id="config-start" 
+                                    type="date"
+                                    value={formData.startDate} 
+                                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="config-end">End Date</Label>
+                                <Input 
+                                    id="config-end" 
+                                    type="date"
+                                    value={formData.endDate} 
+                                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                    )}
                     <div className="pt-4 flex justify-end">
                         <Button onClick={handleSaveGeneral} disabled={isSaving}>
                             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -349,6 +529,211 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                         </Button>
                     </div>
                 </div>
+            </TabsContent>
+            
+            <TabsContent value="pricing" className="mt-0 space-y-6 max-w-2xl">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Pricing Model</CardTitle>
+                        <CardDescription>Configure how this program is priced</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-2">
+                            <Label>Pricing Type</Label>
+                            <Select 
+                                value={formData.pricingModel} 
+                                onValueChange={(val) => setFormData({...formData, pricingModel: val})}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="FLAT_RATE">Flat Rate (Fixed Price)</SelectItem>
+                                    <SelectItem value="PER_SESSION">Per Session</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                        {formData.pricingModel === "FLAT_RATE" && (
+                            <div className="grid gap-2">
+                                <Label>Total Price</Label>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        type="number" 
+                                        className="pl-8"
+                                        placeholder="0.00" 
+                                        value={formData.basePrice || ""}
+                                        onChange={(e) => setFormData({...formData, basePrice: e.target.value ? parseFloat(e.target.value) : null})}
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    The total price for the entire program duration
+                                </p>
+                            </div>
+                        )}
+                        
+                        {formData.pricingModel === "PER_SESSION" && (
+                            <div className="grid gap-2">
+                                <Label>Price Per Session</Label>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        type="number" 
+                                        className="pl-8"
+                                        placeholder="0.00" 
+                                        value={formData.perSessionPrice || ""}
+                                        onChange={(e) => setFormData({...formData, perSessionPrice: e.target.value ? parseFloat(e.target.value) : null})}
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Total will be calculated based on number of sessions
+                                </p>
+                            </div>
+                        )}
+                        
+                        <div className="pt-4 flex justify-end">
+                            <Button onClick={handleSaveGeneral} disabled={isSaving}>
+                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Pricing
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            
+            <TabsContent value="discounts" className="mt-0 space-y-6 max-w-3xl">
+                <Card className="border-dashed shadow-none">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="text-base">Add Bulk Discount</CardTitle>
+                        <CardDescription>Configure family or multi-session discounts</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                            <div className="md:col-span-3 grid gap-2">
+                                <Label>Type</Label>
+                                <Select 
+                                    value={newBulkDiscount.type} 
+                                    onValueChange={(val: "FAMILY_SIBLING" | "MULTI_SESSION") => setNewBulkDiscount({...newBulkDiscount, type: val})}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="FAMILY_SIBLING">Family/Sibling</SelectItem>
+                                        <SelectItem value="MULTI_SESSION">Multi-Session</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="md:col-span-2 grid gap-2">
+                                <Label>{newBulkDiscount.type === "FAMILY_SIBLING" ? "Child #" : "Min Qty"}</Label>
+                                <Input 
+                                    type="number" 
+                                    min="2"
+                                    value={newBulkDiscount.minQuantity}
+                                    onChange={(e) => setNewBulkDiscount({...newBulkDiscount, minQuantity: parseInt(e.target.value) || 2})}
+                                />
+                            </div>
+                            <div className="md:col-span-2 grid gap-2">
+                                <Label>Discount</Label>
+                                <Select 
+                                    value={newBulkDiscount.discountType} 
+                                    onValueChange={(val: "PERCENTAGE" | "FIXED_AMOUNT") => setNewBulkDiscount({...newBulkDiscount, discountType: val})}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                                        <SelectItem value="FIXED_AMOUNT">Fixed Amount</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="md:col-span-2 grid gap-2">
+                                <Label>Value</Label>
+                                <div className="relative">
+                                    {newBulkDiscount.discountType === "PERCENTAGE" ? (
+                                        <Percent className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                        <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    <Input 
+                                        type="number" 
+                                        className="pl-8"
+                                        value={newBulkDiscount.discountValue}
+                                        onChange={(e) => setNewBulkDiscount({...newBulkDiscount, discountValue: parseFloat(e.target.value) || 0})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="md:col-span-2 grid gap-2">
+                                <Label>Description</Label>
+                                <Input 
+                                    placeholder="Optional"
+                                    value={newBulkDiscount.description}
+                                    onChange={(e) => setNewBulkDiscount({...newBulkDiscount, description: e.target.value})}
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <Button onClick={handleAddBulkDiscount} disabled={isAddingDiscount} size="icon" className="w-full">
+                                    {isAddingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                {bulkDiscounts.length > 0 ? (
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Active Discounts</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            {bulkDiscounts.map((discount: any) => (
+                                <div key={discount.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <Badge variant={discount.type === "FAMILY_SIBLING" ? "default" : "secondary"}>
+                                            {discount.type === "FAMILY_SIBLING" ? "Family" : "Multi-Session"}
+                                        </Badge>
+                                        <span className="font-medium">
+                                            {discount.type === "FAMILY_SIBLING" 
+                                                ? `${discount.minQuantity}${discount.minQuantity === 2 ? "nd" : discount.minQuantity === 3 ? "rd" : "th"} child`
+                                                : `${discount.minQuantity}+ sessions`
+                                            }
+                                        </span>
+                                        <span className="text-muted-foreground">→</span>
+                                        <span className="text-green-600 font-medium">
+                                            {discount.discountType === "PERCENTAGE" 
+                                                ? `${Number(discount.discountValue)}% off`
+                                                : `$${Number(discount.discountValue)} off`
+                                            }
+                                        </span>
+                                        {discount.description && (
+                                            <span className="text-sm text-muted-foreground">({discount.description})</span>
+                                        )}
+                                    </div>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={() => handleRemoveBulkDiscount(discount.id)}
+                                        disabled={isDeletingDiscount === discount.id}
+                                    >
+                                        {isDeletingDiscount === discount.id ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        )}
+                                    </Button>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card className="border-dashed">
+                        <CardContent className="py-8 text-center text-muted-foreground">
+                            No bulk discounts configured. Add one above to offer family or volume pricing.
+                        </CardContent>
+                    </Card>
+                )}
             </TabsContent>
 
             <TabsContent value="memberships" className="mt-0 space-y-6 max-w-3xl">
@@ -670,6 +1055,66 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                         )}
                     </div>
                 </div>
+            </TabsContent>
+            
+            <TabsContent value="display" className="mt-0 space-y-6 max-w-2xl">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <Settings className="h-4 w-4" />
+                            Marketing Site Display
+                        </CardTitle>
+                        <CardDescription>
+                            Control what information is shown on your public program listing
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="text-base">Show Level</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Display the program level on the marketing site
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {formData.showLevelOnSite ? (
+                                    <Eye className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <Switch
+                                    checked={formData.showLevelOnSite}
+                                    onCheckedChange={(checked) => setFormData({...formData, showLevelOnSite: checked})}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="text-base">Show Coach</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Display the primary coach on the marketing site
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {formData.showCoachOnSite ? (
+                                    <Eye className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <Switch
+                                    checked={formData.showCoachOnSite}
+                                    onCheckedChange={(checked) => setFormData({...formData, showCoachOnSite: checked})}
+                                />
+                            </div>
+                        </div>
+                        <div className="pt-4 flex justify-end">
+                            <Button onClick={handleSaveGeneral} disabled={isSaving}>
+                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Display Settings
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </TabsContent>
         </div>
       </Tabs>

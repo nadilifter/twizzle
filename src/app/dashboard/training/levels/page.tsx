@@ -1,0 +1,444 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Plus, 
+  Search, 
+  Loader2,
+  Pencil,
+  Trash2,
+  GripVertical,
+  Palette,
+  Check,
+} from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
+import { toast } from "sonner"
+import { api } from "@/lib/api-client"
+
+interface Level {
+  id: string
+  name: string
+  description: string | null
+  order: number
+  color: string | null
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+  _count: {
+    programs: number
+    skills: number
+  }
+}
+
+interface LevelFormData {
+  name: string
+  description: string
+  color: string
+  isDefault: boolean
+}
+
+const initialFormData: LevelFormData = {
+  name: "",
+  description: "",
+  color: "#3b82f6", // Default blue
+  isDefault: false,
+}
+
+const colorPresets = [
+  "#ef4444", // red
+  "#f97316", // orange
+  "#f59e0b", // amber
+  "#eab308", // yellow
+  "#84cc16", // lime
+  "#22c55e", // green
+  "#14b8a6", // teal
+  "#06b6d4", // cyan
+  "#3b82f6", // blue
+  "#6366f1", // indigo
+  "#8b5cf6", // violet
+  "#a855f7", // purple
+  "#d946ef", // fuchsia
+  "#ec4899", // pink
+  "#64748b", // slate
+]
+
+export default function LevelsPage() {
+  const [levels, setLevels] = useState<Level[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [editingLevel, setEditingLevel] = useState<Level | null>(null)
+  const [formData, setFormData] = useState<LevelFormData>(initialFormData)
+  const [isSaving, setIsSaving] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [levelToDelete, setLevelToDelete] = useState<Level | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const fetchLevels = useCallback(async () => {
+    try {
+      const data = await api.get<Level[]>("/api/levels", { search: searchQuery })
+      setLevels(data)
+    } catch (error) {
+      console.error("Error fetching levels:", error)
+      toast.error("Failed to load levels")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [searchQuery])
+
+  useEffect(() => {
+    fetchLevels()
+  }, [fetchLevels])
+
+  const handleOpenSheet = (level?: Level) => {
+    if (level) {
+      setEditingLevel(level)
+      setFormData({
+        name: level.name,
+        description: level.description || "",
+        color: level.color || "#3b82f6",
+        isDefault: level.isDefault,
+      })
+    } else {
+      setEditingLevel(null)
+      setFormData(initialFormData)
+    }
+    setIsSheetOpen(true)
+  }
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Name is required")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      if (editingLevel) {
+        await api.put(`/api/levels/${editingLevel.id}`, formData)
+        toast.success("Level updated successfully")
+      } else {
+        await api.post("/api/levels", formData)
+        toast.success("Level created successfully")
+      }
+      setIsSheetOpen(false)
+      fetchLevels()
+    } catch (error) {
+      console.error("Error saving level:", error)
+      toast.error(editingLevel ? "Failed to update level" : "Failed to create level")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!levelToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await api.delete(`/api/levels/${levelToDelete.id}`)
+      toast.success("Level deleted successfully")
+      setDeleteDialogOpen(false)
+      setLevelToDelete(null)
+      fetchLevels()
+    } catch (error: any) {
+      console.error("Error deleting level:", error)
+      const message = error?.error || "Failed to delete level"
+      toast.error(message)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const openDeleteDialog = (level: Level) => {
+    setLevelToDelete(level)
+    setDeleteDialogOpen(true)
+  }
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Levels</h1>
+          <p className="text-muted-foreground">
+            Define skill and program levels for your organization
+          </p>
+        </div>
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <SheetTrigger asChild>
+            <Button onClick={() => handleOpenSheet()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Level
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>{editingLevel ? "Edit Level" : "Create Level"}</SheetTitle>
+              <SheetDescription>
+                {editingLevel 
+                  ? "Update the level details below." 
+                  : "Add a new level for programs and skills."}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Bronze, Level 1, Beginner"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Optional description for this level"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Color</Label>
+                <div className="flex flex-wrap gap-2">
+                  {colorPresets.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-transform hover:scale-110"
+                      style={{ 
+                        backgroundColor: color,
+                        borderColor: formData.color === color ? "white" : "transparent",
+                        boxShadow: formData.color === color ? `0 0 0 2px ${color}` : "none"
+                      }}
+                      onClick={() => setFormData({ ...formData, color })}
+                    >
+                      {formData.color === color && (
+                        <Check className="h-4 w-4 text-white" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <Palette className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="w-12 h-8 p-1 cursor-pointer"
+                  />
+                  <span className="text-sm text-muted-foreground">{formData.color}</span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isDefault"
+                  checked={formData.isDefault}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isDefault: checked })}
+                />
+                <Label htmlFor="isDefault">Set as default level</Label>
+              </div>
+            </div>
+            <SheetFooter>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving || !formData.name.trim()}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : editingLevel ? (
+                  "Save Changes"
+                ) : (
+                  "Create Level"
+                )}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Levels</CardTitle>
+          <CardDescription>
+            Levels can be assigned to programs and skills to organize your offerings
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search levels..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : levels.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                {searchQuery ? "No levels found matching your search." : "No levels created yet."}
+              </p>
+              {!searchQuery && (
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => handleOpenSheet()}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create your first level
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-center">Programs</TableHead>
+                  <TableHead className="text-center">Skills</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {levels.map((level) => (
+                  <TableRow key={level.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: level.color || "#64748b" }}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{level.name}</span>
+                        {level.isDefault && (
+                          <Badge variant="secondary" className="text-xs">Default</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-xs truncate">
+                      {level.description || "—"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{level._count.programs}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{level._count.skills}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenSheet(level)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openDeleteDialog(level)}
+                          disabled={level._count.programs > 0 || level._count.skills > 0}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Level</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{levelToDelete?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
