@@ -97,6 +97,12 @@ function handleCors(req: NextRequest, response: NextResponse): NextResponse {
   return response;
 }
 
+// Helper to get session cookie name based on environment
+// Duplicated from env-domains.ts because middleware runs in Edge runtime
+function getSessionCookieName(env: Environment): string {
+  return env === 'local' ? "next-auth.session-token" : "__Secure-next-auth.session-token";
+}
+
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get("host") || "";
@@ -119,12 +125,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Determine current environment for cookie name
+  const currentEnv = getCurrentEnvironment();
+  const cookieName = getSessionCookieName(currentEnv);
+
   // Get auth token for protected routes
   // Explicitly pass secret and cookie name to handle edge runtime properly
   const token = await getToken({ 
     req,
     secret: process.env.NEXTAUTH_SECRET,
-    cookieName: "next-auth.session-token",
+    cookieName: cookieName,
   });
 
   // 1. Domain Parsing - Environment Aware
@@ -164,13 +174,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // Debug: log token retrieval for auth troubleshooting
-  const sessionCookie = req.cookies.get("next-auth.session-token");
-  const secureCookie = req.cookies.get("__Secure-next-auth.session-token");
+  const sessionCookie = req.cookies.get(cookieName);
   const allCookieNames = req.cookies.getAll().map(c => c.name);
   if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos" || currentHost === "login") {
     console.log(`Middleware: host=${currentHost}, path=${path}, env=${currentEnv}`);
     console.log(`Middleware: cookies=${JSON.stringify(allCookieNames)}`);
-    console.log(`Middleware: hasCookie=${!!sessionCookie}, hasSecureCookie=${!!secureCookie}, hasToken=${!!token}`);
+    console.log(`Middleware: looking for cookie=${cookieName}, found=${!!sessionCookie}, hasToken=${!!token}`);
     if (token) {
       console.log(`Middleware: tokenEmail=${token.email}`);
     }

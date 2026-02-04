@@ -161,6 +161,16 @@ export function getLoginUrlForHost(hostHeader: string | null): string {
 }
 
 /**
+ * Get the session cookie name based on the environment.
+ * Uses __Secure- prefix for secure environments (production/staging).
+ */
+export function getSessionCookieName(): string {
+  const currentEnv = getCurrentEnvironment();
+  const isLocal = currentEnv === 'local';
+  return isLocal ? "next-auth.session-token" : "__Secure-next-auth.session-token";
+}
+
+/**
  * Check if a hostname belongs to the current environment's domain
  */
 export function isValidDomain(hostname: string): boolean {

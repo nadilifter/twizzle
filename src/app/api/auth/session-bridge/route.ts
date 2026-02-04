@@ -156,7 +156,8 @@ export async function GET(req: NextRequest) {
     const response = NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
 
     // Set the session cookie with the correct domain
-    response.cookies.set("next-auth.session-token", sessionToken, {
+    const cookieName = getSessionCookieName();
+    response.cookies.set(cookieName, sessionToken, {
       httpOnly: true,
       sameSite: "lax",
       path: "/",

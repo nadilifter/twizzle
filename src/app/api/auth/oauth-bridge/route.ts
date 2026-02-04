@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       req, 
       secret: process.env.NEXTAUTH_SECRET,
       // Try to get token even with potentially mismatched cookie domain
-      cookieName: "next-auth.session-token",
+      cookieName: getSessionCookieName(),
     });
 
     if (!token || !token.email) {

@@ -40,14 +40,15 @@ export async function GET(req: NextRequest) {
     const allCookies = req.cookies.getAll();
     console.log("Credentials bridge: All cookies:", allCookies.map(c => c.name));
     
-    const sessionCookie = req.cookies.get("next-auth.session-token");
-    console.log("Credentials bridge: Session cookie present:", !!sessionCookie);
+    const sessionCookieName = getSessionCookieName();
+    const sessionCookie = req.cookies.get(sessionCookieName);
+    console.log("Credentials bridge: Session cookie present:", !!sessionCookie, "name:", sessionCookieName);
     
     // Get the JWT token from the current session
     const token = await getToken({ 
       req, 
       secret: process.env.NEXTAUTH_SECRET,
-      cookieName: "next-auth.session-token",
+      cookieName: sessionCookieName,
     });
 
     console.log("Credentials bridge: Token result:", token ? `Found (email: ${token.email})` : "Not found");

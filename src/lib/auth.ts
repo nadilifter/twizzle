@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
     // All cookies need the same domain for OAuth to work across subdomains
     // (login.domain.com initiates OAuth, domain.com receives callback)
     sessionToken: {
-      name: `next-auth.session-token`,
+      name: getSessionCookieName(),
       options: {
         httpOnly: true,
         sameSite: "lax",
@@ -126,7 +126,6 @@ export const authOptions: NextAuthOptions = {
               process.env.ALLOW_OAUTH_ACCOUNT_LINKING !== "false",
             authorization: {
               params: {
-                prompt: "consent",
                 access_type: "offline",
                 response_type: "code",
               },

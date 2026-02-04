@@ -58,7 +58,9 @@ function buildClearCookieHeader(
  */
 function getClearCookieHeaders(cookieDomain: string, isSecure: boolean): string[] {
   const headers: string[] = [];
+  const sessionCookieName = getSessionCookieName();
   const cookieNames = [
+    sessionCookieName,
     "next-auth.session-token",
     "next-auth.callback-url", 
     "next-auth.csrf-token",
@@ -94,7 +96,8 @@ function logExistingCookies() {
   const allCookies = cookieStore.getAll();
   console.log("Logout: Existing cookies:", allCookies.map(c => ({ name: c.name, value: c.value.substring(0, 20) + "..." })));
   
-  const sessionCookie = cookieStore.get("next-auth.session-token");
+  const sessionCookieName = getSessionCookieName();
+  const sessionCookie = cookieStore.get(sessionCookieName) || cookieStore.get("next-auth.session-token");
   if (sessionCookie) {
     console.log("Logout: Found session cookie, length:", sessionCookie.value.length);
   } else {
