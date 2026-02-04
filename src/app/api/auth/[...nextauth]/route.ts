@@ -87,8 +87,23 @@ export async function OPTIONS(request: NextRequest) {
  * POST handler - Used for credential login, signout, etc.
  * Apply rate limiting to prevent brute force attacks.
  */
+// ... imports
+
+// Helper to log response details
+function logResponse(action: string, response: Response) {
+  const setCookie = response.headers.get("Set-Cookie");
+  const allowOrigin = response.headers.get("Access-Control-Allow-Origin");
+  const cookieNames = setCookie ? setCookie.split(',').map(c => c.split('=')[0]).join(', ') : 'none';
+  
+  console.log(`Auth API [${action}]: Status=${response.status}`);
+  console.log(`Auth API [${action}]: Set-Cookie names=${cookieNames}`);
+  if (setCookie) console.log(`Auth API [${action}]: Set-Cookie full=${setCookie.substring(0, 100)}...`); // Log start of cookie for debugging attributes
+  console.log(`Auth API [${action}]: Access-Control-Allow-Origin=${allowOrigin}`);
+}
+
 export async function POST(request: NextRequest, context: { params: { nextauth: string[] } }) {
   const action = context.params.nextauth?.[0];
+  console.log(`Auth API [POST]: action=${action}, origin=${request.headers.get("origin")}`);
   
   // Apply strict rate limiting for credential sign-in attempts
   if (action === "callback" || action === "signin") {
@@ -99,5 +114,7 @@ export async function POST(request: NextRequest, context: { params: { nextauth: 
   }
 
   const response = await nextAuthHandler(request, context);
-  return addCorsHeaders(request, response);
+  const finalResponse = addCorsHeaders(request, response);
+  logResponse(`POST ${action}`, finalResponse);
+  return finalResponse;
 }
