@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { encode } from "next-auth/jwt";
 import { db } from "@/lib/db";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { getCurrentEnvironment, getEnvConfig } from "@/lib/env-domains";
+import { getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib/env-domains";
 
 /**
  * Session Bridge Endpoint

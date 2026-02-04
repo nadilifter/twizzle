@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import crypto from "crypto";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { getSubdomainUrl, getBaseUrl } from "@/lib/env-domains";
+import { getSubdomainUrl, getBaseUrl, getSessionCookieName } from "@/lib/env-domains";
 
 /**
  * OAuth Bridge Endpoint
