@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import crypto from "crypto";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getSubdomainUrl, getBaseUrl } from "@/lib/env-domains";
 
 /**
  * OAuth Bridge Endpoint
@@ -17,23 +18,12 @@ import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
  * as a fallback if someone lands here.
  */
 
-function getEnvironmentUrls(req: NextRequest) {
-  const host = req.headers.get("host") || "";
-  const isLocal = host.includes("localhost");
-  
-  if (isLocal) {
-    return {
-      loginBaseUrl: "http://login.uplifterinc.localhost:3000",
-      bridgeBaseUrl: "http://uplifterinc.localhost:3000",
-      defaultCallback: "http://admin.uplifterinc.localhost:3000/",
-    };
-  } else {
-    return {
-      loginBaseUrl: "https://login.uplifterinc.com",
-      bridgeBaseUrl: "https://uplifterinc.com",
-      defaultCallback: "https://admin.uplifterinc.com/",
-    };
-  }
+function getEnvironmentUrls() {
+  return {
+    loginBaseUrl: getSubdomainUrl('login'),
+    bridgeBaseUrl: getBaseUrl(),
+    defaultCallback: `${getSubdomainUrl('admin')}/`,
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -43,7 +33,7 @@ export async function GET(req: NextRequest) {
     return rateLimitResponse;
   }
 
-  const { loginBaseUrl, bridgeBaseUrl, defaultCallback } = getEnvironmentUrls(req);
+  const { loginBaseUrl, bridgeBaseUrl, defaultCallback } = getEnvironmentUrls();
   const searchParams = req.nextUrl.searchParams;
   const callbackUrl = searchParams.get("callbackUrl") || defaultCallback;
 

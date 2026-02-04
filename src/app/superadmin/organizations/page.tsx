@@ -11,12 +11,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard } from "lucide-react"
+import { getSubdomainUrl } from "@/lib/env-domains"
 
 function getAdminDashboardSwitchUrl(orgId: string, orgName: string): string {
-  const isLocal = process.env.NODE_ENV === 'development'
-  const adminBase = isLocal
-    ? 'http://admin.uplifterinc.localhost:3000'
-    : 'https://admin.uplifterinc.com'
+  const adminBase = getSubdomainUrl('admin')
   return `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
 }
 

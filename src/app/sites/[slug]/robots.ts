@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
+import { getSubdomainUrl } from '@/lib/env-domains';
 
 /**
  * Generate a dynamic robots.txt for each tenant site.
@@ -24,7 +25,7 @@ export default async function robots({
   // Construct the base URL for the site
   const baseUrl = config?.domain 
     ? `https://${config.domain}` 
-    : `https://${params.slug}.uplifterinc.com`;
+    : getSubdomainUrl(params.slug);
 
   // Only allow indexing for published sites
   if (config?.isPublished) {

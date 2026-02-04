@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Loader2, AlertCircle, Check, Globe, Palette, Image, Eye, LayoutGrid } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { getBaseDomainSuffix, getBaseDomainFromHostname } from "@/lib/client-domains";
 
 export default function WebsitePage() {
   const [config, setConfig] = useState<any>({});
@@ -228,7 +229,7 @@ export default function WebsitePage() {
               <RadioGroupItem value="subdomain" id="subdomain" className="mt-1" />
               <div className="grid gap-2 flex-1">
                 <Label htmlFor="subdomain">Use Uplifter Subdomain<span className="text-destructive ml-1">*</span></Label>
-                <p className="text-sm text-muted-foreground">Get a free subdomain on uplifterinc.com (e.g., mygym.uplifterinc.com).</p>
+                <p className="text-sm text-muted-foreground">Get a free subdomain (e.g., mygym{getBaseDomainSuffix()}).</p>
                 
                 <div className="mt-2">
                   <div className="flex items-center gap-2">
@@ -250,7 +251,7 @@ export default function WebsitePage() {
                         ) : null}
                       </div>
                     </div>
-                    <span className="text-muted-foreground">.uplifterinc.com</span>
+                    <span className="text-muted-foreground">{getBaseDomainSuffix()}</span>
                   </div>
                   {subdomainStatus === 'taken' && (
                     <p className="text-xs text-red-500 mt-1">This subdomain is already taken.</p>

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { getBaseDomainSuffix } from "@/lib/client-domains"
 
 interface SubscriptionPlan {
   id: string
@@ -48,25 +49,19 @@ interface SubscriptionPlan {
 const COUNTRIES = [
   { code: "US", name: "United States" },
   { code: "CA", name: "Canada" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "AU", name: "Australia" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "ES", name: "Spain" },
-  { code: "IT", name: "Italy" },
-  { code: "NL", name: "Netherlands" },
-  { code: "BE", name: "Belgium" },
-  { code: "AT", name: "Austria" },
-  { code: "CH", name: "Switzerland" },
-  { code: "IE", name: "Ireland" },
-  { code: "NZ", name: "New Zealand" },
-  { code: "MX", name: "Mexico" },
-  { code: "BR", name: "Brazil" },
-  { code: "AR", name: "Argentina" },
-  { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-  { code: "IN", name: "India" },
 ]
+
+const MAX_NAME_LENGTH = 255
+const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+
+// US: 12345 or 12345-6789; Canada: A1A 1A1 (letter-digit-letter digit-letter-digit)
+function isValidPostalCode(value: string, country: string): boolean {
+  const trimmed = value.trim().replace(/\s/g, "")
+  if (!trimmed) return false
+  if (country === "US") return /^\d{5}(-\d{4})?$/.test(trimmed)
+  if (country === "CA") return /^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/.test(trimmed)
+  return true // no country selected yet
+}
 
 export default function SignupPage() {
   const router = useRouter()
@@ -76,6 +71,7 @@ export default function SignupPage() {
   
   // Subdomain availability check
   const [subdomainStatus, setSubdomainStatus] = React.useState<"idle" | "checking" | "available" | "taken">("idle")
+  const [subdomainReason, setSubdomainReason] = React.useState<string>("")
   const subdomainCheckTimeout = React.useRef<NodeJS.Timeout | null>(null)
   
   // Form state
@@ -110,6 +106,16 @@ export default function SignupPage() {
   // Validation errors
   const [errors, setErrors] = React.useState<Record<string, string>>({})
 
+  // Default country from browser locale (US or CA only)
+  React.useEffect(() => {
+    if (typeof navigator === "undefined") return
+    const locale = navigator.language || (navigator.languages && navigator.languages[0]) || ""
+    const region = locale.split("-")[1]?.toUpperCase()
+    if (region === "US" || region === "CA") {
+      setFormData(prev => (prev.country ? prev : { ...prev, country: region }))
+    }
+  }, [])
+
   // Fetch plans on mount
   React.useEffect(() => {
     async function fetchPlans() {
@@ -138,6 +144,7 @@ export default function SignupPage() {
   const checkSubdomain = React.useCallback(async (subdomain: string) => {
     if (!subdomain || subdomain.length < 3) {
       setSubdomainStatus("idle")
+      setSubdomainReason("")
       return
     }
 
@@ -146,8 +153,10 @@ export default function SignupPage() {
       const response = await fetch(`/api/org-signup/check-subdomain?subdomain=${encodeURIComponent(subdomain)}`)
       const data = await response.json()
       setSubdomainStatus(data.available ? "available" : "taken")
+      setSubdomainReason(data.reason || "")
     } catch (error) {
       setSubdomainStatus("idle")
+      setSubdomainReason("")
     }
   }, [])
 
@@ -181,6 +190,8 @@ export default function SignupPage() {
     // User account validation
     if (!formData.name.trim()) {
       newErrors.name = "Your name is required"
+    } else if (formData.name.length > MAX_NAME_LENGTH) {
+      newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or less`
     }
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"
@@ -191,6 +202,14 @@ export default function SignupPage() {
       newErrors.password = "Password is required"
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters"
+    } else if (!/[A-Z]/.test(formData.password)) {
+      newErrors.password = "Password must include at least one uppercase letter"
+    } else if (!/[a-z]/.test(formData.password)) {
+      newErrors.password = "Password must include at least one lowercase letter"
+    } else if (!/\d/.test(formData.password)) {
+      newErrors.password = "Password must include at least one number"
+    } else if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(formData.password)) {
+      newErrors.password = "Password must include at least one special character"
     }
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match"
@@ -205,6 +224,37 @@ export default function SignupPage() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.orgEmail)) {
       newErrors.orgEmail = "Please enter a valid email"
     }
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone is required"
+    }
+    if (!formData.country) {
+      newErrors.country = "Country is required"
+    }
+    if (!formData.street.trim()) {
+      newErrors.street = "Street address is required"
+    }
+    if (!formData.city.trim()) {
+      newErrors.city = "City is required"
+    }
+    if (!formData.stateProvince.trim()) {
+      newErrors.stateProvince = "State / Province is required"
+    }
+    if (formData.country === "US" || formData.country === "CA") {
+      if (!formData.postalCode.trim()) {
+        newErrors.postalCode = "Postal code is required"
+      } else if (!isValidPostalCode(formData.postalCode, formData.country)) {
+        newErrors.postalCode =
+          formData.country === "US"
+            ? "Enter a valid US ZIP code (e.g. 12345 or 12345-6789)"
+            : "Enter a valid Canadian postal code (e.g. A1A 1A1)"
+      }
+    }
+    if (!HEX_COLOR_REGEX.test(formData.primaryColor)) {
+      newErrors.primaryColor = "Enter a valid hex color (e.g. #000000)"
+    }
+    if (!HEX_COLOR_REGEX.test(formData.secondaryColor)) {
+      newErrors.secondaryColor = "Enter a valid hex color (e.g. #ffffff)"
+    }
 
     // Subdomain validation
     if (!formData.subdomain.trim()) {
@@ -212,7 +262,7 @@ export default function SignupPage() {
     } else if (formData.subdomain.length < 3) {
       newErrors.subdomain = "Subdomain must be at least 3 characters"
     } else if (subdomainStatus === "taken") {
-      newErrors.subdomain = "This subdomain is already taken"
+      newErrors.subdomain = subdomainReason || "This subdomain is already taken"
     }
 
     // Plan validation
@@ -294,9 +344,11 @@ export default function SignupPage() {
                   placeholder="John Smith"
                   value={formData.name}
                   onChange={handleInputChange}
+                  maxLength={MAX_NAME_LENGTH}
                   className={errors.name ? "border-destructive" : ""}
                 />
                 {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                <p className="text-xs text-muted-foreground">{formData.name.length}/{MAX_NAME_LENGTH}</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
@@ -317,7 +369,8 @@ export default function SignupPage() {
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="Min. 8 characters"
+                  autoComplete="new-password"
+                  placeholder="Min. 8 chars, upper, lower, number, special"
                   value={formData.password}
                   onChange={handleInputChange}
                   className={errors.password ? "border-destructive" : ""}
@@ -330,6 +383,7 @@ export default function SignupPage() {
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
@@ -378,63 +432,29 @@ export default function SignupPage() {
                 {errors.orgEmail && <p className="text-sm text-destructive">{errors.orgEmail}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone (optional)</Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
                   name="phone"
                   type="tel"
+                  autoComplete="tel"
                   placeholder="+1 (555) 123-4567"
                   value={formData.phone}
                   onChange={handleInputChange}
+                  className={errors.phone ? "border-destructive" : ""}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="street">Street Address</Label>
-                <Input
-                  id="street"
-                  name="street"
-                  placeholder="123 Main Street"
-                  value={formData.street}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  placeholder="New York"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="stateProvince">State / Province</Label>
-                <Input
-                  id="stateProvince"
-                  name="stateProvince"
-                  placeholder="NY"
-                  value={formData.stateProvince}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="postalCode">Postal Code</Label>
-                <Input
-                  id="postalCode"
-                  name="postalCode"
-                  placeholder="10001"
-                  value={formData.postalCode}
-                  onChange={handleInputChange}
-                />
+                {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
                 <Select
                   value={formData.country}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, country: value }))
+                    if (errors.country) setErrors(prev => ({ ...prev, country: "" }))
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={errors.country ? "border-destructive" : ""}>
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
                   <SelectContent>
@@ -445,6 +465,59 @@ export default function SignupPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.country && <p className="text-sm text-destructive">{errors.country}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="street">Street Address</Label>
+                <Input
+                  id="street"
+                  name="street"
+                  autoComplete="street-address"
+                  placeholder="123 Main Street"
+                  value={formData.street}
+                  onChange={handleInputChange}
+                  className={errors.street ? "border-destructive" : ""}
+                />
+                {errors.street && <p className="text-sm text-destructive">{errors.street}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  name="city"
+                  autoComplete="address-level2"
+                  placeholder="New York"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className={errors.city ? "border-destructive" : ""}
+                />
+                {errors.city && <p className="text-sm text-destructive">{errors.city}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stateProvince">State / Province</Label>
+                <Input
+                  id="stateProvince"
+                  name="stateProvince"
+                  autoComplete="address-level1"
+                  placeholder="NY"
+                  value={formData.stateProvince}
+                  onChange={handleInputChange}
+                  className={errors.stateProvince ? "border-destructive" : ""}
+                />
+                {errors.stateProvince && <p className="text-sm text-destructive">{errors.stateProvince}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postalCode">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  name="postalCode"
+                  autoComplete="postal-code"
+                  placeholder={formData.country === "CA" ? "A1A 1A1" : "10001"}
+                  value={formData.postalCode}
+                  onChange={handleInputChange}
+                  className={errors.postalCode ? "border-destructive" : ""}
+                />
+                {errors.postalCode && <p className="text-sm text-destructive">{errors.postalCode}</p>}
               </div>
             </CardContent>
           </Card>
@@ -488,7 +561,7 @@ export default function SignupPage() {
                     )}
                   />
                   <span className="inline-flex items-center px-3 h-9 border border-l-0 rounded-r-md bg-muted text-muted-foreground text-sm">
-                    .uplifterinc.com
+                    {getBaseDomainSuffix()}
                   </span>
                   <div className="ml-2 w-6">
                     {subdomainStatus === "checking" && (
@@ -507,7 +580,9 @@ export default function SignupPage() {
                   <p className="text-sm text-green-600">This subdomain is available!</p>
                 )}
                 {subdomainStatus === "taken" && (
-                  <p className="text-sm text-destructive">This subdomain is already taken. Please choose another.</p>
+                  <p className="text-sm text-destructive">
+                    {subdomainReason || "This subdomain is already taken. Please choose another."}
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -539,12 +614,20 @@ export default function SignupPage() {
                     />
                     <Input
                       value={formData.primaryColor}
-                      onChange={(e) => setFormData(prev => ({ ...prev, primaryColor: e.target.value }))}
-                      className="font-mono"
+                      onChange={(e) => {
+                        const v = e.target.value
+                        if (v === "" || /^#?[A-Fa-f0-9]{0,6}$/.test(v.replace(/^#/, ""))) {
+                          setFormData(prev => ({ ...prev, primaryColor: v.startsWith("#") ? v : "#" + v }))
+                          if (errors.primaryColor) setErrors(prev => ({ ...prev, primaryColor: "" }))
+                        }
+                      }}
+                      className={cn("font-mono", errors.primaryColor && "border-destructive")}
                       placeholder="#000000"
+                      maxLength={7}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">Used for buttons, links, and accents</p>
+                  {errors.primaryColor && <p className="text-sm text-destructive">{errors.primaryColor}</p>}
+                  <p className="text-xs text-muted-foreground">Used for buttons, links, and accents (e.g. #000000)</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="secondaryColor">Secondary Color</Label>
@@ -558,12 +641,20 @@ export default function SignupPage() {
                     />
                     <Input
                       value={formData.secondaryColor}
-                      onChange={(e) => setFormData(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                      className="font-mono"
+                      onChange={(e) => {
+                        const v = e.target.value
+                        if (v === "" || /^#?[A-Fa-f0-9]{0,6}$/.test(v.replace(/^#/, ""))) {
+                          setFormData(prev => ({ ...prev, secondaryColor: v.startsWith("#") ? v : "#" + v }))
+                          if (errors.secondaryColor) setErrors(prev => ({ ...prev, secondaryColor: "" }))
+                        }
+                      }}
+                      className={cn("font-mono", errors.secondaryColor && "border-destructive")}
                       placeholder="#ffffff"
+                      maxLength={7}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">Used for backgrounds and highlights</p>
+                  {errors.secondaryColor && <p className="text-sm text-destructive">{errors.secondaryColor}</p>}
+                  <p className="text-xs text-muted-foreground">Used for backgrounds and highlights (e.g. #ffffff)</p>
                 </div>
               </div>
             </CardContent>

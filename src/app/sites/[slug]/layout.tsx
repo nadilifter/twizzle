@@ -16,6 +16,7 @@ import { QueueProvider } from "@/components/sites/queue-context";
 import { VisitorTracker } from "@/components/sites/visitor-tracker";
 import { CookieNotice } from "@/components/sites/cookie-notice";
 import { SiteStructuredData } from "@/components/sites/structured-data";
+import { getSubdomainUrl, getLoginUrl as getEnvLoginUrl } from "@/lib/env-domains";
 
 export const dynamic = "force-dynamic";
 
@@ -23,22 +24,12 @@ export const dynamic = "force-dynamic";
  * Get the login URL for tenant sites.
  * Redirects to the centralized login portal with callback to return to the tenant site.
  */
-function getLoginUrl(subdomain: string, host: string): string {
-  const isLocal = host.includes("localhost");
-  const protocol = isLocal ? "http" : "https";
-  
+function getLoginUrl(subdomain: string): string {
   // Construct the callback URL to return to this tenant site after login
-  const tenantHost = isLocal 
-    ? `${subdomain}.uplifterinc.localhost:3000`
-    : `${subdomain}.uplifterinc.com`;
-  const callbackUrl = `${protocol}://${tenantHost}/`;
+  const callbackUrl = `${getSubdomainUrl(subdomain)}/`;
   
-  // Construct the login URL
-  const loginHost = isLocal 
-    ? "login.uplifterinc.localhost:3000"
-    : "login.uplifterinc.com";
-  
-  return `${protocol}://${loginHost}/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  // Construct the login URL with callback
+  return getEnvLoginUrl(callbackUrl);
 }
 
 // Helper to convert hex to HSL
@@ -94,7 +85,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   // Construct the canonical site URL
   const siteUrl = config.domain 
     ? `https://${config.domain}` 
-    : `https://${config.subdomain}.uplifterinc.com`;
+    : getSubdomainUrl(config.subdomain!);
 
   // Generate description: use custom SEO description, or hero content, or default
   const locationText = org.city && org.stateProvince 
@@ -196,10 +187,8 @@ export default async function SiteLayout({
     return notFound();
   }
 
-  // Get host for constructing login URL
-  const headersList = headers();
-  const host = headersList.get("host") || "";
-  const loginUrl = getLoginUrl(subdomain, host);
+  // Get login URL for this tenant site
+  const loginUrl = getLoginUrl(subdomain);
 
   const primaryColor = config.primaryColor || "#000000";
   const secondaryColor = config.secondaryColor || "#ffffff";
@@ -210,7 +199,7 @@ export default async function SiteLayout({
   // Construct the canonical site URL for structured data
   const siteUrl = config.domain 
     ? `https://${config.domain}` 
-    : `https://${config.subdomain}.uplifterinc.com`;
+    : getSubdomainUrl(config.subdomain!);
 
   return (
     <ThemeProvider

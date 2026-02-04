@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { getBaseDomainSuffix } from "@/lib/client-domains"
 
 interface SubscriptionPlan {
   id: string
@@ -484,7 +485,7 @@ export default function SignupPage() {
                     )}
                   />
                   <span className="inline-flex items-center px-3 h-9 border border-l-0 rounded-r-md bg-muted text-muted-foreground text-sm">
-                    .uplifterinc.com
+                    {getBaseDomainSuffix()}
                   </span>
                   <div className="ml-2 w-6">
                     {subdomainStatus === "checking" && (

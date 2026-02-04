@@ -16,6 +16,7 @@ import {
   getDefaultTemplate,
   type TemplateContext,
 } from "@/lib/notification-template-service";
+import { getSubdomainUrl } from "@/lib/env-domains";
 import type {
   NotificationRule,
   NotificationTemplate,
@@ -601,7 +602,7 @@ export async function buildTemplateContext(
       .filter(Boolean)
       .join(", ") || undefined;
     context.websiteUrl = org.websiteConfig?.subdomain
-      ? `https://${org.websiteConfig.subdomain}.uplifterinc.com`
+      ? getSubdomainUrl(org.websiteConfig.subdomain)
       : undefined;
   }
 
@@ -709,8 +710,8 @@ export async function buildTemplateContext(
       context.dueDate = formatDate(invoice.dueDate);
       context.dueDaysRemaining = calculateDaysUntil(invoice.dueDate);
       context.balanceDue = formatCurrency(Number(invoice.total));
-      // Payment URL would need to be generated based on your payment system
-      context.paymentUrl = `https://pay.uplifterinc.com/inv/${invoice.id}`;
+      // Payment URL - uses environment-aware subdomain
+      context.paymentUrl = `${getSubdomainUrl('pay')}/inv/${invoice.id}`;
     }
   }
 

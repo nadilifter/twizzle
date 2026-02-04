@@ -3,42 +3,77 @@ import { db } from "@/lib/db"
 import { hashPassword } from "@/lib/auth"
 import { z } from "zod"
 import { isSubdomainReserved } from "@/lib/reserved-domains"
+import { containsProfanity } from "@/lib/profanity"
+
+const MAX_NAME_LENGTH = 255
+const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+
+function isValidPostalCode(value: string, country: string): boolean {
+  const trimmed = value.trim().replace(/\s/g, "")
+  if (!trimmed) return false
+  if (country === "US") return /^\d{5}(-\d{4})?$/.test(trimmed)
+  if (country === "CA") return /^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/.test(trimmed)
+  return false
+}
 
 const signupSchema = z.object({
   // User account
-  name: z.string().min(1, "Name is required"),
+  name: z.string()
+    .min(1, "Name is required")
+    .max(MAX_NAME_LENGTH, `Name must be ${MAX_NAME_LENGTH} characters or less`),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must include at least one uppercase letter")
+    .regex(/[a-z]/, "Password must include at least one lowercase letter")
+    .regex(/\d/, "Password must include at least one number")
+    .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/, "Password must include at least one special character"),
+
   // Organization
   orgName: z.string().min(1, "Organization name is required"),
   orgEmail: z.string().email("Invalid organization email"),
-  phone: z.string().optional(),
-  street: z.string().optional(),
-  city: z.string().optional(),
-  stateProvince: z.string().optional(),
-  postalCode: z.string().optional(),
-  country: z.string().optional(),
-  
+  phone: z.string().min(1, "Phone is required"),
+  street: z.string().min(1, "Street address is required"),
+  city: z.string().min(1, "City is required"),
+  stateProvince: z.string().min(1, "State / Province is required"),
+  postalCode: z.string().min(1, "Postal code is required"),
+  country: z.enum(["US", "CA"], { message: "Country must be United States or Canada" }),
+
   // Website
   subdomain: z.string()
     .min(3, "Subdomain must be at least 3 characters")
     .max(63, "Subdomain must be at most 63 characters")
     .regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens")
     .refine((s) => !s.startsWith("-") && !s.endsWith("-"), "Subdomain cannot start or end with a hyphen"),
-  
+
   // Branding (optional)
-  primaryColor: z.string().optional(),
-  secondaryColor: z.string().optional(),
-  
+  primaryColor: z.string().regex(HEX_COLOR_REGEX, "Primary color must be a valid hex (e.g. #000000)").optional(),
+  secondaryColor: z.string().regex(HEX_COLOR_REGEX, "Secondary color must be a valid hex (e.g. #ffffff)").optional(),
+
   // Plan
   planId: z.string().min(1, "Please select a plan"),
-})
+}).refine(
+  (data) => isValidPostalCode(data.postalCode, data.country),
+  { message: "Postal code must be a valid US ZIP or Canadian postal code", path: ["postalCode"] }
+)
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const validatedData = signupSchema.parse(body)
+
+    if (containsProfanity(validatedData.orgName)) {
+      return NextResponse.json(
+        { error: "Organization name contains inappropriate language" },
+        { status: 400 }
+      )
+    }
+    if (containsProfanity(validatedData.subdomain)) {
+      return NextResponse.json(
+        { error: "Subdomain contains inappropriate language" },
+        { status: 400 }
+      )
+    }
 
     // Check if subdomain is reserved (database-driven with EXACT and PREFIX matching)
     const reservedCheck = await isSubdomainReserved(validatedData.subdomain.toLowerCase())

@@ -91,11 +91,10 @@ const formatLastActive = (date: Date | null) => {
   }
 }
 
+import { getSubdomainUrl } from "@/lib/env-domains"
+
 function getImpersonationUrl(userId: string, userName: string): string {
-  const isLocal = process.env.NODE_ENV === 'development'
-  const adminBase = isLocal
-    ? 'http://admin.uplifterinc.localhost:3000'
-    : 'https://admin.uplifterinc.com'
+  const adminBase = getSubdomainUrl('admin')
   return `${adminBase}/dashboard/impersonate?userId=${encodeURIComponent(userId)}&userName=${encodeURIComponent(userName)}`
 }
 

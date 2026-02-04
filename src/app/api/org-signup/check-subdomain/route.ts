@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { isSubdomainReserved } from "@/lib/reserved-domains"
+import { containsProfanity } from "@/lib/profanity"
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +43,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         available: false,
         reason: "Subdomain cannot start or end with a hyphen",
+      })
+    }
+
+    if (containsProfanity(normalizedSubdomain)) {
+      return NextResponse.json({
+        available: false,
+        reason: "Subdomain contains inappropriate language",
       })
     }
 

@@ -59,6 +59,7 @@
     "@tiptap/starter-kit": "^3.13.0",
     "@types/react-leaflet": "^3.0.0",
     "@upstash/redis": "^1.36.1",
+    "bad-words": "^4.0.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

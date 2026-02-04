@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
+import { getSubdomainUrl } from '@/lib/env-domains';
 
 /**
  * Generate a dynamic sitemap for each tenant site.
@@ -34,7 +35,7 @@ export default async function sitemap({
   // Construct the base URL for the site
   const baseUrl = config.domain 
     ? `https://${config.domain}` 
-    : `https://${config.subdomain}.uplifterinc.com`;
+    : getSubdomainUrl(config.subdomain!);
 
   const now = new Date();
 

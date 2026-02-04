@@ -13,39 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-/**
- * Get the base domain from the current hostname
- * Detects the environment based on the URL the user is currently on
- */
-function getBaseDomainFromHostname(): { baseDomain: string; protocol: string } {
-  if (typeof window === "undefined") {
-    return { baseDomain: "uplifterinc.com", protocol: "https" }
-  }
-  
-  const hostname = window.location.hostname
-  
-  // Local development
-  if (hostname.includes("localhost")) {
-    // Extract the base domain pattern (e.g., "uplifterinc.localhost" from "startup.uplifterinc.localhost")
-    const parts = hostname.split(".")
-    if (parts.length >= 2 && parts[parts.length - 1] === "localhost") {
-      const port = window.location.port ? `:${window.location.port}` : ""
-      return { baseDomain: `${parts[parts.length - 2]}.localhost${port}`, protocol: "http" }
-    }
-    return { baseDomain: "uplifterinc.localhost:3000", protocol: "http" }
-  }
-  
-  // Production domains - extract base domain from hostname
-  // e.g., "startup.upliftergymnastics.com" -> "upliftergymnastics.com"
-  const parts = hostname.split(".")
-  if (parts.length >= 2) {
-    const baseDomain = parts.slice(-2).join(".")
-    return { baseDomain, protocol: "https" }
-  }
-  
-  return { baseDomain: "uplifterinc.com", protocol: "https" }
-}
+import { getBaseDomainFromHostname } from "@/lib/client-domains"
 
 function SuccessContent() {
   const searchParams = useSearchParams()

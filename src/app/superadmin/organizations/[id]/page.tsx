@@ -14,35 +14,25 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard } from "lucide-react"
 import { SubscriptionManager } from "./subscription-manager"
+import { getSubdomainUrl } from "@/lib/env-domains"
 
 function getMarketingSiteUrl(slug: string, websiteConfig: { domain?: string | null; subdomain?: string | null } | null): string {
-  const isLocal = process.env.NODE_ENV === 'development'
-  
   // Custom domain takes priority (always external)
   if (websiteConfig?.domain) {
     return `https://${websiteConfig.domain}`
   }
   
-  // Subdomain on platform
+  // Subdomain on platform - use env-aware URL
   if (websiteConfig?.subdomain) {
-    if (isLocal) {
-      return `http://${websiteConfig.subdomain}.uplifterinc.localhost:3000`
-    }
-    return `https://${websiteConfig.subdomain}.uplifterinc.com`
+    return getSubdomainUrl(websiteConfig.subdomain)
   }
   
   // Fallback to slug-based URL
-  if (isLocal) {
-    return `http://${slug}.uplifterinc.localhost:3000`
-  }
-  return `https://${slug}.uplifterinc.com`
+  return getSubdomainUrl(slug)
 }
 
 function getAdminDashboardSwitchUrl(orgId: string, orgName: string): string {
-  const isLocal = process.env.NODE_ENV === 'development'
-  const adminBase = isLocal
-    ? 'http://admin.uplifterinc.localhost:3000'
-    : 'https://admin.uplifterinc.com'
+  const adminBase = getSubdomainUrl('admin')
   return `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
 }
 

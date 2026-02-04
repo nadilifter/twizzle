@@ -12,14 +12,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Globe, Shield, ExternalLink } from "lucide-react"
+import { getSubdomainUrl, getEnvConfig } from "@/lib/env-domains"
 
 // Helper to get proper site URL using middleware-compatible subdomain
 function getSiteUrl(subdomain: string): string {
-  const isLocal = process.env.NODE_ENV === 'development'
-  if (isLocal) {
-    return `http://${subdomain}.uplifterinc.localhost:3000`
-  }
-  return `https://${subdomain}.uplifterinc.com`
+  return getSubdomainUrl(subdomain)
 }
 
 export default async function AdminDomainsPage() {
@@ -139,7 +136,7 @@ export default async function AdminDomainsPage() {
                     <TableCell>
                       {config.subdomain ? (
                         <code className="px-2 py-1 bg-muted rounded text-sm">
-                          {config.subdomain}.uplifterinc.com
+                          {config.subdomain}.{getEnvConfig().baseDomain}
                         </code>
                       ) : (
                         <span className="text-muted-foreground">Not set</span>

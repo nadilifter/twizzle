@@ -11,6 +11,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { signIn, getCsrfToken } from "next-auth/react"
 import { toast } from "sonner"
 import { UplifterLogo } from "@/components/uplifter-logo"
+import { getClientSubdomainUrl } from "@/lib/client-domains"
 
 /**
  * Check if we're on a local subdomain (e.g., login.uplifterinc.localhost)
@@ -18,7 +19,8 @@ import { UplifterLogo } from "@/components/uplifter-logo"
  */
 function isLocalSubdomain(): boolean {
   if (typeof window === "undefined") return false;
-  return window.location.hostname.endsWith("uplifterinc.localhost");
+  return window.location.hostname.endsWith(".localhost") && 
+         window.location.hostname !== "localhost";
 }
 
 /**
@@ -43,7 +45,7 @@ function isLocalSubdomain(): boolean {
  * 
  * PRODUCTION:
  * This issue does NOT affect production. In production, OAuth goes through
- * login.uplifterinc.com directly with proper cookie handling.
+ * the login subdomain directly with proper cookie handling.
  * 
  * TODO: Investigate further if Google OAuth on local subdomains becomes critical.
  * Possible solutions:
@@ -54,37 +56,11 @@ function isLocalSubdomain(): boolean {
 
 /**
  * Get the default callback URL based on current domain.
- * 
- * For uplifterinc.localhost subdomains, we need to return an absolute URL
- * so that after OAuth on localhost:3000, the redirect callback can detect
- * we need to go through the session bridge to set cookies on the correct domain.
+ * Uses the client-domains utility to detect environment from hostname.
  */
 function getDefaultCallbackUrl(): string {
   if (typeof window === "undefined") return "/";
-  
-  const hostname = window.location.hostname;
-  
-  // Local development
-  if (hostname.endsWith("uplifterinc.localhost")) {
-    return "http://admin.uplifterinc.localhost:3000/";
-  }
-  
-  // Production
-  if (hostname.endsWith("uplifterinc.com")) {
-    return "https://admin.uplifterinc.com/";
-  }
-  
-  // Staging
-  if (hostname.endsWith("upliftergymnastics.com")) {
-    return "https://admin.upliftergymnastics.com/";
-  }
-  
-  // Development
-  if (hostname.endsWith("uplifterdev.com")) {
-    return "https://admin.uplifterdev.com/";
-  }
-  
-  return "/";
+  return `${getClientSubdomainUrl('admin')}/`;
 }
 
 /**
@@ -96,30 +72,7 @@ function getDefaultCallbackUrl(): string {
  */
 function getSignupUrl(): string {
   if (typeof window === "undefined") return "/signup";
-  
-  const hostname = window.location.hostname;
-  
-  // Local development
-  if (hostname.endsWith("uplifterinc.localhost")) {
-    return "http://startup.uplifterinc.localhost:3000/";
-  }
-  
-  // Production
-  if (hostname.endsWith("uplifterinc.com")) {
-    return "https://startup.uplifterinc.com/";
-  }
-  
-  // Staging
-  if (hostname.endsWith("upliftergymnastics.com")) {
-    return "https://startup.upliftergymnastics.com/";
-  }
-  
-  // Development
-  if (hostname.endsWith("uplifterdev.com")) {
-    return "https://startup.uplifterdev.com/";
-  }
-  
-  return "/signup";
+  return `${getClientSubdomainUrl('startup')}/`;
 }
 
 export function LoginForm() {
