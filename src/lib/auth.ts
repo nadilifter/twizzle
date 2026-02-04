@@ -237,10 +237,13 @@ export const authOptions: NextAuthOptions = {
           // Auto-create super admin users for @uplifterinc.com emails
           if (!existingUser && isUplifterEmail) {
             console.log(`Creating super admin for Uplifter email: ${email}`);
+            // Use Google OAuth name if available, otherwise default to "Uplifter User"
+            // Superadmins can update the name later if needed
+            const displayName = user.name || "Uplifter User";
             existingUser = await db.user.create({
               data: {
                 email,
-                name: user.name || email.split("@")[0],
+                name: displayName,
                 avatar: user.image,
                 role: "ADMIN",
                 status: "ACTIVE",

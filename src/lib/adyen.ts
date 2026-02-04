@@ -1,5 +1,3 @@
-import { Client, CheckoutAPI, Environment } from "@adyen/api-library";
-
 /**
  * Adyen Payment Integration
  * 
@@ -9,57 +7,69 @@ import { Client, CheckoutAPI, Environment } from "@adyen/api-library";
  *   - ADYEN_ENVIRONMENT: "TEST" or "LIVE" (defaults to TEST in development, required in production)
  */
 
-// Validate required configuration
-if (!process.env.ADYEN_API_KEY) {
-  console.warn("ADYEN_API_KEY is not set - Adyen payments will not work");
-}
+// Lazy initialization to avoid build-time errors
+let _checkoutApi: import("@adyen/api-library").CheckoutAPI | null = null;
+let _adyenEnvironmentName: "TEST" | "LIVE" = "TEST";
 
-if (!process.env.ADYEN_MERCHANT_ACCOUNT) {
-  console.warn("ADYEN_MERCHANT_ACCOUNT is not set - Adyen payments will not work");
-}
+function getCheckoutApi() {
+  if (_checkoutApi) {
+    return _checkoutApi;
+  }
 
-// Determine Adyen environment from env var
-// In production, require explicit configuration
-// In development, default to TEST
-function getAdyenEnvironment(): Environment {
+  // Only initialize when actually needed
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Client, CheckoutAPI, Environment } = require("@adyen/api-library");
+
+  // Validate required configuration
+  if (!process.env.ADYEN_API_KEY) {
+    console.warn("ADYEN_API_KEY is not set - Adyen payments will not work");
+  }
+
+  if (!process.env.ADYEN_MERCHANT_ACCOUNT) {
+    console.warn("ADYEN_MERCHANT_ACCOUNT is not set - Adyen payments will not work");
+  }
+
+  // Determine Adyen environment from env var
   const envValue = process.env.ADYEN_ENVIRONMENT?.toUpperCase();
+  let adyenEnvironment;
   
   if (envValue === "LIVE") {
-    return Environment.LIVE;
+    adyenEnvironment = Environment.LIVE;
+    _adyenEnvironmentName = "LIVE";
+  } else if (envValue === "TEST") {
+    adyenEnvironment = Environment.TEST;
+    _adyenEnvironmentName = "TEST";
+  } else {
+    // If not explicitly set
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "ADYEN_ENVIRONMENT is not set in production! " +
+        "Set to 'LIVE' for production payments or 'TEST' for sandbox. " +
+        "Defaulting to TEST for safety."
+      );
+    }
+    adyenEnvironment = Environment.TEST;
+    _adyenEnvironmentName = "TEST";
   }
-  
-  if (envValue === "TEST") {
-    return Environment.TEST;
-  }
-  
-  // If not explicitly set
-  if (process.env.NODE_ENV === "production") {
-    // In production, warn if not set but default to TEST for safety
-    console.warn(
-      "ADYEN_ENVIRONMENT is not set in production! " +
-      "Set to 'LIVE' for production payments or 'TEST' for sandbox. " +
-      "Defaulting to TEST for safety."
-    );
-    return Environment.TEST;
-  }
-  
-  // In development, default to TEST
-  return Environment.TEST;
+
+  const client = new Client({
+    apiKey: process.env.ADYEN_API_KEY || "",
+    environment: adyenEnvironment,
+  });
+
+  _checkoutApi = new CheckoutAPI(client);
+  return _checkoutApi;
 }
 
-const adyenEnvironment = getAdyenEnvironment();
-
-// Log environment in development
-if (process.env.NODE_ENV === "development") {
-  console.log(`Adyen initialized in ${adyenEnvironment} mode`);
-}
-
-const client = new Client({
-  apiKey: process.env.ADYEN_API_KEY || "",
-  environment: adyenEnvironment,
-});
-
-export const checkoutApi = new CheckoutAPI(client);
+// Export a getter instead of the instance directly
+export const checkoutApi = {
+  get PaymentsApi() {
+    return getCheckoutApi().PaymentsApi;
+  },
+  get PaymentLinksApi() {
+    return getCheckoutApi().PaymentLinksApi;
+  },
+};
 
 /**
  * Check if Adyen is properly configured
@@ -72,7 +82,10 @@ export function isAdyenConfigured(): boolean {
  * Get current Adyen environment
  */
 export function getAdyenEnvironmentName(): "TEST" | "LIVE" {
-  return adyenEnvironment === Environment.LIVE ? "LIVE" : "TEST";
+  // If not initialized yet, determine from env var
+  const envValue = process.env.ADYEN_ENVIRONMENT?.toUpperCase();
+  if (envValue === "LIVE") return "LIVE";
+  return "TEST";
 }
 
 export async function createPaymentSession(

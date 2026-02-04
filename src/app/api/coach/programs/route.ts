@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       .filter((id): id is string => id !== null);
 
     // Combine and deduplicate program IDs
-    const allProgramIds = [...new Set([...programIdsFromStaff, ...programIdsFromEvents])];
+    const allProgramIds = Array.from(new Set([...programIdsFromStaff, ...programIdsFromEvents]));
 
     if (allProgramIds.length === 0) {
       return NextResponse.json({ data: [], total: 0 });

@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
       const validatedData = createJournalEntrySchema.parse(body);
 
       // Verify all GL codes exist
-      const glCodeIds = [...new Set(validatedData.entries.map((e) => e.glCodeId))];
+      const glCodeIds = Array.from(new Set(validatedData.entries.map((e) => e.glCodeId)));
       const existingCodes = await db.gLCode.findMany({
         where: {
           id: { in: glCodeIds },
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: error.issues[0].message },
         { status: 400 }
       );
     }

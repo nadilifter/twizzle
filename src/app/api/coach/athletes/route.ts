@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     const programIdsFromEvents = coachEvents.map(e => e.programId).filter((id): id is string => id !== null);
     
     // Combine and deduplicate program IDs
-    const programIds = [...new Set([...programIdsFromStaff, ...programIdsFromEvents])];
+    const programIds = Array.from(new Set([...programIdsFromStaff, ...programIdsFromEvents]));
 
     if (programIds.length === 0) {
       return NextResponse.json({ data: [], total: 0, limit, offset });

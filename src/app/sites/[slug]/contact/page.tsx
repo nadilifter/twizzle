@@ -20,7 +20,7 @@ export default async function ContactPage({ params }: { params: { slug: string }
                 <div>
                     <h2 className="text-2xl font-semibold mb-6">Get in Touch</h2>
                     <p className="text-muted-foreground mb-8 text-lg">
-                        Have questions about our programs or classes? We're here to help!
+                        Have questions about our programs or classes? We&apos;re here to help!
                         Reach out to us using the contact information below.
                     </p>
 

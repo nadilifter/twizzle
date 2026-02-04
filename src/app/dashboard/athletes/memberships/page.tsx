@@ -187,7 +187,7 @@ export default function MembershipsPage() {
             <DialogHeader>
               <DialogTitle>Create Membership Group</DialogTitle>
               <DialogDescription>
-                Define a broad category of membership (e.g., "Annual Membership").
+                Define a broad category of membership (e.g., &quot;Annual Membership&quot;).
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">

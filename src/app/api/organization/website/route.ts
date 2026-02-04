@@ -90,7 +90,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ...config, subdomainOwned: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating website config:", error);
     return NextResponse.json({ error: "Failed to update website config" }, { status: 500 });

@@ -276,7 +276,7 @@ export default function AdminReservedDomainsPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remove Reserved Domain?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will allow organizations to use "{domain.pattern}" as a subdomain.
+                              This will allow organizations to use &quot;{domain.pattern}&quot; as a subdomain.
                               This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>

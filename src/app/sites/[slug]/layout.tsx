@@ -124,7 +124,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
   // Merge custom keywords with defaults, removing duplicates
   const keywords = customKeywords.length > 0 
-    ? [...new Set([...customKeywords, ...defaultKeywords])]
+    ? Array.from(new Set([...customKeywords, ...defaultKeywords]))
     : defaultKeywords;
 
   return {

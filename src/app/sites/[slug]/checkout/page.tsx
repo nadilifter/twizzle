@@ -133,7 +133,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             <CardHeader>
               <CardTitle>Contact Information</CardTitle>
               <CardDescription>
-                We'll use this to create your account and send your receipt.
+                We&apos;ll use this to create your account and send your receipt.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">

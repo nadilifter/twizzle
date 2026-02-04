@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Loader2 } from "lucide-react"
@@ -12,6 +12,29 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
  * affects the correct cookie domain.
  */
 export default function SwitchOrgPage() {
+  return (
+    <Suspense fallback={<SwitchOrgLoading />}>
+      <SwitchOrgContent />
+    </Suspense>
+  )
+}
+
+function SwitchOrgLoading() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <h1 className="text-xl font-semibold">Loading...</h1>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function SwitchOrgContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session, update } = useSession()

@@ -136,11 +136,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const scopedDb = getScopedDb(session.user.organizationId);
     const body = await request.json();
     const validatedData = createDiscountSchema.parse(body);
 
     // Check if code already exists
-    const existingDiscount = await db.discount.findUnique({
+    const existingDiscount = await scopedDb.discount.findUnique({
       where: { code: validatedData.code },
     });
 
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: error.issues[0].message },
         { status: 400 }
       );
     }

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -13,12 +14,13 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Users, MoreHorizontal, KeyRound } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Users, MoreHorizontal, KeyRound, Pencil } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -39,8 +41,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
 
@@ -155,12 +167,64 @@ const STATUS_OPTIONS = [
 ]
 
 export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTableProps) {
+  const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState<string>("all")
   const [orgFilter, setOrgFilter] = React.useState<string>("all")
   const [statusFilter, setStatusFilter] = React.useState<string>("all")
+  
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false)
+  const [editingUser, setEditingUser] = React.useState<User | null>(null)
+  const [editFormData, setEditFormData] = React.useState({
+    name: "",
+    email: "",
+    role: "",
+    status: "",
+    isSuperAdmin: false,
+  })
+  const [isUpdating, setIsUpdating] = React.useState(false)
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user)
+    setEditFormData({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      isSuperAdmin: user.isSuperAdmin,
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleSaveUser = async () => {
+    if (!editingUser) return
+    
+    setIsUpdating(true)
+    try {
+      const response = await fetch(`/api/superadmin/users/${editingUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFormData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to update user")
+      }
+
+      toast.success("User updated successfully")
+      setEditDialogOpen(false)
+      setEditingUser(null)
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update user")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   const handleSendPasswordReset = async (user: User) => {
     try {
@@ -325,6 +389,11 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit User
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleSendPasswordReset(user)}>
                 <KeyRound className="mr-2 h-4 w-4" />
                 Send Password Reset
@@ -521,6 +590,105 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
           </Button>
         </div>
       </div>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user details. Click save when you&apos;re done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={editFormData.name}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
+                placeholder="Enter full name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editFormData.email}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({ ...prev, email: e.target.value }))
+                }
+                placeholder="Enter email address"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-role">Platform Role</Label>
+              <Select
+                value={editFormData.role}
+                onValueChange={(value) =>
+                  setEditFormData((prev) => ({ ...prev, role: value }))
+                }
+              >
+                <SelectTrigger id="edit-role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="COACH">Coach</SelectItem>
+                  <SelectItem value="STAFF">Staff</SelectItem>
+                  <SelectItem value="VOLUNTEER">Volunteer</SelectItem>
+                  <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
+                  <SelectItem value="PARENT">Parent</SelectItem>
+                  <SelectItem value="CUSTOM">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-status">Status</Label>
+              <Select
+                value={editFormData.status}
+                onValueChange={(value) =>
+                  setEditFormData((prev) => ({ ...prev, status: value }))
+                }
+              >
+                <SelectTrigger id="edit-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="INVITED">Invited</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="edit-superadmin">Super Admin</Label>
+              <Switch
+                id="edit-superadmin"
+                checked={editFormData.isSuperAdmin}
+                onCheckedChange={(checked) =>
+                  setEditFormData((prev) => ({ ...prev, isSuperAdmin: checked }))
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveUser} disabled={isUpdating}>
+              {isUpdating ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

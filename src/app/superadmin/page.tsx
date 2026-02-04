@@ -1,6 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { db } from "@/lib/db"
 
+// Force dynamic rendering - this page fetches from database
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDashboardPage() {
   const orgCount = await db.organization.count()
   const userCount = await db.user.count()

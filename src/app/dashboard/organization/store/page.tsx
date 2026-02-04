@@ -136,7 +136,7 @@ export default function StorePage() {
       const data = await response.json()
       setProducts(data.data || [])
       if (data.categories?.length > 0) {
-        setCategories([...new Set([...defaultCategories, ...data.categories])])
+        setCategories(Array.from(new Set([...defaultCategories, ...data.categories])))
       }
     } catch (error) {
       console.error("Error fetching products:", error)

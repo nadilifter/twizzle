@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(question, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error creating medical question:", error);
     return NextResponse.json({ error: "Failed to create medical question" }, { status: 500 });
@@ -212,7 +212,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(question);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating medical question:", error);
     return NextResponse.json({ error: "Failed to update medical question" }, { status: 500 });

@@ -2,6 +2,9 @@ import { db } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { SuperadminUsersTable } from "@/components/superadmin/users-table"
 
+// Force dynamic rendering - this page fetches from database
+export const dynamic = 'force-dynamic';
+
 export default async function AdminUsersPage() {
   // Fetch users with memberships
   const users = await db.user.findMany({

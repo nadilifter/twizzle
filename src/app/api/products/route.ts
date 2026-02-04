@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       select: { category: true },
       distinct: ["category"],
     });
-    const categories = [...new Set(allProducts.map((p) => p.category))].sort();
+    const categories = Array.from(new Set(allProducts.map((p) => p.category))).sort();
 
     return NextResponse.json({
       data: products,
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: error.issues[0].message },
         { status: 400 }
       );
     }

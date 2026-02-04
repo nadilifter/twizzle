@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(config);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("Error updating medical config:", error);
     return NextResponse.json({ error: "Failed to update medical config" }, { status: 500 });

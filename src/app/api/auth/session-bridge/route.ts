@@ -177,18 +177,5 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/**
- * Helper function to create a bridge token
- * This is exported for use in the custom Google callback
- */
-export function createBridgeToken(email: string, secret: string): string {
-  const crypto = require("crypto");
-  const exp = Date.now() + BRIDGE_TOKEN_MAX_AGE * 1000;
-  const signature = crypto
-    .createHmac("sha256", secret)
-    .update(`${email}:${exp}`)
-    .digest("base64url");
-
-  const tokenData = { email, exp, signature };
-  return Buffer.from(JSON.stringify(tokenData)).toString("base64url");
-}
+// Note: createBridgeToken has been moved to @/lib/bridge-token.ts
+// Import it from there for use in other files

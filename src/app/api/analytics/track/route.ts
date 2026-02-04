@@ -72,11 +72,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Disable body size limit for sendBeacon
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "1kb",
-    },
-  },
-};
+// Route segment config for App Router
+// Note: Body size limits are handled differently in App Router
+// For sendBeacon, the default limits are sufficient
