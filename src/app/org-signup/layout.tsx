@@ -2,6 +2,7 @@ import { GradientBackground } from "@/components/ui/gradient-background"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 import { UplifterLogo } from "@/components/uplifter-logo"
 import Link from "next/link"
+import { getLoginUrl } from "@/lib/env-domains"
 
 export const metadata = {
   title: "Sign Up - Uplifter",
@@ -11,22 +12,12 @@ export const metadata = {
   },
 }
 
-function getLoginUrl(): string {
-  const nextAuthUrl = process.env.NEXTAUTH_URL || ""
-  const isLocal = nextAuthUrl.includes("localhost")
-  
-  if (isLocal) {
-    return "http://login.uplifterinc.localhost:3000"
-  }
-  return "https://login.uplifterinc.com"
-}
-
 export default function SignupsLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const loginUrl = getLoginUrl()
+  const loginUrl = getLoginUrl()  // Uses environment-aware domain config
   
   return (
     <div className="flex flex-col min-h-screen bg-background relative overflow-hidden">

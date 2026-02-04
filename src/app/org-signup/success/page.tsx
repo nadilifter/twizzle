@@ -14,18 +14,47 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
+/**
+ * Get the base domain from the current hostname
+ * Detects the environment based on the URL the user is currently on
+ */
+function getBaseDomainFromHostname(): { baseDomain: string; protocol: string } {
+  if (typeof window === "undefined") {
+    return { baseDomain: "uplifterinc.com", protocol: "https" }
+  }
+  
+  const hostname = window.location.hostname
+  
+  // Local development
+  if (hostname.includes("localhost")) {
+    // Extract the base domain pattern (e.g., "uplifterinc.localhost" from "startup.uplifterinc.localhost")
+    const parts = hostname.split(".")
+    if (parts.length >= 2 && parts[parts.length - 1] === "localhost") {
+      const port = window.location.port ? `:${window.location.port}` : ""
+      return { baseDomain: `${parts[parts.length - 2]}.localhost${port}`, protocol: "http" }
+    }
+    return { baseDomain: "uplifterinc.localhost:3000", protocol: "http" }
+  }
+  
+  // Production domains - extract base domain from hostname
+  // e.g., "startup.upliftergymnastics.com" -> "upliftergymnastics.com"
+  const parts = hostname.split(".")
+  if (parts.length >= 2) {
+    const baseDomain = parts.slice(-2).join(".")
+    return { baseDomain, protocol: "https" }
+  }
+  
+  return { baseDomain: "uplifterinc.com", protocol: "https" }
+}
+
 function SuccessContent() {
   const searchParams = useSearchParams()
   const subdomain = searchParams.get("subdomain") || "your-site"
   const orgName = searchParams.get("orgName") || "Your Organization"
 
-  const isLocal = typeof window !== "undefined" && window.location.hostname.includes("localhost")
-  const siteUrl = isLocal 
-    ? `http://${subdomain}.uplifterinc.localhost:3000`
-    : `https://${subdomain}.uplifterinc.com`
-  const adminUrl = isLocal
-    ? "http://admin.uplifterinc.localhost:3000"
-    : "https://admin.uplifterinc.com"
+  const { baseDomain, protocol } = getBaseDomainFromHostname()
+  const siteUrl = `${protocol}://${subdomain}.${baseDomain}`
+  const adminUrl = `${protocol}://admin.${baseDomain}`
 
   const nextSteps = [
     {
@@ -144,9 +173,9 @@ function SuccessContent() {
 
       <p className="text-sm text-muted-foreground mt-8">
         Need help? Check out our{" "}
-        <a href="#" className="underline hover:text-foreground">documentation</a>
+        <a href="https://learn.uplifterinc.com/" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">documentation</a>
         {" "}or{" "}
-        <a href="#" className="underline hover:text-foreground">contact support</a>.
+        <a href="https://www.uplifterinc.com/contact-us" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">contact support</a>.
       </p>
     </div>
   )
