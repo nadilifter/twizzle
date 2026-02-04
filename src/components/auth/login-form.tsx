@@ -165,23 +165,29 @@ export function LoginForm() {
       
       // Use standard NextAuth signIn for all environments
       // This ensures consistent behavior and proper cookie setting
+      console.log("[Login] Attempting signIn with email:", email)
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       })
+      console.log("[Login] signIn result:", JSON.stringify(result, null, 2))
 
-      if (result?.error) {
+      // Check both result.error AND result.ok for proper validation
+      // signIn returns { error, status, ok, url } when redirect: false
+      if (result?.error || !result?.ok) {
         // Clear password on failed attempt
         setPassword("")
         // Show user-friendly error message
-        const errorMessage = result.error === "CredentialsSignin" 
+        const errorMessage = result?.error === "CredentialsSignin" 
           ? "Invalid email or password. Please try again."
-          : result.error
+          : result?.error || "Authentication failed. Please try again."
         setError(errorMessage)
         toast.error(errorMessage)
+        console.error("[Login] Auth failed:", { error: result?.error, ok: result?.ok, status: result?.status })
       } else {
-        // Success! Now redirect to the appropriate destination
+        // Success! result.ok is true and no error
+        console.log("[Login] Auth succeeded, redirecting...")
         
         // LOCAL DEVELOPMENT ONLY: Use credentials-bridge for cookie domain transfer
         // This is needed because NextAuth sets cookies on the exact hostname in local dev,
