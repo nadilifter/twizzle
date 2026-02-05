@@ -49,6 +49,7 @@ const ORG1_ID = "seed-org-sunrise";
 const ORG2_ID = "seed-org-metro";
 const ORG_DEMO_ID = "seed-org-demo-gym";
 const ORG_UPLIFTER_ID = "seed-org-uplifter";
+const ORG_DISCOVER_CIRCUS_ID = "seed-org-discover-circus";
 // Plan IDs will be dynamically assigned from the upsert results
 
 const daysFromNow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -159,6 +160,24 @@ async function main() {
   console.log(`  ✓ Created: ${orgDemo.name}`);
   console.log(`  ✓ Created: ${orgUplifter.name}`);
 
+  // Discover Circus - Aerial arts school in Nelson, BC
+  const orgDiscoverCircus = await prisma.organization.upsert({
+    where: { slug: "discover-circus" }, update: {},
+    create: {
+      id: ORG_DISCOVER_CIRCUS_ID,
+      name: "Discover Circus",
+      slug: "discover-circus",
+      email: "info@discovercircus.ca",
+      phone: "(866) 514-4667",
+      street: "801 Front St H",
+      city: "Nelson",
+      stateProvince: "BC",
+      postalCode: "V1L 4B8",
+      country: "Canada",
+    },
+  });
+  console.log(`  ✓ Created: ${orgDiscoverCircus.name}`);
+
   // ============================================
   // ORGANIZATION SUBSCRIPTIONS
   // ============================================
@@ -194,6 +213,14 @@ async function main() {
         organizationId: orgUplifter.id, planId: platinumPlan.id, status: "ACTIVE", billingCycle: "YEARLY",
         currentPeriodStart: daysAgo(60), currentPeriodEnd: daysFromNow(305),
         stripeCustomerId: "cus_seed_uplifter", stripeSubscriptionId: "sub_seed_uplifter",
+      },
+    }),
+    prisma.organizationSubscription.upsert({
+      where: { organizationId: orgDiscoverCircus.id }, update: {},
+      create: {
+        organizationId: orgDiscoverCircus.id, planId: goldPlan.id, status: "ACTIVE", billingCycle: "YEARLY",
+        currentPeriodStart: daysAgo(30), currentPeriodEnd: daysFromNow(335),
+        stripeCustomerId: "cus_seed_discover_circus", stripeSubscriptionId: "sub_seed_discover_circus",
       },
     }),
   ]);
@@ -255,7 +282,24 @@ async function main() {
     update: { organizationId: orgDemo.id },
     create: { email: "coach@demo.com", name: "Sarah Coach", passwordHash: hashedPassword, role: "COACH", status: "ACTIVE", organizationId: orgDemo.id },
   });
-  console.log("  ✓ Created 10 users across all organizations");
+  
+  // Discover Circus users
+  const dcAdmin = await prisma.user.upsert({
+    where: { email: "admin@discovercircus.ca" },
+    update: { organizationId: orgDiscoverCircus.id },
+    create: { email: "admin@discovercircus.ca", name: "Circus Admin", passwordHash: hashedPassword, role: "ADMIN", status: "ACTIVE", organizationId: orgDiscoverCircus.id },
+  });
+  const dcCoach1 = await prisma.user.upsert({
+    where: { email: "coach.alex@discovercircus.ca" },
+    update: { organizationId: orgDiscoverCircus.id },
+    create: { email: "coach.alex@discovercircus.ca", name: "Alex Rivera", passwordHash: hashedPassword, role: "COACH", status: "ACTIVE", organizationId: orgDiscoverCircus.id },
+  });
+  const dcCoach2 = await prisma.user.upsert({
+    where: { email: "coach.maya@discovercircus.ca" },
+    update: { organizationId: orgDiscoverCircus.id },
+    create: { email: "coach.maya@discovercircus.ca", name: "Maya Chen", passwordHash: hashedPassword, role: "COACH", status: "ACTIVE", organizationId: orgDiscoverCircus.id },
+  });
+  console.log("  ✓ Created 13 users across all organizations");
 
   // ============================================
   // ORGANIZATION MEMBERS
@@ -274,6 +318,11 @@ async function main() {
     { orgId: orgDemo.id, userId: andrewUser.id, role: "ADMIN" as const }, // Andrew has access to Demo too
     { orgId: orgDemo.id, userId: demoAdmin.id, role: "ADMIN" as const },
     { orgId: orgDemo.id, userId: demoCoach.id, role: "COACH" as const },
+    // Discover Circus memberships
+    { orgId: orgDiscoverCircus.id, userId: andrewUser.id, role: "ADMIN" as const }, // Andrew has access
+    { orgId: orgDiscoverCircus.id, userId: dcAdmin.id, role: "ADMIN" as const },
+    { orgId: orgDiscoverCircus.id, userId: dcCoach1.id, role: "COACH" as const },
+    { orgId: orgDiscoverCircus.id, userId: dcCoach2.id, role: "COACH" as const },
   ];
   await Promise.all(membershipData.map((m) =>
     prisma.organizationMember.upsert({
@@ -399,7 +448,30 @@ async function main() {
       description: "Multi-sport community facility with various courts and fields",
     },
   });
-  console.log("  ✓ Created 3 facilities");
+  
+  // Discover Circus facility
+  const dcFacility = await prisma.facility.upsert({
+    where: { id: `${ORG_DISCOVER_CIRCUS_ID}-facility-main` },
+    update: {},
+    create: {
+      id: `${ORG_DISCOVER_CIRCUS_ID}-facility-main`,
+      organizationId: ORG_DISCOVER_CIRCUS_ID,
+      name: "Discover Circus Studio",
+      street: "801 Front St H",
+      city: "Nelson",
+      stateProvince: "BC",
+      postalCode: "V1L 4B8",
+      country: "Canada",
+      phone: "(866) 514-4667",
+      email: "info@discovercircus.ca",
+      status: "ACTIVE",
+      isDefault: true,
+      squareFootage: 8000,
+      maxCapacity: 100,
+      description: "Aerial arts and circus training studio in the heart of Nelson, BC",
+    },
+  });
+  console.log("  ✓ Created 4 facilities");
 
   // ============================================
   // TRAINING ZONES
@@ -586,6 +658,13 @@ async function main() {
     { id: `${ORG2_ID}-level-intermediate`, organizationId: ORG2_ID, name: "Intermediate", description: "Some experience required", order: 1, color: "#3b82f6", isDefault: false },
     { id: `${ORG2_ID}-level-advanced`, organizationId: ORG2_ID, name: "Advanced", description: "Experienced athletes", order: 2, color: "#8b5cf6", isDefault: false },
     { id: `${ORG2_ID}-level-competitive`, organizationId: ORG2_ID, name: "Competitive", description: "Competition level", order: 3, color: "#ef4444", isDefault: false },
+    // Discover Circus Levels (Aerial arts)
+    { id: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, organizationId: ORG_DISCOVER_CIRCUS_ID, name: "Intro", description: "First-time aerial students, no experience required", order: 0, color: "#22c55e", isDefault: true },
+    { id: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, organizationId: ORG_DISCOVER_CIRCUS_ID, name: "Beginner", description: "Building foundational skills and strength", order: 1, color: "#3b82f6", isDefault: false },
+    { id: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, organizationId: ORG_DISCOVER_CIRCUS_ID, name: "Inter-Beg", description: "Transitioning from beginner to intermediate skills", order: 2, color: "#06b6d4", isDefault: false },
+    { id: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, organizationId: ORG_DISCOVER_CIRCUS_ID, name: "Intermediate", description: "Developing technique and more complex skills", order: 3, color: "#8b5cf6", isDefault: false },
+    { id: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-adv`, organizationId: ORG_DISCOVER_CIRCUS_ID, name: "Inter-Adv", description: "Advanced skills with refined technique", order: 4, color: "#ec4899", isDefault: false },
+    { id: `${ORG_DISCOVER_CIRCUS_ID}-level-advanced`, organizationId: ORG_DISCOVER_CIRCUS_ID, name: "Advanced", description: "High-level aerial artists", order: 5, color: "#ef4444", isDefault: false },
   ];
   for (const level of levelData) {
     await prisma.level.upsert({ where: { id: level.id }, update: {}, create: level });
@@ -661,7 +740,240 @@ async function main() {
       capacity: 20,
     }}),
   ]);
-  console.log("  ✓ Created 9 programs");
+  console.log("  ✓ Created 9 base programs");
+  
+  // Discover Circus Programs (representative sample of ~50 programs)
+  console.log("  📍 Creating Discover Circus programs...");
+  const dcPrograms = [
+    // Adult Aerial Hoop Programs
+    prisma.program.upsert({ where: { id: "dc-prog-ah-intro" }, update: {}, create: {
+      id: "dc-prog-ah-intro", name: "Intro to Aerial Hoop", description: "Adult Aerial Hoop",
+      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ahl1" }, update: {}, create: {
+      id: "dc-prog-ahl1", name: "Adult Aerial Hoop Level 1", description: "Adult Aerial Hoop",
+      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ahl2" }, update: {}, create: {
+      id: "dc-prog-ahl2", name: "Adult Aerial Hoop Level 2", description: "Adult Aerial Hoop",
+      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ahl3" }, update: {}, create: {
+      id: "dc-prog-ahl3", name: "Adult Aerial Hoop Level 3", description: "Adult Aerial Hoop",
+      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ahl4" }, update: {}, create: {
+      id: "dc-prog-ahl4", name: "Adult Aerial Hoop Level 4", description: "Adult Aerial Hoop",
+      level: "Inter-Adv", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-adv`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ahl5" }, update: {}, create: {
+      id: "dc-prog-ahl5", name: "Adult Aerial Hoop Level 5", description: "Adult Aerial Hoop",
+      level: "Advanced", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 38.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-advanced`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    // Adult Aerial Silks Programs
+    prisma.program.upsert({ where: { id: "dc-prog-as-intro" }, update: {}, create: {
+      id: "dc-prog-as-intro", name: "Adult Intro Aerial Silks", description: "Adult Aerial Silks & Sling",
+      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-asl1" }, update: {}, create: {
+      id: "dc-prog-asl1", name: "Adult Aerial Silks Level 1", description: "Adult Aerial Silks & Sling",
+      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 23.75,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-asl2" }, update: {}, create: {
+      id: "dc-prog-asl2", name: "Adult Aerial Silks Level 2", description: "Adult Aerial Silks & Sling",
+      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-asl3" }, update: {}, create: {
+      id: "dc-prog-asl3", name: "Adult Aerial Silks Level 3", description: "Adult Aerial Silks & Sling",
+      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 38.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    // Kids Programs
+    prisma.program.upsert({ where: { id: "dc-prog-ksl1" }, update: {}, create: {
+      id: "dc-prog-ksl1", name: "Kids Aerial Silks Level 1", description: "Kids Aerial Silks (Age 7-11)",
+      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ksl2" }, update: {}, create: {
+      id: "dc-prog-ksl2", name: "Kids Aerial Silks Level 2", description: "Kids Aerial Silks (Age 7-11)",
+      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ksl3" }, update: {}, create: {
+      id: "dc-prog-ksl3", name: "Kids Aerial Silks Level 3", description: "Kids Aerial Silks (Age 7-11)",
+      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ck" }, update: {}, create: {
+      id: "dc-prog-ck", name: "Circus Kids", description: "Circus Kids (Age 5-12)",
+      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 10,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-kc" }, update: {}, create: {
+      id: "dc-prog-kc", name: "Kindy Circus", description: "Circus Kids (Age 5-12)",
+      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-pnm" }, update: {}, create: {
+      id: "dc-prog-pnm", name: "Parent & Me", description: "Circus Tots & Parents (Age 0-5)",
+      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 17.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    // Youth Programs
+    prisma.program.upsert({ where: { id: "dc-prog-ysl1" }, update: {}, create: {
+      id: "dc-prog-ysl1", name: "Youth Aerial Silks Level 1", description: "Youth Aerial Silks (Age 12-17)",
+      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ysl2" }, update: {}, create: {
+      id: "dc-prog-ysl2", name: "Youth Aerial Silks Level 2", description: "Youth Aerial Silks (Age 12-17)",
+      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 23.75,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ysl3" }, update: {}, create: {
+      id: "dc-prog-ysl3", name: "Youth Aerial Silks Level 3", description: "Youth Aerial Silks (Age 12-17)",
+      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-ysl4" }, update: {}, create: {
+      id: "dc-prog-ysl4", name: "Youth Aerial Silks Level 4", description: "Youth Aerial Silks (Age 12-17)",
+      level: "Inter-Adv", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-adv`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    // Straps
+    prisma.program.upsert({ where: { id: "dc-prog-st-intro" }, update: {}, create: {
+      id: "dc-prog-st-intro", name: "Intro to Aerial Straps", description: "Straps",
+      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-stl1" }, update: {}, create: {
+      id: "dc-prog-stl1", name: "Aerial Straps Level 1", description: "Straps",
+      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-stl2" }, update: {}, create: {
+      id: "dc-prog-stl2", name: "Aerial Straps Level 2", description: "Straps",
+      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 23.75,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+    }}),
+    // Open Level Classes
+    prisma.program.upsert({ where: { id: "dc-prog-handstands" }, update: {}, create: {
+      id: "dc-prog-handstands", name: "Handstands & Beyond", description: "Acro & Handstand",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-pa1" }, update: {}, create: {
+      id: "dc-prog-pa1", name: "Partner Acro - Level 1", description: "Acro & Handstand",
+      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-pa2" }, update: {}, create: {
+      id: "dc-prog-pa2", name: "Partner Acro - Level 2", description: "Acro & Handstand",
+      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-beast" }, update: {}, create: {
+      id: "dc-prog-beast", name: "Beast Mode - Conditioning Class", description: "Open Level Classes",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-flex" }, update: {}, create: {
+      id: "dc-prog-flex", name: "Flexibility in Flight", description: "Open Level Classes",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+    }}),
+    // Open Gym / Drop-In
+    prisma.program.upsert({ where: { id: "dc-prog-opengym-mon" }, update: {}, create: {
+      id: "dc-prog-opengym-mon", name: "Open Gym Monday", description: "Open Gym",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 5,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-opengym-wed" }, update: {}, create: {
+      id: "dc-prog-opengym-wed", name: "Open Gym Wednesday", description: "Open Gym",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 5,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-opengym-thu" }, update: {}, create: {
+      id: "dc-prog-opengym-thu", name: "Open Gym Thursday", description: "Open Gym",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 4,
+    }}),
+    // Jams
+    prisma.program.upsert({ where: { id: "dc-prog-acrojam" }, update: {}, create: {
+      id: "dc-prog-acrojam", name: "Acro Jam @ DC", description: "Flow & Acro Jams",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 10.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 12,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-flowjam" }, update: {}, create: {
+      id: "dc-prog-flowjam", name: "Flow & Acro Jam @ North Shore Hall", description: "Flow & Acro Jams",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 4.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 20,
+    }}),
+    // Artist Empowerment Program
+    prisma.program.upsert({ where: { id: "dc-prog-aep-adult" }, update: {}, create: {
+      id: "dc-prog-aep-adult", name: "The Collective - Artist Empowerment Program - Adult", description: "The Collective - Artist Empowerment Program (All Ages)",
+      level: "Advanced", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 38.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-advanced`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    prisma.program.upsert({ where: { id: "dc-prog-aep-youth" }, update: {}, create: {
+      id: "dc-prog-aep-youth", name: "The Collective - Artist Empowerment Program - Youth", description: "The Collective - Artist Empowerment Program (All Ages)",
+      level: "Advanced", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 38.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-advanced`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+    }}),
+    // Private Lessons
+    prisma.program.upsert({ where: { id: "dc-prog-private" }, update: {}, create: {
+      id: "dc-prog-private", name: "Private Lesson Booking", description: "Private Lessons",
+      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 90.0,
+      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 1,
+    }}),
+  ];
+  await Promise.all(dcPrograms);
+  console.log(`  ✓ Created ${dcPrograms.length} Discover Circus programs`);
 
   // ============================================
   // PROGRAM BULK DISCOUNTS
@@ -1725,9 +2037,35 @@ async function main() {
       where: { organizationId: orgUplifter.id }, update: {},
       create: { organizationId: orgUplifter.id, subdomain: "uplifter", primaryColor: "#8B5CF6", secondaryColor: "#EC4899", heroHeadline: "Uplifter Platform", heroSubheadline: "Empowering sports organizations", showCalendar: true, showRegistration: true, showContact: true, isPublished: true, infoBox1Title: defaultInfoBox1Title, infoBox1Content: defaultInfoBox1Content, infoBox2Title: defaultInfoBox2Title, infoBox2Content: defaultInfoBox2Content, infoBox3Title: defaultInfoBox3Title, infoBox3Content: defaultInfoBox3Content },
     }),
+    prisma.websiteConfig.upsert({
+      where: { organizationId: orgDiscoverCircus.id }, update: {},
+      create: { 
+        organizationId: orgDiscoverCircus.id, 
+        subdomain: "discover-circus", 
+        primaryColor: "#511a49", 
+        secondaryColor: "#d1c8f4", 
+        logo: "/uploads/seed-org-discover-circus/logo.png",
+        favicon: "/uploads/seed-org-discover-circus/favicon.ico",
+        heroHeadline: "Discover Your Inner Artist", 
+        heroSubheadline: "Aerial arts and circus training in the heart of the Kootenays", 
+        heroAgeRange: "All Ages Welcome", 
+        heroProgramPeriods: "Year-Round Programs", 
+        heroLocation: "Nelson, BC", 
+        showCalendar: true, 
+        showRegistration: true, 
+        showContact: true, 
+        isPublished: true, 
+        infoBox1Title: "What We Offer",
+        infoBox1Content: "<ul><li>Aerial Silks, Hoop & Trapeze</li><li>Straps & Sling Training</li><li>Kids & Youth Programs</li><li>Open Gym & Jam Sessions</li></ul>",
+        infoBox2Title: "Financial Assistance",
+        infoBox2Content: "<p>We believe circus arts should be accessible to everyone. Bursary options are available for qualifying families. Contact us for more information.</p>",
+        infoBox3Title: "Community Events",
+        infoBox3Content: "<p>Join us for the annual Kootenay Circus Arts Festival and other community performances throughout the year!</p>",
+      },
+    }),
   ]);
   
-  console.log("  ✓ Created 4 website configurations");
+  console.log("  ✓ Created 5 website configurations");
 
   // ============================================
   // PRODUCTS (POS)
@@ -3367,9 +3705,9 @@ See you at Metro Sports!
   console.log("🎉 Development seed completed successfully!");
   console.log("=".repeat(50));
   console.log("\nCreated data summary:");
-  console.log("  • 4 organizations (Sunrise Gymnastics, Metro Sports, Demo Gym, Uplifter)");
+  console.log("  • 5 organizations (Sunrise Gymnastics, Metro Sports, Demo Gym, Uplifter, Discover Circus)");
   console.log("  • 4 subscription plans");
-  console.log("  • 10 users with permissions");
+  console.log("  • 13 users with permissions");
   console.log("  • 9 families with payment methods");
   console.log("  • 14 athletes with guardian relationships");
   console.log("  • 9 programs with membership tiers");
@@ -3403,6 +3741,7 @@ See you at Metro Sports!
   console.log("  Metro Sports Admin: admin@metro-sports.com");
   console.log("  Demo Gym Admin: admin@demo.com");
   console.log("  Demo Gym Coach: coach@demo.com");
+  console.log("  Discover Circus Admin: admin@discovercircus.ca");
   console.log("  Superadmin: andrewkarzel@uplifterinc.com");
 }
 
