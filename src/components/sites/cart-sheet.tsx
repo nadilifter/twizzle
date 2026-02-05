@@ -91,15 +91,6 @@ export function CartSheet() {
                           {item.description}
                         </p>
                       )}
-                      {item.details && Object.keys(item.details).length > 0 && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                            {Object.entries(item.details).map(([key, value]) => (
-                                <span key={key} className="block">
-                                    {key}: {value}
-                                </span>
-                            ))}
-                        </div>
-                      )}
                       <div className="flex items-center gap-2 mt-2">
                         <Button
                           variant="outline"

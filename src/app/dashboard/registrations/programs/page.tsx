@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -12,35 +14,20 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search, Users, Dumbbell, Settings, Loader2, AlertCircle } from "lucide-react"
+import { Plus, Search, Dumbbell, Settings, Loader2, AlertCircle, Pencil } from "lucide-react"
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { usePrograms } from "@/hooks/use-programs"
-import { toast } from "sonner"
 import { ProgramConfiguration } from "./program-configuration"
 
 export default function ProgramsPage() {
-  const { programs, isLoading, error, fetchPrograms, createProgram, updateProgram } = usePrograms()
+  const router = useRouter()
+  const { programs, isLoading, error, fetchPrograms } = usePrograms()
   const [searchTerm, setSearchTerm] = React.useState("")
-  const [isAddOpen, setIsAddOpen] = React.useState(false)
-  const [isEditOpen, setIsEditOpen] = React.useState(false)
+  const [isConfigOpen, setIsConfigOpen] = React.useState(false)
   const [selectedProgram, setSelectedProgram] = React.useState<any>(null)
-
-  // Form states
-  const [newProgram, setNewProgram] = React.useState({
-    name: "",
-    description: "",
-    level: "",
-  })
 
   // Debounced search
   React.useEffect(() => {
@@ -50,31 +37,9 @@ export default function ProgramsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm, fetchPrograms])
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newProgram.name) {
-      toast.error("Program Name is required")
-      return
-    }
-
-    const result = await createProgram({
-        ...newProgram,
-        level: newProgram.level || "Beginner" // Default level if optional
-    })
-    if (result) {
-      toast.success("Program created successfully")
-      setIsAddOpen(false)
-      setNewProgram({ name: "", description: "", level: "" })
-      
-      // Open configuration for the new program
-      setSelectedProgram(result)
-      setIsEditOpen(true)
-    }
-  }
-
-  const handleConfigure = (program: any) => {
+  const handleQuickConfigure = (program: any) => {
     setSelectedProgram(program)
-    setIsEditOpen(true)
+    setIsConfigOpen(true)
   }
 
   return (
@@ -86,52 +51,12 @@ export default function ProgramsPage() {
             Manage your registration programs and enrollment options.
           </p>
         </div>
-        <Sheet open={isAddOpen} onOpenChange={setIsAddOpen}>
-            <SheetTrigger asChild>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Program
-                </Button>
-            </SheetTrigger>
-            <SheetContent>
-                <SheetHeader>
-                    <SheetTitle>Add New Program</SheetTitle>
-                    <SheetDescription>
-                        Create a new program for registration.
-                    </SheetDescription>
-                </SheetHeader>
-                <form onSubmit={handleCreate} className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="name">Program Name</Label>
-                        <Input 
-                          id="name" 
-                          placeholder="e.g. Recreational - Bronze" 
-                          value={newProgram.name}
-                          onChange={e => setNewProgram(prev => ({ ...prev, name: e.target.value }))}
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea 
-                          id="description" 
-                          placeholder="Describe the program goals..." 
-                          value={newProgram.description}
-                          onChange={e => setNewProgram(prev => ({ ...prev, description: e.target.value }))}
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="level">Level (Optional)</Label>
-                        <Input 
-                          id="level" 
-                          placeholder="e.g. Bronze" 
-                          value={newProgram.level}
-                          onChange={e => setNewProgram(prev => ({ ...prev, level: e.target.value }))}
-                        />
-                    </div>
-                    <Button type="submit">Create Program</Button>
-                </form>
-            </SheetContent>
-        </Sheet>
+        <Button asChild>
+          <Link href="/dashboard/registrations/programs/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Program
+          </Link>
+        </Button>
       </div>
 
       <div className="flex items-center gap-4">
@@ -160,12 +85,13 @@ export default function ProgramsPage() {
         </div>
       )}
 
-      <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
+      {/* Quick Configuration Sheet - kept for advanced settings */}
+      <Sheet open={isConfigOpen} onOpenChange={setIsConfigOpen}>
         <SheetContent className="sm:max-w-2xl p-0">
             {selectedProgram ? (
                 <ProgramConfiguration 
                     program={selectedProgram} 
-                    onClose={() => setIsEditOpen(false)} 
+                    onClose={() => setIsConfigOpen(false)} 
                 />
             ) : (
                 <div className="p-6">
@@ -202,9 +128,14 @@ export default function ProgramsPage() {
                 </div>
               </CardContent>
               <CardFooter className="border-t pt-4 gap-2">
-                <Button variant="outline" className="w-full" onClick={() => handleConfigure(program)}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configure
+                <Button variant="outline" className="flex-1" asChild>
+                  <Link href={`/dashboard/registrations/programs/${program.id}/edit`}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleQuickConfigure(program)} title="Advanced Settings">
+                    <Settings className="h-4 w-4" />
                 </Button>
               </CardFooter>
             </Card>

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { getScopedDb } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const createProgramSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  level: z.string().min(1, "Level is required"), // Legacy field
+  level: z.string().optional().default(""), // Legacy field - now optional
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).default("ACTIVE"),
-  // New fields
+  // Program type and pricing
   programType: z.enum(["SINGLE_INSTANCE", "SUBSCRIPTION", "DROP_IN"]).default("SUBSCRIPTION"),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).default("FLAT_RATE"),
   basePrice: z.number().min(0).optional().nullable(),
@@ -20,6 +20,22 @@ const createProgramSchema = z.object({
   levelId: z.string().optional().nullable(),
   showLevelOnSite: z.boolean().default(true),
   showCoachOnSite: z.boolean().default(true),
+  // Age restrictions
+  minAge: z.number().int().min(0).max(100).optional().nullable(),
+  maxAge: z.number().int().min(0).max(100).optional().nullable(),
+  // Restriction flags
+  hasLevelRestriction: z.boolean().default(false),
+  hasCapacityRestriction: z.boolean().default(false),
+  hasAgeRestriction: z.boolean().default(false),
+  hasMembershipRestriction: z.boolean().default(false),
+  // Related data for creation
+  levelRequirementIds: z.array(z.string()).optional(),
+  membershipRequirementIds: z.array(z.string()).optional(),
+  staffAssignments: z.array(z.object({
+    staffProfileId: z.string(),
+    role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
+    isPrimary: z.boolean().default(false),
+  })).optional(),
 });
 
 // GET /api/programs
@@ -63,6 +79,31 @@ export async function GET(request: NextRequest) {
           bulkDiscounts: {
             orderBy: [{ type: "asc" }, { minQuantity: "asc" }],
           },
+          levelRequirements: {
+            include: {
+              level: {
+                select: { id: true, name: true, color: true },
+              },
+            },
+          },
+          staffAssignments: {
+            include: {
+              staffProfile: {
+                include: {
+                  user: {
+                    select: { id: true, name: true, avatar: true },
+                  },
+                },
+              },
+            },
+          },
+          requiredMemberships: {
+            include: {
+              group: {
+                select: { id: true, name: true },
+              },
+            },
+          },
         },
         orderBy: { name: "asc" },
         take: limit,
@@ -103,38 +144,108 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createProgramSchema.parse(body);
-    const scopedDb = getScopedDb(session.user.organizationId);
 
-    const program = await scopedDb.program.create({
-      data: {
-        name: validatedData.name,
-        description: validatedData.description,
-        level: validatedData.level,
-        status: validatedData.status,
-        programType: validatedData.programType,
-        pricingModel: validatedData.pricingModel,
-        basePrice: validatedData.basePrice,
-        perSessionPrice: validatedData.perSessionPrice,
-        startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
-        endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
-        schedulePattern: validatedData.schedulePattern,
-        capacity: validatedData.capacity,
-        levelId: validatedData.levelId,
-        showLevelOnSite: validatedData.showLevelOnSite,
-        showCoachOnSite: validatedData.showCoachOnSite,
-      },
-      include: {
-        membershipTiers: true,
-        programLevel: true,
-        bulkDiscounts: true,
-        _count: {
-          select: {
-            enrollments: true,
-            events: true,
-            lessonPlans: true,
+    // Use db directly with manual organizationId for transactional operations
+    // getScopedDb's tenant isolation doesn't work well within transactions
+    // for records that were just created in the same transaction
+    const program = await db.$transaction(async (tx) => {
+      // Create the program with membership connections included
+      const newProgram = await tx.program.create({
+        data: {
+          name: validatedData.name,
+          description: validatedData.description,
+          level: validatedData.level || "",
+          status: validatedData.status,
+          programType: validatedData.programType,
+          pricingModel: validatedData.pricingModel,
+          basePrice: validatedData.basePrice,
+          perSessionPrice: validatedData.perSessionPrice,
+          startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
+          endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
+          schedulePattern: validatedData.schedulePattern,
+          capacity: validatedData.capacity,
+          levelId: validatedData.levelId,
+          showLevelOnSite: validatedData.showLevelOnSite,
+          showCoachOnSite: validatedData.showCoachOnSite,
+          minAge: validatedData.minAge,
+          maxAge: validatedData.maxAge,
+          hasLevelRestriction: validatedData.hasLevelRestriction,
+          hasCapacityRestriction: validatedData.hasCapacityRestriction,
+          hasAgeRestriction: validatedData.hasAgeRestriction,
+          hasMembershipRestriction: validatedData.hasMembershipRestriction,
+          organizationId: session.user.organizationId,
+          // Connect membership requirements in initial create
+          ...(validatedData.membershipRequirementIds?.length && {
+            requiredMemberships: {
+              connect: validatedData.membershipRequirementIds.map(id => ({ id })),
+            },
+          }),
+        },
+      });
+
+      // Create level requirements if provided
+      if (validatedData.levelRequirementIds?.length) {
+        await tx.programLevelRequirement.createMany({
+          data: validatedData.levelRequirementIds.map(levelId => ({
+            programId: newProgram.id,
+            levelId,
+          })),
+        });
+      }
+
+      // Create staff assignments if provided
+      if (validatedData.staffAssignments?.length) {
+        await tx.programStaff.createMany({
+          data: validatedData.staffAssignments.map(sa => ({
+            programId: newProgram.id,
+            staffProfileId: sa.staffProfileId,
+            role: sa.role,
+            isPrimary: sa.isPrimary,
+          })),
+        });
+      }
+
+      // Fetch the complete program with all relations
+      return tx.program.findUnique({
+        where: { id: newProgram.id },
+        include: {
+          membershipTiers: true,
+          programLevel: true,
+          bulkDiscounts: true,
+          levelRequirements: {
+            include: {
+              level: {
+                select: { id: true, name: true, color: true },
+              },
+            },
+          },
+          staffAssignments: {
+            include: {
+              staffProfile: {
+                include: {
+                  user: {
+                    select: { id: true, name: true, avatar: true },
+                  },
+                },
+              },
+            },
+          },
+          requiredMemberships: {
+            include: {
+              group: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+          _count: {
+            select: {
+              enrollments: true,
+              events: true,
+              lessonPlans: true,
+            },
           },
         },
-      },
+      });
     });
 
     return NextResponse.json(program);

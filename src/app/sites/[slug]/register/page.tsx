@@ -20,6 +20,8 @@ export default async function RegisterPage({ params }: { params: { slug: string 
         },
         include: {
             membershipTiers: true,
+            programLevel: true,
+            bulkDiscounts: true,
             staffAssignments: {
                 where: {
                     role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
@@ -58,9 +60,16 @@ export default async function RegisterPage({ params }: { params: { slug: string 
 
     const serializedPrograms = programs.map(program => ({
         ...program,
+        // Serialize decimal fields to numbers
+        basePrice: program.basePrice ? Number(program.basePrice) : null,
+        perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
         membershipTiers: program.membershipTiers.map(tier => ({
             ...tier,
             price: Number(tier.price)
+        })),
+        bulkDiscounts: program.bulkDiscounts.map(discount => ({
+            ...discount,
+            discountValue: Number(discount.discountValue),
         })),
         staffAssignments: program.staffAssignments.map(assignment => ({
             id: assignment.id,

@@ -190,11 +190,16 @@ const nextConfig = {
             },
           ]
         : []),
-      // Prevent search engine indexing during pilot
-      {
-        key: "X-Robots-Tag",
-        value: "noindex, nofollow, noarchive, nosnippet",
-      },
+      // Prevent search engine indexing for non-production environments
+      // Staging, development, and local should never be indexed
+      ...(currentEnv !== 'production'
+        ? [
+            {
+              key: "X-Robots-Tag",
+              value: "noindex, nofollow, noarchive, nosnippet",
+            },
+          ]
+        : []),
     ];
 
     // Note: CORS is handled dynamically in middleware.ts for proper origin validation

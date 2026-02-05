@@ -110,25 +110,47 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
     membershipTiers.length === 1 ? membershipTiers[0].id : ""
   );
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
-  const [pendingCartAdd, setPendingCartAdd] = useState<{ tier: MembershipTier } | null>(null);
+  const [pendingCartAdd, setPendingCartAdd] = useState<{ tier?: MembershipTier; direct?: boolean } | null>(null);
+
+  // Get the program's direct price (when no tiers)
+  const directPrice = program.basePrice 
+    ? (typeof program.basePrice === "string" ? parseFloat(program.basePrice) : program.basePrice)
+    : program.perSessionPrice
+    ? (typeof program.perSessionPrice === "string" ? parseFloat(program.perSessionPrice) : program.perSessionPrice)
+    : null;
+  
+  // Determine if this program can be added (has tiers OR has direct pricing)
+  const hasTiers = membershipTiers.length > 0;
+  const canAddToCart = hasTiers ? !!selectedTierId : directPrice !== null;
 
   const handleAddToCart = () => {
-    if (!selectedTierId) return;
+    if (hasTiers) {
+      // Tier-based program
+      if (!selectedTierId) return;
+      const tier = membershipTiers.find((t) => t.id === selectedTierId);
+      if (!tier) return;
 
-    const tier = membershipTiers.find((t) => t.id === selectedTierId);
-    if (!tier) return;
+      // Check if there are required memberships
+      if (requiredMemberships.length > 0) {
+        setPendingCartAdd({ tier });
+        setShowMembershipDialog(true);
+        return;
+      }
 
-    // Check if there are required memberships
-    if (requiredMemberships.length > 0) {
-      // Check if any required membership is already in cart
-      // For now, we show the dialog - in a full implementation, we'd check user's existing memberships
-      setPendingCartAdd({ tier });
-      setShowMembershipDialog(true);
-      return;
+      addProgramToCart(tier);
+    } else {
+      // Direct pricing program (no tiers)
+      if (directPrice === null) return;
+
+      // Check if there are required memberships
+      if (requiredMemberships.length > 0) {
+        setPendingCartAdd({ direct: true });
+        setShowMembershipDialog(true);
+        return;
+      }
+
+      addProgramDirectly();
     }
-
-    // No membership required, add directly
-    addProgramToCart(tier);
   };
 
   const addProgramToCart = (tier: MembershipTier) => {
@@ -143,6 +165,24 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
         programId: program.id,
         level: program.level,
         interval: tier.interval,
+        requiredMemberships: requiredMemberships.map(m => m.id),
+      }
+    });
+  };
+
+  const addProgramDirectly = () => {
+    if (directPrice === null) return;
+    addItem({
+      referenceId: program.id,
+      type: "program",
+      name: program.name,
+      description: program.description || undefined,
+      price: directPrice,
+      quantity: 1,
+      details: {
+        programId: program.id,
+        level: program.level,
+        pricingModel: program.pricingModel,
         requiredMemberships: requiredMemberships.map(m => m.id),
       }
     });
@@ -172,16 +212,21 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
 
     // Also add the program if there was a pending add
     if (pendingCartAdd) {
-      addProgramToCart(pendingCartAdd.tier);
+      if (pendingCartAdd.tier) {
+        addProgramToCart(pendingCartAdd.tier);
+      } else if (pendingCartAdd.direct) {
+        addProgramDirectly();
+      }
     }
 
     setShowMembershipDialog(false);
     setPendingCartAdd(null);
   };
 
+  // Calculate display price - prefer tiers, fallback to direct pricing
   const lowestPrice = membershipTiers.length > 0
     ? Math.min(...membershipTiers.map(t => typeof t.price === "string" ? parseFloat(t.price) : t.price))
-    : null;
+    : directPrice;
 
   return (
     <Card className="group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
@@ -216,10 +261,19 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
               <span>{displayLevel}</span>
             </div>
           )}
-          {membershipTiers.length > 0 && (
+          {membershipTiers.length > 0 ? (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5" />
               <span>{membershipTiers.length} option{membershipTiers.length !== 1 ? 's' : ''}</span>
+            </div>
+          ) : program.programType && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>
+                {program.programType === "SUBSCRIPTION" ? "Subscription" 
+                  : program.programType === "DROP_IN" ? "Drop-in" 
+                  : "One-time"}
+              </span>
             </div>
           )}
         </div>
@@ -314,13 +368,20 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
                 <span className="text-sm font-medium">{membershipTiers[0].name}</span>
                 <span className="font-bold">{formatPrice(membershipTiers[0].price)}</span>
              </div>
+        ) : directPrice !== null ? (
+            <div className="flex items-center justify-between w-full">
+                <span className="text-sm font-medium">
+                  {program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee"}
+                </span>
+                <span className="font-bold">{formatPrice(directPrice)}</span>
+            </div>
         ) : (
-            <div className="text-sm text-muted-foreground">No options available</div>
+            <div className="text-sm text-muted-foreground">Contact us for pricing</div>
         )}
 
         <Button
           onClick={handleAddToCart}
-          disabled={!selectedTierId}
+          disabled={!canAddToCart}
           className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
         >
           <ShoppingCart className="h-4 w-4" />

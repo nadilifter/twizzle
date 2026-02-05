@@ -682,6 +682,9 @@ async function main() {
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 85,
       levelId: `${ORG1_ID}-level-bronze`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
+      // Availability restrictions
+      hasAgeRestriction: true, minAge: 5, maxAge: 7,
+      hasLevelRestriction: true, hasCapacityRestriction: false, hasMembershipRestriction: false,
     }}),
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-silver` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-rec-silver`, name: "Recreational Silver", description: "Intermediate recreational program for ages 7-10", 
@@ -689,6 +692,9 @@ async function main() {
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 115,
       levelId: `${ORG1_ID}-level-silver`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
+      // Availability restrictions: requires Bronze level, ages 7-10
+      hasAgeRestriction: true, minAge: 7, maxAge: 10,
+      hasLevelRestriction: true, hasCapacityRestriction: false, hasMembershipRestriction: false,
     }}),
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-gold` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-rec-gold`, name: "Recreational Gold", description: "Advanced recreational program for ages 10+", 
@@ -703,6 +709,9 @@ async function main() {
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 2400,
       levelId: `${ORG1_ID}-level-competitive`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 30,
+      // Availability restrictions: capacity limited, requires competitive level, minimum age 6
+      hasAgeRestriction: true, minAge: 6, maxAge: null,
+      hasLevelRestriction: true, hasCapacityRestriction: true, hasMembershipRestriction: true,
     }}),
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-preschool` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-preschool`, name: "Tiny Tumblers", description: "Parent-child gymnastics for ages 2-4", 
@@ -974,6 +983,52 @@ async function main() {
   ];
   await Promise.all(dcPrograms);
   console.log(`  ✓ Created ${dcPrograms.length} Discover Circus programs`);
+
+  // ============================================
+  // PROGRAM LEVEL REQUIREMENTS (many-to-many)
+  // ============================================
+  console.log("\n📊 Creating program level requirements...");
+  // Silver program requires Bronze level
+  await prisma.programLevelRequirement.upsert({
+    where: { programId_levelId: { programId: `${ORG1_ID}-prog-rec-silver`, levelId: `${ORG1_ID}-level-bronze` } },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-levelreq-silver-bronze`,
+      programId: `${ORG1_ID}-prog-rec-silver`,
+      levelId: `${ORG1_ID}-level-bronze`,
+    },
+  });
+  // JO Team requires multiple levels (any of Gold, Platinum, or Competitive)
+  await Promise.all([
+    prisma.programLevelRequirement.upsert({
+      where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-gold` } },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-levelreq-jo-gold`,
+        programId: `${ORG1_ID}-prog-jo`,
+        levelId: `${ORG1_ID}-level-gold`,
+      },
+    }),
+    prisma.programLevelRequirement.upsert({
+      where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-platinum` } },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-levelreq-jo-platinum`,
+        programId: `${ORG1_ID}-prog-jo`,
+        levelId: `${ORG1_ID}-level-platinum`,
+      },
+    }),
+    prisma.programLevelRequirement.upsert({
+      where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-competitive` } },
+      update: {},
+      create: {
+        id: `${ORG1_ID}-levelreq-jo-competitive`,
+        programId: `${ORG1_ID}-prog-jo`,
+        levelId: `${ORG1_ID}-level-competitive`,
+      },
+    }),
+  ]);
+  console.log("  ✓ Created 4 program level requirements");
 
   // ============================================
   // PROGRAM BULK DISCOUNTS

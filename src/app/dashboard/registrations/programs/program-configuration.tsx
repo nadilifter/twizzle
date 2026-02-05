@@ -395,8 +395,9 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
             <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
                 <TabsTrigger value="general">General</TabsTrigger>
                 <TabsTrigger value="pricing">Pricing</TabsTrigger>
-                <TabsTrigger value="discounts">Discounts</TabsTrigger>
-                <TabsTrigger value="memberships">Memberships</TabsTrigger>
+                {/* Discounts tab temporarily hidden - will be re-enabled later */}
+                {/* <TabsTrigger value="discounts">Discounts</TabsTrigger> */}
+                {/* Memberships tab removed - functionality moved to new program stepper */}
                 <TabsTrigger value="requirements">Requirements</TabsTrigger>
                 <TabsTrigger value="coaches">Coaches</TabsTrigger>
                 <TabsTrigger value="display">Display</TabsTrigger>

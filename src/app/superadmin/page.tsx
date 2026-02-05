@@ -51,6 +51,9 @@ export default async function AdminDashboardPage() {
             <p className="text-sm text-muted-foreground">
               Live feature indicators are hidden in the dashboard sidebar; only beta/demo features show an indicator (flask icon).
             </p>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Now visible:</span> QBO &amp; Xero Integrations (/dashboard/financials/integrations) is shown in the Financials section of the admin sidebar.
+            </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>
                 <span className="font-medium">Dashboard Overview</span> (/dashboard) - 

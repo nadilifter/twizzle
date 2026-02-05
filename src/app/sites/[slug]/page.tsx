@@ -34,6 +34,8 @@ export default async function SitePage({ params }: { params: { slug: string } })
     },
     include: {
       membershipTiers: true,
+      programLevel: true,
+      bulkDiscounts: true,
       staffAssignments: {
         where: {
           role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] }, // Only show coaches, not substitutes/volunteers
@@ -211,7 +213,23 @@ export default async function SitePage({ params }: { params: { slug: string } })
           </div>
 
           <ProgramList 
-            programs={programs} 
+            programs={programs.map(program => ({
+              ...program,
+              basePrice: program.basePrice ? Number(program.basePrice) : null,
+              perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
+              membershipTiers: program.membershipTiers.map(tier => ({
+                ...tier,
+                price: Number(tier.price)
+              })),
+              requiredMemberships: program.requiredMemberships.map(m => ({
+                ...m,
+                price: Number(m.price),
+              })),
+              bulkDiscounts: (program as any).bulkDiscounts?.map((d: any) => ({
+                ...d,
+                discountValue: Number(d.discountValue),
+              })) || [],
+            }))} 
             slug={params.slug} 
           />
         </section>

@@ -5,14 +5,28 @@ import { getSubdomainUrl } from '@/lib/env-domains';
 /**
  * Generate a dynamic robots.txt for each tenant site.
  * 
- * Published sites are allowed to be indexed, while unpublished sites
- * are blocked from search engine crawlers.
+ * - Non-production environments: Always block indexing
+ * - Production + Published sites: Allow indexing
+ * - Production + Unpublished sites: Block indexing
  */
 export default async function robots({ 
   params 
 }: { 
   params: { slug: string } 
 }): Promise<MetadataRoute.Robots> {
+  const appEnv = process.env.APP_ENVIRONMENT;
+  const isProduction = appEnv === 'production';
+
+  // Block all crawlers for non-production environments (staging, development, local)
+  if (!isProduction) {
+    return {
+      rules: {
+        userAgent: '*',
+        disallow: '/',
+      },
+    };
+  }
+
   const config = await db.websiteConfig.findUnique({
     where: { subdomain: params.slug },
     select: { 
@@ -27,7 +41,7 @@ export default async function robots({
     ? `https://${config.domain}` 
     : getSubdomainUrl(params.slug);
 
-  // Only allow indexing for published sites
+  // Only allow indexing for published sites in production
   if (config?.isPublished) {
     return {
       rules: [

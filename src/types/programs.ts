@@ -29,6 +29,20 @@ export interface ProgramRequiredMembership {
   };
 }
 
+export type ProgramType = "SINGLE_INSTANCE" | "SUBSCRIPTION" | "DROP_IN";
+export type PricingModel = "FLAT_RATE" | "PER_SESSION";
+
+export interface ProgramLevelRequirement {
+  id: string;
+  programId: string;
+  levelId: string;
+  level: {
+    id: string;
+    name: string;
+    color: string | null;
+  };
+}
+
 export interface Program {
   id: string;
   name: string;
@@ -38,6 +52,34 @@ export interface Program {
   organizationId: string;
   createdAt: string;
   updatedAt: string;
+  
+  // Program type and pricing
+  programType: ProgramType;
+  pricingModel: PricingModel;
+  basePrice: number | null;
+  perSessionPrice: number | null;
+  
+  // Schedule
+  startDate: string | null;
+  endDate: string | null;
+  
+  // Level configuration
+  levelId: string | null;
+  showLevelOnSite: boolean;
+  showCoachOnSite: boolean;
+  
+  // Capacity
+  capacity: number | null;
+  
+  // Age restrictions
+  minAge: number | null;
+  maxAge: number | null;
+  
+  // Restriction flags
+  hasLevelRestriction: boolean;
+  hasCapacityRestriction: boolean;
+  hasAgeRestriction: boolean;
+  hasMembershipRestriction: boolean;
 }
 
 export interface ProgramWithRelations extends Program {
@@ -49,6 +91,12 @@ export interface ProgramWithRelations extends Program {
   membershipTiers: MembershipTier[];
   staffAssignments?: ProgramStaffWithProfile[];
   requiredMemberships?: ProgramRequiredMembership[];
+  levelRequirements?: ProgramLevelRequirement[];
+  programLevel?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
 }
 
 export interface ProgramsListResponse {
@@ -61,8 +109,34 @@ export interface ProgramsListResponse {
 export interface CreateProgramPayload {
   name: string;
   description?: string;
-  level: string;
+  level?: string;
   status?: ProgramStatus;
+  programType?: ProgramType;
+  pricingModel?: PricingModel;
+  basePrice?: number | null;
+  perSessionPrice?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  levelId?: string | null;
+  showLevelOnSite?: boolean;
+  showCoachOnSite?: boolean;
+  capacity?: number | null;
+  minAge?: number | null;
+  maxAge?: number | null;
+  hasLevelRestriction?: boolean;
+  hasCapacityRestriction?: boolean;
+  hasAgeRestriction?: boolean;
+  hasMembershipRestriction?: boolean;
+  // For staff assignments during creation
+  staffAssignments?: Array<{
+    staffProfileId: string;
+    role: string;
+    isPrimary: boolean;
+  }>;
+  // For level requirements during creation
+  levelRequirementIds?: string[];
+  // For membership requirements during creation
+  membershipRequirementIds?: string[];
 }
 
 export interface UpdateProgramPayload {
@@ -70,6 +144,32 @@ export interface UpdateProgramPayload {
   description?: string;
   level?: string;
   status?: ProgramStatus;
+  programType?: ProgramType;
+  pricingModel?: PricingModel;
+  basePrice?: number | null;
+  perSessionPrice?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  levelId?: string | null;
+  showLevelOnSite?: boolean;
+  showCoachOnSite?: boolean;
+  capacity?: number | null;
+  minAge?: number | null;
+  maxAge?: number | null;
+  hasLevelRestriction?: boolean;
+  hasCapacityRestriction?: boolean;
+  hasAgeRestriction?: boolean;
+  hasMembershipRestriction?: boolean;
+  // For staff assignments
+  staffAssignments?: Array<{
+    staffProfileId: string;
+    role: string;
+    isPrimary: boolean;
+  }>;
+  // For level requirements
+  levelRequirementIds?: string[];
+  // For membership requirements
+  membershipRequirementIds?: string[];
 }
 
 export interface ProgramsQueryParams {

@@ -90,7 +90,9 @@ export async function POST(
       })),
       programRegistrations: programItems.map(item => ({
         programId: item.details?.programId,
-        membershipTierId: item.referenceId,
+        // For tier-based programs, referenceId is the tierId; for direct pricing, it's the programId
+        membershipTierId: item.details?.programId !== item.referenceId ? item.referenceId : null,
+        pricingModel: item.details?.pricingModel || null,
         requiredMemberships: item.details?.requiredMemberships || [],
       })),
     };

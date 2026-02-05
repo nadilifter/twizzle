@@ -526,9 +526,10 @@ model Level {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  programs       Program[]
-  skills         Skill[]    @relation("SkillLevel")
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  programs            Program[]
+  skills              Skill[]    @relation("SkillLevel")
+  programRequirements ProgramLevelRequirement[]
 
   @@index([organizationId])
   @@index([order])
@@ -561,9 +562,19 @@ model Program {
   capacity          Int?
   
   // Level Configuration
-  levelId           String?   // FK to Level model
+  levelId           String?   // FK to Level model (legacy single level)
   showLevelOnSite   Boolean   @default(true)
   showCoachOnSite   Boolean   @default(true)
+  
+  // Age Restrictions
+  minAge            Int?      // Minimum age (0-100)
+  maxAge            Int?      // Maximum age (0-100)
+  
+  // Restriction Flags (for UI toggle state)
+  hasLevelRestriction       Boolean @default(false)
+  hasCapacityRestriction    Boolean @default(false)
+  hasAgeRestriction         Boolean @default(false)
+  hasMembershipRestriction  Boolean @default(false)
 
   // Relations
   organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -578,6 +589,7 @@ model Program {
   evaluations         Evaluation[]
   evaluationTemplates ProgramEvaluationTemplate[]
   bulkDiscounts       ProgramBulkDiscount[]
+  levelRequirements   ProgramLevelRequirement[]
   
   // Registration Queue
   queueConfigs        RegistrationQueueConfig[]
@@ -624,6 +636,21 @@ model ProgramBulkDiscount {
 enum BulkDiscountType {
   FAMILY_SIBLING    // Nth child discount
   MULTI_SESSION     // Buy X, save Y
+}
+
+// Program Level Requirements - many-to-many for level restrictions
+model ProgramLevelRequirement {
+  id        String   @id @default(cuid())
+  programId String
+  levelId   String
+  createdAt DateTime @default(now())
+  
+  program   Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  level     Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  
+  @@unique([programId, levelId])
+  @@index([programId])
+  @@index([levelId])
 }
 
 // Legacy - to be deprecated

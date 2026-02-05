@@ -15,25 +15,32 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+// Determine if we should block search engine indexing
+// Non-production environments (staging, development, local) should never be indexed
+const isProduction = process.env.APP_ENVIRONMENT === 'production';
+
 export const metadata: Metadata = {
   title: "Uplifter",
   description: "Sports management platform for gymnasts",
   icons: {
     icon: "/favicon.ico",
   },
-  robots: {
-    index: false,
-    follow: false,
-    nocache: true,
-    googleBot: {
+  // Block indexing for non-production environments
+  ...(!isProduction && {
+    robots: {
       index: false,
       follow: false,
-      noimageindex: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      nocache: true,
+      googleBot: {
+        index: false,
+        follow: false,
+        noimageindex: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
     },
-  },
+  }),
 };
 
 export default function RootLayout({

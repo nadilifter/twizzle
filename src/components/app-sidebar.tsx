@@ -250,12 +250,10 @@ const data = {
           title: "Discounts",
           url: "/dashboard/financials/discounts",
         },
-        /*
         {
           title: "Integrations",
           url: "/dashboard/financials/integrations",
         },
-        */
         {
           title: "Invoices",
           url: "/dashboard/financials/invoices",
