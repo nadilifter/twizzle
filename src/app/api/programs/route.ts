@@ -142,6 +142,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Check programs limit
+    const organization = await db.organization.findUnique({
+      where: { id: session.user.organizationId! },
+      include: {
+        subscription: {
+          include: { plan: true }
+        }
+      }
+    });
+
+    if (organization?.subscription?.plan?.maxPrograms) {
+      const maxPrograms = organization.subscription.plan.maxPrograms;
+      const scopedDb = getScopedDb(session.user.organizationId);
+      const currentCount = await scopedDb.program.count();
+      
+      if (currentCount >= maxPrograms) {
+        return NextResponse.json({ 
+          error: `Programs limit reached. Your plan allows a maximum of ${maxPrograms} program${maxPrograms === 1 ? '' : 's'}. Please upgrade your plan to create more programs.` 
+        }, { status: 400 });
+      }
+    }
+
     const body = await request.json();
     const validatedData = createProgramSchema.parse(body);
 

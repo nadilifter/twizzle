@@ -1,4 +1,4 @@
-import { Check, Download, AlertCircle, Lock, MessageSquare } from "lucide-react"
+import { Check, Download, AlertCircle, Lock, MessageSquare, Mail, HardDrive, Tag } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +30,7 @@ import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { PlanSelector } from "./plan-selector"
 import { getUsageStats } from "@/lib/sms-service"
+import { getEmailUsageStats, checkEmailUsageLimits } from "@/lib/email-campaign-service"
 import { PaymentMethodsCard } from "@/components/billing/payment-methods-card"
 
 export default async function BillingPage() {
@@ -49,6 +50,7 @@ export default async function BillingPage() {
           families: true,
           athletes: true,
           members: true,
+          programs: true,
           events: true,
         }
       },
@@ -93,6 +95,26 @@ export default async function BillingPage() {
 
   // Get SMS usage
   const smsUsage = await getUsageStats(session.user.organizationId)
+
+  // Get Email usage
+  const [emailStats, emailLimits] = await Promise.all([
+    getEmailUsageStats(session.user.organizationId),
+    checkEmailUsageLimits(session.user.organizationId),
+  ])
+
+  // Get Storage usage (aggregate Media.fileSize)
+  const storageUsage = await db.media.aggregate({
+    where: { organizationId: session.user.organizationId },
+    _sum: { fileSize: true },
+    _count: true,
+  })
+  const storageUsedBytes = storageUsage._sum.fileSize || 0
+  const storageUsedMB = Math.round(storageUsedBytes / (1024 * 1024) * 100) / 100
+
+  // Get Membership types count
+  const membershipTypesCount = await db.membershipGroup.count({
+    where: { organizationId: session.user.organizationId },
+  })
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -217,14 +239,22 @@ export default async function BillingPage() {
                   perTransactionFee: Number(p.perTransactionFee),
                   maxAthletes: p.maxAthletes,
                   maxUsers: p.maxUsers,
+                  maxPrograms: p.maxPrograms,
                   maxEvents: p.maxEvents,
+                  smsIncluded: p.smsIncluded,
+                  emailIncluded: p.emailIncluded,
+                  maxStorageMB: p.maxStorageMB,
+                  maxMembershipTypes: p.maxMembershipTypes,
                   features: p.features as string[],
                   isPopular: p.isPopular,
                 }))}
                 currentUsage={{
                   athletes: organization._count.athletes,
                   users: organization._count.members,
+                  programs: organization._count.programs,
                   events: organization._count.events,
+                  storageMB: storageUsedMB,
+                  membershipTypes: membershipTypesCount,
                 }}
                 billingCycle={subscription?.billingCycle || "MONTHLY"}
               />
@@ -243,32 +273,56 @@ export default async function BillingPage() {
               <span className="text-sm font-medium">Athletes</span>
               <div className="text-right">
                 <span className="text-2xl font-bold">{organization._count.athletes}</span>
-                {currentPlan?.maxAthletes && (
-                  <span className="text-sm text-muted-foreground"> / {currentPlan.maxAthletes}</span>
-                )}
+                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxAthletes ?? "∞"}</span>
               </div>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Users</span>
               <div className="text-right">
                 <span className="text-2xl font-bold">{organization._count.members}</span>
-                {currentPlan?.maxUsers && (
-                  <span className="text-sm text-muted-foreground"> / {currentPlan.maxUsers}</span>
-                )}
+                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxUsers ?? "∞"}</span>
+              </div>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-medium">Programs</span>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{organization._count.programs}</span>
+                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxPrograms ?? "∞"}</span>
               </div>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Events</span>
               <div className="text-right">
                 <span className="text-2xl font-bold">{organization._count.events}</span>
-                {currentPlan?.maxEvents && (
-                  <span className="text-sm text-muted-foreground"> / {currentPlan.maxEvents}</span>
-                )}
+                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxEvents ?? "∞"}</span>
               </div>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Families</span>
-              <span className="text-2xl font-bold">{organization._count.families}</span>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{organization._count.families}</span>
+                <span className="text-sm text-muted-foreground"> / ∞</span>
+              </div>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-medium">Membership Types</span>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{membershipTypesCount}</span>
+                <span className="text-sm text-muted-foreground"> / {currentPlan?.maxMembershipTypes ?? "∞"}</span>
+              </div>
+            </div>
+            <Separator />
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-medium">Storage Used</span>
+              <div className="text-right">
+                <span className="text-2xl font-bold">{storageUsedMB >= 1000 ? `${(storageUsedMB / 1000).toFixed(1)} GB` : `${storageUsedMB} MB`}</span>
+                <span className="text-sm text-muted-foreground">
+                  {" / "}
+                  {currentPlan?.maxStorageMB 
+                    ? (currentPlan.maxStorageMB >= 1000 ? `${currentPlan.maxStorageMB / 1000} GB` : `${currentPlan.maxStorageMB} MB`)
+                    : "∞"}
+                </span>
+              </div>
             </div>
             <Separator />
             <div className="flex items-baseline justify-between">
@@ -342,6 +396,147 @@ export default async function BillingPage() {
                 <AlertDescription>
                   You&apos;ve sent {smsUsage.overageMessages} messages over your plan limit.
                   Overage cost: {formatCurrency(smsUsage.overageCost)} ({formatCurrency(Number(currentPlan.smsOverageRate))}/message)
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Email Usage Card */}
+      {currentPlan?.emailIncluded && currentPlan.emailIncluded > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Email Usage
+                </CardTitle>
+                <CardDescription>
+                  Your email campaign usage for this billing period
+                </CardDescription>
+              </div>
+              {emailLimits && emailLimits.used > emailLimits.included && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                  Over limit
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Emails Sent</span>
+                <span className="font-medium">
+                  {emailLimits?.used ?? 0} / {currentPlan.emailIncluded}
+                </span>
+              </div>
+              <Progress 
+                value={Math.min(100, ((emailLimits?.used ?? 0) / currentPlan.emailIncluded) * 100)} 
+                className="h-2"
+              />
+            </div>
+
+            {emailStats && (
+              <div className="grid grid-cols-4 gap-4 pt-2">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {emailStats.emailsDelivered ?? 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Delivered</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {emailStats.emailsOpened ?? 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Opened</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {emailStats.emailsClicked ?? 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Clicked</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {emailStats.emailsBounced ?? 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Bounced</div>
+                </div>
+              </div>
+            )}
+
+            {emailLimits && emailLimits.used > emailLimits.included && currentPlan.emailOverageRate && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Overage Charges</AlertTitle>
+                <AlertDescription>
+                  You&apos;ve sent {emailLimits.used - emailLimits.included} emails over your plan limit.
+                  Overage cost: {formatCurrency((emailLimits.used - emailLimits.included) * Number(currentPlan.emailOverageRate))} ({formatCurrency(Number(currentPlan.emailOverageRate))}/email)
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Storage Usage Card */}
+      {currentPlan?.maxStorageMB && currentPlan.maxStorageMB > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <HardDrive className="h-5 w-5" />
+                  Storage Usage
+                </CardTitle>
+                <CardDescription>
+                  Your file storage usage
+                </CardDescription>
+              </div>
+              {storageUsedMB > currentPlan.maxStorageMB && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                  Over limit
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Storage Used</span>
+                <span className="font-medium">
+                  {storageUsedMB >= 1000 ? `${(storageUsedMB / 1000).toFixed(2)} GB` : `${storageUsedMB} MB`} / {currentPlan.maxStorageMB >= 1000 ? `${currentPlan.maxStorageMB / 1000} GB` : `${currentPlan.maxStorageMB} MB`}
+                </span>
+              </div>
+              <Progress 
+                value={Math.min(100, (storageUsedMB / currentPlan.maxStorageMB) * 100)} 
+                className="h-2"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="text-center">
+                <div className="text-2xl font-bold">
+                  {storageUsage._count}
+                </div>
+                <div className="text-xs text-muted-foreground">Total Files</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">
+                  {Math.round(100 - (storageUsedMB / currentPlan.maxStorageMB) * 100)}%
+                </div>
+                <div className="text-xs text-muted-foreground">Remaining</div>
+              </div>
+            </div>
+
+            {storageUsedMB > currentPlan.maxStorageMB && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Storage Limit Exceeded</AlertTitle>
+                <AlertDescription>
+                  You&apos;ve exceeded your storage limit. Please delete some files or upgrade your plan to continue uploading.
                 </AlertDescription>
               </Alert>
             )}
@@ -451,14 +646,22 @@ export default async function BillingPage() {
                           perTransactionFee: Number(plan.perTransactionFee),
                           maxAthletes: plan.maxAthletes,
                           maxUsers: plan.maxUsers,
+                          maxPrograms: plan.maxPrograms,
                           maxEvents: plan.maxEvents,
+                          smsIncluded: plan.smsIncluded,
+                          emailIncluded: plan.emailIncluded,
+                          maxStorageMB: plan.maxStorageMB,
+                          maxMembershipTypes: plan.maxMembershipTypes,
                           features: plan.features as string[],
                           isPopular: plan.isPopular,
                         }]}
                         currentUsage={{
                           athletes: organization._count.athletes,
                           users: organization._count.members,
+                          programs: organization._count.programs,
                           events: organization._count.events,
+                          storageMB: storageUsedMB,
+                          membershipTypes: membershipTypesCount,
                         }}
                         billingCycle={subscription?.billingCycle || "MONTHLY"}
                         variant="compact"

@@ -1,6 +1,24 @@
 "use client"
 
 import * as React from "react"
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { 
   Plus, 
   Pencil, 
@@ -11,7 +29,14 @@ import {
   Loader2,
   Users,
   Calendar,
-  UserPlus
+  UserPlus,
+  MessageSquare,
+  Mail,
+  HardDrive,
+  Tag,
+  GripVertical,
+  ArrowUpDown,
+  BookOpen
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -42,7 +67,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 
 interface SubscriptionPlan {
@@ -56,7 +80,18 @@ interface SubscriptionPlan {
   perTransactionFee: string
   maxAthletes: number | null
   maxUsers: number | null
+  maxPrograms: number | null
   maxEvents: number | null
+  // SMS Limits
+  smsIncluded: number | null
+  smsOverageRate: string | null
+  // Email Limits
+  emailIncluded: number | null
+  emailOverageRate: string | null
+  // Storage Limits
+  maxStorageMB: number | null
+  // Membership Limits
+  maxMembershipTypes: number | null
   features: string[]
   isPopular: boolean
   displayOrder: number
@@ -67,12 +102,74 @@ interface SubscriptionPlan {
   }
 }
 
+// Sortable Plan Item for reorder dialog
+function SortablePlanItem({ plan }: { plan: SubscriptionPlan }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: plan.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 rounded-lg border bg-card p-3 ${
+        isDragging ? "opacity-50 shadow-lg" : ""
+      }`}
+    >
+      <button
+        className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{plan.name}</span>
+          {plan.isPopular && (
+            <Badge variant="secondary" className="gap-1 text-xs">
+              <Star className="h-3 w-3" /> Popular
+            </Badge>
+          )}
+          {!plan.isActive && (
+            <Badge variant="outline" className="text-xs">Inactive</Badge>
+          )}
+        </div>
+        <span className="text-sm text-muted-foreground">{plan.slug}</span>
+      </div>
+      <span className="text-sm text-muted-foreground">
+        ${Number(plan.monthlyPrice).toFixed(2)}/mo
+      </span>
+    </div>
+  )
+}
+
 export default function PlansPage() {
   const [plans, setPlans] = React.useState<SubscriptionPlan[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false)
+  const [reorderPlans, setReorderPlans] = React.useState<SubscriptionPlan[]>([])
+  const [isSavingOrder, setIsSavingOrder] = React.useState(false)
   const [editingPlan, setEditingPlan] = React.useState<SubscriptionPlan | null>(null)
   const [isSaving, setIsSaving] = React.useState(false)
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(MouseSensor, {}),
+    useSensor(TouchSensor, {}),
+    useSensor(KeyboardSensor, {})
+  )
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -85,10 +182,20 @@ export default function PlansPage() {
     perTransactionFee: "0.30",
     maxAthletes: "",
     maxUsers: "",
+    maxPrograms: "",
     maxEvents: "",
+    // SMS Limits
+    smsIncluded: "",
+    smsOverageRate: "",
+    // Email Limits
+    emailIncluded: "",
+    emailOverageRate: "",
+    // Storage Limits
+    maxStorageMB: "",
+    // Membership Limits
+    maxMembershipTypes: "",
     features: "",
     isPopular: false,
-    displayOrder: "0",
     isActive: true,
     isPublic: true,
   })
@@ -123,10 +230,16 @@ export default function PlansPage() {
       perTransactionFee: "0.30",
       maxAthletes: "",
       maxUsers: "",
+      maxPrograms: "",
       maxEvents: "",
+      smsIncluded: "",
+      smsOverageRate: "",
+      emailIncluded: "",
+      emailOverageRate: "",
+      maxStorageMB: "",
+      maxMembershipTypes: "",
       features: "",
       isPopular: false,
-      displayOrder: String(plans.length),
       isActive: true,
       isPublic: true,
     })
@@ -145,10 +258,16 @@ export default function PlansPage() {
       perTransactionFee: plan.perTransactionFee,
       maxAthletes: plan.maxAthletes?.toString() || "",
       maxUsers: plan.maxUsers?.toString() || "",
+      maxPrograms: plan.maxPrograms?.toString() || "",
       maxEvents: plan.maxEvents?.toString() || "",
+      smsIncluded: plan.smsIncluded?.toString() || "",
+      smsOverageRate: plan.smsOverageRate || "",
+      emailIncluded: plan.emailIncluded?.toString() || "",
+      emailOverageRate: plan.emailOverageRate || "",
+      maxStorageMB: plan.maxStorageMB?.toString() || "",
+      maxMembershipTypes: plan.maxMembershipTypes?.toString() || "",
       features: plan.features.join("\n"),
       isPopular: plan.isPopular,
-      displayOrder: String(plan.displayOrder),
       isActive: plan.isActive,
       isPublic: plan.isPublic,
     })
@@ -168,10 +287,18 @@ export default function PlansPage() {
         perTransactionFee: parseFloat(formData.perTransactionFee),
         maxAthletes: formData.maxAthletes ? parseInt(formData.maxAthletes) : null,
         maxUsers: formData.maxUsers ? parseInt(formData.maxUsers) : null,
+        maxPrograms: formData.maxPrograms ? parseInt(formData.maxPrograms) : null,
         maxEvents: formData.maxEvents ? parseInt(formData.maxEvents) : null,
+        smsIncluded: formData.smsIncluded ? parseInt(formData.smsIncluded) : null,
+        smsOverageRate: formData.smsOverageRate ? parseFloat(formData.smsOverageRate) : null,
+        emailIncluded: formData.emailIncluded ? parseInt(formData.emailIncluded) : null,
+        emailOverageRate: formData.emailOverageRate ? parseFloat(formData.emailOverageRate) : null,
+        maxStorageMB: formData.maxStorageMB ? parseInt(formData.maxStorageMB) : null,
+        maxMembershipTypes: formData.maxMembershipTypes ? parseInt(formData.maxMembershipTypes) : null,
         features: formData.features.split("\n").map(f => f.trim()).filter(Boolean),
         isPopular: formData.isPopular,
-        displayOrder: parseInt(formData.displayOrder),
+        // Auto-assign display order for new plans (add to end)
+        ...(editingPlan ? {} : { displayOrder: plans.length }),
         isActive: formData.isActive,
         isPublic: formData.isPublic,
       }
@@ -240,6 +367,52 @@ export default function PlansPage() {
     }
   }
 
+  const handleOpenReorder = () => {
+    setReorderPlans([...plans])
+    setIsReorderDialogOpen(true)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setReorderPlans((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
+  }
+
+  const handleSaveOrder = async () => {
+    setIsSavingOrder(true)
+    try {
+      // Update each plan's displayOrder
+      const updates = reorderPlans.map((plan, index) => ({
+        id: plan.id,
+        displayOrder: index,
+      }))
+
+      const response = await fetch("/api/superadmin/plans/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plans: updates }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to save order")
+      }
+
+      toast.success("Plan order updated")
+      setIsReorderDialogOpen(false)
+      fetchPlans()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save order")
+    } finally {
+      setIsSavingOrder(false)
+    }
+  }
+
   const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -260,10 +433,18 @@ export default function PlansPage() {
             Manage billing plans that organizations can subscribe to
           </p>
         </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Plan
-        </Button>
+        <div className="flex gap-2">
+          {plans.length > 1 && (
+            <Button variant="outline" onClick={handleOpenReorder}>
+              <ArrowUpDown className="mr-2 h-4 w-4" />
+              Reorder
+            </Button>
+          )}
+          <Button onClick={handleOpenCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Plan
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -346,7 +527,7 @@ export default function PlansPage() {
 
                 <Separator />
 
-                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                <div className="grid grid-cols-4 gap-2 text-center text-sm">
                   <div>
                     <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                     <p className="font-medium">{plan.maxAthletes || "∞"}</p>
@@ -358,9 +539,37 @@ export default function PlansPage() {
                     <p className="text-xs text-muted-foreground">Users</p>
                   </div>
                   <div>
+                    <BookOpen className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                    <p className="font-medium">{plan.maxPrograms || "∞"}</p>
+                    <p className="text-xs text-muted-foreground">Programs</p>
+                  </div>
+                  <div>
                     <Calendar className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                     <p className="font-medium">{plan.maxEvents || "∞"}</p>
                     <p className="text-xs text-muted-foreground">Events</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                  <div>
+                    <MessageSquare className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                    <p className="font-medium">{plan.smsIncluded || "—"}</p>
+                    <p className="text-xs text-muted-foreground">SMS/mo</p>
+                  </div>
+                  <div>
+                    <Mail className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                    <p className="font-medium">{plan.emailIncluded || "—"}</p>
+                    <p className="text-xs text-muted-foreground">Email/mo</p>
+                  </div>
+                  <div>
+                    <HardDrive className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                    <p className="font-medium">{plan.maxStorageMB ? `${plan.maxStorageMB >= 1000 ? `${plan.maxStorageMB / 1000}GB` : `${plan.maxStorageMB}MB`}` : "∞"}</p>
+                    <p className="text-xs text-muted-foreground">Storage</p>
+                  </div>
+                  <div>
+                    <Tag className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                    <p className="font-medium">{plan.maxMembershipTypes || "∞"}</p>
+                    <p className="text-xs text-muted-foreground">Memberships</p>
                   </div>
                 </div>
 
@@ -397,16 +606,15 @@ export default function PlansPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-6 pb-2">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
             <DialogTitle>{editingPlan ? "Edit Plan" : "Create Plan"}</DialogTitle>
             <DialogDescription>
               {editingPlan ? "Update subscription plan details" : "Add a new subscription plan"}
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-6">
-            <div className="grid gap-6 py-4">
+          <div className="grid gap-6 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Plan Name</Label>
@@ -514,6 +722,16 @@ export default function PlansPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="maxPrograms">Max Programs</Label>
+                  <Input
+                    id="maxPrograms"
+                    type="number"
+                    value={formData.maxPrograms}
+                    onChange={(e) => setFormData({ ...formData, maxPrograms: e.target.value })}
+                    placeholder="Unlimited"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="maxEvents">Max Events</Label>
                   <Input
                     id="maxEvents"
@@ -524,6 +742,87 @@ export default function PlansPage() {
                   />
                 </div>
               </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <h4 className="font-medium">Usage Limits</h4>
+                <p className="text-sm text-muted-foreground">Set monthly quotas and overage rates</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="smsIncluded">SMS Included (per month)</Label>
+                  <Input
+                    id="smsIncluded"
+                    type="number"
+                    value={formData.smsIncluded}
+                    onChange={(e) => setFormData({ ...formData, smsIncluded: e.target.value })}
+                    placeholder="No SMS"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smsOverageRate">SMS Overage Rate ($)</Label>
+                  <Input
+                    id="smsOverageRate"
+                    type="number"
+                    step="0.01"
+                    value={formData.smsOverageRate}
+                    onChange={(e) => setFormData({ ...formData, smsOverageRate: e.target.value })}
+                    placeholder="e.g., 0.05"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="emailIncluded">Emails Included (per month)</Label>
+                  <Input
+                    id="emailIncluded"
+                    type="number"
+                    value={formData.emailIncluded}
+                    onChange={(e) => setFormData({ ...formData, emailIncluded: e.target.value })}
+                    placeholder="No emails"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="emailOverageRate">Email Overage Rate ($)</Label>
+                  <Input
+                    id="emailOverageRate"
+                    type="number"
+                    step="0.001"
+                    value={formData.emailOverageRate}
+                    onChange={(e) => setFormData({ ...formData, emailOverageRate: e.target.value })}
+                    placeholder="e.g., 0.005"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="maxStorageMB">Max Storage (MB)</Label>
+                  <Input
+                    id="maxStorageMB"
+                    type="number"
+                    value={formData.maxStorageMB}
+                    onChange={(e) => setFormData({ ...formData, maxStorageMB: e.target.value })}
+                    placeholder="Unlimited"
+                  />
+                  <p className="text-xs text-muted-foreground">1000 MB = 1 GB</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxMembershipTypes">Max Membership Types</Label>
+                  <Input
+                    id="maxMembershipTypes"
+                    type="number"
+                    value={formData.maxMembershipTypes}
+                    onChange={(e) => setFormData({ ...formData, maxMembershipTypes: e.target.value })}
+                    placeholder="Unlimited"
+                  />
+                </div>
+              </div>
+
+              <Separator />
 
               <div className="space-y-2">
                 <Label htmlFor="features">Features (one per line)</Label>
@@ -571,28 +870,58 @@ export default function PlansPage() {
                     onCheckedChange={(checked) => setFormData({ ...formData, isPublic: checked })}
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="displayOrder">Display Order</Label>
-                  <Input
-                    id="displayOrder"
-                    type="number"
-                    value={formData.displayOrder}
-                    onChange={(e) => setFormData({ ...formData, displayOrder: e.target.value })}
-                    className="w-24"
-                  />
-                </div>
               </div>
             </div>
-          </ScrollArea>
 
-          <DialogFooter className="p-6 pt-4 border-t">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingPlan ? "Save Changes" : "Create Plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reorder Dialog */}
+      <Dialog open={isReorderDialogOpen} onOpenChange={setIsReorderDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reorder Plans</DialogTitle>
+            <DialogDescription>
+              Drag and drop to reorder how plans appear to users
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={reorderPlans.map(p => p.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-2">
+                  {reorderPlans.map((plan) => (
+                    <SortablePlanItem key={plan.id} plan={plan} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReorderDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveOrder} disabled={isSavingOrder}>
+              {isSavingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Order
             </Button>
           </DialogFooter>
         </DialogContent>

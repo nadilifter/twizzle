@@ -8,6 +8,7 @@ import {
 import { getCurrentEnvironment } from "@/lib/env-domains";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { db } from "@/lib/db";
 
 // Content type mapping for common image types
 const CONTENT_TYPES: Record<string, string> = {
@@ -37,6 +38,38 @@ export async function POST(request: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const fileSizeBytes = buffer.length;
+    const fileSizeMB = fileSizeBytes / (1024 * 1024);
+
+    // Check storage limits
+    const organization = await db.organization.findUnique({
+      where: { id: session.user.organizationId },
+      include: {
+        subscription: {
+          include: { plan: true }
+        }
+      }
+    });
+
+    if (organization?.subscription?.plan?.maxStorageMB) {
+      const maxStorageMB = organization.subscription.plan.maxStorageMB;
+      
+      // Get current storage usage
+      const storageUsage = await db.media.aggregate({
+        where: { organizationId: session.user.organizationId },
+        _sum: { fileSize: true },
+      });
+      const currentStorageBytes = storageUsage._sum.fileSize || 0;
+      const currentStorageMB = currentStorageBytes / (1024 * 1024);
+      
+      // Check if adding this file would exceed the limit
+      if (currentStorageMB + fileSizeMB > maxStorageMB) {
+        const remainingMB = Math.max(0, maxStorageMB - currentStorageMB);
+        return NextResponse.json({ 
+          error: `Storage limit exceeded. Your plan allows ${maxStorageMB >= 1000 ? `${maxStorageMB / 1000} GB` : `${maxStorageMB} MB`} of storage. You have ${remainingMB.toFixed(1)} MB remaining, but this file is ${fileSizeMB.toFixed(1)} MB.` 
+        }, { status: 400 });
+      }
+    }
 
     const ext = path.extname(file.name).toLowerCase();
     const contentType = CONTENT_TYPES[ext] || file.type || 'application/octet-stream';

@@ -107,6 +107,29 @@ export async function POST(request: NextRequest) {
     const validatedData = createMembershipGroupSchema.parse(body);
     const scopedDb = getScopedDb(session.user.organizationId);
 
+    // Check membership types limit
+    const organization = await db.organization.findUnique({
+      where: { id: session.user.organizationId! },
+      include: {
+        subscription: {
+          include: { plan: true }
+        }
+      }
+    });
+
+    if (organization?.subscription?.plan?.maxMembershipTypes) {
+      const maxTypes = organization.subscription.plan.maxMembershipTypes;
+      
+      // Get current membership types count
+      const currentCount = await scopedDb.membershipGroup.count();
+      
+      if (currentCount >= maxTypes) {
+        return NextResponse.json({ 
+          error: `Membership types limit reached. Your plan allows a maximum of ${maxTypes} membership type${maxTypes === 1 ? '' : 's'}. Please upgrade your plan to create more membership types.` 
+        }, { status: 400 });
+      }
+    }
+
     const group = await scopedDb.membershipGroup.create({
       data: {
         ...validatedData,

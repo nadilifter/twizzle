@@ -13,7 +13,18 @@ const updatePlanSchema = z.object({
   perTransactionFee: z.number().min(0).optional(),
   maxAthletes: z.number().int().positive().optional().nullable(),
   maxUsers: z.number().int().positive().optional().nullable(),
+  maxPrograms: z.number().int().positive().optional().nullable(),
   maxEvents: z.number().int().positive().optional().nullable(),
+  // SMS Limits
+  smsIncluded: z.number().int().nonnegative().optional().nullable(),
+  smsOverageRate: z.number().min(0).optional().nullable(),
+  // Email Limits
+  emailIncluded: z.number().int().nonnegative().optional().nullable(),
+  emailOverageRate: z.number().min(0).optional().nullable(),
+  // Storage Limits
+  maxStorageMB: z.number().int().positive().optional().nullable(),
+  // Membership Limits
+  maxMembershipTypes: z.number().int().positive().optional().nullable(),
   features: z.array(z.string()).optional(),
   isPopular: z.boolean().optional(),
   displayOrder: z.number().int().optional(),

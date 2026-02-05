@@ -10,6 +10,7 @@ const createMediaSchema = z.object({
   description: z.string().optional(),
   athleteId: z.string().optional(),
   eventId: z.string().optional(),
+  fileSize: z.number().int().nonnegative().optional(), // File size in bytes
 });
 
 // GET /api/media
@@ -139,12 +140,46 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check storage limits if fileSize is provided
+    if (validatedData.fileSize && validatedData.fileSize > 0) {
+      const organization = await db.organization.findUnique({
+        where: { id: session.user.organizationId },
+        include: {
+          subscription: {
+            include: { plan: true }
+          }
+        }
+      });
+
+      if (organization?.subscription?.plan?.maxStorageMB) {
+        const maxStorageMB = organization.subscription.plan.maxStorageMB;
+        const fileSizeMB = validatedData.fileSize / (1024 * 1024);
+        
+        // Get current storage usage
+        const storageUsage = await db.media.aggregate({
+          where: { organizationId: session.user.organizationId },
+          _sum: { fileSize: true },
+        });
+        const currentStorageBytes = storageUsage._sum.fileSize || 0;
+        const currentStorageMB = currentStorageBytes / (1024 * 1024);
+        
+        // Check if adding this file would exceed the limit
+        if (currentStorageMB + fileSizeMB > maxStorageMB) {
+          const remainingMB = Math.max(0, maxStorageMB - currentStorageMB);
+          return NextResponse.json({ 
+            error: `Storage limit exceeded. Your plan allows ${maxStorageMB >= 1000 ? `${maxStorageMB / 1000} GB` : `${maxStorageMB} MB`} of storage. You have ${remainingMB.toFixed(1)} MB remaining, but this file is ${fileSizeMB.toFixed(1)} MB.` 
+          }, { status: 400 });
+        }
+      }
+    }
+
     const media = await db.media.create({
       data: {
         url: validatedData.url,
         type: validatedData.type,
         title: validatedData.title,
         description: validatedData.description,
+        fileSize: validatedData.fileSize || 0,
         athleteId: validatedData.athleteId,
         eventId: validatedData.eventId,
         uploadedById: session.user.id,

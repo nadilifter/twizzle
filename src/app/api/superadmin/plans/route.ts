@@ -13,7 +13,18 @@ const createPlanSchema = z.object({
   perTransactionFee: z.number().min(0),
   maxAthletes: z.number().int().positive().optional().nullable(),
   maxUsers: z.number().int().positive().optional().nullable(),
+  maxPrograms: z.number().int().positive().optional().nullable(),
   maxEvents: z.number().int().positive().optional().nullable(),
+  // SMS Limits
+  smsIncluded: z.number().int().nonnegative().optional().nullable(),
+  smsOverageRate: z.number().min(0).optional().nullable(),
+  // Email Limits
+  emailIncluded: z.number().int().nonnegative().optional().nullable(),
+  emailOverageRate: z.number().min(0).optional().nullable(),
+  // Storage Limits
+  maxStorageMB: z.number().int().positive().optional().nullable(),
+  // Membership Limits
+  maxMembershipTypes: z.number().int().positive().optional().nullable(),
   features: z.array(z.string()),
   isPopular: z.boolean().optional(),
   displayOrder: z.number().int().optional(),
@@ -82,7 +93,14 @@ export async function POST(request: NextRequest) {
         perTransactionFee: validatedData.perTransactionFee,
         maxAthletes: validatedData.maxAthletes,
         maxUsers: validatedData.maxUsers,
+        maxPrograms: validatedData.maxPrograms,
         maxEvents: validatedData.maxEvents,
+        smsIncluded: validatedData.smsIncluded,
+        smsOverageRate: validatedData.smsOverageRate,
+        emailIncluded: validatedData.emailIncluded,
+        emailOverageRate: validatedData.emailOverageRate,
+        maxStorageMB: validatedData.maxStorageMB,
+        maxMembershipTypes: validatedData.maxMembershipTypes,
         features: validatedData.features,
         isPopular: validatedData.isPopular ?? false,
         displayOrder: validatedData.displayOrder ?? 0,

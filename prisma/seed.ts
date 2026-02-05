@@ -72,14 +72,18 @@ async function main() {
       // Update existing plans with email limits
       emailIncluded: null, // No email campaigns on free plan
       emailOverageRate: null,
+      maxStorageMB: 500, // 500 MB
+      maxMembershipTypes: 2,
     },
     create: {
       name: "Free", slug: "free", description: "Perfect for getting started",
       monthlyPrice: 0, yearlyPrice: 0, transactionFee: 0.05, perTransactionFee: 0.50,
-      maxAthletes: 25, maxUsers: 2, maxEvents: 10,
+      maxAthletes: 25, maxUsers: 2, maxPrograms: 3, maxEvents: 10,
       smsIncluded: null, smsOverageRate: null,
       emailIncluded: null, emailOverageRate: null, // No email campaigns on free plan
-      features: ["Basic scheduling", "Up to 25 athletes", "Email support"],
+      maxStorageMB: 500, // 500 MB
+      maxMembershipTypes: 2,
+      features: ["Basic scheduling", "Up to 25 athletes", "Email support", "500 MB storage"],
       isPopular: false, displayOrder: 0, isActive: true, isPublic: true,
     },
   });
@@ -88,14 +92,18 @@ async function main() {
     update: {
       emailIncluded: 500, // 500 emails/month
       emailOverageRate: 0.005, // $0.005 per email over limit
+      maxStorageMB: 2000, // 2 GB
+      maxMembershipTypes: 5,
     },
     create: {
       name: "Starter", slug: "starter", description: "For growing organizations",
       monthlyPrice: 49, yearlyPrice: 470, transactionFee: 0.035, perTransactionFee: 0.35,
-      maxAthletes: 100, maxUsers: 5, maxEvents: 50,
+      maxAthletes: 100, maxUsers: 5, maxPrograms: 10, maxEvents: 50,
       smsIncluded: 100, smsOverageRate: 0.05,
       emailIncluded: 500, emailOverageRate: 0.005, // 500 emails/month, $0.005 per extra
-      features: ["Advanced scheduling", "Up to 100 athletes", "Priority email support", "Basic reporting", "500 email campaigns/month"],
+      maxStorageMB: 2000, // 2 GB
+      maxMembershipTypes: 5,
+      features: ["Advanced scheduling", "Up to 100 athletes", "Priority email support", "Basic reporting", "500 email campaigns/month", "2 GB storage"],
       isPopular: false, displayOrder: 1, isActive: true, isPublic: true,
     },
   });
@@ -104,14 +112,18 @@ async function main() {
     update: {
       emailIncluded: 2500, // 2500 emails/month
       emailOverageRate: 0.003, // $0.003 per email over limit
+      maxStorageMB: 10000, // 10 GB
+      maxMembershipTypes: 15,
     },
     create: {
       name: "Gold", slug: "gold", description: "Most popular for established clubs",
       monthlyPrice: 149, yearlyPrice: 1430, transactionFee: 0.029, perTransactionFee: 0.30,
-      maxAthletes: 500, maxUsers: 15, maxEvents: null,
+      maxAthletes: 500, maxUsers: 15, maxPrograms: 50, maxEvents: null,
       smsIncluded: 500, smsOverageRate: 0.04,
       emailIncluded: 2500, emailOverageRate: 0.003, // 2500 emails/month, $0.003 per extra
-      features: ["Unlimited events", "Up to 500 athletes", "Phone support", "Advanced reporting", "Custom branding", "2,500 email campaigns/month"],
+      maxStorageMB: 10000, // 10 GB
+      maxMembershipTypes: 15,
+      features: ["Unlimited events", "Up to 500 athletes", "Phone support", "Advanced reporting", "Custom branding", "2,500 email campaigns/month", "10 GB storage"],
       isPopular: true, displayOrder: 2, isActive: true, isPublic: true,
     },
   });
@@ -120,14 +132,18 @@ async function main() {
     update: {
       emailIncluded: 10000, // 10000 emails/month
       emailOverageRate: 0.002, // $0.002 per email over limit
+      maxStorageMB: null, // Unlimited
+      maxMembershipTypes: null, // Unlimited
     },
     create: {
       name: "Platinum", slug: "platinum", description: "Enterprise-grade solution",
       monthlyPrice: 349, yearlyPrice: 3350, transactionFee: 0.025, perTransactionFee: 0.25,
-      maxAthletes: null, maxUsers: null, maxEvents: null,
+      maxAthletes: null, maxUsers: null, maxPrograms: null, maxEvents: null,
       smsIncluded: 2000, smsOverageRate: 0.03,
       emailIncluded: 10000, emailOverageRate: 0.002, // 10000 emails/month, $0.002 per extra
-      features: ["Unlimited everything", "Dedicated support", "Custom integrations", "White-label options", "SLA guarantee", "10,000 email campaigns/month"],
+      maxStorageMB: null, // Unlimited
+      maxMembershipTypes: null, // Unlimited
+      features: ["Unlimited everything", "Dedicated support", "Custom integrations", "White-label options", "SLA guarantee", "10,000 email campaigns/month", "Unlimited storage"],
       isPopular: false, displayOrder: 3, isActive: true, isPublic: true,
     },
   });

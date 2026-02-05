@@ -35,7 +35,12 @@ interface Plan {
   perTransactionFee: number
   maxAthletes: number | null
   maxUsers: number | null
+  maxPrograms: number | null
   maxEvents: number | null
+  smsIncluded: number | null
+  emailIncluded: number | null
+  maxStorageMB: number | null
+  maxMembershipTypes: number | null
   features: string[]
   isPopular: boolean
 }
@@ -46,7 +51,10 @@ interface Props {
   currentUsage: {
     athletes: number
     users: number
+    programs: number
     events: number
+    storageMB?: number
+    membershipTypes?: number
   }
   billingCycle: string
   variant?: "default" | "compact"
@@ -80,8 +88,19 @@ export function PlanSelector({
     if (selectedPlan.maxUsers && currentUsage.users > selectedPlan.maxUsers) {
       limitWarnings.push(`This plan allows ${selectedPlan.maxUsers} users, but you have ${currentUsage.users}`)
     }
+    if (selectedPlan.maxPrograms && currentUsage.programs > selectedPlan.maxPrograms) {
+      limitWarnings.push(`This plan allows ${selectedPlan.maxPrograms} programs, but you have ${currentUsage.programs}`)
+    }
     if (selectedPlan.maxEvents && currentUsage.events > selectedPlan.maxEvents) {
       limitWarnings.push(`This plan allows ${selectedPlan.maxEvents} events, but you have ${currentUsage.events}`)
+    }
+    if (selectedPlan.maxStorageMB && currentUsage.storageMB && currentUsage.storageMB > selectedPlan.maxStorageMB) {
+      const usedGB = (currentUsage.storageMB / 1000).toFixed(1)
+      const limitGB = (selectedPlan.maxStorageMB / 1000).toFixed(1)
+      limitWarnings.push(`This plan allows ${limitGB} GB storage, but you're using ${usedGB} GB`)
+    }
+    if (selectedPlan.maxMembershipTypes && currentUsage.membershipTypes && currentUsage.membershipTypes > selectedPlan.maxMembershipTypes) {
+      limitWarnings.push(`This plan allows ${selectedPlan.maxMembershipTypes} membership types, but you have ${currentUsage.membershipTypes}`)
     }
   }
 
@@ -235,6 +254,40 @@ export function PlanSelector({
                       <span className="text-muted-foreground">Users</span>
                       <span className="font-medium">
                         {selectedPlan.maxUsers || "Unlimited"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Programs</span>
+                      <span className="font-medium">
+                        {selectedPlan.maxPrograms || "Unlimited"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">SMS/month</span>
+                      <span className="font-medium">
+                        {selectedPlan.smsIncluded || "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Emails/month</span>
+                      <span className="font-medium">
+                        {selectedPlan.emailIncluded || "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Storage</span>
+                      <span className="font-medium">
+                        {selectedPlan.maxStorageMB 
+                          ? (selectedPlan.maxStorageMB >= 1000 
+                              ? `${selectedPlan.maxStorageMB / 1000} GB` 
+                              : `${selectedPlan.maxStorageMB} MB`)
+                          : "Unlimited"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Membership Types</span>
+                      <span className="font-medium">
+                        {selectedPlan.maxMembershipTypes || "Unlimited"}
                       </span>
                     </div>
                   </div>

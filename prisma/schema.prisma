@@ -2074,6 +2074,7 @@ model Media {
   type           MediaType
   title          String?
   description    String?
+  fileSize       Int       @default(0)  // File size in bytes
   athleteId      String?
   eventId        String?
   uploadedById   String
@@ -2270,6 +2271,7 @@ model SubscriptionPlan {
   // Limits
   maxAthletes       Int?     // null = unlimited
   maxUsers          Int?     // null = unlimited
+  maxPrograms       Int?     // null = unlimited
   maxEvents         Int?     // null = unlimited
   
   // SMS Limits
@@ -2279,6 +2281,12 @@ model SubscriptionPlan {
   // Email Limits
   emailIncluded     Int?     // Emails included per month (null = no email campaigns)
   emailOverageRate  Decimal? @db.Decimal(10, 4) // Cost per email over limit
+  
+  // Storage Limits
+  maxStorageMB      Int?     // Storage in MB (null = unlimited)
+  
+  // Membership Limits
+  maxMembershipTypes Int?    // Max membership groups (null = unlimited)
   
   // Features (stored as JSON for flexibility)
   features          Json     // Array of feature strings
