@@ -72,6 +72,9 @@ function hexToHSL(hex: string): string {
 /**
  * Generate SEO-optimized metadata for tenant sites.
  * Includes Open Graph, Twitter Cards, canonical URLs, and keywords.
+ * 
+ * Note: Non-production environments (staging, development, local) are always blocked
+ * from indexing regardless of the site's published status.
  */
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const config = await db.websiteConfig.findUnique({
@@ -81,6 +84,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!config) return {};
 
   const org = config.organization;
+  
+  // Check if we're in production - only production sites can be indexed
+  const isProduction = process.env.APP_ENVIRONMENT === 'production';
   
   // Construct the canonical site URL
   const siteUrl = config.domain 
@@ -118,6 +124,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     ? Array.from(new Set([...customKeywords, ...defaultKeywords]))
     : defaultKeywords;
 
+  // Determine robots directive:
+  // - Non-production: always noindex
+  // - Production + published: index
+  // - Production + unpublished: noindex
+  const shouldIndex = isProduction && config.isPublished;
+
   return {
     title: {
       default: org.name,
@@ -154,12 +166,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       description,
       images: config.heroImage ? [config.heroImage] : [],
     },
-    // Allow indexing for published sites
-    robots: config.isPublished 
+    // Block indexing for non-production environments or unpublished sites
+    robots: shouldIndex 
       ? { index: true, follow: true }
       : { index: false, follow: false },
-    // Google Search Console verification
-    ...(config.googleVerification && {
+    // Google Search Console verification (only relevant for production)
+    ...(isProduction && config.googleVerification && {
       verification: {
         google: config.googleVerification,
       },
@@ -296,7 +308,7 @@ export default async function SiteLayout({
                 <p className="text-center text-sm text-muted-foreground">
                     © {new Date().getFullYear()} {config.organization.name}. All rights reserved.
                 </p>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap justify-center">
                     {config.showContact && (
                         <Link 
                             href="/contact" 
@@ -313,6 +325,22 @@ export default async function SiteLayout({
                             Register
                         </Link>
                     )}
+                    <a 
+                        href="https://www.uplifterinc.com/privacy-policy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    >
+                        Privacy
+                    </a>
+                    <a 
+                        href="https://www.uplifterinc.com/terms-of-service"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    >
+                        Terms
+                    </a>
                 </div>
              </div>
         </footer>
