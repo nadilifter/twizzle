@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import crypto from "crypto";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { getSubdomainUrl, getBaseUrl, getSessionCookieName } from "@/lib/env-domains";
+import { getSubdomainUrl, getBaseUrl, getSessionCookieName, getCurrentEnvironment } from "@/lib/env-domains";
 
 /**
  * OAuth Bridge Endpoint
@@ -12,10 +12,10 @@ import { getSubdomainUrl, getBaseUrl, getSessionCookieName } from "@/lib/env-dom
  * It creates a bridge token from the session and redirects to the session-bridge
  * endpoint on uplifterinc.localhost to set the cookie with the correct domain.
  * 
- * PRODUCTION:
- * In production, OAuth goes directly through login.uplifterinc.com with cookies
- * set on .uplifterinc.com, so this bridge is not needed. However, it still works
- * as a fallback if someone lands here.
+ * PRODUCTION/STAGING:
+ * This bridge is NOT needed in production/staging because cookies are properly
+ * configured with shared domain (.upliftergymnastics.com, .uplifterinc.com).
+ * If someone lands here in production, we just redirect to the callback URL.
  */
 
 function getEnvironmentUrls() {
@@ -33,10 +33,22 @@ export async function GET(req: NextRequest) {
     return rateLimitResponse;
   }
 
+  const currentEnv = getCurrentEnvironment();
   const { loginBaseUrl, bridgeBaseUrl, defaultCallback } = getEnvironmentUrls();
   const searchParams = req.nextUrl.searchParams;
   const callbackUrl = searchParams.get("callbackUrl") || defaultCallback;
 
+  // PRODUCTION/STAGING PASSTHROUGH:
+  // In production/staging, OAuth cookies are properly shared across subdomains,
+  // so this bridge is not needed. Just redirect to the callback URL.
+  // The session cookie is already set correctly by NextAuth.
+  if (currentEnv !== 'local') {
+    console.log(`OAuth bridge: Production passthrough (env: ${currentEnv}), redirecting to ${callbackUrl}`);
+    return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
+  }
+
+  // LOCAL DEVELOPMENT: Bridge is needed because cookies can't be shared
+  // across localhost:3000 and *.uplifterinc.localhost:3000
   try {
     // Get the JWT token from the session that was just created
     const token = await getToken({ 

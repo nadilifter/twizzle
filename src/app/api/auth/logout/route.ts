@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getCurrentEnvironment, getEnvConfig } from "@/lib/env-domains";
+import { getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib/env-domains";
 
 /**
  * Custom Logout Endpoint

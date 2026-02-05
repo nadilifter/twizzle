@@ -5,7 +5,8 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "./db";
-import { getEnvConfig, getCurrentEnvironment, getSubdomainUrl, getSessionCookieName } from "./env-domains";
+import { getEnvConfig, getCurrentEnvironment, getSubdomainUrl } from "./env-domains";
+import { getAuthCookies } from "./auth-cookies";
 
 /**
  * Creates a signed bridge token for cross-domain session transfer
@@ -22,65 +23,16 @@ function createBridgeToken(email: string, secret: string): string {
   return Buffer.from(JSON.stringify(tokenData)).toString("base64url");
 }
 
-/**
- * Get the cookie domain based on the current environment
- */
-function getCookieDomain(): string | undefined {
-  const currentEnv = getCurrentEnvironment();
-  
-  // In local development, don't set a domain - this allows the cookie to be set on
-  // localhost:3000 when OAuth completes, then session-bridge transfers the
-  // session to local subdomains with the correct domain.
-  if (currentEnv === 'local') {
-    return undefined;
-  }
-  
-  // For cloud environments, use the configured cookie domain
-  return getEnvConfig().cookieDomain;
-}
-
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as NextAuthOptions["adapter"],
   debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "jwt",
   },
-  cookies: {
-    // All cookies need the same domain for OAuth to work across subdomains
-    // (login.domain.com initiates OAuth, domain.com receives callback)
-    sessionToken: {
-      name: getSessionCookieName(),
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: getCurrentEnvironment() !== 'local',
-        domain: getCookieDomain()
-      }
-    },
-    callbackUrl: {
-      name: getCurrentEnvironment() === 'local' ? 'next-auth.callback-url' : '__Secure-next-auth.callback-url',
-      options: {
-        sameSite: "lax",
-        path: "/",
-        secure: getCurrentEnvironment() !== 'local',
-        domain: getCookieDomain()
-      }
-    },
-    csrfToken: {
-      // Use __Secure- instead of __Host- to allow domain sharing across subdomains
-      // __Host- prefix requires NO domain attribute and can only be set on exact host
-      // __Secure- prefix allows domain attribute for cross-subdomain sharing
-      name: getCurrentEnvironment() === 'local' ? 'next-auth.csrf-token' : '__Secure-next-auth.csrf-token',
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: getCurrentEnvironment() !== 'local',
-        domain: getCookieDomain() // Allow CSRF token to be shared across subdomains
-      }
-    }
-  },
+  // Use centralized cookie configuration that includes ALL OAuth-required cookies
+  // (sessionToken, callbackUrl, csrfToken, pkceCodeVerifier, state, nonce)
+  // This ensures proper cross-subdomain OAuth flows in staging/production
+  cookies: getAuthCookies(),
   pages: {
     signIn: "/login",
     signOut: "/login",
@@ -399,34 +351,49 @@ export const authOptions: NextAuthOptions = {
       }
     },
     async redirect({ url, baseUrl }) {
-      // Handle cross-domain OAuth redirect
-      // When OAuth completes on localhost:3000 but the callbackUrl is for a local subdomain,
-      // we need to redirect through the session bridge to set the cookie on the correct domain
-      //
-      // IMPORTANT: This should ONLY trigger for OAuth logins (which must go through localhost:3000
-      // due to Google's restrictions), NOT for credentials logins on subdomains.
-      
       const config = getEnvConfig();
       const currentEnv = getCurrentEnvironment();
       const baseDomain = config.baseDomain.split(':')[0]; // Remove port if present
       
-      // Only trigger OAuth bridge when:
-      // 1. We're in local development
-      // 2. The request is coming from localhost:3000 (OAuth callback)
-      // 3. The callback URL is for a local subdomain
-      // 4. The URL doesn't already contain oauth-bridge (prevent loops)
+      // PRODUCTION/STAGING: Standard redirect behavior
+      // Cookies are properly shared across subdomains via domain attribute,
+      // so no bridge is needed - NextAuth handles everything correctly
+      if (currentEnv !== 'local') {
+        // Allows relative callback URLs
+        if (url.startsWith("/")) {
+          return `${baseUrl}${url}`;
+        }
+        // Allows callback URLs on the same origin
+        try {
+          if (new URL(url).origin === baseUrl) {
+            return url;
+          }
+        } catch {
+          // URL parsing failed, continue to next check
+        }
+        // Allow callback URLs to the current environment's domain (trusted)
+        if (url.includes(baseDomain)) {
+          return url;
+        }
+        return baseUrl;
+      }
+      
+      // LOCAL DEVELOPMENT: Handle cross-domain OAuth redirect
+      // When OAuth completes on localhost:3000 but the callbackUrl is for a local subdomain,
+      // we need to redirect through the session bridge to set the cookie on the correct domain.
+      // This is only needed in local dev because Google doesn't allow localhost subdomains
+      // as OAuth redirect URIs.
+      
       const isLocalhost = baseUrl === "http://localhost:3000";
-      const callbackIsLocalSubdomain = currentEnv === 'local' && url.includes(baseDomain);
+      const callbackIsLocalSubdomain = url.includes(baseDomain);
       const isNotAlreadyBridge = !url.includes("oauth-bridge");
       
       if (isLocalhost && callbackIsLocalSubdomain && isNotAlreadyBridge) {
         // Extract the original callback URL
-        // The URL might be the full callback URL or contain a callbackUrl param
         let finalCallback = url;
         
         try {
           const urlObj = new URL(url);
-          // If there's a nested callbackUrl param, use that as the final destination
           const nestedCallback = urlObj.searchParams.get("callbackUrl");
           if (nestedCallback) {
             finalCallback = nestedCallback;
@@ -435,13 +402,12 @@ export const authOptions: NextAuthOptions = {
           // URL parsing failed, use as-is
         }
         
-        // Prevent redirect loop: if callback is the login portal or a login page, redirect to admin instead
+        // Prevent redirect loop: if callback is the login portal, redirect to admin instead
         try {
           const callbackUrlObj = new URL(finalCallback);
           const callbackHost = callbackUrlObj.hostname;
           const callbackPath = callbackUrlObj.pathname;
           if (callbackHost.startsWith("login.") || callbackPath === "/login") {
-            // Replace with admin subdomain
             finalCallback = getSubdomainUrl("admin") + "/";
             console.log("Redirect callback: Callback was login page, redirecting to admin instead");
           }
@@ -452,23 +418,23 @@ export const authOptions: NextAuthOptions = {
         console.log("Redirect callback: Detected cross-domain OAuth, redirecting to bridge");
         console.log("Redirect callback: baseUrl=", baseUrl, "url=", url, "finalCallback=", finalCallback);
         
-        // Redirect to oauth-bridge which will get the session and transfer it
         const bridgeUrl = new URL("/api/auth/oauth-bridge", "http://localhost:3000");
         bridgeUrl.searchParams.set("callbackUrl", finalCallback);
         return bridgeUrl.toString();
       }
       
-      // Default redirect behavior
-      // Allows relative callback URLs
+      // Local dev fallback: standard redirect behavior
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`;
       }
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) {
-        return url;
+      try {
+        if (new URL(url).origin === baseUrl) {
+          return url;
+        }
+      } catch {
+        // URL parsing failed
       }
-      // Allow callback URLs to the current environment's domain (trusted)
-      else if (url.includes(baseDomain)) {
+      if (url.includes(baseDomain)) {
         return url;
       }
       return baseUrl;
