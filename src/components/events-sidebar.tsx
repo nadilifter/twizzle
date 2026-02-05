@@ -126,7 +126,7 @@ export function EventsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
             </div>
           </div>
         ) : (
-          <NavUser user={user} showOrganizationOptions={false} />
+          <NavUser user={user} />
         )}
       </SidebarFooter>
       <SidebarRail />

@@ -1,4 +1,4 @@
-import { Check, CreditCard, Download, AlertCircle, Lock, MessageSquare } from "lucide-react"
+import { Check, Download, AlertCircle, Lock, MessageSquare } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +30,7 @@ import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { PlanSelector } from "./plan-selector"
 import { getUsageStats } from "@/lib/sms-service"
+import { PaymentMethodsCard } from "@/components/billing/payment-methods-card"
 
 export default async function BillingPage() {
   const session = await getAuthSession()
@@ -38,7 +39,7 @@ export default async function BillingPage() {
     redirect("/login")
   }
 
-  // Fetch organization with subscription
+  // Fetch organization with subscription and payment methods
   const organization = await db.organization.findUnique({
     where: { id: session.user.organizationId },
     include: {
@@ -60,7 +61,14 @@ export default async function BillingPage() {
         include: {
           plan: true
         }
-      }
+      },
+      organizationPaymentMethods: {
+        where: { isActive: true },
+        orderBy: [
+          { isDefault: "desc" },
+          { createdAt: "desc" },
+        ],
+      },
     },
   })
 
@@ -342,26 +350,23 @@ export default async function BillingPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
-         <Card>
-          <CardHeader>
-            <CardTitle>Payment Methods</CardTitle>
-            <CardDescription>Manage your payment details for subscription billing</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="flex items-center justify-center py-8 text-muted-foreground">
-              <div className="text-center">
-                <CreditCard className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="font-medium">No payment method required</p>
-                <p className="text-sm">During the beta period, all features are free.</p>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="ghost" className="w-full" disabled>
-              Add Payment Method (Coming Soon)
-            </Button>
-          </CardFooter>
-        </Card>
+        <PaymentMethodsCard
+          paymentMethods={organization.organizationPaymentMethods.map(pm => ({
+            id: pm.id,
+            storedPaymentMethodId: pm.storedPaymentMethodId,
+            type: pm.type,
+            brand: pm.brand,
+            lastFour: pm.lastFour,
+            expiryMonth: pm.expiryMonth,
+            expiryYear: pm.expiryYear,
+            holderName: pm.holderName,
+            isDefault: pm.isDefault,
+            isActive: pm.isActive,
+            createdAt: pm.createdAt.toISOString(),
+          }))}
+          organizationId={organization.id}
+          hasSubscription={!!subscription}
+        />
 
         <Card>
           <CardHeader>

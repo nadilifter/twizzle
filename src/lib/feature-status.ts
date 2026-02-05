@@ -110,6 +110,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Skills database with difficulty levels and age ranges",
     apiRoutes: ["/api/skills", "/api/skills/[id]"],
   },
+  "/dashboard/training/levels": {
+    status: "live",
+    description: "Skill and program levels management",
+    apiRoutes: ["/api/levels"],
+  },
   "/dashboard/training/evaluations": {
     status: "live",
     description: "Evaluation templates and results management",

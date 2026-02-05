@@ -1,12 +1,6 @@
 "use client"
 
-import {
-  Building2Icon,
-  LogOutIcon,
-  MoreVerticalIcon,
-  UploadIcon,
-  UserCircleIcon,
-} from "lucide-react"
+import { LogOutIcon, MoreVerticalIcon } from "lucide-react"
 
 import {
   Avatar,
@@ -16,7 +10,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -28,22 +21,18 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { useRouter } from "next/navigation"
 import { logout } from "@/lib/logout"
 
 export function NavUser({
   user,
-  showOrganizationOptions = true,
 }: {
   user: {
     name: string
     email: string
     avatar?: string | null
   }
-  showOrganizationOptions?: boolean
 }) {
   const { isMobile } = useSidebar()
-  const router = useRouter()
 
   // Generate initials from name for avatar fallback
   const getInitials = (name: string) => {
@@ -101,25 +90,6 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <UserCircleIcon />
-                Account
-              </DropdownMenuItem>
-              {showOrganizationOptions && (
-                <>
-                  <DropdownMenuItem onClick={() => router.push("/switch-organization")}>
-                    <Building2Icon />
-                    Switch Organization
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/dashboard/bulk-upload")}>
-                    <UploadIcon />
-                    Bulk Upload
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOutIcon />

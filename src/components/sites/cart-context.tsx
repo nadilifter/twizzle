@@ -24,6 +24,8 @@ interface CartContextType {
   clearCart: () => void
   subtotal: number
   totalItems: number
+  getDependentItems: (id: string) => CartItem[]
+  removeItemWithDependents: (id: string) => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -93,6 +95,39 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("uplifter-cart")
   }
 
+  // Find items that depend on the given item (e.g., programs that require a membership)
+  const getDependentItems = (id: string): CartItem[] => {
+    const itemToCheck = items.find((item) => item.id === id)
+    if (!itemToCheck) return []
+
+    // If removing a membership, find programs that require it
+    if (itemToCheck.type === "membership") {
+      const membershipReferenceId = itemToCheck.referenceId
+      return items.filter(
+        (item) =>
+          item.type === "program" &&
+          item.details?.requiredMemberships?.includes(membershipReferenceId)
+      )
+    }
+
+    return []
+  }
+
+  // Remove an item and all items that depend on it
+  const removeItemWithDependents = (id: string) => {
+    const dependents = getDependentItems(id)
+    const idsToRemove = new Set([id, ...dependents.map((d) => d.id)])
+    
+    setItems((prev) => prev.filter((item) => !idsToRemove.has(item.id)))
+    
+    const count = idsToRemove.size
+    if (count > 1) {
+      toast.success(`${count} items removed from cart`)
+    } else {
+      toast.success("Item removed from cart")
+    }
+  }
+
   const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0)
   const totalItems = items.reduce((total, item) => total + item.quantity, 0)
 
@@ -108,6 +143,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         subtotal,
         totalItems,
+        getDependentItems,
+        removeItemWithDependents,
       }}
     >
       {children}

@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard } from "lucide-react"
+import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle } from "lucide-react"
 import { SubscriptionManager } from "./subscription-manager"
 import { getSubdomainUrl } from "@/lib/env-domains"
 
@@ -85,7 +85,14 @@ export default async function OrganizationDetailPage({ params }: Props) {
           plan: true
         }
       },
-      websiteConfig: true
+      websiteConfig: true,
+      organizationPaymentMethods: {
+        where: { isActive: true },
+        orderBy: [
+          { isDefault: "desc" },
+          { createdAt: "desc" },
+        ],
+      }
     }
   })
 
@@ -321,6 +328,81 @@ export default async function OrganizationDetailPage({ params }: Props) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Payment Methods (Adyen Integration) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            <CardTitle>Payment Methods</CardTitle>
+          </div>
+          <CardDescription>Stored payment methods for subscription billing</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {organization.organizationPaymentMethods.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No payment methods on file</p>
+          ) : (
+            <div className="space-y-3">
+              {organization.organizationPaymentMethods.map((method) => {
+                const isExpired = method.expiryMonth && method.expiryYear ? 
+                  new Date() > new Date(parseInt(method.expiryYear), parseInt(method.expiryMonth), 0) : false
+                const isExpiringSoon = method.expiryMonth && method.expiryYear ? (() => {
+                  const expiryDate = new Date(parseInt(method.expiryYear), parseInt(method.expiryMonth), 0)
+                  const twoMonthsFromNow = new Date()
+                  twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2)
+                  return !isExpired && expiryDate <= twoMonthsFromNow
+                })() : false
+
+                return (
+                  <div key={method.id} className={`flex items-center justify-between p-3 border rounded-lg ${
+                    isExpired ? "border-destructive/50 bg-destructive/5" : 
+                    isExpiringSoon ? "border-amber-500/50 bg-amber-500/5" : ""
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium capitalize">{method.brand || method.type}</span>
+                          <span className="text-muted-foreground">•••• {method.lastFour}</span>
+                          {method.isDefault && (
+                            <Badge variant="secondary" className="text-xs">Default</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {method.expiryMonth && method.expiryYear && (
+                            <span>Expires {method.expiryMonth}/{method.expiryYear.slice(-2)}</span>
+                          )}
+                          {method.holderName && (
+                            <>
+                              <span>•</span>
+                              <span>{method.holderName}</span>
+                            </>
+                          )}
+                        </div>
+                        {isExpired && (
+                          <div className="flex items-center gap-1 text-sm text-destructive mt-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            <span>Card expired - billing may fail</span>
+                          </div>
+                        )}
+                        {isExpiringSoon && !isExpired && (
+                          <div className="flex items-center gap-1 text-sm text-amber-600 mt-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            <span>Expiring soon</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Added {method.createdAt.toLocaleDateString()}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>

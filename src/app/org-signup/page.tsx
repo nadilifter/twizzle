@@ -8,6 +8,8 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { isValidPhoneNumber } from "react-phone-number-input"
 import {
   Card,
   CardContent,
@@ -224,8 +226,10 @@ export default function SignupPage() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.orgEmail)) {
       newErrors.orgEmail = "Please enter a valid email"
     }
-    if (!formData.phone.trim()) {
+    if (!formData.phone) {
       newErrors.phone = "Phone is required"
+    } else if (!isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = "Please enter a valid phone number"
     }
     if (!formData.country) {
       newErrors.country = "Country is required"
@@ -282,6 +286,23 @@ export default function SignupPage() {
       return
     }
 
+    // Check if the selected plan is paid (price > 0)
+    const selectedPlan = plans.find(p => p.id === formData.planId)
+    const isPaidPlan = selectedPlan && Number(selectedPlan.monthlyPrice) > 0
+
+    if (isPaidPlan) {
+      // Store form data in session storage and redirect to payment page
+      const signupData = {
+        ...formData,
+        planName: selectedPlan.name,
+        planPrice: selectedPlan.monthlyPrice,
+      }
+      sessionStorage.setItem("org-signup-data", JSON.stringify(signupData))
+      router.push("/org-signup/payment")
+      return
+    }
+
+    // For free plans, proceed directly with signup
     setIsLoading(true)
     try {
       const response = await fetch("/api/org-signup", {
@@ -297,7 +318,7 @@ export default function SignupPage() {
       }
 
       toast.success("Organization created successfully!")
-      router.push(`/success?subdomain=${formData.subdomain}&orgName=${encodeURIComponent(formData.orgName)}`)
+      router.push(`/org-signup/success?subdomain=${formData.subdomain}&orgName=${encodeURIComponent(formData.orgName)}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong")
     } finally {
@@ -433,15 +454,17 @@ export default function SignupPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="+1 (555) 123-4567"
+                  defaultCountry="US"
                   value={formData.phone}
-                  onChange={handleInputChange}
-                  className={errors.phone ? "border-destructive" : ""}
+                  onChange={(value) => {
+                    setFormData(prev => ({ ...prev, phone: value || "" }))
+                    if (errors.phone) {
+                      setErrors(prev => ({ ...prev, phone: "" }))
+                    }
+                  }}
+                  className={errors.phone ? "[&>input]:border-destructive" : ""}
                 />
                 {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
               </div>
@@ -668,7 +691,7 @@ export default function SignupPage() {
                 <CardTitle>Choose Your Plan</CardTitle>
               </div>
               <CardDescription>
-                All plans include a 30-day free trial. No credit card required.
+                All plans include a 30-day free trial. {plans.find(p => p.id === formData.planId && Number(p.monthlyPrice) > 0) ? "Credit card required for paid plans." : "No credit card required for free plans."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -754,21 +777,32 @@ export default function SignupPage() {
 
           {/* Submit Button */}
           <div className="flex justify-center">
-            <Button
-              type="submit"
-              size="lg"
-              disabled={isLoading || subdomainStatus === "checking"}
-              className="w-full sm:w-auto min-w-[200px]"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Organization...
-                </>
-              ) : (
-                "Create Organization"
-              )}
-            </Button>
+            {(() => {
+              const selectedPlan = plans.find(p => p.id === formData.planId)
+              const isPaidPlan = selectedPlan && Number(selectedPlan.monthlyPrice) > 0
+              return (
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isLoading || subdomainStatus === "checking"}
+                  className="w-full sm:w-auto min-w-[200px]"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isPaidPlan ? "Proceeding to Payment..." : "Creating Organization..."}
+                    </>
+                  ) : isPaidPlan ? (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Continue to Payment
+                    </>
+                  ) : (
+                    "Create Organization"
+                  )}
+                </Button>
+              )
+            })()}
           </div>
 
           <p className="text-center text-sm text-muted-foreground">

@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "./db";
+import { ROLE_PERMISSIONS } from "./permissions";
 import { getEnvConfig, getCurrentEnvironment, getSubdomainUrl } from "./env-domains";
 import { getAuthCookies } from "./auth-cookies";
 
@@ -129,15 +130,24 @@ export const authOptions: NextAuthOptions = {
               organizationName = "";
           }
 
+          const dbPermissions = user.permissions.map((p) => p.permission);
+          let permissions =
+            dbPermissions.length > 0
+              ? dbPermissions
+              : ROLE_PERMISSIONS[(user.role || "").toUpperCase()] ?? [];
+          if (user.isSuperAdmin && !permissions.includes("*")) {
+            permissions = ["*"];
+          }
+
           const returnedUser = {
             id: user.id,
             email: user.email,
             name: user.name,
             image: user.avatar,
-            role: user.role, 
-            organizationId: organizationId || "", 
+            role: user.role,
+            organizationId: organizationId || "",
             organizationName: organizationName || "",
-            permissions: user.permissions.map((p) => p.permission),
+            permissions,
             isSuperAdmin: user.isSuperAdmin,
           };
           console.log("Authorize returning user:", returnedUser.email, returnedUser.id);
@@ -279,8 +289,16 @@ export const authOptions: NextAuthOptions = {
             token.id = dbUser.id;
             token.role = dbUser.role;
             token.isSuperAdmin = dbUser.isSuperAdmin;
-            token.permissions = dbUser.permissions.map((p) => p.permission);
-            
+            const dbPermissions = dbUser.permissions.map((p) => p.permission);
+            let permissions =
+              dbPermissions.length > 0
+                ? dbPermissions
+                : ROLE_PERMISSIONS[(dbUser.role || "").toUpperCase()] ?? [];
+            if (dbUser.isSuperAdmin && !permissions.includes("*")) {
+              permissions = ["*"];
+            }
+            token.permissions = permissions;
+
             // Super admins don't need a specific organization - they can access all
             // But we can default to their saved org if they have one
             let organizationId = dbUser.organizationId;

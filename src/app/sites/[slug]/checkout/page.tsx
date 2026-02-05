@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useCart } from "@/components/sites/cart-context"
+import { useCart, CartItem } from "@/components/sites/cart-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,9 +14,10 @@ import { toast } from "sonner"
 import { useRouter, useParams } from "next/navigation"
 import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate"
 import { ReservationTimer } from "@/components/sites/reservation-timer"
+import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
-  const { items, subtotal, removeItem, clearCart } = useCart()
+  const { items, subtotal, removeItem, clearCart, getDependentItems, removeItemWithDependents } = useCart()
   const router = useRouter()
   const [formData, setFormData] = useState({
     firstName: "",
@@ -30,6 +31,40 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [discountCode, setDiscountCode] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(null)
+
+  // State for remove confirmation dialog
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
+  const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null)
+  const [dependentItems, setDependentItems] = useState<CartItem[]>([])
+
+  const handleRemoveClick = (item: CartItem) => {
+    const dependents = getDependentItems(item.id)
+    
+    if (dependents.length > 0) {
+      // Item has dependents, show confirmation dialog
+      setItemToRemove(item)
+      setDependentItems(dependents)
+      setRemoveDialogOpen(true)
+    } else {
+      // No dependents, remove directly
+      removeItem(item.id)
+    }
+  }
+
+  const handleConfirmRemove = () => {
+    if (itemToRemove) {
+      removeItemWithDependents(itemToRemove.id)
+    }
+    setRemoveDialogOpen(false)
+    setItemToRemove(null)
+    setDependentItems([])
+  }
+
+  const handleCancelRemove = () => {
+    setRemoveDialogOpen(false)
+    setItemToRemove(null)
+    setDependentItems([])
+  }
 
   // Queue gate - check if user has valid reservation
   const { isChecking, isAllowed, hasReservation, reservation } = useQueueGate(params.slug)
@@ -272,7 +307,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                             Qty: {item.quantity} 
                             {!paymentSession && (
                                 <button 
-                                    onClick={() => removeItem(item.id)}
+                                    onClick={() => handleRemoveClick(item)}
                                     className="ml-2 text-destructive hover:underline"
                                 >
                                     Remove
@@ -330,6 +365,16 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           organizationSlug={params.slug}
         />
       )}
+      
+      {/* Remove item confirmation dialog */}
+      <RemoveItemDialog
+        open={removeDialogOpen}
+        onOpenChange={setRemoveDialogOpen}
+        itemToRemove={itemToRemove}
+        dependentItems={dependentItems}
+        onCancel={handleCancelRemove}
+        onConfirmRemove={handleConfirmRemove}
+      />
     </div>
   )
 }

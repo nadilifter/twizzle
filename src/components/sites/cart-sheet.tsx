@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react"
@@ -14,16 +15,52 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { useCart } from "@/components/sites/cart-context"
+import { useCart, CartItem } from "@/components/sites/cart-context"
+import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
 
 export function CartSheet() {
-  const { items, isOpen, setIsOpen, updateQuantity, removeItem, subtotal } = useCart()
+  const { items, isOpen, setIsOpen, updateQuantity, removeItem, subtotal, getDependentItems, removeItemWithDependents } = useCart()
+  
+  // State for remove confirmation dialog
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
+  const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null)
+  const [dependentItems, setDependentItems] = useState<CartItem[]>([])
+
+  const handleRemoveClick = (item: CartItem) => {
+    const dependents = getDependentItems(item.id)
+    
+    if (dependents.length > 0) {
+      // Item has dependents, show confirmation dialog
+      setItemToRemove(item)
+      setDependentItems(dependents)
+      setRemoveDialogOpen(true)
+    } else {
+      // No dependents, remove directly
+      removeItem(item.id)
+    }
+  }
+
+  const handleConfirmRemove = () => {
+    if (itemToRemove) {
+      removeItemWithDependents(itemToRemove.id)
+    }
+    setRemoveDialogOpen(false)
+    setItemToRemove(null)
+    setDependentItems([])
+  }
+
+  const handleCancelRemove = () => {
+    setRemoveDialogOpen(false)
+    setItemToRemove(null)
+    setDependentItems([])
+  }
   const pathname = usePathname()
   
   // Extract slug from pathname (e.g., /sites/london-western/...)
   const slug = pathname?.split("/")[2]
 
   return (
+    <>
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="w-full sm:max-w-md flex flex-col">
         <SheetHeader>
@@ -85,7 +122,7 @@ export function CartSheet() {
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 ml-2 text-destructive hover:text-destructive"
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => handleRemoveClick(item)}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -126,5 +163,16 @@ export function CartSheet() {
         )}
       </SheetContent>
     </Sheet>
+    
+    {/* Remove item confirmation dialog */}
+    <RemoveItemDialog
+      open={removeDialogOpen}
+      onOpenChange={setRemoveDialogOpen}
+      itemToRemove={itemToRemove}
+      dependentItems={dependentItems}
+      onCancel={handleCancelRemove}
+      onConfirmRemove={handleConfirmRemove}
+    />
+    </>
   )
 }

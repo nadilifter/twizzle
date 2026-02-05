@@ -105,6 +105,9 @@ model Organization {
   
   // Levels
   levels                 Level[]
+  
+  // Organization Payment Methods (for SaaS subscription billing)
+  organizationPaymentMethods OrganizationPaymentMethod[]
 }
 
 model OrganizationMember {
@@ -2283,6 +2286,10 @@ model OrganizationSubscription {
   stripeCustomerId  String?
   stripeSubscriptionId String?
   
+  // Adyen Payment Info
+  adyenShopperReference    String?  @unique // Unique ID for this org in Adyen
+  adyenRecurringDetailRef  String?          // Primary payment method token ID
+  
   // Admin controls
   isLocked          Boolean  @default(false) // If true, org cannot change plan
   lockedReason      String?  // Why it's locked (shown to org admins)
@@ -2315,6 +2322,37 @@ enum SubscriptionStatus {
 enum BillingCycle {
   MONTHLY
   YEARLY
+}
+
+// Organization Payment Methods - for SaaS subscription billing via Adyen
+model OrganizationPaymentMethod {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  
+  // Adyen Token Info
+  storedPaymentMethodId String   @unique  // Token from Adyen (storedPaymentMethodId)
+  shopperReference      String            // Links to org's Adyen identity
+  
+  // Card Display Info (safe to store - no sensitive data)
+  type                  String            // "scheme", "sepadirectdebit", etc.
+  brand                 String?           // "visa", "mc", "amex"
+  lastFour              String            // Last 4 digits of card
+  expiryMonth           String?           // "03"
+  expiryYear            String?           // "2030"
+  holderName            String?           // Cardholder name
+  
+  // Status
+  isDefault             Boolean  @default(false)
+  isActive              Boolean  @default(true)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([shopperReference])
 }
 
 // ============================================

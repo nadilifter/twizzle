@@ -52,6 +52,9 @@ const signupSchema = z.object({
 
   // Plan
   planId: z.string().min(1, "Please select a plan"),
+  
+  // Adyen (optional - for paid plans)
+  adyenShopperReference: z.string().optional(),
 }).refine(
   (data) => isValidPostalCode(data.postalCode, data.country),
   { message: "Postal code must be a valid US ZIP or Canadian postal code", path: ["postalCode"] }
@@ -193,6 +196,11 @@ export async function POST(request: NextRequest) {
       })
 
       // 5. Create the subscription (trial)
+      // Generate the permanent Adyen shopper reference using the org ID
+      const adyenShopperRef = validatedData.adyenShopperReference 
+        ? `org-${organization.id}` // Convert temporary signup reference to permanent org reference
+        : null
+      
       await tx.organizationSubscription.create({
         data: {
           organizationId: organization.id,
@@ -202,6 +210,8 @@ export async function POST(request: NextRequest) {
           currentPeriodStart: now,
           currentPeriodEnd: trialEndsAt,
           trialEndsAt: trialEndsAt,
+          // Store Adyen reference if payment method was collected
+          adyenShopperReference: adyenShopperRef,
         },
       })
 
