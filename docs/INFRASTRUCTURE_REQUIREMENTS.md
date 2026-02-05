@@ -155,7 +155,7 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 | Environment | Assets Bucket | Documents Bucket |
 |-------------|---------------|------------------|
 | Production | `uplifter-assets-prod` | `uplifter-documents-prod` |
-| Staging | `uplifter-assets-staging` | `uplifter-documents-staging` |
+| Staging | `uplifter-gymnastics-assets` | `uplifter-gymnastics-docs` |
 | Development | `uplifter-assets-dev` | `uplifter-documents-dev` |
 
 **Note**: S3 bucket names must be globally unique. If these names are taken, provide alternatives.

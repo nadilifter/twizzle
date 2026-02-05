@@ -40,9 +40,9 @@ export const ENV_CONFIG: Record<Environment, EnvironmentConfig> = {
   staging: {
     baseDomain: 'upliftergymnastics.com',
     cookieDomain: '.upliftergymnastics.com',
-    s3Bucket: 'uplifter-assets-staging',
-    s3DocumentsBucket: 'uplifter-documents-staging',
-    cdnUrl: 'https://cdn.upliftergymnastics.com',
+    s3Bucket: 'uplifter-gymnastics-assets',
+    s3DocumentsBucket: 'uplifter-gymnastics-docs',
+    cdnUrl: 'https://assets.upliftergymnastics.com',
     useHttps: true,
     corsOrigins: [
       'https://upliftergymnastics.com',

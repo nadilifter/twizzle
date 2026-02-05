@@ -10,7 +10,7 @@ env:
   NODE_ENV: "production"
   APP_ENVIRONMENT: "staging"
   AWS_S3_REGION: "us-east-1"
-  AWS_S3_BUCKET: "uplifter-assets-staging"
+  USE_S3_STORAGE: "true"
   ADYEN_ENVIRONMENT: "TEST"
   TWILIO_ENVIRONMENT: "TEST"
 
@@ -56,8 +56,10 @@ externalServices:
     host: "staging-redis.xxxxxx.cache.amazonaws.com"
     port: 6379
   s3:
-    bucket: "uplifter-assets-staging"
+    assetsBucket: "uplifter-gymnastics-assets"
+    documentsBucket: "uplifter-gymnastics-docs"
     region: "us-east-1"
+    cdnUrl: "https://assets.upliftergymnastics.com"
 
 secrets:
   name: "uplifter-staging-secrets"

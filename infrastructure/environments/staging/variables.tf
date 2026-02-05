@@ -9,11 +9,11 @@ variable "aws_region" {
 variable "assets_bucket_name" {
   description = "Name of the S3 bucket for public assets"
   type        = string
-  default     = "uplifter-assets-staging"
+  default     = "uplifter-gymnastics-assets"
 }
 
 variable "documents_bucket_name" {
   description = "Name of the S3 bucket for private documents"
   type        = string
-  default     = "uplifter-documents-staging"
+  default     = "uplifter-gymnastics-docs"
 }

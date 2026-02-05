@@ -122,6 +122,13 @@ export async function uploadFile(
 ): Promise<string> {
   const client = getS3Client();
   const bucketName = getBucketName(bucket);
+  const config = getEnvConfig();
+
+  // Only set public-read ACL if there's no CDN (CloudFront handles public access)
+  // and the bucket is assets and isPublic is not explicitly false
+  const shouldSetPublicAcl = bucket === 'assets' 
+    && options.isPublic !== false 
+    && !config.cdnUrl;
 
   const command = new PutObjectCommand({
     Bucket: bucketName,
@@ -129,8 +136,8 @@ export async function uploadFile(
     Body: file,
     ContentType: options.contentType || 'application/octet-stream',
     CacheControl: options.cacheControl || (bucket === 'assets' ? 'public, max-age=31536000' : 'private, no-cache'),
-    // Set ACL for public assets in production
-    ...(bucket === 'assets' && options.isPublic !== false && {
+    // Set ACL only when not using CloudFront CDN
+    ...(shouldSetPublicAcl && {
       ACL: 'public-read',
     }),
     ...(options.metadata && { Metadata: options.metadata }),

@@ -52,7 +52,7 @@ This is **not** a public starter template and is **not** intended for general re
 * **UI System**: Shadcn UI + Tailwind CSS
 * **Database**: PostgreSQL 16 (RDS in cloud, Docker locally)
 * **Caching**: Redis (ElastiCache in cloud, Docker locally)
-* **Payments**: Adyen (primary), Stripe (future)
+* **Payments**: Adyen
 * **SMS**: Twilio
 * **Email**: Amazon SES (cloud), MailHog (local)
 * **Storage**: S3 (cloud), MinIO (local)
@@ -384,7 +384,7 @@ Set `ADYEN_ENVIRONMENT=TEST` for non-production environments.
 | Environment | Bucket | CDN |
 |-------------|--------|-----|
 | Production | uplifter-assets-prod | cdn.uplifterinc.com |
-| Staging | uplifter-assets-staging | cdn.upliftergymnastics.com |
+| Staging | uplifter-gymnastics-assets | assets.upliftergymnastics.com |
 | Development | uplifter-assets-dev | None |
 | Local | MinIO (localhost:9000) | None |
 
