@@ -109,6 +109,15 @@ export async function middleware(req: NextRequest) {
 
   // 2. Portal Routing
   
+  // Helper to get the login host based on environment
+  const getLoginHost = () => `login.${config.baseDomain}`;
+  
+  // Helper to get a subdomain host
+  const getSubdomainHost = (subdomain: string) => `${subdomain}.${config.baseDomain}`;
+  
+  // Get protocol based on environment
+  const protocol = config.useHttps ? 'https:' : 'http:';
+  
   // LOGIN PORTAL (login.{baseDomain}) -> /(auth)/*
   // In local dev, Google OAuth must go through localhost:3000 (Google's restriction)
   // The login form handles this by posting OAuth to localhost:3000, then session-bridge
@@ -129,15 +138,6 @@ export async function middleware(req: NextRequest) {
     url.pathname = newPath;
     return NextResponse.rewrite(url);
   }
-
-  // Helper to get the login host based on environment
-  const getLoginHost = () => `login.${config.baseDomain}`;
-  
-  // Helper to get a subdomain host
-  const getSubdomainHost = (subdomain: string) => `${subdomain}.${config.baseDomain}`;
-  
-  // Get protocol based on environment
-  const protocol = config.useHttps ? 'https:' : 'http:';
 
   // ADMIN PORTAL (admin.{baseDomain}) -> /dashboard
   if (currentHost === "admin") {
