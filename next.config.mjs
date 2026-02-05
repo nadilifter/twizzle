@@ -11,21 +11,25 @@ const ENV_CONFIG = {
     baseDomain: 'uplifterinc.com',
     useHttps: true,
     cdnDomain: 'cdn.uplifterinc.com',
+    s3Bucket: 'uplifter-assets-prod',
   },
   staging: {
     baseDomain: 'upliftergymnastics.com',
     useHttps: true,
-    cdnDomain: 'cdn.upliftergymnastics.com',
+    cdnDomain: 'assets.upliftergymnastics.com',
+    s3Bucket: 'uplifter-gymnastics-assets',
   },
   development: {
     baseDomain: 'uplifterdev.com',
     useHttps: true,
     cdnDomain: null,
+    s3Bucket: 'uplifter-assets-dev',
   },
   local: {
     baseDomain: 'uplifterinc.localhost:3000',
     useHttps: false,
     cdnDomain: null,
+    s3Bucket: 'local-assets',
   },
 };
 
@@ -90,6 +94,47 @@ const getImgSrcCsp = () => {
   return `img-src ${base}`;
 };
 
+// Build remote patterns for Next.js Image component
+const getImageRemotePatterns = () => {
+  const patterns = [];
+  
+  // Add patterns for all environments to support development/preview
+  Object.values(ENV_CONFIG).forEach(config => {
+    // CDN domain
+    if (config.cdnDomain) {
+      patterns.push({
+        protocol: 'https',
+        hostname: config.cdnDomain,
+        pathname: '/**',
+      });
+    }
+    
+    // S3 bucket (direct access pattern)
+    if (config.s3Bucket) {
+      patterns.push({
+        protocol: 'https',
+        hostname: `${config.s3Bucket}.s3.*.amazonaws.com`,
+        pathname: '/**',
+      });
+      patterns.push({
+        protocol: 'https',
+        hostname: `${config.s3Bucket}.s3.amazonaws.com`,
+        pathname: '/**',
+      });
+    }
+  });
+  
+  // Local MinIO for development
+  patterns.push({
+    protocol: 'http',
+    hostname: 'localhost',
+    port: '9000',
+    pathname: '/**',
+  });
+  
+  return patterns;
+};
+
 const nextConfig = {
   output: "standalone",
   // Skip TypeScript errors during build for staging deployment
@@ -100,6 +145,10 @@ const nextConfig = {
   eslint: {
     // Also skip ESLint errors during build
     ignoreDuringBuilds: true,
+  },
+  // Configure allowed remote image sources for Next.js Image component
+  images: {
+    remotePatterns: getImageRemotePatterns(),
   },
   // Improve local development performance
   onDemandEntries: {
