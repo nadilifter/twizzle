@@ -64,10 +64,6 @@ interface Level {
   isDefault: boolean
   createdAt: string
   updatedAt: string
-  _count: {
-    programs: number
-    skills: number
-  }
 }
 
 interface LevelFormData {
@@ -306,7 +302,7 @@ export default function LevelsPage() {
         <CardHeader>
           <CardTitle>All Levels</CardTitle>
           <CardDescription>
-            Levels can be assigned to programs and skills to organize your offerings
+            Levels are sorted from lowest to highest. Drag to reorder.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -351,8 +347,6 @@ export default function LevelsPage() {
                   <TableHead className="w-12"></TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="text-center">Programs</TableHead>
-                  <TableHead className="text-center">Skills</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -379,12 +373,6 @@ export default function LevelsPage() {
                     <TableCell className="text-muted-foreground max-w-xs truncate">
                       {level.description || "—"}
                     </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline">{level._count.programs}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline">{level._count.skills}</Badge>
-                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -398,7 +386,7 @@ export default function LevelsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => openDeleteDialog(level)}
-                          disabled={level._count.programs > 0 || level._count.skills > 0}
+                          
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
