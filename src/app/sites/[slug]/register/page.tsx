@@ -92,7 +92,7 @@ export default async function RegisterPage({ params }: { params: { slug: string 
 
     return (
         <QueueGateWrapper>
-            <div className="container mx-auto px-4 py-12">
+            <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
                 <h1 className="text-3xl font-bold mb-8 text-center">Registration</h1>
                 <p className="text-center text-muted-foreground max-w-2xl mx-auto mb-12">
                     Browse our available programs and find the perfect fit for you. 

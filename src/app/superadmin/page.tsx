@@ -72,8 +72,8 @@ export default async function AdminDashboardPage() {
                 <span className="text-muted-foreground ml-2">Hidden from Dashboard section.</span>
               </li>
               <li>
-                <span className="font-medium">Forms Section</span> (/dashboard/forms) - 
-                <span className="text-muted-foreground ml-2">Hidden from sidebar. Includes Surveys and Waivers.</span>
+                <span className="font-medium">Forms Section</span> (/dashboard/forms, /dashboard/forms/surveys, /dashboard/forms/waivers) - 
+                <span className="text-muted-foreground ml-2">Now visible in sidebar. Includes Surveys and Waivers.</span>
               </li>
               <li>
                 <span className="font-medium">Campaigns Section</span> (/campaigns) - 

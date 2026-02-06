@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { useRouter } from "next/navigation";
 import { useCart } from "@/components/sites/cart-context";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Clock, MapPin, ShoppingCart, CheckCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, ShoppingCart } from "lucide-react";
 
 interface Instance {
     id: string;
@@ -26,16 +25,31 @@ interface ProgramInstanceSelectorProps {
         perSessionPrice?: number;
     };
     subdomain: string;
+    /** If provided, this instance will be pre-selected */
+    highlightInstanceId?: string | null;
 }
 
 export function ProgramInstanceSelector({ 
     instances, 
     program,
-    subdomain 
+    subdomain,
+    highlightInstanceId,
 }: ProgramInstanceSelectorProps) {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const { addItem } = useCart();
-    const router = useRouter();
+    const { addItem, setIsOpen } = useCart();
+
+    // Pre-select the highlighted instance on mount
+    useEffect(() => {
+        if (highlightInstanceId) {
+            const instance = instances.find(i => i.id === highlightInstanceId);
+            if (instance) {
+                const isFull = instance.capacity !== undefined && instance.registrationCount >= instance.capacity;
+                if (!isFull) {
+                    setSelectedIds(new Set([highlightInstanceId]));
+                }
+            }
+        }
+    }, [highlightInstanceId, instances]);
 
     const toggleInstance = (id: string) => {
         const newSelected = new Set(selectedIds);
@@ -79,7 +93,8 @@ export function ProgramInstanceSelector({
             });
         });
 
-        router.push(`/sites/${subdomain}/checkout`);
+        // Open the cart sheet instead of navigating away
+        setIsOpen(true);
     };
 
     const totalPrice = selectedIds.size * (program.perSessionPrice || 0);
@@ -87,7 +102,7 @@ export function ProgramInstanceSelector({
     return (
         <div className="space-y-4">
             {/* Selection Controls */}
-            <div className="flex items-center justify-between pb-3 border-b">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
                 <div className="flex items-center gap-3">
                     <Button 
                         variant="outline" 
@@ -112,7 +127,7 @@ export function ProgramInstanceSelector({
             </div>
 
             {/* Instance List */}
-            <div className="divide-y max-h-[400px] overflow-y-auto">
+            <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
                 {instances.map((instance) => {
                     const isFull = instance.capacity !== undefined && instance.registrationCount >= instance.capacity;
                     const isSelected = selectedIds.has(instance.id);
@@ -122,7 +137,7 @@ export function ProgramInstanceSelector({
                         <div 
                             key={instance.id}
                             className={`flex items-center gap-4 py-3 px-2 rounded transition-colors ${
-                                isSelected ? 'bg-primary/5' : 'hover:bg-slate-50'
+                                isSelected ? 'bg-primary/5' : 'hover:bg-muted/50'
                             } ${isFull ? 'opacity-50' : 'cursor-pointer'}`}
                             onClick={() => !isFull && toggleInstance(instance.id)}
                         >
@@ -135,12 +150,12 @@ export function ProgramInstanceSelector({
                             
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-slate-400" />
-                                    <span className="font-medium text-slate-900">
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium text-foreground">
                                         {format(new Date(instance.date), "EEE, MMM d")}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-4 mt-1 text-sm text-slate-600">
+                                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                                     <div className="flex items-center gap-1">
                                         <Clock className="h-3.5 w-3.5" />
                                         {instance.startTime} - {instance.endTime}
@@ -156,13 +171,13 @@ export function ProgramInstanceSelector({
 
                             <div className="text-right shrink-0">
                                 {program.perSessionPrice && (
-                                    <div className="font-medium text-slate-900">
+                                    <div className="font-medium text-foreground">
                                         ${program.perSessionPrice}
                                     </div>
                                 )}
                                 {spotsLeft !== null && (
                                     <div className={`text-xs ${
-                                        isFull ? 'text-red-600' : spotsLeft <= 3 ? 'text-orange-600' : 'text-green-600'
+                                        isFull ? 'text-red-600 dark:text-red-400' : spotsLeft <= 3 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'
                                     }`}>
                                         {isFull ? 'Full' : `${spotsLeft} spots`}
                                     </div>
@@ -175,14 +190,14 @@ export function ProgramInstanceSelector({
 
             {/* Add to Cart Footer */}
             {selectedIds.size > 0 && (
-                <div className="sticky bottom-0 bg-white pt-4 border-t mt-4">
+                <div className="sticky bottom-0 bg-card pt-4 border-t border-border mt-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="text-sm text-slate-600">
+                            <div className="text-sm text-muted-foreground">
                                 {selectedIds.size} session{selectedIds.size !== 1 ? 's' : ''} selected
                             </div>
                             {program.perSessionPrice && (
-                                <div className="text-xl font-bold text-slate-900">
+                                <div className="text-xl font-bold text-foreground">
                                     ${totalPrice.toFixed(2)}
                                 </div>
                             )}

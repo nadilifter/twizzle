@@ -140,16 +140,16 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
   const [pendingCartAdd, setPendingCartAdd] = useState<{ tier?: MembershipTier; direct?: boolean } | null>(null);
 
-  // Get the program's direct price (when no tiers)
+  // Get the program's direct price (when no tiers) - defaults to 0 (free) if no price is set
   const directPrice = program.basePrice 
     ? (typeof program.basePrice === "string" ? parseFloat(program.basePrice) : program.basePrice)
     : program.perSessionPrice
     ? (typeof program.perSessionPrice === "string" ? parseFloat(program.perSessionPrice) : program.perSessionPrice)
-    : null;
+    : 0;
   
-  // Determine if this program can be added (has tiers OR has direct pricing)
+  // Determine if this program can be added (has tiers OR direct pricing including free)
   const hasTiers = membershipTiers.length > 0;
-  const canAddToCart = hasTiers ? !!selectedTierId : directPrice !== null;
+  const canAddToCart = hasTiers ? !!selectedTierId : true;
 
   const handleAddToCart = () => {
     if (hasTiers) {
@@ -167,8 +167,7 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
 
       addProgramToCart(tier);
     } else {
-      // Direct pricing program (no tiers)
-      if (directPrice === null) return;
+      // Direct pricing program (no tiers) - includes free programs
 
       // Check if there are required memberships
       if (requiredMemberships.length > 0) {
@@ -199,7 +198,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   };
 
   const addProgramDirectly = () => {
-    if (directPrice === null) return;
     addItem({
       referenceId: program.id,
       type: "program",
@@ -455,15 +453,13 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
                 <span className="text-sm font-medium">{membershipTiers[0].name}</span>
                 <span className="font-bold">{formatPrice(membershipTiers[0].price)}</span>
              </div>
-        ) : directPrice !== null ? (
+        ) : (
             <div className="flex items-center justify-between w-full">
                 <span className="text-sm font-medium">
-                  {program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee"}
+                  {directPrice === 0 ? "Free Program" : program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee"}
                 </span>
                 <span className="font-bold">{formatPrice(directPrice)}</span>
             </div>
-        ) : (
-            <div className="text-sm text-muted-foreground">Contact us for pricing</div>
         )}
 
         <Button

@@ -43,6 +43,7 @@ function SwitchOrgContent() {
 
   const orgId = searchParams.get("orgId")
   const orgName = searchParams.get("orgName")
+  const redirect = searchParams.get("redirect")
 
   useEffect(() => {
     async function switchOrg() {
@@ -66,8 +67,8 @@ function SwitchOrgContent() {
           organizationName: orgName,
         })
 
-        // Navigate to dashboard and refresh to pick up new session
-        router.push("/dashboard")
+        // Navigate to redirect target or dashboard, and refresh to pick up new session
+        router.push(redirect || "/dashboard")
         router.refresh()
       } catch (err) {
         console.error("Failed to switch organization:", err)

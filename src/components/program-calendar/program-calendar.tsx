@@ -25,6 +25,8 @@ export function ProgramCalendar({
   onEventClick,
   className,
   showHeader = true,
+  slug,
+  isPublic = false,
 }: ProgramCalendarProps) {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(initialDate || new Date());
@@ -52,9 +54,12 @@ export function ProgramCalendar({
         end = endOfDay(currentDate);
       }
 
-      const response = await fetch(
-        `/api/calendar/instances?start=${start.toISOString()}&end=${end.toISOString()}`
-      );
+      // Use public API when slug is provided, otherwise use the auth-protected endpoint
+      const apiUrl = slug
+        ? `/api/public/calendar/instances?slug=${encodeURIComponent(slug)}&start=${start.toISOString()}&end=${end.toISOString()}`
+        : `/api/calendar/instances?start=${start.toISOString()}&end=${end.toISOString()}`;
+
+      const response = await fetch(apiUrl);
 
       if (response.ok) {
         const data = await response.json();
@@ -66,7 +71,7 @@ export function ProgramCalendar({
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [currentDate, viewMode]);
+  }, [currentDate, viewMode, slug]);
 
   useEffect(() => {
     fetchEvents();
@@ -121,8 +126,9 @@ export function ProgramCalendar({
       events: visibleEvents,
       loading,
       onEventClick: handleEventClick,
+      isPublic,
     }),
-    [currentDate, viewMode, visibleEvents, loading, handleEventClick]
+    [currentDate, viewMode, visibleEvents, loading, handleEventClick, isPublic]
   );
 
   const renderView = () => {

@@ -280,7 +280,6 @@ const data = {
         },
       ],
     },
-    /*
     {
       title: "Forms",
       url: "/dashboard/forms",
@@ -295,7 +294,6 @@ const data = {
         },
       ],
     },
-    */
     /*
     {
       title: "Campaigns",

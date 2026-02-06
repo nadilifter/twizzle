@@ -73,7 +73,7 @@ interface EventCardProps {
  * Full event card for day view and mobile views
  */
 export function EventCard({ event, className }: EventCardProps) {
-  const { onEventClick } = useCalendarContext();
+  const { onEventClick, isPublic } = useCalendarContext();
   const isCancelled = event.status === "CANCELLED";
 
   return (
@@ -122,11 +122,13 @@ export function EventCard({ event, className }: EventCardProps) {
               <span className="truncate">{event.facilityName}</span>
             </span>
           )}
-          <span className="flex items-center gap-1">
-            <Users className="h-3 w-3 shrink-0" />
-            {event.registrationCount}
-            {event.capacity && `/${event.capacity}`}
-          </span>
+          {!isPublic && (
+            <span className="flex items-center gap-1">
+              <Users className="h-3 w-3 shrink-0" />
+              {event.registrationCount}
+              {event.capacity && `/${event.capacity}`}
+            </span>
+          )}
         </div>
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />

@@ -27,6 +27,10 @@ export interface ProgramCalendarProps {
   onEventClick?: (event: CalendarEvent) => void;
   className?: string;
   showHeader?: boolean;
+  /** When provided, fetches from the public API using this site slug instead of the auth-protected endpoint */
+  slug?: string;
+  /** When true, hides sensitive data like registration counts and attendance in the UI */
+  isPublic?: boolean;
 }
 
 export interface CalendarContextType {
@@ -37,4 +41,6 @@ export interface CalendarContextType {
   events: CalendarEvent[];
   loading: boolean;
   onEventClick: (event: CalendarEvent) => void;
+  /** Whether the calendar is in public mode (hides sensitive data) */
+  isPublic: boolean;
 }
