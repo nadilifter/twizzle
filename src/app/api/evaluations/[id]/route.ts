@@ -19,7 +19,7 @@ const skillRatingSchema = z.object({
 
 const updateEvaluationSchema = z.object({
   date: z.string().optional(),
-  level: z.string().optional(),
+  levelId: z.string().optional().nullable(),
   overallScore: z.number().min(0).max(10).optional(),
   status: evaluationStatusEnum.optional(),
   notes: z.string().optional().nullable(),
@@ -166,6 +166,7 @@ export async function GET(
         },
         template: {
           include: {
+            level: true,
             skills: {
               include: {
                 skill: true,
@@ -181,6 +182,7 @@ export async function GET(
             },
           },
         },
+        level: true,
         program: {
           select: {
             id: true,
@@ -367,13 +369,15 @@ export async function PUT(
             select: {
               id: true,
               name: true,
-              difficultyLevel: true,
+              levelId: true,
+              level: true,
               scoringType: true,
               pointScaleMin: true,
               pointScaleMax: true,
               pointScalePassThreshold: true,
             },
           },
+          level: true,
           program: {
             select: {
               id: true,
@@ -466,13 +470,15 @@ export async function PUT(
               select: {
                 id: true,
                 name: true,
-                difficultyLevel: true,
+                levelId: true,
+                level: true,
                 scoringType: true,
                 pointScaleMin: true,
                 pointScaleMax: true,
                 pointScalePassThreshold: true,
               },
             },
+            level: true,
             program: {
               select: {
                 id: true,

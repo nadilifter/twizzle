@@ -32,7 +32,8 @@ export async function GET(
           select: {
             id: true,
             name: true,
-            difficultyLevel: true,
+            levelId: true,
+            level: true,
             completionType: true,
             completionThreshold: true,
             skills: {
@@ -122,7 +123,8 @@ export async function PUT(
           select: {
             id: true,
             name: true,
-            difficultyLevel: true,
+            levelId: true,
+            level: true,
             completionType: true,
             completionThreshold: true,
           },

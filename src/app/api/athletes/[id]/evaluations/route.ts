@@ -70,9 +70,11 @@ export async function GET(
             select: {
               id: true,
               name: true,
-              difficultyLevel: true,
+              levelId: true,
+              level: true,
             },
           },
+          level: true,
           skillRatings: {
             include: {
               skill: true,

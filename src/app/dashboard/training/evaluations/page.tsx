@@ -61,25 +61,13 @@ import { format } from "date-fns"
 import { api } from "@/lib/api-client"
 import type { 
   Skill, 
-  SkillDifficulty, 
+  Level,
   EvaluationTemplateWithSkills,
   EvaluationWithRelations,
   EvaluationStatus,
   ScoringType,
   CompletionType,
 } from "@/types/evaluations"
-
-const difficultyColors: Record<SkillDifficulty, string> = {
-  BEGINNER: "bg-green-500/10 text-green-700 dark:text-green-400",
-  INTERMEDIATE: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  ADVANCED: "bg-red-500/10 text-red-700 dark:text-red-400",
-}
-
-const difficultyLabels: Record<SkillDifficulty, string> = {
-  BEGINNER: "Beginner",
-  INTERMEDIATE: "Intermediate",
-  ADVANCED: "Advanced",
-}
 
 const statusColors: Record<EvaluationStatus, string> = {
   PENDING: "bg-slate-500/10 text-slate-700 dark:text-slate-400",
@@ -102,14 +90,14 @@ const statusLabels: Record<EvaluationStatus, string> = {
 interface TemplateFormData {
   name: string
   description: string
-  difficultyLevel: SkillDifficulty
+  levelId: string
   minAge: string
   maxAge: string
   isActive: boolean
   skillIds: string[]
   // Auto-sync configuration
   autoSyncEnabled: boolean
-  autoSyncLevels: SkillDifficulty[]
+  autoSyncLevels: string[]
   autoSyncCategories: string[]
   // Scoring configuration
   scoringType: ScoringType
@@ -124,7 +112,7 @@ interface TemplateFormData {
 const initialFormData: TemplateFormData = {
   name: "",
   description: "",
-  difficultyLevel: "BEGINNER",
+  levelId: "",
   minAge: "",
   maxAge: "",
   isActive: true,
@@ -170,6 +158,9 @@ export default function EvaluationsPage() {
   // Skills for template form
   const [skills, setSkills] = useState<Skill[]>([])
   const [isLoadingSkills, setIsLoadingSkills] = useState(false)
+
+  // Levels for template form
+  const [levels, setLevels] = useState<Level[]>([])
   
   // Form state
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -234,6 +225,21 @@ export default function EvaluationsPage() {
     }
   }
 
+  // Fetch levels
+  const fetchLevels = async () => {
+    try {
+      const response = await api.get<{ data: Level[] }>("/api/levels")
+      setLevels(response.data)
+    } catch (error) {
+      console.error("Error fetching levels:", error)
+    }
+  }
+
+  // Load levels on mount
+  useEffect(() => {
+    fetchLevels()
+  }, [])
+
   useEffect(() => {
     if (activeTab === "templates") {
       const debounce = setTimeout(() => {
@@ -263,7 +269,7 @@ export default function EvaluationsPage() {
       await api.post("/api/evaluation-templates", {
         name: formData.name,
         description: formData.description || undefined,
-        difficultyLevel: formData.difficultyLevel,
+        levelId: formData.levelId || null,
         minAge: formData.minAge ? parseInt(formData.minAge) : undefined,
         maxAge: formData.maxAge ? parseInt(formData.maxAge) : undefined,
         isActive: formData.isActive,
@@ -313,7 +319,7 @@ export default function EvaluationsPage() {
       await api.put(`/api/evaluation-templates/${selectedTemplate.id}`, {
         name: formData.name,
         description: formData.description || null,
-        difficultyLevel: formData.difficultyLevel,
+        levelId: formData.levelId || null,
         minAge: formData.minAge ? parseInt(formData.minAge) : null,
         maxAge: formData.maxAge ? parseInt(formData.maxAge) : null,
         isActive: formData.isActive,
@@ -382,7 +388,7 @@ export default function EvaluationsPage() {
     setFormData({
       name: template.name,
       description: template.description || "",
-      difficultyLevel: template.difficultyLevel,
+      levelId: template.levelId || "",
       minAge: template.minAge?.toString() || "",
       maxAge: template.maxAge?.toString() || "",
       isActive: template.isActive,
@@ -528,9 +534,14 @@ export default function EvaluationsPage() {
                         <CardDescription>{getAgeRange(template)}</CardDescription>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap justify-end">
-                        <Badge className={difficultyColors[template.difficultyLevel]}>
-                          {difficultyLabels[template.difficultyLevel]}
-                        </Badge>
+                        {template.level && (
+                          <Badge 
+                            style={template.level.color ? { backgroundColor: `${template.level.color}20`, color: template.level.color } : undefined}
+                            variant={template.level.color ? "outline" : "secondary"}
+                          >
+                            {template.level.name}
+                          </Badge>
+                        )}
                         {!template.isActive && (
                           <Badge variant="outline">Inactive</Badge>
                         )}
@@ -642,7 +653,7 @@ export default function EvaluationsPage() {
                         {evaluation.athlete.name}
                       </TableCell>
                       <TableCell>
-                        {evaluation.template?.name || evaluation.level}
+                        {evaluation.template?.name || evaluation.level?.name || "—"}
                       </TableCell>
                       <TableCell>
                         {format(new Date(evaluation.date), "MMM d, yyyy")}
@@ -695,18 +706,21 @@ export default function EvaluationsPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="difficulty">Difficulty Level</Label>
+              <Label htmlFor="difficulty">Level</Label>
               <Select
-                value={formData.difficultyLevel}
-                onValueChange={(value) => setFormData({ ...formData, difficultyLevel: value as SkillDifficulty })}
+                value={formData.levelId || "none"}
+                onValueChange={(value) => setFormData({ ...formData, levelId: value === "none" ? "" : value })}
               >
                 <SelectTrigger id="difficulty">
-                  <SelectValue />
+                  <SelectValue placeholder="Select a level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BEGINNER">Beginner</SelectItem>
-                  <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-                  <SelectItem value="ADVANCED">Advanced</SelectItem>
+                  <SelectItem value="none">No level</SelectItem>
+                  {levels.map((level) => (
+                    <SelectItem key={level.id} value={level.id}>
+                      {level.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -863,23 +877,26 @@ export default function EvaluationsPage() {
               {formData.autoSyncEnabled && (
                 <>
                   <div className="grid gap-2">
-                    <Label>Difficulty Levels</Label>
+                    <Label>Levels</Label>
                     <div className="flex flex-wrap gap-2">
-                      {(["BEGINNER", "INTERMEDIATE", "ADVANCED"] as SkillDifficulty[]).map((level) => (
-                        <label key={level} className="flex items-center gap-2">
+                      {levels.map((level) => (
+                        <label key={level.id} className="flex items-center gap-2">
                           <Checkbox
-                            checked={formData.autoSyncLevels.includes(level)}
+                            checked={formData.autoSyncLevels.includes(level.id)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFormData({ ...formData, autoSyncLevels: [...formData.autoSyncLevels, level] })
+                                setFormData({ ...formData, autoSyncLevels: [...formData.autoSyncLevels, level.id] })
                               } else {
-                                setFormData({ ...formData, autoSyncLevels: formData.autoSyncLevels.filter((l) => l !== level) })
+                                setFormData({ ...formData, autoSyncLevels: formData.autoSyncLevels.filter((l) => l !== level.id) })
                               }
                             }}
                           />
-                          <span className="text-sm">{difficultyLabels[level]}</span>
+                          <span className="text-sm">{level.name}</span>
                         </label>
                       ))}
+                      {levels.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No levels available</p>
+                      )}
                     </div>
                   </div>
                   <div className="grid gap-2">
@@ -940,7 +957,7 @@ export default function EvaluationsPage() {
                             <div className="flex-1">
                               <div className="text-sm font-medium">{skill.name}</div>
                               <div className="text-xs text-muted-foreground">
-                                {difficultyLabels[skill.difficultyLevel]}
+                                {skill.skillLevel?.name || "No level"}
                               </div>
                             </div>
                           </label>
@@ -992,18 +1009,21 @@ export default function EvaluationsPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-difficulty">Difficulty Level</Label>
+              <Label htmlFor="edit-difficulty">Level</Label>
               <Select
-                value={formData.difficultyLevel}
-                onValueChange={(value) => setFormData({ ...formData, difficultyLevel: value as SkillDifficulty })}
+                value={formData.levelId || "none"}
+                onValueChange={(value) => setFormData({ ...formData, levelId: value === "none" ? "" : value })}
               >
                 <SelectTrigger id="edit-difficulty">
-                  <SelectValue />
+                  <SelectValue placeholder="Select a level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BEGINNER">Beginner</SelectItem>
-                  <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-                  <SelectItem value="ADVANCED">Advanced</SelectItem>
+                  <SelectItem value="none">No level</SelectItem>
+                  {levels.map((level) => (
+                    <SelectItem key={level.id} value={level.id}>
+                      {level.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1150,23 +1170,26 @@ export default function EvaluationsPage() {
               {formData.autoSyncEnabled && (
                 <>
                   <div className="grid gap-2">
-                    <Label>Difficulty Levels</Label>
+                    <Label>Levels</Label>
                     <div className="flex flex-wrap gap-2">
-                      {(["BEGINNER", "INTERMEDIATE", "ADVANCED"] as SkillDifficulty[]).map((level) => (
-                        <label key={level} className="flex items-center gap-2">
+                      {levels.map((level) => (
+                        <label key={level.id} className="flex items-center gap-2">
                           <Checkbox
-                            checked={formData.autoSyncLevels.includes(level)}
+                            checked={formData.autoSyncLevels.includes(level.id)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFormData({ ...formData, autoSyncLevels: [...formData.autoSyncLevels, level] })
+                                setFormData({ ...formData, autoSyncLevels: [...formData.autoSyncLevels, level.id] })
                               } else {
-                                setFormData({ ...formData, autoSyncLevels: formData.autoSyncLevels.filter((l) => l !== level) })
+                                setFormData({ ...formData, autoSyncLevels: formData.autoSyncLevels.filter((l) => l !== level.id) })
                               }
                             }}
                           />
-                          <span className="text-sm">{difficultyLabels[level]}</span>
+                          <span className="text-sm">{level.name}</span>
                         </label>
                       ))}
+                      {levels.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No levels available</p>
+                      )}
                     </div>
                   </div>
                   <div className="grid gap-2">
@@ -1220,7 +1243,7 @@ export default function EvaluationsPage() {
                             <div className="flex-1">
                               <div className="text-sm font-medium">{skill.name}</div>
                               <div className="text-xs text-muted-foreground">
-                                {difficultyLabels[skill.difficultyLevel]}
+                                {skill.skillLevel?.name || "No level"}
                               </div>
                             </div>
                           </label>

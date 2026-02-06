@@ -9,13 +9,7 @@ import { Trophy, Star, Target, Calendar } from "lucide-react"
 import { format } from "date-fns"
 import { api } from "@/lib/api-client"
 import { toast } from "sonner"
-import type { AthleteAchievementsResponse, SkillDifficulty } from "@/types/evaluations"
-
-const difficultyColors: Record<SkillDifficulty, string> = {
-  BEGINNER: "bg-green-500/10 text-green-700 dark:text-green-400",
-  INTERMEDIATE: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  ADVANCED: "bg-red-500/10 text-red-700 dark:text-red-400",
-}
+import type { AthleteAchievementsResponse } from "@/types/evaluations"
 
 interface AthleteAchievementsProps {
   athleteId: string
@@ -172,9 +166,15 @@ export function AthleteAchievements({
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <Badge className={`${difficultyColors[achievement.templateDifficulty]} text-xs`}>
-                      {achievement.templateDifficulty}
-                    </Badge>
+                    {achievement.templateLevel && (
+                      <Badge 
+                        className="text-xs"
+                        style={achievement.templateLevel.color ? { backgroundColor: `${achievement.templateLevel.color}20`, color: achievement.templateLevel.color } : undefined}
+                        variant={achievement.templateLevel.color ? "outline" : "secondary"}
+                      >
+                        {achievement.templateLevel.name}
+                      </Badge>
+                    )}
                     {achievement.earnedAt && (
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
@@ -226,9 +226,15 @@ export function AthleteAchievements({
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-2">
-                  <Badge className={`${difficultyColors[achievement.templateDifficulty]} text-xs`}>
-                    {achievement.templateDifficulty}
-                  </Badge>
+                  {achievement.templateLevel && (
+                    <Badge 
+                      className="text-xs"
+                      style={achievement.templateLevel.color ? { backgroundColor: `${achievement.templateLevel.color}20`, color: achievement.templateLevel.color } : undefined}
+                      variant={achievement.templateLevel.color ? "outline" : "secondary"}
+                    >
+                      {achievement.templateLevel.name}
+                    </Badge>
+                  )}
                   {achievement.progress && (
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">

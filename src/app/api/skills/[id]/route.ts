@@ -3,14 +3,12 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
-const skillDifficultyEnum = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
-
 const updateSkillSchema = z.object({
   name: z.string().min(1).optional(),
   category: z.string().min(1).optional(),
   level: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
-  difficultyLevel: skillDifficultyEnum.optional(),
+  levelId: z.string().optional().nullable(),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   videoUrl: z.string().url().optional().nullable(),

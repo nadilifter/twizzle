@@ -4,21 +4,20 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { syncTemplateSkills } from "@/lib/services/template-sync";
 
-const skillDifficultyEnum = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
 const scoringTypeEnum = z.enum(["PASS_FAIL", "POINT_SCALE"]);
 const completionTypeEnum = z.enum(["PERCENTAGE", "COUNT", "ALL"]);
 
 const createTemplateSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  difficultyLevel: skillDifficultyEnum.optional().default("BEGINNER"),
+  levelId: z.string().optional().nullable(),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   isActive: z.boolean().optional().default(true),
   
   // Auto-sync configuration
   autoSyncEnabled: z.boolean().optional().default(false),
-  autoSyncLevels: z.array(skillDifficultyEnum).optional().default([]),
+  autoSyncLevels: z.array(z.string()).optional().default([]),
   autoSyncCategories: z.array(z.string()).optional().default([]),
   
   // Scoring configuration
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
-    const difficultyLevel = searchParams.get("difficultyLevel");
+    const levelId = searchParams.get("levelId");
     const isActive = searchParams.get("isActive");
     const minAge = searchParams.get("minAge");
     const maxAge = searchParams.get("maxAge");
@@ -65,7 +64,7 @@ export async function GET(request: NextRequest) {
           { description: { contains: search, mode: "insensitive" as const } },
         ],
       }),
-      ...(difficultyLevel && { difficultyLevel: difficultyLevel as "BEGINNER" | "INTERMEDIATE" | "ADVANCED" }),
+      ...(levelId && { levelId }),
       ...(isActive !== null && isActive !== undefined && { isActive: isActive === "true" }),
       ...(scoringType && { scoringType: scoringType as "PASS_FAIL" | "POINT_SCALE" }),
       // Filter by program assignment
@@ -93,6 +92,7 @@ export async function GET(request: NextRequest) {
       db.evaluationTemplate.findMany({
         where,
         include: {
+          level: true,
           skills: {
             include: {
               skill: true,
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: [{ difficultyLevel: "asc" }, { name: "asc" }],
+        orderBy: [{ name: "asc" }],
         take: limit,
         skip: offset,
       }),
@@ -216,6 +216,7 @@ export async function POST(request: NextRequest) {
         }),
       },
       include: {
+        level: true,
         skills: {
           include: {
             skill: true,
@@ -255,6 +256,7 @@ export async function POST(request: NextRequest) {
       const updatedTemplate = await db.evaluationTemplate.findUnique({
         where: { id: template.id },
         include: {
+          level: true,
           skills: {
             include: {
               skill: true,

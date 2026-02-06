@@ -541,6 +541,8 @@ model Level {
   organization        Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   skills              Skill[]                   @relation("SkillLevel")
   programRequirements ProgramLevelRequirement[]
+  evaluations         Evaluation[]
+  evaluationTemplates EvaluationTemplate[]
 
   @@index([organizationId])
   @@index([order])
@@ -1250,8 +1252,7 @@ model Skill {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  // Difficulty and age targeting
-  difficultyLevel SkillDifficulty @default(BEGINNER)
+  // Age targeting
   minAge          Int? // Suggested minimum age
   maxAge          Int? // Suggested maximum age
   videoUrl        String? // Demo video URL
@@ -1271,28 +1272,22 @@ model Skill {
   @@index([levelId])
 }
 
-enum SkillDifficulty {
-  BEGINNER
-  INTERMEDIATE
-  ADVANCED
-}
-
 // Evaluation Templates - reusable groupings of skills for assessments
 model EvaluationTemplate {
-  id              String          @id @default(cuid())
-  name            String
-  description     String?         @db.Text
-  difficultyLevel SkillDifficulty @default(BEGINNER)
-  minAge          Int?
-  maxAge          Int?
-  isActive        Boolean         @default(true)
-  organizationId  String
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  description    String?  @db.Text
+  levelId        String? // FK to Level model
+  minAge         Int?
+  maxAge         Int?
+  isActive       Boolean  @default(true)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Auto-sync configuration
   autoSyncEnabled    Boolean  @default(false)
-  autoSyncLevels     String[] @default([]) // e.g., ["BEGINNER", "INTERMEDIATE"]
+  autoSyncLevels     String[] @default([]) // Level IDs for auto-sync filtering
   autoSyncCategories String[] @default([]) // e.g., ["Vault", "Bars"]
 
   // Scoring configuration
@@ -1307,12 +1302,14 @@ model EvaluationTemplate {
 
   // Relations
   organization     Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  level            Level?                      @relation(fields: [levelId], references: [id], onDelete: SetNull)
   skills           EvaluationTemplateSkill[]
   evaluations      Evaluation[]
   programTemplates ProgramEvaluationTemplate[]
   achievements     Achievement[]
 
   @@index([organizationId])
+  @@index([levelId])
 }
 
 // Junction table for skills in evaluation templates
@@ -1413,8 +1410,8 @@ model Evaluation {
   coachId      String
   templateId   String? // Optional link to evaluation template
   programId    String? // Optional link to program
+  levelId      String? // FK to Level model
   date         DateTime
-  level        String
   overallScore Decimal          @db.Decimal(3, 1)
   status       EvaluationStatus
   notes        String?          @db.Text
@@ -1426,6 +1423,7 @@ model Evaluation {
   coach               User                 @relation(fields: [coachId], references: [id])
   template            EvaluationTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
   program             Program?             @relation(fields: [programId], references: [id], onDelete: SetNull)
+  level               Level?               @relation(fields: [levelId], references: [id], onDelete: SetNull)
   skillRatings        EvaluationSkill[]
   athleteAchievements AthleteAchievement[]
 
@@ -1433,6 +1431,7 @@ model Evaluation {
   @@index([coachId])
   @@index([templateId])
   @@index([programId])
+  @@index([levelId])
 }
 
 enum EvaluationStatus {

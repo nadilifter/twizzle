@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              difficultyLevel: true,
+              levelId: true,
+              level: true,
               completionType: true,
               completionThreshold: true,
             },
@@ -121,7 +122,8 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            difficultyLevel: true,
+            levelId: true,
+            level: true,
             completionType: true,
             completionThreshold: true,
           },

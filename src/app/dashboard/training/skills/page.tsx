@@ -58,27 +58,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { api } from "@/lib/api-client"
-import type { Skill, SkillDifficulty } from "@/types/evaluations"
+import type { Skill, Level } from "@/types/evaluations"
 
 const DEFAULT_CATEGORIES = ["Floor", "Bars", "Beam", "Vault", "Trampoline", "General"]
-
-const difficultyColors: Record<SkillDifficulty, string> = {
-  BEGINNER: "bg-green-500/10 text-green-700 dark:text-green-400",
-  INTERMEDIATE: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  ADVANCED: "bg-red-500/10 text-red-700 dark:text-red-400",
-}
-
-const difficultyLabels: Record<SkillDifficulty, string> = {
-  BEGINNER: "Beginner",
-  INTERMEDIATE: "Intermediate",
-  ADVANCED: "Advanced",
-}
 
 interface SkillFormData {
   name: string
   category: string
   description: string
-  difficultyLevel: SkillDifficulty
+  levelId: string
   minAge: string
   maxAge: string
   videoUrl: string
@@ -89,7 +77,7 @@ const initialFormData: SkillFormData = {
   name: "",
   category: "",
   description: "",
-  difficultyLevel: "BEGINNER",
+  levelId: "",
   minAge: "",
   maxAge: "",
   videoUrl: "",
@@ -102,7 +90,8 @@ export default function SkillsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
-  const [difficultyFilter, setDifficultyFilter] = useState<SkillDifficulty | "">("")
+  const [levelFilter, setLevelFilter] = useState("")
+  const [levels, setLevels] = useState<Level[]>([])
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
   
   // Form state
@@ -122,7 +111,7 @@ export default function SkillsPage() {
       const params: Record<string, string> = {}
       if (search) params.search = search
       if (selectedCategory !== "All") params.category = selectedCategory
-      if (difficultyFilter) params.difficultyLevel = difficultyFilter
+      if (levelFilter) params.levelId = levelFilter
 
       const response = await api.get<{
         data: Skill[]
@@ -140,7 +129,20 @@ export default function SkillsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [search, selectedCategory, difficultyFilter])
+  }, [search, selectedCategory, levelFilter])
+
+  // Fetch levels
+  useEffect(() => {
+    async function loadLevels() {
+      try {
+        const response = await api.get<{ data: Level[] }>("/api/levels")
+        setLevels(response.data)
+      } catch (error) {
+        console.error("Error fetching levels:", error)
+      }
+    }
+    loadLevels()
+  }, [])
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -162,7 +164,7 @@ export default function SkillsPage() {
         name: formData.name,
         category: formData.category,
         description: formData.description || undefined,
-        difficultyLevel: formData.difficultyLevel,
+        levelId: formData.levelId || undefined,
         minAge: formData.minAge ? parseInt(formData.minAge) : undefined,
         maxAge: formData.maxAge ? parseInt(formData.maxAge) : undefined,
         videoUrl: formData.videoUrl || undefined,
@@ -194,7 +196,7 @@ export default function SkillsPage() {
         name: formData.name,
         category: formData.category,
         description: formData.description || null,
-        difficultyLevel: formData.difficultyLevel,
+        levelId: formData.levelId || null,
         minAge: formData.minAge ? parseInt(formData.minAge) : null,
         maxAge: formData.maxAge ? parseInt(formData.maxAge) : null,
         videoUrl: formData.videoUrl || null,
@@ -244,7 +246,7 @@ export default function SkillsPage() {
       name: skill.name,
       category: skill.category,
       description: skill.description || "",
-      difficultyLevel: skill.difficultyLevel,
+      levelId: skill.levelId || "",
       minAge: skill.minAge?.toString() || "",
       maxAge: skill.maxAge?.toString() || "",
       videoUrl: skill.videoUrl || "",
@@ -329,18 +331,19 @@ export default function SkillsPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="difficulty">Difficulty Level</Label>
+                <Label htmlFor="difficulty">Level</Label>
                 <Select
-                  value={formData.difficultyLevel}
-                  onValueChange={(value) => setFormData({ ...formData, difficultyLevel: value as SkillDifficulty })}
+                  value={formData.levelId || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, levelId: value === "none" ? "" : value })}
                 >
                   <SelectTrigger id="difficulty">
-                    <SelectValue />
+                    <SelectValue placeholder="Select a level" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BEGINNER">Beginner</SelectItem>
-                    <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-                    <SelectItem value="ADVANCED">Advanced</SelectItem>
+                    <SelectItem value="none">No level</SelectItem>
+                    {levels.map((level) => (
+                      <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -422,15 +425,15 @@ export default function SkillsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={difficultyFilter || "all"} onValueChange={(v) => setDifficultyFilter(v === "all" ? "" : v as SkillDifficulty)}>
+        <Select value={levelFilter || "all"} onValueChange={(v) => setLevelFilter(v === "all" ? "" : v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Levels" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Levels</SelectItem>
-            <SelectItem value="BEGINNER">Beginner</SelectItem>
-            <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-            <SelectItem value="ADVANCED">Advanced</SelectItem>
+            {levels.map((level) => (
+              <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <ToggleGroup
@@ -479,11 +482,11 @@ export default function SkillsPage() {
                 <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="font-semibold mb-2">No Skills Found</h3>
                 <p className="text-muted-foreground mb-4">
-                  {search || difficultyFilter
+                  {search || levelFilter
                     ? "Try adjusting your filters"
                     : "Get started by creating your first skill"}
                 </p>
-                {!search && !difficultyFilter && (
+                {!search && !levelFilter && (
                   <Button onClick={() => setIsCreateOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add New Skill
@@ -508,11 +511,15 @@ export default function SkillsPage() {
                       ) : (
                         <PlayCircle className="h-12 w-12 text-muted-foreground/50 group-hover:text-primary transition-colors" />
                       )}
-                      <Badge
-                        className={`absolute top-2 right-2 ${difficultyColors[skill.difficultyLevel]}`}
-                      >
-                        {difficultyLabels[skill.difficultyLevel]}
-                      </Badge>
+                      {skill.skillLevel && (
+                        <Badge
+                          className="absolute top-2 right-2"
+                          style={skill.skillLevel.color ? { backgroundColor: `${skill.skillLevel.color}20`, color: skill.skillLevel.color } : undefined}
+                          variant={skill.skillLevel.color ? "outline" : "secondary"}
+                        >
+                          {skill.skillLevel.name}
+                        </Badge>
+                      )}
                     </div>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
@@ -569,9 +576,16 @@ export default function SkillsPage() {
                         </TableCell>
                         <TableCell>{skill.category}</TableCell>
                         <TableCell>
-                          <Badge className={difficultyColors[skill.difficultyLevel]}>
-                            {difficultyLabels[skill.difficultyLevel]}
-                          </Badge>
+                          {skill.skillLevel ? (
+                            <Badge
+                              style={skill.skillLevel.color ? { backgroundColor: `${skill.skillLevel.color}20`, color: skill.skillLevel.color } : undefined}
+                              variant={skill.skillLevel.color ? "outline" : "secondary"}
+                            >
+                              {skill.skillLevel.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {getAgeRange(skill) || "—"}
@@ -619,7 +633,7 @@ export default function SkillsPage() {
               <SheetHeader>
                 <SheetTitle>{selectedSkill.name}</SheetTitle>
                 <SheetDescription>
-                  {selectedSkill.category} • {difficultyLabels[selectedSkill.difficultyLevel]}
+                  {selectedSkill.category}{selectedSkill.skillLevel ? ` • ${selectedSkill.skillLevel.name}` : ""}
                   {getAgeRange(selectedSkill) && ` • ${getAgeRange(selectedSkill)}`}
                 </SheetDescription>
               </SheetHeader>
@@ -715,18 +729,19 @@ export default function SkillsPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-difficulty">Difficulty Level</Label>
+              <Label htmlFor="edit-difficulty">Level</Label>
               <Select
-                value={formData.difficultyLevel}
-                onValueChange={(value) => setFormData({ ...formData, difficultyLevel: value as SkillDifficulty })}
+                value={formData.levelId || "none"}
+                onValueChange={(value) => setFormData({ ...formData, levelId: value === "none" ? "" : value })}
               >
                 <SelectTrigger id="edit-difficulty">
-                  <SelectValue />
+                  <SelectValue placeholder="Select a level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BEGINNER">Beginner</SelectItem>
-                  <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-                  <SelectItem value="ADVANCED">Advanced</SelectItem>
+                  <SelectItem value="none">No level</SelectItem>
+                  {levels.map((level) => (
+                    <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

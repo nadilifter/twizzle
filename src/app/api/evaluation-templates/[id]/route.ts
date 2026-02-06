@@ -4,21 +4,20 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { syncTemplateSkills } from "@/lib/services/template-sync";
 
-const skillDifficultyEnum = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
 const scoringTypeEnum = z.enum(["PASS_FAIL", "POINT_SCALE"]);
 const completionTypeEnum = z.enum(["PERCENTAGE", "COUNT", "ALL"]);
 
 const updateTemplateSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
-  difficultyLevel: skillDifficultyEnum.optional(),
+  levelId: z.string().optional().nullable(),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   isActive: z.boolean().optional(),
   
   // Auto-sync configuration
   autoSyncEnabled: z.boolean().optional(),
-  autoSyncLevels: z.array(skillDifficultyEnum).optional(),
+  autoSyncLevels: z.array(z.string()).optional(),
   autoSyncCategories: z.array(z.string()).optional(),
   
   // Scoring configuration
@@ -54,6 +53,7 @@ export async function GET(
         organizationId: session.user.organizationId,
       },
       include: {
+        level: true,
         skills: {
           include: {
             skill: true,
@@ -208,6 +208,7 @@ export async function PUT(
       return tx.evaluationTemplate.findUnique({
         where: { id },
         include: {
+          level: true,
           skills: {
             include: {
               skill: true,
@@ -253,6 +254,7 @@ export async function PUT(
       const updatedTemplate = await db.evaluationTemplate.findUnique({
         where: { id },
         include: {
+          level: true,
           skills: {
             include: {
               skill: true,

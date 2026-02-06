@@ -662,7 +662,7 @@ export default function CoachEvaluationsPage() {
                           <div>
                             <CardTitle className="text-sm font-medium">{sr.skill.name}</CardTitle>
                             <CardDescription className="text-xs">
-                              {sr.skill.category} • {sr.skill.difficultyLevel}
+                              {sr.skill.category}{sr.skill.skillLevel ? ` • ${sr.skill.skillLevel.name}` : ""}
                             </CardDescription>
                           </div>
                           {isPassing && (

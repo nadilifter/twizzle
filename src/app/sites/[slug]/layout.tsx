@@ -17,6 +17,8 @@ import { VisitorTracker } from "@/components/sites/visitor-tracker";
 import { CookieNotice } from "@/components/sites/cookie-notice";
 import { SiteStructuredData } from "@/components/sites/structured-data";
 import { getSubdomainUrl, getLoginUrl as getEnvLoginUrl } from "@/lib/env-domains";
+import { getAuthSession } from "@/lib/auth";
+import { MarketingUserMenu } from "@/components/sites/marketing-user-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -202,6 +204,30 @@ export default async function SiteLayout({
   // Get login URL for this tenant site
   const loginUrl = getLoginUrl(subdomain);
 
+  // Check if user has an active session (cookie is shared across subdomains)
+  const session = await getAuthSession();
+
+  // Determine if the logged-in user is an admin on any organization
+  let isAdmin = false;
+  if (session?.user) {
+    if (session.user.isSuperAdmin) {
+      isAdmin = true;
+    } else {
+      const adminMembership = await db.organizationMember.findFirst({
+        where: {
+          userId: session.user.id,
+          role: "ADMIN",
+          status: "ACTIVE",
+        },
+      });
+      isAdmin = !!adminMembership;
+    }
+  }
+
+  // Build portal URLs for the user menu
+  const adminUrl = getSubdomainUrl("admin");
+  const athleteUrl = getSubdomainUrl("athletes");
+
   const primaryColor = config.primaryColor || "#000000";
   const secondaryColor = config.secondaryColor || "#ffffff";
   
@@ -288,15 +314,31 @@ export default async function SiteLayout({
                 <div className="flex items-center gap-3 text-sm">
                     <MarketingAnnouncementBell organizationId={config.organizationId} />
                     <ThemeToggle />
-                    <Link 
-                        href="/signup" 
-                        className="text-foreground/80 hover:text-primary transition-colors font-medium"
-                    >
-                        Sign Up
-                    </Link>
-                    <Button asChild size="sm" className="text-sm font-medium">
-                        <Link href={loginUrl}>Login</Link>
-                    </Button>
+                    {session?.user ? (
+                        <MarketingUserMenu
+                            user={{
+                                name: session.user.name || session.user.email || "User",
+                                email: session.user.email || "",
+                                image: session.user.image,
+                            }}
+                            isAdmin={isAdmin}
+                            adminUrl={adminUrl}
+                            athleteUrl={athleteUrl}
+                            siteUrl={siteUrl}
+                        />
+                    ) : (
+                        <>
+                            <Link 
+                                href="/signup" 
+                                className="text-foreground/80 hover:text-primary transition-colors font-medium"
+                            >
+                                Sign Up
+                            </Link>
+                            <Button asChild size="sm" className="text-sm font-medium">
+                                <Link href={loginUrl}>Login</Link>
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
         </header>

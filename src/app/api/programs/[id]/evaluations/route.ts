@@ -71,10 +71,12 @@ export async function GET(
             select: {
               id: true,
               name: true,
-              difficultyLevel: true,
+              levelId: true,
+              level: true,
               scoringType: true,
             },
           },
+          level: true,
           skillRatings: {
             include: {
               skill: true,
@@ -238,12 +240,6 @@ export async function POST(
       const evaluations = [];
 
       for (const athleteId of athletesToCreate) {
-        // Get athlete level
-        const athlete = await tx.athlete.findUnique({
-          where: { id: athleteId },
-          select: { level: true },
-        });
-
         const evaluation = await tx.evaluation.create({
           data: {
             athleteId,
@@ -251,7 +247,7 @@ export async function POST(
             templateId: validatedData.templateId,
             programId,
             date: evaluationDate,
-            level: athlete?.level || null,
+            levelId: template.levelId || null,
             overallScore: 0,
             status: "PENDING",
             skillRatings: {

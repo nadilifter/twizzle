@@ -1,10 +1,23 @@
 // Skills and Evaluations Types
 
-export type SkillDifficulty = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 export type SkillAttemptStatus = "NOT_ATTEMPTED" | "ATTEMPTED" | "SUCCEEDED";
 export type EvaluationStatus = "PENDING" | "IN_PROGRESS" | "PASS" | "RETRY" | "EXCELLENT" | "SATISFACTORY";
 export type ScoringType = "PASS_FAIL" | "POINT_SCALE";
 export type CompletionType = "PERCENTAGE" | "COUNT" | "ALL";
+
+// ===== Levels =====
+
+export interface Level {
+  id: string;
+  organizationId: string;
+  name: string;
+  description: string | null;
+  order: number;
+  color: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ===== Skills =====
 
@@ -14,7 +27,7 @@ export interface Skill {
   category: string;
   level: string | null;
   description: string | null;
-  difficultyLevel: SkillDifficulty;
+  levelId: string | null;
   minAge: number | null;
   maxAge: number | null;
   videoUrl: string | null;
@@ -22,6 +35,7 @@ export interface Skill {
   organizationId: string;
   createdAt: string;
   updatedAt: string;
+  skillLevel?: Level | null;
 }
 
 export interface CreateSkillPayload {
@@ -29,7 +43,7 @@ export interface CreateSkillPayload {
   category: string;
   level?: string;
   description?: string;
-  difficultyLevel?: SkillDifficulty;
+  levelId?: string;
   minAge?: number;
   maxAge?: number;
   videoUrl?: string;
@@ -41,7 +55,7 @@ export interface UpdateSkillPayload {
   category?: string;
   level?: string;
   description?: string;
-  difficultyLevel?: SkillDifficulty;
+  levelId?: string | null;
   minAge?: number | null;
   maxAge?: number | null;
   videoUrl?: string | null;
@@ -60,7 +74,7 @@ export interface SkillsQueryParams {
   search?: string;
   category?: string;
   level?: string;
-  difficultyLevel?: SkillDifficulty;
+  levelId?: string;
   minAge?: number;
   maxAge?: number;
   limit?: number;
@@ -82,7 +96,7 @@ export interface EvaluationTemplate {
   id: string;
   name: string;
   description: string | null;
-  difficultyLevel: SkillDifficulty;
+  levelId: string | null;
   minAge: number | null;
   maxAge: number | null;
   isActive: boolean;
@@ -92,7 +106,7 @@ export interface EvaluationTemplate {
   
   // Auto-sync configuration
   autoSyncEnabled: boolean;
-  autoSyncLevels: SkillDifficulty[];
+  autoSyncLevels: string[];
   autoSyncCategories: string[];
   
   // Scoring configuration
@@ -104,6 +118,9 @@ export interface EvaluationTemplate {
   // Completion requirements
   completionType: CompletionType;
   completionThreshold: number;
+
+  // Level relation
+  level?: Level | null;
 }
 
 export interface ProgramEvaluationTemplate {
@@ -136,7 +153,8 @@ export interface AchievementWithTemplate extends Achievement {
   template: {
     id: string;
     name: string;
-    difficultyLevel: SkillDifficulty;
+    levelId: string | null;
+    level?: Level | null;
     completionType: CompletionType;
     completionThreshold: number;
   };
@@ -157,14 +175,14 @@ export interface EvaluationTemplateWithSkills extends EvaluationTemplate {
 export interface CreateEvaluationTemplatePayload {
   name: string;
   description?: string;
-  difficultyLevel?: SkillDifficulty;
+  levelId?: string;
   minAge?: number;
   maxAge?: number;
   isActive?: boolean;
   
   // Auto-sync configuration
   autoSyncEnabled?: boolean;
-  autoSyncLevels?: SkillDifficulty[];
+  autoSyncLevels?: string[];
   autoSyncCategories?: string[];
   
   // Scoring configuration
@@ -184,14 +202,14 @@ export interface CreateEvaluationTemplatePayload {
 export interface UpdateEvaluationTemplatePayload {
   name?: string;
   description?: string;
-  difficultyLevel?: SkillDifficulty;
+  levelId?: string | null;
   minAge?: number | null;
   maxAge?: number | null;
   isActive?: boolean;
   
   // Auto-sync configuration
   autoSyncEnabled?: boolean;
-  autoSyncLevels?: SkillDifficulty[];
+  autoSyncLevels?: string[];
   autoSyncCategories?: string[];
   
   // Scoring configuration
@@ -234,8 +252,8 @@ export interface Evaluation {
   coachId: string;
   templateId: string | null;
   programId: string | null;
+  levelId: string | null;
   date: string;
-  level: string;
   overallScore: number;
   status: EvaluationStatus;
   notes: string | null;
@@ -261,6 +279,7 @@ export interface EvaluationWithRelations extends Evaluation {
     name: string;
     level?: string;
   } | null;
+  level?: Level | null;
   skillRatings: EvaluationSkillRating[];
   athleteAchievements?: AthleteAchievement[];
   newAchievements?: { achievementId: string; achievementName: string }[];
@@ -271,7 +290,7 @@ export interface CreateEvaluationPayload {
   templateId?: string;
   programId?: string;
   date: string;
-  level?: string;
+  levelId?: string;
   overallScore?: number;
   status?: EvaluationStatus;
   notes?: string;
@@ -287,7 +306,7 @@ export interface CreateEvaluationPayload {
 
 export interface UpdateEvaluationPayload {
   date?: string;
-  level?: string;
+  levelId?: string | null;
   overallScore?: number;
   status?: EvaluationStatus;
   notes?: string;
@@ -404,7 +423,8 @@ export interface AthleteAchievementsResponse {
     badgeImageUrl: string | null;
     templateId: string;
     templateName: string;
-    templateDifficulty: SkillDifficulty;
+    templateLevelId: string | null;
+    templateLevel: Level | null;
     completionType: CompletionType;
     completionThreshold: number;
     earned: boolean;
@@ -475,7 +495,7 @@ export interface SyncResult {
 
 export interface SyncPreviewResponse {
   autoSyncEnabled: boolean;
-  autoSyncLevels: SkillDifficulty[];
+  autoSyncLevels: string[];
   autoSyncCategories: string[];
   preview: {
     totalMatching: number;
@@ -486,7 +506,7 @@ export interface SyncPreviewResponse {
       id: string;
       name: string;
       category: string;
-      difficultyLevel: SkillDifficulty;
+      levelId: string | null;
     }>;
   };
 }

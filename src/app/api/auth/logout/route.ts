@@ -194,15 +194,22 @@ export async function GET(req: NextRequest) {
   console.log(`Logout GET: Environment=${currentEnv}, CookieDomain=${cookieDomain}, Secure=${isSecure}`);
   console.log(`Logout GET: Request host=${req.headers.get("host")}`);
   
-  // Build the login URL
+  // Build the redirect URL: use ?redirectUrl query param if provided, otherwise default to login
   const protocol = config.useHttps ? 'https' : 'http';
-  const loginHost = `login.${config.baseDomain}`;
-  const loginUrl = `${protocol}://${loginHost}/login`;
+  const redirectParam = req.nextUrl.searchParams.get("redirectUrl");
+  let redirectUrl: string;
+  if (redirectParam) {
+    // Use the provided redirect URL (must be an absolute URL for safety)
+    redirectUrl = redirectParam.startsWith("http") ? redirectParam : `${protocol}://login.${config.baseDomain}/login`;
+  } else {
+    const loginHost = `login.${config.baseDomain}`;
+    redirectUrl = `${protocol}://${loginHost}/login`;
+  }
   
-  console.log(`Logout GET: Redirecting to ${loginUrl}`);
+  console.log(`Logout GET: Redirecting to ${redirectUrl}`);
   
   // Create redirect response
-  const response = NextResponse.redirect(loginUrl);
+  const response = NextResponse.redirect(redirectUrl);
   
   // Add all Set-Cookie headers to clear cookies
   const clearCookieHeaders = getClearCookieHeaders(cookieDomain, isSecure);

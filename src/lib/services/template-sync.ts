@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import type { SkillDifficulty } from "@prisma/client";
 
 /**
  * Template Auto-Sync Service
@@ -48,16 +47,16 @@ export async function syncTemplateSkills(templateId: string): Promise<SyncResult
   // Build the query for matching skills
   const whereClause: {
     organizationId: string;
-    difficultyLevel?: { in: SkillDifficulty[] };
+    levelId?: { in: string[] };
     category?: { in: string[] };
   } = {
     organizationId: template.organizationId,
   };
 
-  // Filter by difficulty levels if specified
+  // Filter by levels if specified (using Level IDs)
   if (template.autoSyncLevels.length > 0) {
-    whereClause.difficultyLevel = {
-      in: template.autoSyncLevels as SkillDifficulty[],
+    whereClause.levelId = {
+      in: template.autoSyncLevels,
     };
   }
 
@@ -74,7 +73,6 @@ export async function syncTemplateSkills(templateId: string): Promise<SyncResult
     select: { id: true },
     orderBy: [
       { category: "asc" },
-      { difficultyLevel: "asc" },
       { name: "asc" },
     ],
   });
@@ -165,7 +163,7 @@ export async function syncAllOrganizationTemplates(
  * Useful for previewing before enabling auto-sync.
  * 
  * @param organizationId - The organization ID
- * @param levels - Array of difficulty levels to include
+ * @param levels - Array of Level IDs to include
  * @param categories - Array of categories to include
  * @returns Count of matching skills
  */
@@ -173,18 +171,18 @@ export async function previewAutoSyncSkills(
   organizationId: string,
   levels: string[],
   categories: string[]
-): Promise<{ count: number; skills: Array<{ id: string; name: string; category: string; difficultyLevel: string }> }> {
+): Promise<{ count: number; skills: Array<{ id: string; name: string; category: string; levelId: string | null }> }> {
   const whereClause: {
     organizationId: string;
-    difficultyLevel?: { in: SkillDifficulty[] };
+    levelId?: { in: string[] };
     category?: { in: string[] };
   } = {
     organizationId,
   };
 
   if (levels.length > 0) {
-    whereClause.difficultyLevel = {
-      in: levels as SkillDifficulty[],
+    whereClause.levelId = {
+      in: levels,
     };
   }
 
@@ -200,11 +198,10 @@ export async function previewAutoSyncSkills(
       id: true,
       name: true,
       category: true,
-      difficultyLevel: true,
+      levelId: true,
     },
     orderBy: [
       { category: "asc" },
-      { difficultyLevel: "asc" },
       { name: "asc" },
     ],
   });

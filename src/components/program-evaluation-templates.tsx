@@ -44,20 +44,7 @@ import { api } from "@/lib/api-client"
 import type { 
   EvaluationTemplateWithSkills,
   ProgramEvaluationTemplate,
-  SkillDifficulty,
 } from "@/types/evaluations"
-
-const difficultyColors: Record<SkillDifficulty, string> = {
-  BEGINNER: "bg-green-500/10 text-green-700 dark:text-green-400",
-  INTERMEDIATE: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  ADVANCED: "bg-red-500/10 text-red-700 dark:text-red-400",
-}
-
-const difficultyLabels: Record<SkillDifficulty, string> = {
-  BEGINNER: "Beginner",
-  INTERMEDIATE: "Intermediate",
-  ADVANCED: "Advanced",
-}
 
 interface ProgramEvaluationTemplatesProps {
   programId: string
@@ -254,9 +241,15 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
                         <SelectItem key={template.id} value={template.id}>
                           <div className="flex items-center gap-2">
                             <span>{template.name}</span>
-                            <Badge className={`${difficultyColors[template.difficultyLevel]} text-xs`}>
-                              {difficultyLabels[template.difficultyLevel]}
-                            </Badge>
+                            {template.level && (
+                              <Badge 
+                                className="text-xs"
+                                style={template.level.color ? { backgroundColor: `${template.level.color}20`, color: template.level.color } : undefined}
+                                variant={template.level.color ? "outline" : "secondary"}
+                              >
+                                {template.level.name}
+                              </Badge>
+                            )}
                           </div>
                         </SelectItem>
                       ))}
@@ -320,9 +313,13 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
                       {assignment.template?.name || "Unknown Template"}
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-1">
-                      {assignment.template && (
-                        <Badge className={`${difficultyColors[assignment.template.difficultyLevel]} text-xs`}>
-                          {difficultyLabels[assignment.template.difficultyLevel]}
+                      {assignment.template?.level && (
+                        <Badge 
+                          className="text-xs"
+                          style={assignment.template.level.color ? { backgroundColor: `${assignment.template.level.color}20`, color: assignment.template.level.color } : undefined}
+                          variant={assignment.template.level.color ? "outline" : "secondary"}
+                        >
+                          {assignment.template.level.name}
                         </Badge>
                       )}
                       {assignment.isRequired && (

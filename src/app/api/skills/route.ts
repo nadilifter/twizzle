@@ -3,14 +3,12 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
-const skillDifficultyEnum = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
-
 const createSkillSchema = z.object({
   name: z.string().min(1, "Name is required"),
   category: z.string().min(1, "Category is required"),
   level: z.string().optional(),
   description: z.string().optional(),
-  difficultyLevel: skillDifficultyEnum.optional().default("BEGINNER"),
+  levelId: z.string().optional().nullable(),
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   videoUrl: z.string().url().optional().nullable(),
@@ -29,7 +27,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category");
     const level = searchParams.get("level");
-    const difficultyLevel = searchParams.get("difficultyLevel");
+    const levelId = searchParams.get("levelId");
     const minAge = searchParams.get("minAge");
     const maxAge = searchParams.get("maxAge");
     const limit = parseInt(searchParams.get("limit") || "100");
@@ -45,7 +43,7 @@ export async function GET(request: NextRequest) {
       }),
       ...(category && { category }),
       ...(level && { level }),
-      ...(difficultyLevel && { difficultyLevel: difficultyLevel as "BEGINNER" | "INTERMEDIATE" | "ADVANCED" }),
+      ...(levelId && { levelId }),
       // Filter skills appropriate for an athlete's age
       ...(minAge && {
         OR: [
@@ -64,7 +62,8 @@ export async function GET(request: NextRequest) {
     const [skills, total, categories] = await Promise.all([
       db.skill.findMany({
         where,
-        orderBy: [{ category: "asc" }, { difficultyLevel: "asc" }, { name: "asc" }],
+        orderBy: [{ category: "asc" }, { name: "asc" }],
+        include: { skillLevel: true },
         take: limit,
         skip: offset,
       }),

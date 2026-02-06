@@ -28,7 +28,6 @@ import { toast } from "sonner";
 import type { 
   AthleteSkillProgress as AthleteSkillProgressType,
   SkillAttemptStatus,
-  SkillDifficulty,
 } from "@/types/evaluations";
 
 interface Athlete {
@@ -71,17 +70,6 @@ const attemptStatusLabels: Record<SkillAttemptStatus, string> = {
   SUCCEEDED: "Mastered",
 };
 
-const difficultyColors: Record<SkillDifficulty, string> = {
-  BEGINNER: "bg-green-500/10 text-green-700 dark:text-green-400",
-  INTERMEDIATE: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  ADVANCED: "bg-red-500/10 text-red-700 dark:text-red-400",
-};
-
-const difficultyLabels: Record<SkillDifficulty, string> = {
-  BEGINNER: "Beginner",
-  INTERMEDIATE: "Intermediate",
-  ADVANCED: "Advanced",
-};
 
 export default function AthleteSkillsPage() {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
@@ -364,9 +352,14 @@ function SkillsGrid({
               </div>
               
               <div className="flex items-center gap-2 mb-3">
-                <Badge className={difficultyColors[sp.skill.difficultyLevel]}>
-                  {difficultyLabels[sp.skill.difficultyLevel]}
-                </Badge>
+                {sp.skill.skillLevel && (
+                  <Badge
+                    style={sp.skill.skillLevel.color ? { backgroundColor: `${sp.skill.skillLevel.color}20`, color: sp.skill.skillLevel.color } : undefined}
+                    variant={sp.skill.skillLevel.color ? "outline" : "secondary"}
+                  >
+                    {sp.skill.skillLevel.name}
+                  </Badge>
+                )}
                 <Badge variant="outline" className={attemptStatusColors[sp.bestStatus]}>
                   {attemptStatusLabels[sp.bestStatus]}
                 </Badge>

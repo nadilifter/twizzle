@@ -1650,52 +1650,52 @@ async function main() {
   // Org1 - Gymnastics skills organized by apparatus and difficulty
   const org1SkillsData = [
     // Floor - Beginner (ages 4-7)
-    { id: `${ORG1_ID}-skill-1`, name: "Forward Roll", category: "Floor", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "Start standing, tuck chin to chest, push off feet, roll smoothly onto back, and stand up. Key points: tight tuck, hands push floor, smooth momentum." },
-    { id: `${ORG1_ID}-skill-2`, name: "Backward Roll", category: "Floor", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "From standing, squat down, roll backward keeping chin tucked, push through hands by ears, stand up. Key points: hands by ears, push hard to clear head." },
-    { id: `${ORG1_ID}-skill-3`, name: "Cartwheel", category: "Floor", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Hand-hand-foot-foot pattern with straight legs passing through handstand position. Key points: straight legs, T-position arms, look at hands." },
-    { id: `${ORG1_ID}-skill-4`, name: "Handstand", category: "Floor", level: "Silver", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Kick up to inverted position with body in straight line from wrists to toes. Key points: tight core, shoulder shrug, look at hands." },
-    { id: `${ORG1_ID}-skill-5`, name: "Bridge", category: "Floor", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "Arched position with hands and feet on floor, stomach facing ceiling. Key points: push shoulders over hands, straight arms." },
+    { id: `${ORG1_ID}-skill-1`, name: "Forward Roll", category: "Floor", level: "Bronze", minAge: 4, maxAge: 8, description: "Start standing, tuck chin to chest, push off feet, roll smoothly onto back, and stand up. Key points: tight tuck, hands push floor, smooth momentum." },
+    { id: `${ORG1_ID}-skill-2`, name: "Backward Roll", category: "Floor", level: "Bronze", minAge: 4, maxAge: 8, description: "From standing, squat down, roll backward keeping chin tucked, push through hands by ears, stand up. Key points: hands by ears, push hard to clear head." },
+    { id: `${ORG1_ID}-skill-3`, name: "Cartwheel", category: "Floor", level: "Bronze", minAge: 5, maxAge: 10, description: "Hand-hand-foot-foot pattern with straight legs passing through handstand position. Key points: straight legs, T-position arms, look at hands." },
+    { id: `${ORG1_ID}-skill-4`, name: "Handstand", category: "Floor", level: "Silver", minAge: 5, maxAge: 10, description: "Kick up to inverted position with body in straight line from wrists to toes. Key points: tight core, shoulder shrug, look at hands." },
+    { id: `${ORG1_ID}-skill-5`, name: "Bridge", category: "Floor", level: "Bronze", minAge: 4, maxAge: 8, description: "Arched position with hands and feet on floor, stomach facing ceiling. Key points: push shoulders over hands, straight arms." },
     
     // Floor - Intermediate (ages 6-10)
-    { id: `${ORG1_ID}-skill-6`, name: "Round-off", category: "Floor", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 12, description: "Running entry, cartwheel with 1/4 turn to land with both feet together facing start direction. Key points: fast snap-down, arms by ears." },
-    { id: `${ORG1_ID}-skill-7`, name: "Back Walkover", category: "Floor", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 12, description: "Standing back arch through bridge, split legs, and stand up one leg at a time. Key points: controlled arch back, split legs." },
-    { id: `${ORG1_ID}-skill-8`, name: "Front Walkover", category: "Floor", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 12, description: "Standing forward through handstand with split legs, arch over to standing. Key points: strong lunge, split in handstand." },
+    { id: `${ORG1_ID}-skill-6`, name: "Round-off", category: "Floor", level: "Silver", minAge: 6, maxAge: 12, description: "Running entry, cartwheel with 1/4 turn to land with both feet together facing start direction. Key points: fast snap-down, arms by ears." },
+    { id: `${ORG1_ID}-skill-7`, name: "Back Walkover", category: "Floor", level: "Silver", minAge: 6, maxAge: 12, description: "Standing back arch through bridge, split legs, and stand up one leg at a time. Key points: controlled arch back, split legs." },
+    { id: `${ORG1_ID}-skill-8`, name: "Front Walkover", category: "Floor", level: "Silver", minAge: 6, maxAge: 12, description: "Standing forward through handstand with split legs, arch over to standing. Key points: strong lunge, split in handstand." },
     
     // Floor - Advanced (ages 8+)
-    { id: `${ORG1_ID}-skill-9`, name: "Back Handspring", category: "Floor", level: "Gold", difficultyLevel: "ADVANCED" as const, minAge: 8, maxAge: 18, description: "Jump backward through handstand, snap down to feet. Key points: sit back, big arm swing, tight arch." },
-    { id: `${ORG1_ID}-skill-10`, name: "Front Handspring", category: "Floor", level: "Gold", difficultyLevel: "ADVANCED" as const, minAge: 8, maxAge: 18, description: "Running hurdle to handstand with powerful push through shoulders, snap down to feet. Key points: block through shoulders, tight body." },
+    { id: `${ORG1_ID}-skill-9`, name: "Back Handspring", category: "Floor", level: "Gold", minAge: 8, maxAge: 18, description: "Jump backward through handstand, snap down to feet. Key points: sit back, big arm swing, tight arch." },
+    { id: `${ORG1_ID}-skill-10`, name: "Front Handspring", category: "Floor", level: "Gold", minAge: 8, maxAge: 18, description: "Running hurdle to handstand with powerful push through shoulders, snap down to feet. Key points: block through shoulders, tight body." },
     
     // Vault - Beginner
-    { id: `${ORG1_ID}-skill-11`, name: "Squat On", category: "Vault", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Run to springboard, jump to squat position on vault, stand, and jump off. Key points: strong punch off board, knees to chest." },
-    { id: `${ORG1_ID}-skill-12`, name: "Straddle Over", category: "Vault", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 6, maxAge: 12, description: "Run, punch off board, place hands on vault and straddle legs over, land on feet. Key points: straight arms, push through shoulders." },
+    { id: `${ORG1_ID}-skill-11`, name: "Squat On", category: "Vault", level: "Bronze", minAge: 5, maxAge: 10, description: "Run to springboard, jump to squat position on vault, stand, and jump off. Key points: strong punch off board, knees to chest." },
+    { id: `${ORG1_ID}-skill-12`, name: "Straddle Over", category: "Vault", level: "Bronze", minAge: 6, maxAge: 12, description: "Run, punch off board, place hands on vault and straddle legs over, land on feet. Key points: straight arms, push through shoulders." },
     
     // Vault - Intermediate/Advanced
-    { id: `${ORG1_ID}-skill-13`, name: "Handspring Vault", category: "Vault", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 8, maxAge: 18, description: "Run, punch off board, front handspring over vault table. Key points: block through shoulders, tight body, stick landing." },
+    { id: `${ORG1_ID}-skill-13`, name: "Handspring Vault", category: "Vault", level: "Silver", minAge: 8, maxAge: 18, description: "Run, punch off board, front handspring over vault table. Key points: block through shoulders, tight body, stick landing." },
     
     // Bars - Beginner
-    { id: `${ORG1_ID}-skill-14`, name: "Pullover", category: "Bars", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "From hang, pull body up and over bar to front support. Key points: pull close to bar, chin tucked, hips to bar." },
-    { id: `${ORG1_ID}-skill-15`, name: "Back Hip Circle", category: "Bars", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "From front support, fall backward around bar keeping hips close. Key points: hollow body, hips stay on bar." },
-    { id: `${ORG1_ID}-skill-16`, name: "Glide Swing", category: "Bars", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "From hang, extend body forward then pull legs in to swing under bar. Key points: extend legs forward, pike at end." },
+    { id: `${ORG1_ID}-skill-14`, name: "Pullover", category: "Bars", level: "Bronze", minAge: 5, maxAge: 10, description: "From hang, pull body up and over bar to front support. Key points: pull close to bar, chin tucked, hips to bar." },
+    { id: `${ORG1_ID}-skill-15`, name: "Back Hip Circle", category: "Bars", level: "Bronze", minAge: 5, maxAge: 10, description: "From front support, fall backward around bar keeping hips close. Key points: hollow body, hips stay on bar." },
+    { id: `${ORG1_ID}-skill-16`, name: "Glide Swing", category: "Bars", level: "Bronze", minAge: 5, maxAge: 10, description: "From hang, extend body forward then pull legs in to swing under bar. Key points: extend legs forward, pike at end." },
     
     // Bars - Intermediate
-    { id: `${ORG1_ID}-skill-17`, name: "Cast", category: "Bars", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 14, description: "From front support, push hips away from bar while maintaining hollow shape. Key points: push through shoulders, tight hollow body." },
-    { id: `${ORG1_ID}-skill-18`, name: "Kip", category: "Bars", level: "Gold", difficultyLevel: "ADVANCED" as const, minAge: 8, maxAge: 18, description: "From glide, bring toes to bar, then slide legs down bar while pulling to front support. Key points: toes to bar, aggressive pull." },
+    { id: `${ORG1_ID}-skill-17`, name: "Cast", category: "Bars", level: "Silver", minAge: 6, maxAge: 14, description: "From front support, push hips away from bar while maintaining hollow shape. Key points: push through shoulders, tight hollow body." },
+    { id: `${ORG1_ID}-skill-18`, name: "Kip", category: "Bars", level: "Gold", minAge: 8, maxAge: 18, description: "From glide, bring toes to bar, then slide legs down bar while pulling to front support. Key points: toes to bar, aggressive pull." },
     
     // Beam - Beginner
-    { id: `${ORG1_ID}-skill-19`, name: "Beam Walk", category: "Beam", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "Walk forward on beam with good posture, arms out for balance. Key points: eyes up, small steps, pointed toes." },
-    { id: `${ORG1_ID}-skill-20`, name: "Dip Walk", category: "Beam", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 8, description: "Walk with a plie (dip) on each step. Key points: deep plie, straight supporting leg, pointed toe." },
-    { id: `${ORG1_ID}-skill-21`, name: "Relevé Turns", category: "Beam", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Turn on balls of feet (relevé) with controlled rotation. Key points: high relevé, spot head, arms help balance." },
-    { id: `${ORG1_ID}-skill-22`, name: "Scale", category: "Beam", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 10, description: "Stand on one leg, other leg extended behind, torso parallel to beam. Key points: straight legs, square hips, arms extended." },
+    { id: `${ORG1_ID}-skill-19`, name: "Beam Walk", category: "Beam", level: "Bronze", minAge: 4, maxAge: 8, description: "Walk forward on beam with good posture, arms out for balance. Key points: eyes up, small steps, pointed toes." },
+    { id: `${ORG1_ID}-skill-20`, name: "Dip Walk", category: "Beam", level: "Bronze", minAge: 4, maxAge: 8, description: "Walk with a plie (dip) on each step. Key points: deep plie, straight supporting leg, pointed toe." },
+    { id: `${ORG1_ID}-skill-21`, name: "Relevé Turns", category: "Beam", level: "Bronze", minAge: 5, maxAge: 10, description: "Turn on balls of feet (relevé) with controlled rotation. Key points: high relevé, spot head, arms help balance." },
+    { id: `${ORG1_ID}-skill-22`, name: "Scale", category: "Beam", level: "Bronze", minAge: 5, maxAge: 10, description: "Stand on one leg, other leg extended behind, torso parallel to beam. Key points: straight legs, square hips, arms extended." },
     
     // Beam - Intermediate
-    { id: `${ORG1_ID}-skill-23`, name: "Cartwheel on Beam", category: "Beam", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 7, maxAge: 14, description: "Cartwheel performed on the balance beam with control. Key points: stay in line, control speed, look at hands." },
-    { id: `${ORG1_ID}-skill-24`, name: "Handstand on Beam", category: "Beam", level: "Silver", difficultyLevel: "INTERMEDIATE" as const, minAge: 7, maxAge: 14, description: "Controlled handstand on beam with proper alignment. Key points: controlled kick, tight body, balance through shoulders." },
+    { id: `${ORG1_ID}-skill-23`, name: "Cartwheel on Beam", category: "Beam", level: "Silver", minAge: 7, maxAge: 14, description: "Cartwheel performed on the balance beam with control. Key points: stay in line, control speed, look at hands." },
+    { id: `${ORG1_ID}-skill-24`, name: "Handstand on Beam", category: "Beam", level: "Silver", minAge: 7, maxAge: 14, description: "Controlled handstand on beam with proper alignment. Key points: controlled kick, tight body, balance through shoulders." },
     
     // General/Conditioning - Beginner
-    { id: `${ORG1_ID}-skill-25`, name: "Straddle Stretch", category: "General", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 18, description: "Seated straddle position with chest reaching toward floor. Key points: straight legs, pointed toes, flat back." },
-    { id: `${ORG1_ID}-skill-26`, name: "Pike Stretch", category: "General", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 4, maxAge: 18, description: "Seated pike position reaching for toes. Key points: straight legs, flexed feet, nose to knees." },
-    { id: `${ORG1_ID}-skill-27`, name: "Hollow Body Hold", category: "General", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 18, description: "Lying on back with arms overhead, lift shoulders and legs off ground maintaining curved spine. Key points: lower back pressed to floor, tight core." },
-    { id: `${ORG1_ID}-skill-28`, name: "Arch Body Hold", category: "General", level: "Bronze", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 18, description: "Lying face down, lift arms and legs off ground in arched position. Key points: squeeze glutes, lift chest, arms by ears." },
+    { id: `${ORG1_ID}-skill-25`, name: "Straddle Stretch", category: "General", level: "Bronze", minAge: 4, maxAge: 18, description: "Seated straddle position with chest reaching toward floor. Key points: straight legs, pointed toes, flat back." },
+    { id: `${ORG1_ID}-skill-26`, name: "Pike Stretch", category: "General", level: "Bronze", minAge: 4, maxAge: 18, description: "Seated pike position reaching for toes. Key points: straight legs, flexed feet, nose to knees." },
+    { id: `${ORG1_ID}-skill-27`, name: "Hollow Body Hold", category: "General", level: "Bronze", minAge: 5, maxAge: 18, description: "Lying on back with arms overhead, lift shoulders and legs off ground maintaining curved spine. Key points: lower back pressed to floor, tight core." },
+    { id: `${ORG1_ID}-skill-28`, name: "Arch Body Hold", category: "General", level: "Bronze", minAge: 5, maxAge: 18, description: "Lying face down, lift arms and legs off ground in arched position. Key points: squeeze glutes, lift chest, arms by ears." },
   ];
   
   for (const skill of org1SkillsData) {
@@ -1708,12 +1708,12 @@ async function main() {
   
   // Org2 - Multi-sport skills
   const org2SkillsData = [
-    { id: `${ORG2_ID}-skill-1`, name: "Dribbling", category: "Soccer", level: "Beginner", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 14, description: "Basic ball control while moving. Key points: soft touches, use both feet, keep ball close." },
-    { id: `${ORG2_ID}-skill-2`, name: "Passing", category: "Soccer", level: "Beginner", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 14, description: "Accurate short passes with inside of foot. Key points: plant foot beside ball, follow through toward target." },
-    { id: `${ORG2_ID}-skill-3`, name: "Layup", category: "Basketball", level: "Beginner", difficultyLevel: "BEGINNER" as const, minAge: 7, maxAge: 18, description: "Basic layup from both sides of the basket. Key points: two-step approach, knee up, soft touch on backboard." },
-    { id: `${ORG2_ID}-skill-4`, name: "Freestyle Stroke", category: "Swimming", level: "Beginner", difficultyLevel: "BEGINNER" as const, minAge: 5, maxAge: 18, description: "Proper freestyle technique with rhythmic breathing. Key points: high elbow recovery, bilateral breathing, flutter kick." },
-    { id: `${ORG2_ID}-skill-5`, name: "Shooting Form", category: "Basketball", level: "Intermediate", difficultyLevel: "INTERMEDIATE" as const, minAge: 8, maxAge: 18, description: "Proper shooting mechanics from mid-range. Key points: BEEF - Balance, Eyes, Elbow, Follow-through." },
-    { id: `${ORG2_ID}-skill-6`, name: "Backstroke", category: "Swimming", level: "Intermediate", difficultyLevel: "INTERMEDIATE" as const, minAge: 6, maxAge: 18, description: "Proper backstroke technique with rotation. Key points: pinky first entry, hip rotation, steady kick." },
+    { id: `${ORG2_ID}-skill-1`, name: "Dribbling", category: "Soccer", level: "Beginner", minAge: 5, maxAge: 14, description: "Basic ball control while moving. Key points: soft touches, use both feet, keep ball close." },
+    { id: `${ORG2_ID}-skill-2`, name: "Passing", category: "Soccer", level: "Beginner", minAge: 5, maxAge: 14, description: "Accurate short passes with inside of foot. Key points: plant foot beside ball, follow through toward target." },
+    { id: `${ORG2_ID}-skill-3`, name: "Layup", category: "Basketball", level: "Beginner", minAge: 7, maxAge: 18, description: "Basic layup from both sides of the basket. Key points: two-step approach, knee up, soft touch on backboard." },
+    { id: `${ORG2_ID}-skill-4`, name: "Freestyle Stroke", category: "Swimming", level: "Beginner", minAge: 5, maxAge: 18, description: "Proper freestyle technique with rhythmic breathing. Key points: high elbow recovery, bilateral breathing, flutter kick." },
+    { id: `${ORG2_ID}-skill-5`, name: "Shooting Form", category: "Basketball", level: "Intermediate", minAge: 8, maxAge: 18, description: "Proper shooting mechanics from mid-range. Key points: BEEF - Balance, Eyes, Elbow, Follow-through." },
+    { id: `${ORG2_ID}-skill-6`, name: "Backstroke", category: "Swimming", level: "Intermediate", minAge: 6, maxAge: 18, description: "Proper backstroke technique with rotation. Key points: pinky first entry, hip rotation, steady kick." },
   ];
   
   for (const skill of org2SkillsData) {
@@ -1737,7 +1737,7 @@ async function main() {
       id: `${ORG1_ID}-template-preschool`,
       name: "Preschool Basics",
       description: "Fundamental skills assessment for preschool-aged gymnasts (ages 4-5). Focus on body awareness, basic movements, and fun!",
-      difficultyLevel: "BEGINNER" as const,
+      levelId: `${ORG1_ID}-level-bronze`,
       minAge: 4,
       maxAge: 5,
       organizationId: ORG1_ID,
@@ -1757,7 +1757,7 @@ async function main() {
       id: `${ORG1_ID}-template-rec-level1`,
       name: "Recreational Level 1",
       description: "Entry-level recreational assessment covering basic skills across all apparatus (ages 5-7).",
-      difficultyLevel: "BEGINNER" as const,
+      levelId: `${ORG1_ID}-level-bronze`,
       minAge: 5,
       maxAge: 7,
       organizationId: ORG1_ID,
@@ -1777,7 +1777,7 @@ async function main() {
       id: `${ORG1_ID}-template-rec-level2`,
       name: "Recreational Level 2",
       description: "Intermediate recreational assessment with more challenging skills (ages 6-9).",
-      difficultyLevel: "INTERMEDIATE" as const,
+      levelId: `${ORG1_ID}-level-silver`,
       minAge: 6,
       maxAge: 9,
       organizationId: ORG1_ID,
@@ -1797,7 +1797,7 @@ async function main() {
       id: `${ORG1_ID}-template-preteam`,
       name: "Pre-Team Assessment",
       description: "Assessment to determine readiness for competitive team program (ages 7-10). Must demonstrate proficiency in intermediate skills.",
-      difficultyLevel: "INTERMEDIATE" as const,
+      levelId: `${ORG1_ID}-level-silver`,
       minAge: 7,
       maxAge: 10,
       organizationId: ORG1_ID,
@@ -1817,7 +1817,7 @@ async function main() {
       id: `${ORG1_ID}-template-jo-level3`,
       name: "JO Level 3 Readiness",
       description: "Assessment for USAG Junior Olympics Level 3 readiness (ages 8-12). Advanced beginner skills required.",
-      difficultyLevel: "ADVANCED" as const,
+      levelId: `${ORG1_ID}-level-gold`,
       minAge: 8,
       maxAge: 12,
       organizationId: ORG1_ID,
@@ -2020,7 +2020,7 @@ async function main() {
       templateId: `${ORG1_ID}-template-rec-level1`,
       programId: `${ORG1_ID}-prog-rec-bronze`, // Link to Bronze program
       date: daysAgo(14),
-      level: "Recreational Level 1",
+      levelId: `${ORG1_ID}-level-bronze`,
       overallScore: 7.5,
       status: "PASS",
       notes: "Emily is making great progress! Strong tumbling skills. Keep working on bar endurance.",
@@ -2058,7 +2058,7 @@ async function main() {
       templateId: `${ORG1_ID}-template-rec-level2`,
       programId: `${ORG1_ID}-prog-rec-silver`, // Link to Silver program
       date: daysAgo(21),
-      level: "Recreational Level 2",
+      levelId: `${ORG1_ID}-level-silver`,
       overallScore: 8.5,
       status: "EXCELLENT",
       notes: "Sophie is ready for pre-team evaluation! Excellent work ethic and technique.",
@@ -2096,7 +2096,7 @@ async function main() {
       templateId: `${ORG1_ID}-template-preteam`,
       programId: `${ORG1_ID}-prog-jo`, // Link to JO program
       date: daysAgo(45),
-      level: "Pre-Team",
+      levelId: `${ORG1_ID}-level-silver`,
       overallScore: 8.0,
       status: "PASS",
       notes: "Olivia has passed the pre-team assessment and is ready to join the JO team!",
@@ -2134,7 +2134,7 @@ async function main() {
       templateId: `${ORG1_ID}-template-rec-level1`,
       programId: `${ORG1_ID}-prog-rec-bronze`, // Link to Bronze program
       date: daysFromNow(7),
-      level: "Recreational Level 1",
+      levelId: `${ORG1_ID}-level-bronze`,
       overallScore: 0,
       status: "PENDING",
       notes: null,
@@ -2162,7 +2162,7 @@ async function main() {
       templateId: `${ORG1_ID}-template-preschool`,
       programId: `${ORG1_ID}-prog-preschool`, // Link to Preschool program
       date: daysAgo(7),
-      level: "Preschool Basics",
+      levelId: `${ORG1_ID}-level-preschool`,
       overallScore: 6.0,
       status: "SATISFACTORY",
       notes: "Hannah is doing great for her age! Very enthusiastic and always trying her best.",

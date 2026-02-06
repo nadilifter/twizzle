@@ -22,7 +22,7 @@ const createEvaluationSchema = z.object({
   templateId: z.string().optional(), // Optional - can create from template
   programId: z.string().optional(), // Optional - link to program
   date: z.string().min(1, "Date is required"),
-  level: z.string().optional(), // Optional if using template
+  levelId: z.string().optional(), // Optional if using template
   overallScore: z.number().min(0).max(10).optional().default(0),
   status: evaluationStatusEnum.optional().default("PENDING"),
   notes: z.string().optional(),
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
     const templateId = searchParams.get("templateId");
     const programId = searchParams.get("programId");
     const status = searchParams.get("status");
-    const level = searchParams.get("level");
+    const levelId = searchParams.get("levelId");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const limit = parseInt(searchParams.get("limit") || "50");
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
       ...(templateId && { templateId }),
       ...(programId && { programId }),
       ...(status && { status: status as "PENDING" | "IN_PROGRESS" | "PASS" | "RETRY" | "EXCELLENT" | "SATISFACTORY" }),
-      ...(level && { level }),
+      ...(levelId && { levelId }),
       ...(startDate && endDate && {
         date: {
           gte: new Date(startDate),
@@ -192,7 +192,8 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              difficultyLevel: true,
+              levelId: true,
+              level: true,
               scoringType: true,
               pointScaleMin: true,
               pointScaleMax: true,
@@ -201,6 +202,7 @@ export async function GET(request: NextRequest) {
               completionThreshold: true,
             },
           },
+          level: true,
           program: {
             select: {
               id: true,
@@ -318,7 +320,7 @@ export async function POST(request: NextRequest) {
 
     // If template provided, load template details
     let templateSkillIds: string[] = [];
-    let level = validatedData.level;
+    let levelId = validatedData.levelId;
     let scoringType: ScoringType = "PASS_FAIL";
     let pointScalePassThreshold = 7;
     
@@ -344,9 +346,9 @@ export async function POST(request: NextRequest) {
       scoringType = template.scoringType;
       pointScalePassThreshold = template.pointScalePassThreshold;
       
-      // Use template's difficulty level if level not provided
-      if (!level) {
-        level = template.difficultyLevel;
+      // Use template's level if level not provided
+      if (!levelId) {
+        levelId = template.levelId;
       }
     }
 
@@ -380,7 +382,7 @@ export async function POST(request: NextRequest) {
         templateId: validatedData.templateId,
         programId: validatedData.programId,
         date: new Date(validatedData.date),
-        level: level || athlete.level,
+        levelId: levelId || null,
         overallScore: validatedData.overallScore || 0,
         status: validatedData.status || "PENDING",
         notes: validatedData.notes,
@@ -412,29 +414,31 @@ export async function POST(request: NextRequest) {
           },
         },
         template: {
-          select: {
-            id: true,
-            name: true,
-            difficultyLevel: true,
-            scoringType: true,
-            pointScaleMin: true,
-            pointScaleMax: true,
-            pointScalePassThreshold: true,
+            select: {
+              id: true,
+              name: true,
+              levelId: true,
+              level: true,
+              scoringType: true,
+              pointScaleMin: true,
+              pointScaleMax: true,
+              pointScalePassThreshold: true,
+            },
+          },
+          level: true,
+          program: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          skillRatings: {
+            include: {
+              skill: true,
+            },
           },
         },
-        program: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        skillRatings: {
-          include: {
-            skill: true,
-          },
-        },
-      },
-    });
+      });
 
     // Update athlete skill progress for each skill rating (only if not PENDING)
     if (validatedData.status && validatedData.status !== "PENDING") {
@@ -479,13 +483,15 @@ export async function POST(request: NextRequest) {
                 select: {
                   id: true,
                   name: true,
-                  difficultyLevel: true,
+                  levelId: true,
+                  level: true,
                   scoringType: true,
                   pointScaleMin: true,
                   pointScaleMax: true,
                   pointScalePassThreshold: true,
                 },
               },
+              level: true,
               program: {
                 select: {
                   id: true,

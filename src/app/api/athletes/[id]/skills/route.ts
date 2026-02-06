@@ -16,7 +16,7 @@ export async function GET(
     const { id: athleteId } = await params;
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
-    const difficultyLevel = searchParams.get("difficultyLevel");
+    const levelId = searchParams.get("levelId");
 
     // Verify athlete belongs to organization
     const athlete = await db.athlete.findFirst({
@@ -45,14 +45,15 @@ export async function GET(
     const skillWhere = {
       organizationId: session.user.organizationId,
       ...(category && { category }),
-      ...(difficultyLevel && { difficultyLevel: difficultyLevel as "BEGINNER" | "INTERMEDIATE" | "ADVANCED" }),
+      ...(levelId && { levelId }),
     };
 
     // Get all skills and athlete's progress
     const [skills, progressRecords] = await Promise.all([
       db.skill.findMany({
         where: skillWhere,
-        orderBy: [{ category: "asc" }, { difficultyLevel: "asc" }, { name: "asc" }],
+        orderBy: [{ category: "asc" }, { name: "asc" }],
+        include: { skillLevel: true },
       }),
       db.athleteSkillProgress.findMany({
         where: {
