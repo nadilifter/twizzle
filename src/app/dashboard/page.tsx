@@ -1,6 +1,6 @@
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { SectionCards } from "@/components/section-cards"
-import { ProgramCalendar } from "@/components/dashboard/program-calendar"
+import { ChartAreaInteractive } from "@/components/chart-area-interactive";
+import { SectionCards } from "@/components/section-cards";
+import { ProgramCalendar } from "@/components/program-calendar";
 
 export default function Page() {
   return (

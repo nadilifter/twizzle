@@ -48,7 +48,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import {
+  getEventPillClasses,
+  getEventCardClasses,
+  getBadgeColorClasses,
+} from "@/components/program-calendar/color-utils";
 
 interface CalendarEvent {
   id: string;
@@ -88,6 +94,7 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedFacility, setSelectedFacility] = useState<string>("");
@@ -156,6 +163,7 @@ export default function CalendarPage() {
       console.error("Failed to fetch calendar events:", error);
     } finally {
       setLoading(false);
+      setInitialLoad(false);
     }
   }, [currentDate, viewMode, selectedFacility, selectedProgram, selectedStatus]);
 
@@ -274,14 +282,10 @@ export default function CalendarPage() {
           handleEventClick(event);
         }}
         className={cn(
-          "w-full text-left rounded px-1.5 py-0.5 text-xs font-medium truncate transition-all hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
-          isCancelled && "opacity-50 line-through"
+          getEventPillClasses(event.color, isCancelled),
+          "w-full text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
         )}
-        style={{
-          backgroundColor: `${event.color}20`,
-          color: event.color,
-          borderLeft: `3px solid ${event.color}`,
-        }}
+        title={`${event.title} - ${event.startTime} to ${event.endTime}`}
       >
         {compact ? event.startTime : `${event.startTime} ${event.title}`}
       </button>
@@ -295,11 +299,7 @@ export default function CalendarPage() {
       <div
         key={event.id}
         onClick={() => handleEventClick(event)}
-        className={cn(
-          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors",
-          isCancelled && "opacity-50"
-        )}
-        style={{ borderLeftColor: event.color, borderLeftWidth: 4 }}
+        className={getEventCardClasses(event.color, isCancelled)}
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -311,8 +311,7 @@ export default function CalendarPage() {
             {event.levelName && (
               <Badge
                 variant="outline"
-                className="text-xs shrink-0"
-                style={{ color: event.color, borderColor: event.color }}
+                className={getBadgeColorClasses(event.color)}
               >
                 {event.levelName}
               </Badge>
@@ -326,13 +325,13 @@ export default function CalendarPage() {
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3 shrink-0" />
               {event.startTime} - {event.endTime}
             </span>
             {event.facilityName && (
-              <span className="flex items-center gap-1 truncate">
+              <span className="flex items-center gap-1 truncate max-w-[150px]">
                 <MapPin className="h-3 w-3 shrink-0" />
                 <span className="truncate">{event.facilityName}</span>
               </span>
@@ -348,6 +347,46 @@ export default function CalendarPage() {
       </div>
     );
   };
+
+  // Deterministic pattern for skeleton event counts (avoids hydration mismatch)
+  const skeletonPattern = [2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 2, 2, 0, 1, 2, 0, 1, 0, 1, 0, 2, 1, 0, 2, 1];
+
+  const renderMonthSkeleton = () => (
+    <div className="flex flex-col h-full">
+      <div className="hidden md:grid grid-cols-7 border-b divide-x divide-border bg-muted/50">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <div key={day} className="px-2 py-2 text-center text-xs font-medium text-muted-foreground">
+            {day}
+          </div>
+        ))}
+      </div>
+      <div className="hidden md:grid grid-cols-7 flex-1 divide-x divide-border">
+        {skeletonPattern.map((eventCount, i) => (
+          <div key={i} className="min-h-[100px] border-b p-1.5">
+            <Skeleton className="w-6 h-6 rounded-full mb-1.5" />
+            <div className="space-y-1">
+              {Array.from({ length: eventCount }, (_, j) => (
+                <Skeleton key={j} className="h-5 w-full rounded" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="md:hidden p-3 space-y-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i}>
+            <div className="flex items-center gap-2 mb-2">
+              <Skeleton className="w-7 h-7 rounded-full" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+            <div className="space-y-2 pl-9">
+              <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-full p-4 md:p-6 gap-4">
@@ -502,8 +541,11 @@ export default function CalendarPage() {
         </CardHeader>
 
         <CardContent className="flex-1 p-0 overflow-hidden">
+          {/* Show skeleton on initial load */}
+          {initialLoad && renderMonthSkeleton()}
+
           {/* Month View */}
-          {viewMode === "month" && (
+          {!initialLoad && viewMode === "month" && (
             <div className="flex flex-col h-full">
               {/* Desktop Day Headers */}
               <div className="hidden md:grid grid-cols-7 border-b divide-x divide-border bg-muted/50">
@@ -616,7 +658,7 @@ export default function CalendarPage() {
           )}
 
           {/* Week View */}
-          {viewMode === "week" && (
+          {!initialLoad && viewMode === "week" && (
             <div className="flex flex-col h-full">
               {/* Desktop Week Headers */}
               <div className="hidden md:grid grid-cols-7 border-b divide-x divide-border bg-muted/50">
@@ -714,7 +756,7 @@ export default function CalendarPage() {
           )}
 
           {/* Day View */}
-          {viewMode === "day" && (
+          {!initialLoad && viewMode === "day" && (
             <ScrollArea className="h-full">
               <div className="p-4 space-y-2">
                 {getEventsForDay(currentDate).length === 0 ? (
