@@ -343,6 +343,16 @@ export default async function SiteLayout({
                     </a>
                 </div>
              </div>
+             <div className="mx-auto mt-4 text-center">
+                <a
+                    href="https://www.uplifterinc.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+                >
+                    Powered by Uplifter
+                </a>
+             </div>
         </footer>
         <VisitorTracker organizationId={config.organizationId} />
         <CookieNotice />

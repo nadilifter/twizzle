@@ -52,6 +52,14 @@ export default async function SignupsLayout({
       <footer className="relative z-10 border-t bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Uplifter Inc. All rights reserved.</p>
+          <a
+            href="https://www.uplifterinc.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground mt-1 inline-block"
+          >
+            Powered by Uplifter
+          </a>
         </div>
       </footer>
     </div>
