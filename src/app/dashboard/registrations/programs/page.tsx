@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search, Dumbbell, Settings, Loader2, AlertCircle, Pencil } from "lucide-react"
+import { Plus, Search, Dumbbell, Settings, Loader2, AlertCircle, CalendarDays } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -129,12 +129,12 @@ export default function ProgramsPage() {
               </CardContent>
               <CardFooter className="border-t pt-4 gap-2">
                 <Button variant="outline" className="flex-1" asChild>
-                  <Link href={`/dashboard/registrations/programs/${program.id}/edit`}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
+                  <Link href={`/dashboard/registrations/programs/${program.id}/sessions`}>
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {(program as any).recurrenceType === "NON_RECURRING" ? "View Session" : "View Sessions"}
                   </Link>
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleQuickConfigure(program)} title="Advanced Settings">
+                <Button variant="ghost" size="icon" onClick={() => handleQuickConfigure(program)} title="Configure">
                     <Settings className="h-4 w-4" />
                 </Button>
               </CardFooter>

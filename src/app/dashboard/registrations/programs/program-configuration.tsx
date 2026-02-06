@@ -1,26 +1,79 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Trash2, Save, Loader2, DollarSign, User, Star, AlertTriangle, Eye, EyeOff, Settings, Percent } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  User,
+  Star,
+  Users,
+  CreditCard,
+  MapPin,
+  Clock,
+  Repeat,
+  CalendarDays,
+  Info,
+} from "lucide-react"
 import { toast } from "sonner"
 import { usePrograms } from "@/hooks/use-programs"
 import { useStaff } from "@/hooks/use-staff"
 import { useMemberships } from "@/hooks/use-memberships"
 import type { ProgramStaffRole } from "@/types/staff"
+import { cn } from "@/lib/utils"
+import { RecurrencePicker, parseRRule } from "@/components/ui/recurrence-picker"
 
 interface ProgramConfigProps {
-  program: any 
+  program: any
   onClose: () => void
+}
+
+interface Level {
+  id: string
+  name: string
+  color: string | null
+  order: number
+}
+
+interface Facility {
+  id: string
+  name: string
+  street: string | null
+  city: string | null
+  stateProvince: string | null
+}
+
+interface MembershipInstance {
+  id: string
+  name: string
+  price: number
+  groupName: string
+}
+
+interface StaffAssignment {
+  staffProfileId: string
+  role: ProgramStaffRole
+  isPrimary: boolean
+  staffProfile?: {
+    id: string
+    user: {
+      name: string
+      avatar: string | null
+    }
+    title: string | null
+  }
 }
 
 const ROLE_LABELS: Record<ProgramStaffRole, string> = {
@@ -34,47 +87,60 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
   const { updateProgram, fetchPrograms } = usePrograms()
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
-  
+
   const [activeTab, setActiveTab] = useState("general")
   const [isSaving, setIsSaving] = useState(false)
-  const [isAddingTier, setIsAddingTier] = useState(false)
-  const [isDeletingTier, setIsDeletingTier] = useState<string | null>(null)
-  
-  // Local state for form fields
-  const [formData, setFormData] = useState({
+
+  // Levels state
+  const [levels, setLevels] = useState<Level[]>([])
+  const [loadingLevels, setLoadingLevels] = useState(true)
+
+  // Facilities state
+  const [facilities, setFacilities] = useState<Facility[]>([])
+  const [loadingFacilities, setLoadingFacilities] = useState(true)
+
+  // Form state - mirrors the stepper's ProgramFormData
+  const [formData, setFormData] = useState(() => ({
+    // General
     name: program.name || "",
     description: program.description || "",
-    level: program.level || "",
-    status: program.status || "ACTIVE",
-    // New fields
-    programType: program.programType || "SUBSCRIPTION",
-    pricingModel: program.pricingModel || "FLAT_RATE",
-    basePrice: program.basePrice ? Number(program.basePrice) : null,
-    perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
-    startDate: program.startDate ? new Date(program.startDate).toISOString().split('T')[0] : "",
-    endDate: program.endDate ? new Date(program.endDate).toISOString().split('T')[0] : "",
-    capacity: program.capacity || null,
-    levelId: program.levelId || null,
-    showLevelOnSite: program.showLevelOnSite ?? true,
+    recurrenceType: (program.recurrenceType || "RECURRING") as "NON_RECURRING" | "RECURRING",
+    registrationType: (program.registrationType || "ALL_INSTANCES") as "ALL_INSTANCES" | "PER_INSTANCE" | null,
+    price: (() => {
+      const isFlatRate = program.pricingModel === "FLAT_RATE"
+      const val = isFlatRate ? program.basePrice : program.perSessionPrice
+      return val != null ? Number(val) : null
+    })(),
+
+    // Schedule
+    startDate: program.startDate ? new Date(program.startDate).toISOString().split("T")[0] : "",
+    endDate: program.endDate ? new Date(program.endDate).toISOString().split("T")[0] : "",
+    startTime: program.startTime || "09:00",
+    duration: program.duration || 60,
+    facilityId: (program.facilityId || null) as string | null,
+    rrule: (program.rrule || null) as string | null,
+
+    // Requirements
+    hasLevelRestriction: program.hasLevelRestriction || false,
+    levelRequirementIds: (program.levelRequirements?.map((lr: any) => lr.levelId) || []) as string[],
+    hasCapacityRestriction: program.hasCapacityRestriction || false,
+    capacity: (program.capacity || null) as number | null,
+    hasAgeRestriction: program.hasAgeRestriction || false,
+    minAge: (program.minAge ?? null) as number | null,
+    maxAge: (program.maxAge ?? null) as number | null,
+    hasMembershipRestriction: program.hasMembershipRestriction || false,
+    membershipRequirementIds: (program.requiredMemberships?.map((m: any) => m.id) || []) as string[],
+
+    // Staff
+    staffAssignments: (program.staffAssignments?.map((sa: any) => ({
+      staffProfileId: sa.staffProfileId,
+      role: sa.role as ProgramStaffRole,
+      isPrimary: sa.isPrimary,
+      staffProfile: sa.staffProfile,
+    })) || []) as StaffAssignment[],
     showCoachOnSite: program.showCoachOnSite ?? true,
-  })
-  
-  // State for levels
-  const [levels, setLevels] = useState<any[]>([])
-  const [loadingLevels, setLoadingLevels] = useState(true)
-  
-  // State for bulk discounts
-  const [bulkDiscounts, setBulkDiscounts] = useState<any[]>(program.bulkDiscounts || [])
-  const [isAddingDiscount, setIsAddingDiscount] = useState(false)
-  const [isDeletingDiscount, setIsDeletingDiscount] = useState<string | null>(null)
-  const [newBulkDiscount, setNewBulkDiscount] = useState({
-    type: "FAMILY_SIBLING" as "FAMILY_SIBLING" | "MULTI_SESSION",
-    minQuantity: 2,
-    discountType: "PERCENTAGE" as "PERCENTAGE" | "FIXED_AMOUNT",
-    discountValue: 10,
-    description: "",
-  })
-  
+  }))
+
   // Fetch levels
   useEffect(() => {
     const fetchLevels = async () => {
@@ -93,295 +159,263 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     fetchLevels()
   }, [])
 
-  // State for membership tiers
-  const [tiers, setTiers] = useState<any[]>(program.membershipTiers || [])
-  const [newTier, setNewTier] = useState({
-    name: "",
-    price: "",
-    interval: "MONTHLY",
-  })
-  
-  // State for coaches
-  const [assignedStaff, setAssignedStaff] = useState<any[]>(program.staffAssignments || [])
-  const [isAddingStaff, setIsAddingStaff] = useState(false)
-  const [isDeletingStaff, setIsDeletingStaff] = useState<string | null>(null)
-  const [newStaffAssignment, setNewStaffAssignment] = useState({
-    staffProfileId: "",
-    role: "ASSISTANT_COACH" as ProgramStaffRole,
-    isPrimary: false,
-  })
-  
-  // State for requirements
-  const [requirements, setRequirements] = useState<any[]>(program.requiredMemberships || [])
-  const [isAddingRequirement, setIsAddingRequirement] = useState(false)
-  const [isDeletingRequirement, setIsDeletingRequirement] = useState<string | null>(null)
-  const [selectedMembershipInstance, setSelectedMembershipInstance] = useState("")
-  
-  // Flatten membership instances from groups
-  const allMembershipInstances = memberships?.flatMap(group => 
-    group.instances?.map((instance: any) => ({
-      ...instance,
-      groupName: group.name,
-    })) || []
-  ) || []
-  
-  // Filter out already required memberships
-  const availableMembershipInstances = allMembershipInstances.filter(
-    (instance: any) => !requirements.some(r => r.id === instance.id)
-  )
-  
-  // Filter out already assigned staff
-  const unassignedStaff = availableStaff?.filter(
-    s => !assignedStaff.some(a => a.staffProfile?.id === s.id || a.staffProfileId === s.id)
-  ) || []
+  // Fetch facilities
+  useEffect(() => {
+    const fetchFacilities = async () => {
+      try {
+        const response = await fetch("/api/organization/facilities")
+        if (response.ok) {
+          const data = await response.json()
+          setFacilities(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch facilities:", error)
+      } finally {
+        setLoadingFacilities(false)
+      }
+    }
+    fetchFacilities()
+  }, [])
 
+  // Flatten membership instances from groups
+  const allMembershipInstances = useMemo(() => {
+    return (
+      memberships?.flatMap((group) =>
+        group.instances?.map((instance: any) => ({
+          id: instance.id,
+          name: instance.name,
+          price: Number(instance.price),
+          groupName: group.name,
+        })) || []
+      ) || []
+    )
+  }, [memberships])
+
+  // Filter out already assigned staff
+  const unassignedStaff = useMemo(() => {
+    return (
+      availableStaff?.filter(
+        (s) => !formData.staffAssignments.some((a) => a.staffProfileId === s.id)
+      ) || []
+    )
+  }, [availableStaff, formData.staffAssignments])
+
+  // Staff handlers
+  const handleAddStaff = useCallback(
+    (staffProfileId: string) => {
+      const staff = availableStaff?.find((s) => s.id === staffProfileId)
+      if (!staff) return
+      setFormData((prev) => ({
+        ...prev,
+        staffAssignments: [
+          ...prev.staffAssignments,
+          {
+            staffProfileId: staff.id,
+            role: "ASSISTANT_COACH" as ProgramStaffRole,
+            isPrimary: prev.staffAssignments.length === 0,
+            staffProfile: {
+              id: staff.id,
+              user: {
+                name: staff.user?.name || "Unknown",
+                avatar: staff.user?.avatar || null,
+              },
+              title: staff.title || null,
+            },
+          },
+        ],
+      }))
+    },
+    [availableStaff]
+  )
+
+  const handleRemoveStaff = (staffProfileId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      staffAssignments: prev.staffAssignments.filter(
+        (a) => a.staffProfileId !== staffProfileId
+      ),
+    }))
+  }
+
+  const handleUpdateStaffRole = (staffProfileId: string, role: ProgramStaffRole) => {
+    setFormData((prev) => ({
+      ...prev,
+      staffAssignments: prev.staffAssignments.map((a) =>
+        a.staffProfileId === staffProfileId ? { ...a, role } : a
+      ),
+    }))
+  }
+
+  const handleSetPrimary = (staffProfileId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      staffAssignments: prev.staffAssignments.map((a) => ({
+        ...a,
+        isPrimary: a.staffProfileId === staffProfileId,
+      })),
+    }))
+  }
+
+  // --- Save handlers per tab ---
   const handleSaveGeneral = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Program name is required")
+      return
+    }
+    if (formData.price !== null && formData.price < 0) {
+      toast.error("Price cannot be negative")
+      return
+    }
+
     setIsSaving(true)
     try {
-      await updateProgram(program.id, formData)
-      toast.success("Program details updated")
+      const isFlatRate =
+        formData.recurrenceType === "RECURRING" &&
+        formData.registrationType === "ALL_INSTANCES"
+      const legacyProgramType =
+        formData.recurrenceType === "NON_RECURRING"
+          ? "SINGLE_INSTANCE"
+          : formData.registrationType === "PER_INSTANCE"
+            ? "DROP_IN"
+            : "SUBSCRIPTION"
+      const priceValue =
+        formData.price != null
+          ? Math.max(0, Math.round(formData.price * 100) / 100)
+          : null
+
+      await updateProgram(program.id, {
+        name: formData.name,
+        description: formData.description || undefined,
+        programType: legacyProgramType as any,
+        recurrenceType: formData.recurrenceType as any,
+        registrationType:
+          formData.recurrenceType === "RECURRING"
+            ? (formData.registrationType as any)
+            : null,
+        pricingModel: isFlatRate ? ("FLAT_RATE" as any) : ("PER_SESSION" as any),
+        basePrice: isFlatRate ? priceValue : null,
+        perSessionPrice: !isFlatRate ? priceValue : null,
+      })
+      toast.success("General settings saved")
+      fetchPrograms()
     } catch (error) {
-      toast.error("Failed to update program")
+      toast.error("Failed to save general settings")
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleAddTier = async () => {
-    if (!newTier.name || !newTier.price) {
-        toast.error("Name and Price are required")
+  const handleSaveSchedule = async () => {
+    if (!formData.startDate) {
+      toast.error("Start date is required")
+      return
+    }
+    if (formData.recurrenceType === "RECURRING" && !formData.endDate) {
+      toast.error("End date is required for recurring programs")
+      return
+    }
+    if (!formData.startTime) {
+      toast.error("Start time is required")
+      return
+    }
+    if (!formData.duration || formData.duration < 1) {
+      toast.error("Duration must be at least 1 minute")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await updateProgram(program.id, {
+        startDate: formData.startDate || null,
+        endDate: formData.endDate || null,
+        startTime: formData.startTime,
+        duration: formData.duration,
+        facilityId: formData.facilityId,
+        rrule: formData.rrule,
+      } as any)
+      toast.success("Schedule saved")
+      fetchPrograms()
+    } catch (error) {
+      toast.error("Failed to save schedule")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSaveRequirements = async () => {
+    if (
+      formData.hasCapacityRestriction &&
+      (!formData.capacity || formData.capacity < 1)
+    ) {
+      toast.error("Capacity must be at least 1 when enabled")
+      return
+    }
+    if (formData.hasAgeRestriction) {
+      if (formData.minAge === null && formData.maxAge === null) {
+        toast.error("At least one age value is required when age restriction is enabled")
         return
+      }
+      if (formData.minAge !== null && formData.maxAge !== null && formData.minAge > formData.maxAge) {
+        toast.error("Minimum age cannot be greater than maximum age")
+        return
+      }
     }
-
-    setIsAddingTier(true)
-    try {
-        const response = await fetch(`/api/programs/${program.id}/tiers`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newTier)
-        })
-
-        if (!response.ok) throw new Error("Failed to add tier")
-        
-        const addedTier = await response.json()
-        setTiers([...tiers, addedTier])
-        setNewTier({ name: "", price: "", interval: "MONTHLY" })
-        toast.success("Membership option added")
-        
-        // Refresh parent list silently to keep sync
-        fetchPrograms()
-    } catch (error) {
-        console.error(error)
-        toast.error("Failed to add membership option")
-    } finally {
-        setIsAddingTier(false)
+    if (formData.hasLevelRestriction && formData.levelRequirementIds.length === 0) {
+      toast.error("Select at least one level when level restriction is enabled")
+      return
     }
-  }
-
-  const handleRemoveTier = async (id: string) => {
-    setIsDeletingTier(id)
-    try {
-        const response = await fetch(`/api/programs/${program.id}/tiers/${id}`, {
-            method: "DELETE",
-        })
-
-        if (!response.ok) throw new Error("Failed to delete tier")
-        
-        setTiers(tiers.filter(t => t.id !== id))
-        toast.success("Membership option removed")
-        fetchPrograms()
-    } catch (error) {
-        console.error(error)
-        toast.error("Failed to remove option")
-    } finally {
-        setIsDeletingTier(null)
-    }
-  }
-  
-  // Staff/Coach handlers
-  const handleAddStaff = async () => {
-    if (!newStaffAssignment.staffProfileId) {
-      toast.error("Please select a staff member")
+    if (formData.hasMembershipRestriction && formData.membershipRequirementIds.length === 0) {
+      toast.error("Select at least one membership when membership restriction is enabled")
       return
     }
 
-    setIsAddingStaff(true)
+    setIsSaving(true)
     try {
-      const response = await fetch(`/api/programs/${program.id}/staff`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newStaffAssignment),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to add coach")
-      }
-
-      const addedStaff = await response.json()
-      setAssignedStaff([...assignedStaff, addedStaff])
-      setNewStaffAssignment({ staffProfileId: "", role: "ASSISTANT_COACH", isPrimary: false })
-      toast.success("Coach added to program")
-      fetchPrograms()
-    } catch (error: any) {
-      console.error(error)
-      toast.error(error.message || "Failed to add coach")
-    } finally {
-      setIsAddingStaff(false)
-    }
-  }
-
-  const handleRemoveStaff = async (assignmentId: string) => {
-    setIsDeletingStaff(assignmentId)
-    try {
-      const response = await fetch(`/api/programs/${program.id}/staff/${assignmentId}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) throw new Error("Failed to remove coach")
-
-      setAssignedStaff(assignedStaff.filter(a => a.id !== assignmentId))
-      toast.success("Coach removed from program")
+      await updateProgram(program.id, {
+        hasLevelRestriction: formData.hasLevelRestriction,
+        levelRequirementIds: formData.hasLevelRestriction ? formData.levelRequirementIds : [],
+        hasCapacityRestriction: formData.hasCapacityRestriction,
+        capacity: formData.hasCapacityRestriction ? formData.capacity : null,
+        hasAgeRestriction: formData.hasAgeRestriction,
+        minAge: formData.hasAgeRestriction ? formData.minAge : null,
+        maxAge: formData.hasAgeRestriction ? formData.maxAge : null,
+        hasMembershipRestriction: formData.hasMembershipRestriction,
+        membershipRequirementIds: formData.hasMembershipRestriction
+          ? formData.membershipRequirementIds
+          : [],
+      } as any)
+      toast.success("Requirements saved")
       fetchPrograms()
     } catch (error) {
-      console.error(error)
-      toast.error("Failed to remove coach")
+      toast.error("Failed to save requirements")
     } finally {
-      setIsDeletingStaff(null)
+      setIsSaving(false)
     }
   }
 
-  const handleSetPrimary = async (assignmentId: string) => {
+  const handleSaveStaff = async () => {
+    setIsSaving(true)
     try {
-      const response = await fetch(`/api/programs/${program.id}/staff/${assignmentId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isPrimary: true }),
-      })
-
-      if (!response.ok) throw new Error("Failed to update")
-
-      // Update local state - remove primary from others, set on this one
-      setAssignedStaff(assignedStaff.map(a => ({
-        ...a,
-        isPrimary: a.id === assignmentId,
-      })))
-      toast.success("Primary coach updated")
-    } catch (error) {
-      console.error(error)
-      toast.error("Failed to update primary coach")
-    }
-  }
-  
-  // Bulk discount handlers
-  const handleAddBulkDiscount = async () => {
-    if (newBulkDiscount.discountValue <= 0) {
-      toast.error("Discount value must be greater than 0")
-      return
-    }
-
-    setIsAddingDiscount(true)
-    try {
-      const response = await fetch(`/api/programs/${program.id}/bulk-discounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newBulkDiscount),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to add discount")
-      }
-
-      const addedDiscount = await response.json()
-      setBulkDiscounts([...bulkDiscounts, addedDiscount])
-      setNewBulkDiscount({
-        type: "FAMILY_SIBLING",
-        minQuantity: 2,
-        discountType: "PERCENTAGE",
-        discountValue: 10,
-        description: "",
-      })
-      toast.success("Bulk discount added")
-    } catch (error: any) {
-      console.error(error)
-      toast.error(error.message || "Failed to add bulk discount")
-    } finally {
-      setIsAddingDiscount(false)
-    }
-  }
-
-  const handleRemoveBulkDiscount = async (discountId: string) => {
-    setIsDeletingDiscount(discountId)
-    try {
-      const response = await fetch(`/api/programs/${program.id}/bulk-discounts/${discountId}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) throw new Error("Failed to remove discount")
-
-      setBulkDiscounts(bulkDiscounts.filter(d => d.id !== discountId))
-      toast.success("Bulk discount removed")
-    } catch (error) {
-      console.error(error)
-      toast.error("Failed to remove bulk discount")
-    } finally {
-      setIsDeletingDiscount(null)
-    }
-  }
-
-  // Requirements handlers
-  const handleAddRequirement = async () => {
-    if (!selectedMembershipInstance) {
-      toast.error("Please select a membership")
-      return
-    }
-
-    setIsAddingRequirement(true)
-    try {
-      const response = await fetch(`/api/programs/${program.id}/requirements`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ membershipInstanceId: selectedMembershipInstance }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to add requirement")
-      }
-
-      const updatedRequirements = await response.json()
-      setRequirements(updatedRequirements)
-      setSelectedMembershipInstance("")
-      toast.success("Membership requirement added")
-      fetchPrograms()
-    } catch (error: any) {
-      console.error(error)
-      toast.error(error.message || "Failed to add requirement")
-    } finally {
-      setIsAddingRequirement(false)
-    }
-  }
-
-  const handleRemoveRequirement = async (instanceId: string) => {
-    setIsDeletingRequirement(instanceId)
-    try {
-      const response = await fetch(`/api/programs/${program.id}/requirements/${instanceId}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) throw new Error("Failed to remove requirement")
-
-      setRequirements(requirements.filter(r => r.id !== instanceId))
-      toast.success("Requirement removed")
+      await updateProgram(program.id, {
+        staffAssignments: formData.staffAssignments.map((sa) => ({
+          staffProfileId: sa.staffProfileId,
+          role: sa.role,
+          isPrimary: sa.isPrimary,
+        })),
+        showCoachOnSite: formData.showCoachOnSite,
+      } as any)
+      toast.success("Staff settings saved")
       fetchPrograms()
     } catch (error) {
-      console.error(error)
-      toast.error("Failed to remove requirement")
+      toast.error("Failed to save staff settings")
     } finally {
-      setIsDeletingRequirement(null)
+      setIsSaving(false)
     }
   }
+
+  // Derived values for schedule tab
+  const startDateObj = formData.startDate ? new Date(formData.startDate + "T00:00:00") : null
+  const endDateObj = formData.endDate ? new Date(formData.endDate + "T00:00:00") : null
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -392,735 +426,833 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <div className="px-6 py-2 border-b bg-muted/30">
-            <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
-                <TabsTrigger value="general">General</TabsTrigger>
-                <TabsTrigger value="pricing">Pricing</TabsTrigger>
-                {/* Discounts tab temporarily hidden - will be re-enabled later */}
-                {/* <TabsTrigger value="discounts">Discounts</TabsTrigger> */}
-                {/* Memberships tab removed - functionality moved to new program stepper */}
-                <TabsTrigger value="requirements">Requirements</TabsTrigger>
-                <TabsTrigger value="coaches">Coaches</TabsTrigger>
-                <TabsTrigger value="display">Display</TabsTrigger>
-            </TabsList>
+          <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="schedule">Schedule</TabsTrigger>
+            <TabsTrigger value="requirements">Requirements</TabsTrigger>
+            <TabsTrigger value="staff">Staff</TabsTrigger>
+          </TabsList>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-            <TabsContent value="general" className="mt-0 space-y-6 max-w-2xl">
-                <div className="space-y-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="config-name">Program Name</Label>
-                        <Input 
-                            id="config-name" 
-                            value={formData.name} 
-                            onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        />
+          {/* ============================================= */}
+          {/* GENERAL TAB                                   */}
+          {/* ============================================= */}
+          <TabsContent value="general" className="mt-0 space-y-6 max-w-2xl">
+            {/* Program Name */}
+            <div className="space-y-2">
+              <Label htmlFor="config-name">Program Name *</Label>
+              <Input
+                id="config-name"
+                placeholder="e.g., Recreational Gymnastics - Bronze"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="config-desc">Description</Label>
+              <RichTextEditor
+                value={formData.description || ""}
+                onChange={(value) => setFormData((prev) => ({ ...prev, description: value }))}
+                placeholder="Describe what this program offers, who it's for, and what participants will learn..."
+              />
+            </div>
+
+            {/* Schedule Type */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Schedule Type</Label>
+              <RadioGroup
+                value={formData.recurrenceType}
+                onValueChange={(value: "NON_RECURRING" | "RECURRING") =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    recurrenceType: value,
+                    registrationType:
+                      value === "RECURRING"
+                        ? prev.registrationType || "ALL_INSTANCES"
+                        : null,
+                  }))
+                }
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.recurrenceType === "NON_RECURRING"
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="NON_RECURRING" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Single Session</span>
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="config-desc">Description</Label>
-                        <RichTextEditor 
-                            value={formData.description || ""} 
-                            onChange={(value) => setFormData({...formData, description: value})}
-                            placeholder="Enter program description..."
-                        />
+                    <p className="text-sm text-muted-foreground">
+                      One-time event like a camp, workshop, or clinic
+                    </p>
+                  </div>
+                </label>
+
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.recurrenceType === "RECURRING"
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="RECURRING" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Repeat className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Repeating Schedule</span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="config-type">Program Type</Label>
-                            <Select 
-                                value={formData.programType} 
-                                onValueChange={(val) => setFormData({...formData, programType: val})}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="SINGLE_INSTANCE">Single Instance (One-off)</SelectItem>
-                                    <SelectItem value="SUBSCRIPTION">Subscription (Recurring)</SelectItem>
-                                    <SelectItem value="DROP_IN">Drop-In (Per Class)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="config-status">Status</Label>
-                            <Select 
-                                value={formData.status} 
-                                onValueChange={(val) => setFormData({...formData, status: val})}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ACTIVE">Active</SelectItem>
-                                    <SelectItem value="INACTIVE">Inactive</SelectItem>
-                                    <SelectItem value="ARCHIVED">Archived</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="config-level-select">Level</Label>
-                            <Select 
-                                value={formData.levelId || "none"} 
-                                onValueChange={(val) => setFormData({...formData, levelId: val === "none" ? null : val})}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a level" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">No Level</SelectItem>
-                                    {levels.map((level) => (
-                                        <SelectItem key={level.id} value={level.id}>
-                                            <div className="flex items-center gap-2">
-                                                <div 
-                                                    className="w-3 h-3 rounded-full" 
-                                                    style={{ backgroundColor: level.color || "#64748b" }}
-                                                />
-                                                {level.name}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Input 
-                                placeholder="Or enter level text (legacy)"
-                                value={formData.level} 
-                                onChange={(e) => setFormData({...formData, level: e.target.value})}
-                                className="text-sm"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="config-capacity">Capacity (optional)</Label>
-                            <Input 
-                                id="config-capacity" 
-                                type="number"
-                                min="1"
-                                placeholder="Unlimited"
-                                value={formData.capacity || ""} 
-                                onChange={(e) => setFormData({...formData, capacity: e.target.value ? parseInt(e.target.value) : null})}
-                            />
-                        </div>
-                    </div>
-                    {(formData.programType === "SUBSCRIPTION" || formData.programType === "SINGLE_INSTANCE") && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="config-start">Start Date</Label>
-                                <Input 
-                                    id="config-start" 
-                                    type="date"
-                                    value={formData.startDate} 
-                                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="config-end">End Date</Label>
-                                <Input 
-                                    id="config-end" 
-                                    type="date"
-                                    value={formData.endDate} 
-                                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                                />
-                            </div>
-                        </div>
+                    <p className="text-sm text-muted-foreground">
+                      Weekly or recurring classes on a regular schedule
+                    </p>
+                  </div>
+                </label>
+              </RadioGroup>
+            </div>
+
+            {/* Registration Type - only for recurring */}
+            {formData.recurrenceType === "RECURRING" && (
+              <div className="space-y-4 rounded-lg border p-4 bg-muted/20">
+                <Label className="text-base font-medium">Registration Style</Label>
+                <RadioGroup
+                  value={formData.registrationType || "ALL_INSTANCES"}
+                  onValueChange={(value: "ALL_INSTANCES" | "PER_INSTANCE") =>
+                    setFormData((prev) => ({ ...prev, registrationType: value }))
+                  }
+                  className="space-y-3"
+                >
+                  <label
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg border bg-background p-3 cursor-pointer transition-colors",
+                      formData.registrationType === "ALL_INSTANCES"
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
                     )}
-                    <div className="pt-4 flex justify-end">
-                        <Button onClick={handleSaveGeneral} disabled={isSaving}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Save Changes
+                  >
+                    <RadioGroupItem value="ALL_INSTANCES" className="mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <span className="font-medium text-sm">Enroll in entire program</span>
+                      <p className="text-xs text-muted-foreground">
+                        Athletes register once for all sessions during the program period
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg border bg-background p-3 cursor-pointer transition-colors",
+                      formData.registrationType === "PER_INSTANCE"
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <RadioGroupItem value="PER_INSTANCE" className="mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <span className="font-medium text-sm">Sign up per class</span>
+                      <p className="text-xs text-muted-foreground">
+                        Athletes register individually for each session they want to attend
+                      </p>
+                    </div>
+                  </label>
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Price */}
+            <div className="space-y-2">
+              <Label htmlFor="config-price" className="text-base font-medium flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                {formData.recurrenceType === "RECURRING" &&
+                formData.registrationType === "ALL_INSTANCES"
+                  ? "Price (flat rate)"
+                  : "Price (per session)"}
+              </Label>
+              <div className="relative max-w-[200px]">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
+                <Input
+                  id="config-price"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="0.00"
+                  className="pl-7"
+                  value={formData.price === null ? "" : formData.price}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    if (raw === "") {
+                      setFormData((prev) => ({ ...prev, price: null }))
+                      return
+                    }
+                    const parsed = parseFloat(raw)
+                    if (Number.isNaN(parsed)) return
+                    if (parsed < 0) return
+                    const rounded = Math.round(parsed * 100) / 100
+                    setFormData((prev) => ({ ...prev, price: rounded }))
+                  }}
+                  onBlur={(e) => {
+                    const raw = e.target.value
+                    if (raw === "") return
+                    const parsed = parseFloat(raw)
+                    if (!Number.isNaN(parsed) && parsed >= 0) {
+                      const rounded = Math.round(parsed * 100) / 100
+                      if (rounded !== formData.price) {
+                        setFormData((prev) => ({ ...prev, price: rounded }))
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Optional. Leave blank or set to 0 for free programs. Maximum 2 decimal places.
+              </p>
+            </div>
+
+            {/* Save */}
+            <div className="pt-4 flex justify-end">
+              <Button onClick={handleSaveGeneral} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* ============================================= */}
+          {/* SCHEDULE TAB                                  */}
+          {/* ============================================= */}
+          <TabsContent value="schedule" className="mt-0 space-y-6 max-w-2xl">
+            {/* Date Selection */}
+            <div
+              className={cn(
+                "grid gap-4",
+                formData.recurrenceType === "RECURRING"
+                  ? "grid-cols-1 md:grid-cols-2"
+                  : "grid-cols-1"
+              )}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="config-start-date">
+                  {formData.recurrenceType === "RECURRING" ? "Start Date *" : "Program Date *"}
+                </Label>
+                <Input
+                  id="config-start-date"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      startDate: e.target.value,
+                      endDate:
+                        e.target.value &&
+                        prev.endDate &&
+                        prev.endDate < e.target.value
+                          ? ""
+                          : prev.endDate,
+                    }))
+                  }
+                />
+              </div>
+
+              {formData.recurrenceType === "RECURRING" && (
+                <div className="space-y-2">
+                  <Label htmlFor="config-end-date">End Date *</Label>
+                  <Input
+                    id="config-end-date"
+                    type="date"
+                    value={formData.endDate}
+                    min={formData.startDate || undefined}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, endDate: e.target.value }))
+                    }
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Time and Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="config-start-time">Start Time *</Label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="config-start-time"
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, startTime: e.target.value }))
+                    }
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="config-duration">Duration (minutes) *</Label>
+                <Input
+                  id="config-duration"
+                  type="number"
+                  min={1}
+                  max={480}
+                  placeholder="60"
+                  value={formData.duration || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      duration: e.target.value ? parseInt(e.target.value) : null,
+                    }))
+                  }
+                />
+                {formData.duration && (
+                  <p className="text-xs text-muted-foreground">
+                    {Math.floor(formData.duration / 60)}h {formData.duration % 60}m
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Facility */}
+            <div className="space-y-2">
+              <Label>Location</Label>
+              {loadingFacilities ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading facilities...
+                </div>
+              ) : facilities.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-4 text-center">
+                  <MapPin className="h-6 w-6 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No facilities configured.{" "}
+                    <a href="/dashboard/settings/facilities" className="text-primary underline">
+                      Add a facility
+                    </a>
+                  </p>
+                </div>
+              ) : (
+                <Select
+                  value={formData.facilityId || "__none__"}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      facilityId: value === "__none__" ? null : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a facility (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No specific location</SelectItem>
+                    {facilities.map((facility) => (
+                      <SelectItem key={facility.id} value={facility.id}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{facility.name}</span>
+                          {facility.city && (
+                            <span className="text-muted-foreground">
+                              - {facility.city}
+                              {facility.stateProvince && `, ${facility.stateProvince}`}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Recurrence Pattern */}
+            {formData.recurrenceType === "RECURRING" && startDateObj && endDateObj && (
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-base font-medium">Recurrence Pattern</Label>
+                </div>
+                <RecurrencePicker
+                  startDate={startDateObj}
+                  endDate={endDateObj}
+                  value={
+                    formData.rrule
+                      ? parseRRule(formData.rrule, startDateObj, endDateObj)
+                      : undefined
+                  }
+                  onRRuleChange={(rrule) =>
+                    setFormData((prev) => ({ ...prev, rrule }))
+                  }
+                />
+              </div>
+            )}
+
+            {/* Save */}
+            <div className="pt-4 flex justify-end">
+              <Button onClick={handleSaveSchedule} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Schedule
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* ============================================= */}
+          {/* REQUIREMENTS TAB                              */}
+          {/* ============================================= */}
+          <TabsContent value="requirements" className="mt-0 space-y-6 max-w-2xl">
+            {/* Level Restriction */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Level Restriction</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require athletes to be at one of the selected levels
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasLevelRestriction}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasLevelRestriction: checked,
+                      levelRequirementIds: checked ? prev.levelRequirementIds : [],
+                    }))
+                  }
+                />
+              </div>
+
+              {formData.hasLevelRestriction && (
+                <div className="pt-2 border-t">
+                  {loadingLevels ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading levels...
+                    </div>
+                  ) : levels.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No levels configured.{" "}
+                      <a href="/dashboard/training/levels" className="text-primary underline">
+                        Create levels
+                      </a>{" "}
+                      first.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {levels.map((level) => (
+                        <label
+                          key={level.id}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                            formData.levelRequirementIds.includes(level.id)
+                              ? "border-primary bg-primary/5"
+                              : "hover:bg-muted/50"
+                          )}
+                        >
+                          <Checkbox
+                            checked={formData.levelRequirementIds.includes(level.id)}
+                            onCheckedChange={(checked) => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                levelRequirementIds: checked
+                                  ? [...prev.levelRequirementIds, level.id]
+                                  : prev.levelRequirementIds.filter((id) => id !== level.id),
+                              }))
+                            }}
+                          />
+                          <div
+                            className="w-3 h-3 rounded-full shrink-0"
+                            style={{ backgroundColor: level.color || "#64748b" }}
+                          />
+                          <span className="text-sm font-medium">{level.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Capacity Restriction */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Capacity Limit</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Limit the number of athletes who can enroll
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasCapacityRestriction}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasCapacityRestriction: checked,
+                      capacity: checked ? prev.capacity || 20 : null,
+                    }))
+                  }
+                />
+              </div>
+
+              {formData.hasCapacityRestriction && (
+                <div className="pt-2 border-t">
+                  <Label htmlFor="config-capacity">Maximum Capacity</Label>
+                  <Input
+                    id="config-capacity"
+                    type="number"
+                    min={1}
+                    placeholder="Enter maximum number of athletes"
+                    value={formData.capacity || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        capacity: e.target.value ? parseInt(e.target.value) : null,
+                      }))
+                    }
+                    className="mt-2 max-w-[200px]"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Age Restriction */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Age Restriction</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Restrict registration by athlete age
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasAgeRestriction}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasAgeRestriction: checked,
+                      minAge: checked ? prev.minAge : null,
+                      maxAge: checked ? prev.maxAge : null,
+                    }))
+                  }
+                />
+              </div>
+
+              {formData.hasAgeRestriction && (
+                <div className="pt-2 border-t space-y-4">
+                  <div className="flex items-center gap-2 p-2 rounded bg-muted/50">
+                    <Info className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <p className="text-xs text-muted-foreground">
+                      At least one age value is required. Leave the other blank for no limit in that
+                      direction.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="config-min-age">Minimum Age</Label>
+                      <Input
+                        id="config-min-age"
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="No minimum"
+                        value={formData.minAge ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            minAge: e.target.value ? parseInt(e.target.value) : null,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="config-max-age">Maximum Age</Label>
+                      <Input
+                        id="config-max-age"
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="No maximum"
+                        value={formData.maxAge ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            maxAge: e.target.value ? parseInt(e.target.value) : null,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Membership Restriction */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Membership Requirement</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require athletes to have an active membership
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasMembershipRestriction}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasMembershipRestriction: checked,
+                      membershipRequirementIds: checked ? prev.membershipRequirementIds : [],
+                    }))
+                  }
+                />
+              </div>
+
+              {formData.hasMembershipRestriction && (
+                <div className="pt-2 border-t">
+                  {loadingMemberships ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading memberships...
+                    </div>
+                  ) : allMembershipInstances.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No memberships configured.{" "}
+                      <a
+                        href="/dashboard/athletes/memberships"
+                        className="text-primary underline"
+                      >
+                        Create memberships
+                      </a>{" "}
+                      first.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {allMembershipInstances.map((instance: MembershipInstance) => (
+                        <label
+                          key={instance.id}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                            formData.membershipRequirementIds.includes(instance.id)
+                              ? "border-primary bg-primary/5"
+                              : "hover:bg-muted/50"
+                          )}
+                        >
+                          <Checkbox
+                            checked={formData.membershipRequirementIds.includes(instance.id)}
+                            onCheckedChange={(checked) => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                membershipRequirementIds: checked
+                                  ? [...prev.membershipRequirementIds, instance.id]
+                                  : prev.membershipRequirementIds.filter(
+                                      (id) => id !== instance.id
+                                    ),
+                              }))
+                            }}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">
+                                {instance.groupName} - {instance.name}
+                              </span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              ${instance.price.toFixed(2)}
+                            </span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Save */}
+            <div className="pt-4 flex justify-end">
+              <Button onClick={handleSaveRequirements} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Requirements
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* ============================================= */}
+          {/* STAFF TAB                                     */}
+          {/* ============================================= */}
+          <TabsContent value="staff" className="mt-0 space-y-6 max-w-2xl">
+            {/* Add Staff */}
+            <div className="space-y-2">
+              <Label>Add Staff Member</Label>
+              <div className="flex gap-2">
+                <Select
+                  value=""
+                  onValueChange={handleAddStaff}
+                  disabled={loadingStaff || unassignedStaff.length === 0}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue
+                      placeholder={
+                        loadingStaff
+                          ? "Loading..."
+                          : unassignedStaff.length === 0
+                            ? "All staff assigned"
+                            : "Select staff member to add"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unassignedStaff.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={s.user?.avatar || ""} />
+                            <AvatarFallback>
+                              <User className="h-3 w-3" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{s.user?.name || "Unknown"}</span>
+                          {s.title && (
+                            <span className="text-muted-foreground">({s.title})</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Assigned Staff List */}
+            <div className="space-y-3">
+              <Label>Assigned Staff ({formData.staffAssignments.length})</Label>
+
+              {formData.staffAssignments.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center">
+                  <Users className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No staff assigned yet. Add staff members above.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {formData.staffAssignments.map((assignment) => (
+                    <div
+                      key={assignment.staffProfileId}
+                      className="flex items-center gap-3 rounded-lg border p-3 bg-card"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={assignment.staffProfile?.user?.avatar || ""} />
+                        <AvatarFallback>
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium truncate">
+                            {assignment.staffProfile?.user?.name || "Unknown"}
+                          </span>
+                          {assignment.isPrimary && (
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              <Star className="h-3 w-3 mr-1" />
+                              Primary
+                            </Badge>
+                          )}
+                        </div>
+                        {assignment.staffProfile?.title && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {assignment.staffProfile.title}
+                          </p>
+                        )}
+                      </div>
+
+                      <Select
+                        value={assignment.role}
+                        onValueChange={(value: ProgramStaffRole) =>
+                          handleUpdateStaffRole(assignment.staffProfileId, value)
+                        }
+                      >
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="LEAD_COACH">Lead Coach</SelectItem>
+                          <SelectItem value="ASSISTANT_COACH">Assistant Coach</SelectItem>
+                          <SelectItem value="SUBSTITUTE">Substitute</SelectItem>
+                          <SelectItem value="VOLUNTEER">Volunteer</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <div className="flex items-center gap-1">
+                        {!assignment.isPrimary && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSetPrimary(assignment.staffProfileId)}
+                            title="Set as primary"
+                          >
+                            <Star className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveStaff(assignment.staffProfileId)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
+                      </div>
                     </div>
+                  ))}
                 </div>
-            </TabsContent>
-            
-            <TabsContent value="pricing" className="mt-0 space-y-6 max-w-2xl">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Pricing Model</CardTitle>
-                        <CardDescription>Configure how this program is priced</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid gap-2">
-                            <Label>Pricing Type</Label>
-                            <Select 
-                                value={formData.pricingModel} 
-                                onValueChange={(val) => setFormData({...formData, pricingModel: val})}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="FLAT_RATE">Flat Rate (Fixed Price)</SelectItem>
-                                    <SelectItem value="PER_SESSION">Per Session</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        
-                        {formData.pricingModel === "FLAT_RATE" && (
-                            <div className="grid gap-2">
-                                <Label>Total Price</Label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input 
-                                        type="number" 
-                                        className="pl-8"
-                                        placeholder="0.00" 
-                                        value={formData.basePrice || ""}
-                                        onChange={(e) => setFormData({...formData, basePrice: e.target.value ? parseFloat(e.target.value) : null})}
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    The total price for the entire program duration
-                                </p>
-                            </div>
-                        )}
-                        
-                        {formData.pricingModel === "PER_SESSION" && (
-                            <div className="grid gap-2">
-                                <Label>Price Per Session</Label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input 
-                                        type="number" 
-                                        className="pl-8"
-                                        placeholder="0.00" 
-                                        value={formData.perSessionPrice || ""}
-                                        onChange={(e) => setFormData({...formData, perSessionPrice: e.target.value ? parseFloat(e.target.value) : null})}
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Total will be calculated based on number of sessions
-                                </p>
-                            </div>
-                        )}
-                        
-                        <div className="pt-4 flex justify-end">
-                            <Button onClick={handleSaveGeneral} disabled={isSaving}>
-                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Pricing
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-            
-            <TabsContent value="discounts" className="mt-0 space-y-6 max-w-3xl">
-                <Card className="border-dashed shadow-none">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="text-base">Add Bulk Discount</CardTitle>
-                        <CardDescription>Configure family or multi-session discounts</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                            <div className="md:col-span-3 grid gap-2">
-                                <Label>Type</Label>
-                                <Select 
-                                    value={newBulkDiscount.type} 
-                                    onValueChange={(val: "FAMILY_SIBLING" | "MULTI_SESSION") => setNewBulkDiscount({...newBulkDiscount, type: val})}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="FAMILY_SIBLING">Family/Sibling</SelectItem>
-                                        <SelectItem value="MULTI_SESSION">Multi-Session</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="md:col-span-2 grid gap-2">
-                                <Label>{newBulkDiscount.type === "FAMILY_SIBLING" ? "Child #" : "Min Qty"}</Label>
-                                <Input 
-                                    type="number" 
-                                    min="2"
-                                    value={newBulkDiscount.minQuantity}
-                                    onChange={(e) => setNewBulkDiscount({...newBulkDiscount, minQuantity: parseInt(e.target.value) || 2})}
-                                />
-                            </div>
-                            <div className="md:col-span-2 grid gap-2">
-                                <Label>Discount</Label>
-                                <Select 
-                                    value={newBulkDiscount.discountType} 
-                                    onValueChange={(val: "PERCENTAGE" | "FIXED_AMOUNT") => setNewBulkDiscount({...newBulkDiscount, discountType: val})}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="PERCENTAGE">Percentage</SelectItem>
-                                        <SelectItem value="FIXED_AMOUNT">Fixed Amount</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="md:col-span-2 grid gap-2">
-                                <Label>Value</Label>
-                                <div className="relative">
-                                    {newBulkDiscount.discountType === "PERCENTAGE" ? (
-                                        <Percent className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    ) : (
-                                        <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    )}
-                                    <Input 
-                                        type="number" 
-                                        className="pl-8"
-                                        value={newBulkDiscount.discountValue}
-                                        onChange={(e) => setNewBulkDiscount({...newBulkDiscount, discountValue: parseFloat(e.target.value) || 0})}
-                                    />
-                                </div>
-                            </div>
-                            <div className="md:col-span-2 grid gap-2">
-                                <Label>Description</Label>
-                                <Input 
-                                    placeholder="Optional"
-                                    value={newBulkDiscount.description}
-                                    onChange={(e) => setNewBulkDiscount({...newBulkDiscount, description: e.target.value})}
-                                />
-                            </div>
-                            <div className="md:col-span-1">
-                                <Button onClick={handleAddBulkDiscount} disabled={isAddingDiscount} size="icon" className="w-full">
-                                    {isAddingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                
-                {bulkDiscounts.length > 0 ? (
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Active Discounts</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            {bulkDiscounts.map((discount: any) => (
-                                <div key={discount.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <Badge variant={discount.type === "FAMILY_SIBLING" ? "default" : "secondary"}>
-                                            {discount.type === "FAMILY_SIBLING" ? "Family" : "Multi-Session"}
-                                        </Badge>
-                                        <span className="font-medium">
-                                            {discount.type === "FAMILY_SIBLING" 
-                                                ? `${discount.minQuantity}${discount.minQuantity === 2 ? "nd" : discount.minQuantity === 3 ? "rd" : "th"} child`
-                                                : `${discount.minQuantity}+ sessions`
-                                            }
-                                        </span>
-                                        <span className="text-muted-foreground">→</span>
-                                        <span className="text-green-600 font-medium">
-                                            {discount.discountType === "PERCENTAGE" 
-                                                ? `${Number(discount.discountValue)}% off`
-                                                : `$${Number(discount.discountValue)} off`
-                                            }
-                                        </span>
-                                        {discount.description && (
-                                            <span className="text-sm text-muted-foreground">({discount.description})</span>
-                                        )}
-                                    </div>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon"
-                                        onClick={() => handleRemoveBulkDiscount(discount.id)}
-                                        disabled={isDeletingDiscount === discount.id}
-                                    >
-                                        {isDeletingDiscount === discount.id ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        )}
-                                    </Button>
-                                </div>
-                            ))}
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <Card className="border-dashed">
-                        <CardContent className="py-8 text-center text-muted-foreground">
-                            No bulk discounts configured. Add one above to offer family or volume pricing.
-                        </CardContent>
-                    </Card>
-                )}
-            </TabsContent>
+              )}
+            </div>
 
-            <TabsContent value="memberships" className="mt-0 space-y-6 max-w-3xl">
-                <Card className="border-dashed shadow-none">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="text-base">Add New Option</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                            <div className="md:col-span-5 grid gap-2">
-                                <Label>Option Name</Label>
-                                <Input 
-                                    placeholder="e.g. Monthly Pass" 
-                                    value={newTier.name}
-                                    onChange={(e) => setNewTier({...newTier, name: e.target.value})}
-                                />
-                            </div>
-                            <div className="md:col-span-3 grid gap-2">
-                                <Label>Price</Label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input 
-                                        type="number" 
-                                        className="pl-8"
-                                        placeholder="0.00" 
-                                        value={newTier.price}
-                                        onChange={(e) => setNewTier({...newTier, price: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                             <div className="md:col-span-3 grid gap-2">
-                                <Label>Billing</Label>
-                                <Select 
-                                    value={newTier.interval} 
-                                    onValueChange={(val) => setNewTier({...newTier, interval: val})}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="MONTHLY">Monthly</SelectItem>
-                                        <SelectItem value="YEARLY">Yearly</SelectItem>
-                                        <SelectItem value="SESSION">Per Session</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="md:col-span-1">
-                                <Button onClick={handleAddTier} disabled={isAddingTier} size="icon" className="w-full">
-                                    {isAddingTier ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <div className="space-y-4">
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Options</h3>
-                    <div className="grid gap-3">
-                        {tiers.length === 0 ? (
-                            <div className="p-8 text-center border rounded-md bg-muted/10">
-                                <p className="text-sm text-muted-foreground">No membership options configured yet.</p>
-                            </div>
-                        ) : (
-                            tiers.map((tier) => (
-                                <div key={tier.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="font-medium">{tier.name}</span>
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <span className="capitalize">{tier.interval.toLowerCase()}</span>
-                                            <span>•</span>
-                                            <span>${Number(tier.price).toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => handleRemoveTier(tier.id)}
-                                        disabled={isDeletingTier === tier.id}
-                                        className="text-muted-foreground hover:text-destructive transition-colors"
-                                    >
-                                        {isDeletingTier === tier.id ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </div>
-                            ))
-                        )}
-                    </div>
+            {/* Show Coach on Site */}
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Show Coach on Marketing Site</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display the primary coach on the public program listing
+                  </p>
                 </div>
-            </TabsContent>
+                <Switch
+                  checked={formData.showCoachOnSite}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, showCoachOnSite: checked }))
+                  }
+                />
+              </div>
+            </div>
 
-            <TabsContent value="requirements" className="mt-0 space-y-6 max-w-3xl">
-                <Card className="border-dashed shadow-none">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="text-base">Add Membership Requirement</CardTitle>
-                        <CardDescription>
-                            Athletes must have an active membership to enroll in this program.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex gap-4 items-end">
-                            <div className="flex-1 grid gap-2">
-                                <Label>Membership</Label>
-                                <Select
-                                    value={selectedMembershipInstance}
-                                    onValueChange={setSelectedMembershipInstance}
-                                    disabled={loadingMemberships}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={loadingMemberships ? "Loading..." : "Select a membership"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {availableMembershipInstances.map((instance: any) => (
-                                            <SelectItem key={instance.id} value={instance.id}>
-                                                {instance.groupName} - {instance.name} (${Number(instance.price).toFixed(2)})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <Button
-                                onClick={handleAddRequirement}
-                                disabled={isAddingRequirement || !selectedMembershipInstance}
-                            >
-                                {isAddingRequirement ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Plus className="h-4 w-4 mr-2" />
-                                )}
-                                Add
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {requirements.length > 0 && (
-                    <div className="p-4 border rounded-md bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                        <div className="flex gap-2 items-start">
-                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
-                            <p className="text-sm text-amber-800 dark:text-amber-200">
-                                Athletes without these memberships will be prompted to purchase when registering for this program.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                <div className="space-y-4">
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Required Memberships</h3>
-                    <div className="grid gap-3">
-                        {requirements.length === 0 ? (
-                            <div className="p-8 text-center border rounded-md bg-muted/10">
-                                <p className="text-sm text-muted-foreground">No membership requirements set. Any athlete can enroll.</p>
-                            </div>
-                        ) : (
-                            requirements.map((req) => (
-                                <div key={req.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="font-medium">{req.group?.name || "Membership"} - {req.name}</span>
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <span>${Number(req.price).toFixed(2)}</span>
-                                            <span>•</span>
-                                            <span className="capitalize">{req.billingInterval?.toLowerCase()}</span>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleRemoveRequirement(req.id)}
-                                        disabled={isDeletingRequirement === req.id}
-                                        className="text-muted-foreground hover:text-destructive transition-colors"
-                                    >
-                                        {isDeletingRequirement === req.id ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            </TabsContent>
-
-            <TabsContent value="coaches" className="mt-0 space-y-6 max-w-3xl">
-                <Card className="border-dashed shadow-none">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="text-base">Assign Coach</CardTitle>
-                        <CardDescription>
-                            Add coaches to this program. They will be visible on the marketing site and in the coach portal.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                            <div className="md:col-span-5 grid gap-2">
-                                <Label>Staff Member</Label>
-                                <Select
-                                    value={newStaffAssignment.staffProfileId}
-                                    onValueChange={(val) => setNewStaffAssignment({ ...newStaffAssignment, staffProfileId: val })}
-                                    disabled={loadingStaff}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={loadingStaff ? "Loading..." : "Select staff member"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {unassignedStaff.map((s) => (
-                                            <SelectItem key={s.id} value={s.id}>
-                                                {s.user?.name || "Unknown"} {s.title ? `(${s.title})` : ""}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="md:col-span-4 grid gap-2">
-                                <Label>Role</Label>
-                                <Select
-                                    value={newStaffAssignment.role}
-                                    onValueChange={(val) => setNewStaffAssignment({ ...newStaffAssignment, role: val as ProgramStaffRole })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="LEAD_COACH">Lead Coach</SelectItem>
-                                        <SelectItem value="ASSISTANT_COACH">Assistant Coach</SelectItem>
-                                        <SelectItem value="SUBSTITUTE">Substitute</SelectItem>
-                                        <SelectItem value="VOLUNTEER">Volunteer</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="md:col-span-3">
-                                <Button
-                                    onClick={handleAddStaff}
-                                    disabled={isAddingStaff || !newStaffAssignment.staffProfileId}
-                                    className="w-full"
-                                >
-                                    {isAddingStaff ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <>
-                                            <Plus className="h-4 w-4 mr-2" />
-                                            Add
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <div className="space-y-4">
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Assigned Coaches</h3>
-                    <div className="grid gap-3">
-                        {assignedStaff.length === 0 ? (
-                            <div className="p-8 text-center border rounded-md bg-muted/10">
-                                <p className="text-sm text-muted-foreground">No coaches assigned to this program yet.</p>
-                            </div>
-                        ) : (
-                            assignedStaff.map((assignment) => (
-                                <div key={assignment.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="h-10 w-10">
-                                            <AvatarImage src={assignment.staffProfile?.user?.avatar || ""} />
-                                            <AvatarFallback>
-                                                <User className="h-4 w-4" />
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium">{assignment.staffProfile?.user?.name || "Unknown"}</span>
-                                                {assignment.isPrimary && (
-                                                    <Badge variant="secondary" className="text-xs">
-                                                        <Star className="h-3 w-3 mr-1" />
-                                                        Primary
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <span>{ROLE_LABELS[assignment.role as ProgramStaffRole] || assignment.role}</span>
-                                                {assignment.staffProfile?.title && (
-                                                    <>
-                                                        <span>•</span>
-                                                        <span>{assignment.staffProfile.title}</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {!assignment.isPrimary && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleSetPrimary(assignment.id)}
-                                                className="text-muted-foreground hover:text-foreground"
-                                            >
-                                                <Star className="h-4 w-4 mr-1" />
-                                                Set Primary
-                                            </Button>
-                                        )}
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleRemoveStaff(assignment.id)}
-                                            disabled={isDeletingStaff === assignment.id}
-                                            className="text-muted-foreground hover:text-destructive transition-colors"
-                                        >
-                                            {isDeletingStaff === assignment.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Trash2 className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            </TabsContent>
-            
-            <TabsContent value="display" className="mt-0 space-y-6 max-w-2xl">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Settings className="h-4 w-4" />
-                            Marketing Site Display
-                        </CardTitle>
-                        <CardDescription>
-                            Control what information is shown on your public program listing
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label className="text-base">Show Level</Label>
-                                <p className="text-sm text-muted-foreground">
-                                    Display the program level on the marketing site
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {formData.showLevelOnSite ? (
-                                    <Eye className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                <Switch
-                                    checked={formData.showLevelOnSite}
-                                    onCheckedChange={(checked) => setFormData({...formData, showLevelOnSite: checked})}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label className="text-base">Show Coach</Label>
-                                <p className="text-sm text-muted-foreground">
-                                    Display the primary coach on the marketing site
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {formData.showCoachOnSite ? (
-                                    <Eye className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                <Switch
-                                    checked={formData.showCoachOnSite}
-                                    onCheckedChange={(checked) => setFormData({...formData, showCoachOnSite: checked})}
-                                />
-                            </div>
-                        </div>
-                        <div className="pt-4 flex justify-end">
-                            <Button onClick={handleSaveGeneral} disabled={isSaving}>
-                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Display Settings
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
+            {/* Save */}
+            <div className="pt-4 flex justify-end">
+              <Button onClick={handleSaveStaff} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Staff
+              </Button>
+            </div>
+          </TabsContent>
         </div>
       </Tabs>
+
       <div className="p-4 border-t flex justify-end bg-background">
-        <Button variant="outline" onClick={onClose}>Close</Button>
+        <Button variant="outline" onClick={onClose}>
+          Close
+        </Button>
       </div>
     </div>
   )

@@ -97,6 +97,8 @@ interface ProgramFormData {
   programType: "SINGLE_INSTANCE" | "SUBSCRIPTION" | "DROP_IN" // Legacy, kept for backward compatibility
   recurrenceType: "NON_RECURRING" | "RECURRING"
   registrationType: "ALL_INSTANCES" | "PER_INSTANCE" | null
+  /** Single price: per-session (single session or per-class) or flat rate (entire program). Null/0 = free. */
+  price: number | null
   
   // Step 2: Date & Location
   startDate: Date | null
@@ -106,7 +108,7 @@ interface ProgramFormData {
   facilityId: string | null
   rrule: string | null
   
-  // Step 3: Availability
+  // Step 3: Requirements
   hasLevelRestriction: boolean
   levelRequirementIds: string[]
   hasCapacityRestriction: boolean
@@ -158,6 +160,13 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     programType: program?.programType || "SUBSCRIPTION",
     recurrenceType: (program as any)?.recurrenceType || "RECURRING",
     registrationType: (program as any)?.registrationType || "ALL_INSTANCES",
+    price: (() => {
+      const p = program as any
+      if (!p) return null
+      const isFlat = p.pricingModel === "FLAT_RATE"
+      const val = isFlat ? p.basePrice : p.perSessionPrice
+      return val != null ? Number(val) : null
+    })(),
     
     // Step 2: Date & Location
     startDate: program?.startDate ? new Date(program.startDate) : null,
@@ -167,7 +176,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     facilityId: (program as any)?.facilityId || null,
     rrule: (program as any)?.rrule || null,
     
-    // Step 3: Availability
+    // Step 3: Requirements
     hasLevelRestriction: program?.hasLevelRestriction || false,
     levelRequirementIds: program?.levelRequirements?.map(lr => lr.levelId) || [],
     hasCapacityRestriction: program?.hasCapacityRestriction || false,
@@ -252,6 +261,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       case 1:
         if (!formData.name.trim()) {
           toast.error("Program name is required")
+          return false
+        }
+        if (formData.price !== null && formData.price !== undefined && formData.price < 0) {
+          toast.error("Price cannot be negative")
           return false
         }
         return true
@@ -342,12 +355,18 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           ? "DROP_IN" 
           : "SUBSCRIPTION"
       
+      const isFlatRate = formData.recurrenceType === "RECURRING" && formData.registrationType === "ALL_INSTANCES"
+      const priceValue = formData.price != null ? Math.max(0, Math.round(formData.price * 100) / 100) : null
+
       const payload: CreateProgramPayload | UpdateProgramPayload = {
         name: formData.name,
         description: formData.description || undefined,
         programType: legacyProgramType,
         recurrenceType: formData.recurrenceType,
         registrationType: formData.recurrenceType === "RECURRING" ? formData.registrationType : null,
+        pricingModel: isFlatRate ? "FLAT_RATE" : "PER_SESSION",
+        basePrice: isFlatRate ? priceValue : null,
+        perSessionPrice: !isFlatRate ? priceValue : null,
         startDate: formData.startDate?.toISOString(),
         endDate: formData.endDate?.toISOString(),
         startTime: formData.startTime,
@@ -503,7 +522,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
             >
               <StepperIndicator />
               <div className="hidden sm:block text-left">
-                <StepperTitle>Availability</StepperTitle>
+                <StepperTitle>Requirements</StepperTitle>
                 <StepperDescription>Restrictions & limits</StepperDescription>
               </div>
             </button>
@@ -661,6 +680,54 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   </RadioGroup>
                 </div>
               )}
+              
+              {/* Price - per session (single session or sign up per class) or flat rate (entire program) */}
+              <div className="space-y-2">
+                <Label htmlFor="price" className="text-base font-medium flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  {formData.recurrenceType === "RECURRING" && formData.registrationType === "ALL_INSTANCES"
+                    ? "Price (flat rate)"
+                    : "Price (per session)"}
+                </Label>
+                <div className="relative max-w-[200px]">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    id="price"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    placeholder="0.00"
+                    className="pl-7"
+                    value={formData.price === null ? "" : formData.price}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      if (raw === "") {
+                        setFormData(prev => ({ ...prev, price: null }))
+                        return
+                      }
+                      const parsed = parseFloat(raw)
+                      if (Number.isNaN(parsed)) return
+                      if (parsed < 0) return
+                      const rounded = Math.round(parsed * 100) / 100
+                      setFormData(prev => ({ ...prev, price: rounded }))
+                    }}
+                    onBlur={(e) => {
+                      const raw = e.target.value
+                      if (raw === "") return
+                      const parsed = parseFloat(raw)
+                      if (!Number.isNaN(parsed) && parsed >= 0) {
+                        const rounded = Math.round(parsed * 100) / 100
+                        if (rounded !== formData.price) {
+                          setFormData(prev => ({ ...prev, price: rounded }))
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Optional. Leave blank or set to 0 for free programs. Maximum 2 decimal places.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </StepperContent>
@@ -851,13 +918,13 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           </Card>
         </StepperContent>
         
-        {/* Step 3: Availability */}
+        {/* Step 3: Requirements */}
         <StepperContent value={3}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Availability & Restrictions
+                Requirements & Restrictions
               </CardTitle>
               <CardDescription>
                 Configure who can register for this program. Toggle on the restrictions you want to apply.
