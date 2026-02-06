@@ -89,15 +89,17 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Debug: log token retrieval for auth troubleshooting
+  // Debug: log token retrieval for auth troubleshooting (only when AUTH_DEBUG is enabled)
   const sessionCookie = req.cookies.get(cookieName);
-  const allCookieNames = req.cookies.getAll().map(c => c.name);
-  if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos" || currentHost === "login" || path.startsWith("/api/auth")) {
-    console.log(`Middleware: method=${req.method}, host=${currentHost}, path=${path}, env=${currentEnv}`);
-    console.log(`Middleware: cookies=${JSON.stringify(allCookieNames)}`);
-    console.log(`Middleware: looking for cookie=${cookieName}, found=${!!sessionCookie}, hasToken=${!!token}`);
-    if (token) {
-      console.log(`Middleware: tokenEmail=${token.email}`);
+  if (process.env.AUTH_DEBUG === 'true') {
+    const allCookieNames = req.cookies.getAll().map(c => c.name);
+    if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos" || currentHost === "login" || path.startsWith("/api/auth")) {
+      console.log(`Middleware: method=${req.method}, host=${currentHost}, path=${path}, env=${currentEnv}`);
+      console.log(`Middleware: cookies=${JSON.stringify(allCookieNames)}`);
+      console.log(`Middleware: looking for cookie=${cookieName}, found=${!!sessionCookie}, hasToken=${!!token}`);
+      if (token) {
+        console.log(`Middleware: tokenEmail=${token.email}`);
+      }
     }
   }
 
@@ -141,9 +143,6 @@ export async function middleware(req: NextRequest) {
 
   // ADMIN PORTAL (admin.{baseDomain}) -> /dashboard
   if (currentHost === "admin") {
-    // Debug logging for auth issues
-    console.log(`Middleware [admin]: path=${path}, hasToken=${!!token}, tokenEmail=${token?.email || 'none'}`);
-    
     // Redirect /login to centralized login portal
     if (path.startsWith("/login")) {
          const loginHost = getLoginHost();
@@ -157,7 +156,6 @@ export async function middleware(req: NextRequest) {
 
     // Auth Check for Admin
     if (!token && !path.startsWith("/login")) {
-      console.log(`Middleware [admin]: No token found, redirecting to login`);
       const loginHost = getLoginHost();
       const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
       // Construct the external callback URL (req.url gives internal Docker URL)

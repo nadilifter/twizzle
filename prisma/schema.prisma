@@ -15,99 +15,102 @@ datasource db {
 // ============================================
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  logo      String?
-  
+  id   String  @id @default(cuid())
+  name String
+  slug String  @unique
+  logo String?
+
   // Contact
-  email         String?
-  phone         String?
-  
+  email String?
+  phone String?
+
   // Address (structured)
   street        String?
   city          String?
   stateProvince String?
   postalCode    String?
   country       String?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  membershipTiers MembershipTier[] // Legacy, to be removed
-  membershipGroups MembershipGroup[]
-  members     OrganizationMember[]
-  users       User[] // Legacy relation, keep for now but rely on members
-  families    Family[]
-  programs    Program[]
-  events      Event[]
-  invoices    Invoice[]
-  skills      Skill[]
-  lessonPlans LessonPlan[]
-  announcements Announcement[]
-  websiteConfig WebsiteConfig?
+  membershipTiers     MembershipTier[] // Legacy, to be removed
+  membershipGroups    MembershipGroup[]
+  members             OrganizationMember[]
+  users               User[] // Legacy relation, keep for now but rely on members
+  families            Family[]
+  programs            Program[]
+  events              Event[]
+  invoices            Invoice[]
+  skills              Skill[]
+  lessonPlans         LessonPlan[]
+  announcements       Announcement[]
+  websiteConfig       WebsiteConfig?
   evaluationTemplates EvaluationTemplate[]
-  achievements Achievement[]
+  achievements        Achievement[]
 
   // Financials
-  discounts       Discount[]
-  glCodes         GLCode[]
-  ledgerEntries   LedgerEntry[]
-  transactions    Transaction[]
-  payouts         Payout[]
+  discounts        Discount[]
+  glCodes          GLCode[]
+  ledgerEntries    LedgerEntry[]
+  transactions     Transaction[]
+  payouts          Payout[]
   recurringCharges RecurringCharge[]
-  
+
   // Athletes (Direct relation for easier querying)
-  athletes      Athlete[]
-  
+  athletes Athlete[]
+
   // Platform Subscription
-  subscription  OrganizationSubscription?
-  
+  subscription OrganizationSubscription?
+
   // POS Products
-  products      Product[]
-  
+  products Product[]
+
   // Media
-  media         Media[]
-  
+  media Media[]
+
   // Facilities
-  facilities    Facility[]
-  equipment     Equipment[]
-  
+  facilities Facility[]
+  equipment  Equipment[]
+
   // Staff & Scheduling
   staffProfiles     StaffProfile[]
   shifts            Shift[]
   scheduleTemplates ScheduleTemplate[]
-  
+
   // SMS
-  smsMessages       SmsMessage[]
-  smsCampaigns      SmsCampaign[]
-  smsUsage          SmsUsage[]
-  
+  smsMessages  SmsMessage[]
+  smsCampaigns SmsCampaign[]
+  smsUsage     SmsUsage[]
+
   // Email
-  emailMessages     EmailMessage[]
-  emailCampaigns    EmailCampaign[]
-  emailUsage        EmailUsage[]
-  
+  emailMessages  EmailMessage[]
+  emailCampaigns EmailCampaign[]
+  emailUsage     EmailUsage[]
+
   // Medical
   medicalFormConfig      MedicalFormConfig?
   customMedicalQuestions CustomMedicalQuestion[]
-  
+
   // Registration Queues
-  queueConfigs           RegistrationQueueConfig[]
-  
+  queueConfigs RegistrationQueueConfig[]
+
   // Invitations
-  invitations            OrganizationInvitation[]
-  
+  invitations OrganizationInvitation[]
+
   // Notification Rules
-  notificationRules      NotificationRule[]
-  notificationLogs       NotificationLog[]
-  
+  notificationRules NotificationRule[]
+  notificationLogs  NotificationLog[]
+
   // Levels
-  levels                 Level[]
-  
+  levels Level[]
+
   // Organization Payment Methods (for SaaS subscription billing)
   organizationPaymentMethods OrganizationPaymentMethod[]
+
+  // Program Instances
+  programInstances ProgramInstance[]
 }
 
 model OrganizationMember {
@@ -119,8 +122,8 @@ model OrganizationMember {
   joinedAt       DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, userId])
 }
@@ -132,44 +135,44 @@ enum MemberStatus {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
+  id             String     @id @default(cuid())
+  email          String     @unique
   name           String
   passwordHash   String?
   avatar         String?
-  role           Role     @default(COACH) // Platform role or fallback
+  role           Role       @default(COACH) // Platform role or fallback
   status         UserStatus @default(ACTIVE)
-  organizationId String?   // Made optional - Last active organization
-  isSuperAdmin   Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  organizationId String? // Made optional - Last active organization
+  isSuperAdmin   Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
   lastActiveAt   DateTime?
 
   // Relations
-  organization  Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberships   OrganizationMember[]
-  permissions   UserPermission[]
-  lessonPlans   LessonPlan[]
-  evaluations   Evaluation[]
-  events        Event[]      @relation("EventCoach")
-  sessions      Session[]
-  accounts      Account[]
-  media         Media[]
+  organization        Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships         OrganizationMember[]
+  permissions         UserPermission[]
+  lessonPlans         LessonPlan[]
+  evaluations         Evaluation[]
+  events              Event[]              @relation("EventCoach")
+  sessions            Session[]
+  accounts            Account[]
+  media               Media[]
   facilityAssignments FacilityAssignment[]
-  staffProfile  StaffProfile?
-  
+  staffProfile        StaffProfile?
+
   // Announcement relations
-  announcementReads       AnnouncementRead[] @relation("AnnouncementReads")
-  systemAnnouncementReads SystemAnnouncementRead[] @relation("SystemAnnouncementReads")
-  systemAnnouncementsCreated SystemAnnouncement[] @relation("SystemAnnouncementCreator")
-  
+  announcementReads          AnnouncementRead[]       @relation("AnnouncementReads")
+  systemAnnouncementReads    SystemAnnouncementRead[] @relation("SystemAnnouncementReads")
+  systemAnnouncementsCreated SystemAnnouncement[]     @relation("SystemAnnouncementCreator")
+
   // Feature request relations
-  featureRequests         FeatureRequest[] @relation("FeatureRequestAuthor")
-  featureVotes            FeatureVote[] @relation("FeatureVotes")
-  featureComments         FeatureComment[] @relation("FeatureComments")
-  
+  featureRequests FeatureRequest[] @relation("FeatureRequestAuthor")
+  featureVotes    FeatureVote[]    @relation("FeatureVotes")
+  featureComments FeatureComment[] @relation("FeatureComments")
+
   // Invitations sent by this user
-  invitationsSent         OrganizationInvitation[] @relation("InvitationsSent")
+  invitationsSent OrganizationInvitation[] @relation("InvitationsSent")
 }
 
 model Session {
@@ -177,8 +180,8 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {
@@ -225,9 +228,9 @@ model UserPermission {
   id         String @id @default(cuid())
   userId     String
   permission String // e.g., "athletes.read", "financials.write"
-  
-  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, permission])
 }
 
@@ -245,8 +248,8 @@ model OrganizationInvitation {
   createdAt      DateTime                     @default(now())
   updatedAt      DateTime                     @updatedAt
 
-  organization   Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invitedBy      User                         @relation("InvitationsSent", fields: [invitedById], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InvitationsSent", fields: [invitedById], references: [id])
 
   @@index([email])
   @@index([organizationId])
@@ -291,33 +294,34 @@ model Family {
   organizationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  
+
   // SMS Preferences
-  smsOptOut      Boolean  @default(false) // True if family has opted out of SMS
-  smsOptOutAt    DateTime?               // When they opted out
-  
+  smsOptOut   Boolean   @default(false) // True if family has opted out of SMS
+  smsOptOutAt DateTime? // When they opted out
+
   // Email Preferences
-  emailOptOut    Boolean  @default(false) // True if family has opted out of marketing emails
-  emailOptOutAt  DateTime?               // When they opted out
+  emailOptOut   Boolean   @default(false) // True if family has opted out of marketing emails
+  emailOptOutAt DateTime? // When they opted out
 
   // Relations
-  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   // athletes       Athlete[] // Deprecated, use guardians
-  guardians        AthleteGuardian[]
-  paymentMethods   PaymentMethod[]
-  invoices         Invoice[]
-  payments         Payment[]
-  enrollments      Enrollment[] // Enrollments paid/managed by this family
-  recurringCharges RecurringCharge[]
-  smsMessages      SmsMessage[]
-  emailMessages    EmailMessage[]
+  guardians             AthleteGuardian[]
+  paymentMethods        PaymentMethod[]
+  invoices              Invoice[]
+  payments              Payment[]
+  enrollments           Enrollment[] // Enrollments paid/managed by this family
+  recurringCharges      RecurringCharge[]
+  smsMessages           SmsMessage[]
+  emailMessages         EmailMessage[]
+  instanceRegistrations InstanceRegistration[] // Per-instance program registrations
 
   // Auth Link
-  userId         String?   @unique
+  userId String? @unique
 }
 
 model Athlete {
-  id        String       @id @default(cuid())
+  id        String        @id @default(cuid())
   name      String
   email     String?
   level     String
@@ -326,17 +330,17 @@ model Athlete {
   avatar    String?
   birthDate DateTime?
   familyId  String? // Deprecated: Use guardians relation
-  
+
   // New fields for refactor
-  customId       String?  // Club-specific ID (e.g. Member ID)
-  organizationId String?  // Direct organization link
-  medicalDetails Json?    // { allergies: [], conditions: [], emergencyContact: {} }
-  
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  customId       String? // Club-specific ID (e.g. Member ID)
+  organizationId String? // Direct organization link
+  medicalDetails Json? // { allergies: [], conditions: [], emergencyContact: {} }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization     Organization? @relation(fields: [organizationId], references: [id])
+  organization     Organization?          @relation(fields: [organizationId], references: [id])
   enrollments      Enrollment[]
   attendances      Attendance[]
   evaluations      Evaluation[]
@@ -346,25 +350,29 @@ model Athlete {
   recurringCharges RecurringCharge[]
   skillProgress    AthleteSkillProgress[]
   achievements     AthleteAchievement[]
-  
+
   // Multi-family support
-  guardians   AthleteGuardian[]
-  
+  guardians AthleteGuardian[]
+
   // Medical information
   medicalInfo AthleteMedicalInfo?
+
+  // Program instance registrations & attendance
+  instanceRegistrations InstanceRegistration[]
+  instanceAttendances   InstanceAttendance[]
 }
 
 model AthleteGuardian {
   id           String   @id @default(cuid())
   athleteId    String
   familyId     String
-  relationship String?  // e.g. "Parent", "Guardian", "Grandparent"
+  relationship String? // e.g. "Parent", "Guardian", "Grandparent"
   isPrimary    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  athlete      Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  family       Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  family  Family  @relation(fields: [familyId], references: [id], onDelete: Cascade)
 
   @@unique([athleteId, familyId])
 }
@@ -390,20 +398,20 @@ enum MedicalQuestionType {
 
 // Organization-level medical form configuration
 model MedicalFormConfig {
-  id             String   @id @default(cuid())
-  organizationId String   @unique
-  
+  id             String @id @default(cuid())
+  organizationId String @unique
+
   // Standard questions toggles
-  collectAllergies          Boolean @default(true)
-  collectMedications        Boolean @default(true)
-  collectConditions         Boolean @default(true)
-  collectEmergencyContact   Boolean @default(true)
+  collectAllergies           Boolean @default(true)
+  collectMedications         Boolean @default(true)
+  collectConditions          Boolean @default(true)
+  collectEmergencyContact    Boolean @default(true)
   collectDietaryRestrictions Boolean @default(false)
-  collectInsuranceInfo      Boolean @default(false)
-  
+  collectInsuranceInfo       Boolean @default(false)
+
   // Registration integration
   requireDuringRegistration Boolean @default(false)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -413,21 +421,21 @@ model MedicalFormConfig {
 
 // Custom medical questions defined by organization
 model CustomMedicalQuestion {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
-  
-  questionText   String
-  questionType   MedicalQuestionType @default(TEXT)
-  options        Json?    // For MULTIPLE_CHOICE/CHECKBOX types: string[]
-  required       Boolean  @default(false)
-  displayOrder   Int      @default(0)
-  isActive       Boolean  @default(true)
-  
+
+  questionText String
+  questionType MedicalQuestionType @default(TEXT)
+  options      Json? // For MULTIPLE_CHOICE/CHECKBOX types: string[]
+  required     Boolean             @default(false)
+  displayOrder Int                 @default(0)
+  isActive     Boolean             @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   responses    CustomMedicalResponse[]
 
   @@index([organizationId])
@@ -435,35 +443,35 @@ model CustomMedicalQuestion {
 
 // Structured medical data per athlete
 model AthleteMedicalInfo {
-  id        String   @id @default(cuid())
-  athleteId String   @unique
-  
+  id        String @id @default(cuid())
+  athleteId String @unique
+
   // Standard fields (arrays for multiple entries)
-  allergies              String[] // Food, environmental, medication allergies
-  medications            String[] // Current medications
-  conditions             String[] // Medical conditions (asthma, diabetes, etc.)
-  dietaryRestrictions    String[] // Dietary restrictions
-  
+  allergies           String[] // Food, environmental, medication allergies
+  medications         String[] // Current medications
+  conditions          String[] // Medical conditions (asthma, diabetes, etc.)
+  dietaryRestrictions String[] // Dietary restrictions
+
   // Insurance info
-  insuranceProvider      String?
-  insurancePolicyNumber  String?
-  
+  insuranceProvider     String?
+  insurancePolicyNumber String?
+
   // Emergency contact (structured from JSON)
   emergencyContactName     String?
   emergencyContactPhone    String?
   emergencyContactRelation String?
-  
+
   // Additional notes
-  additionalNotes        String?  @db.Text
-  
+  additionalNotes String? @db.Text
+
   // Metadata
-  lastUpdatedBy String?  // User ID who last updated
-  
+  lastUpdatedBy String? // User ID who last updated
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  athlete         Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  athlete         Athlete                 @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   customResponses CustomMedicalResponse[]
 
   @@index([athleteId])
@@ -471,12 +479,12 @@ model AthleteMedicalInfo {
 
 // Answers to custom medical questions
 model CustomMedicalResponse {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   medicalInfoId String
   questionId    String
-  
-  response      String   // Stored as string, parsed based on question type
-  
+
+  response String // Stored as string, parsed based on question type
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -490,14 +498,14 @@ model CustomMedicalResponse {
 }
 
 model PaymentMethod {
-  id        String  @id @default(cuid())
+  id        String            @id @default(cuid())
   familyId  String
   type      PaymentMethodType
   last4     String
   expiry    String?
   brand     String?
-  isDefault Boolean @default(false)
-  createdAt DateTime @default(now())
+  isDefault Boolean           @default(false)
+  createdAt DateTime          @default(now())
 
   // Relations
   family           Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
@@ -517,18 +525,18 @@ enum PaymentMethodType {
 model Level {
   id             String   @id @default(cuid())
   organizationId String
-  name           String   // e.g., "Bronze", "Level 1", "Beginner"
+  name           String // e.g., "Bronze", "Level 1", "Beginner"
   description    String?
-  order          Int      @default(0)  // Display order
-  color          String?  // Optional hex color for UI
+  order          Int      @default(0) // Display order
+  color          String? // Optional hex color for UI
   isDefault      Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relations
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization        Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   programs            Program[]
-  skills              Skill[]    @relation("SkillLevel")
+  skills              Skill[]                   @relation("SkillLevel")
   programRequirements ProgramLevelRequirement[]
 
   @@index([organizationId])
@@ -536,49 +544,60 @@ model Level {
 }
 
 model Program {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   name           String
   description    String?
-  level          String   // Legacy field - kept for backwards compatibility
+  level          String // Legacy field - kept for backwards compatibility
   status         ProgramStatus @default(ACTIVE)
   organizationId String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  // Program Type
-  programType       ProgramType @default(SUBSCRIPTION)
-  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Program Type (Legacy - kept for backwards compatibility)
+  programType ProgramType @default(SUBSCRIPTION)
+
+  // New Calendar-based scheduling
+  recurrenceType   RecurrenceType    @default(RECURRING)
+  registrationType RegistrationType? // Only for recurring: all-at-once or per-instance
+
   // Pricing Configuration
-  pricingModel      PricingModel @default(FLAT_RATE)
-  basePrice         Decimal?  @db.Decimal(10, 2)  // For flat-rate pricing
-  perSessionPrice   Decimal?  @db.Decimal(10, 2)  // For per-session pricing
-  
-  // Schedule Configuration (for recurring programs)
-  startDate         DateTime?
-  endDate           DateTime?
-  schedulePattern   Json?  // { days: ["MON", "WED", "FRI"], time: "09:00" }
-  
-  // Capacity (for drop-in classes)
-  capacity          Int?
-  
+  pricingModel    PricingModel @default(FLAT_RATE)
+  basePrice       Decimal?     @db.Decimal(10, 2) // For flat-rate pricing
+  perSessionPrice Decimal?     @db.Decimal(10, 2) // For per-session pricing
+
+  // Schedule Configuration
+  startDate       DateTime?
+  endDate         DateTime?
+  schedulePattern Json? // Legacy: { days: ["MON", "WED", "FRI"], time: "09:00" }
+  rrule           String? // RFC 5545 RRULE string (e.g., "FREQ=WEEKLY;BYDAY=MO,WE,FR")
+  startTime       String? // Default start time (e.g., "09:00")
+  duration        Int? // Duration in minutes
+
+  // Default Facility
+  facilityId String? // Default facility for this program
+
+  // Capacity (for classes)
+  capacity Int?
+
   // Level Configuration
-  levelId           String?   // FK to Level model (legacy single level)
-  showLevelOnSite   Boolean   @default(true)
-  showCoachOnSite   Boolean   @default(true)
-  
+  levelId         String? // FK to Level model (legacy single level)
+  showLevelOnSite Boolean @default(true)
+  showCoachOnSite Boolean @default(true)
+
   // Age Restrictions
-  minAge            Int?      // Minimum age (0-100)
-  maxAge            Int?      // Maximum age (0-100)
-  
+  minAge Int? // Minimum age (0-100)
+  maxAge Int? // Maximum age (0-100)
+
   // Restriction Flags (for UI toggle state)
-  hasLevelRestriction       Boolean @default(false)
-  hasCapacityRestriction    Boolean @default(false)
-  hasAgeRestriction         Boolean @default(false)
-  hasMembershipRestriction  Boolean @default(false)
+  hasLevelRestriction      Boolean @default(false)
+  hasCapacityRestriction   Boolean @default(false)
+  hasAgeRestriction        Boolean @default(false)
+  hasMembershipRestriction Boolean @default(false)
 
   // Relations
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  programLevel        Level?       @relation(fields: [levelId], references: [id], onDelete: SetNull)
+  organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  programLevel        Level?                      @relation(fields: [levelId], references: [id], onDelete: SetNull)
+  facility            Facility?                   @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   events              Event[]
   lessonPlans         LessonPlan[]
   enrollments         Enrollment[]
@@ -590,12 +609,14 @@ model Program {
   evaluationTemplates ProgramEvaluationTemplate[]
   bulkDiscounts       ProgramBulkDiscount[]
   levelRequirements   ProgramLevelRequirement[]
-  
+  instances           ProgramInstance[]
+
   // Registration Queue
-  queueConfigs        RegistrationQueueConfig[]
-  queueReservations   QueueReservation[]
-  
+  queueConfigs      RegistrationQueueConfig[]
+  queueReservations QueueReservation[]
+
   @@index([levelId])
+  @@index([facilityId])
 }
 
 enum ProgramStatus {
@@ -604,38 +625,50 @@ enum ProgramStatus {
   ARCHIVED
 }
 
+// Legacy - kept for backwards compatibility during migration
 enum ProgramType {
-  SINGLE_INSTANCE   // One-off class/event
-  SUBSCRIPTION      // Recurring within period (annual membership style)
-  DROP_IN           // Individually purchased classes
+  SINGLE_INSTANCE // One-off class/event
+  SUBSCRIPTION // Recurring within period (annual membership style)
+  DROP_IN // Individually purchased classes
+}
+
+// New calendar-based program scheduling
+enum RecurrenceType {
+  NON_RECURRING // Single date/time event
+  RECURRING // Repeats on a schedule
+}
+
+enum RegistrationType {
+  ALL_INSTANCES // User registers for entire series
+  PER_INSTANCE // User registers for individual sessions
 }
 
 enum PricingModel {
-  FLAT_RATE         // Fixed price for entire program
-  PER_SESSION       // Price calculated per session
+  FLAT_RATE // Fixed price for entire program
+  PER_SESSION // Price calculated per session
 }
 
 // Program Bulk Discounts - for family and multi-session discounts
 model ProgramBulkDiscount {
-  id             String   @id @default(cuid())
-  programId      String
-  type           BulkDiscountType
-  minQuantity    Int      // e.g., 2 for 2nd child, 10 for 10-pack
-  discountType   DiscountType  // PERCENTAGE, FIXED_AMOUNT
-  discountValue  Decimal  @db.Decimal(10, 2)
-  description    String?  // Display text for marketing site
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String           @id @default(cuid())
+  programId     String
+  type          BulkDiscountType
+  minQuantity   Int // e.g., 2 for 2nd child, 10 for 10-pack
+  discountType  DiscountType // PERCENTAGE, FIXED_AMOUNT
+  discountValue Decimal          @db.Decimal(10, 2)
+  description   String? // Display text for marketing site
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   // Relations
-  program        Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   @@index([programId])
 }
 
 enum BulkDiscountType {
-  FAMILY_SIBLING    // Nth child discount
-  MULTI_SESSION     // Buy X, save Y
+  FAMILY_SIBLING // Nth child discount
+  MULTI_SESSION // Buy X, save Y
 }
 
 // Program Level Requirements - many-to-many for level restrictions
@@ -644,10 +677,10 @@ model ProgramLevelRequirement {
   programId String
   levelId   String
   createdAt DateTime @default(now())
-  
-  program   Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  level     Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
-  
+
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  level   Level   @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
   @@unique([programId, levelId])
   @@index([programId])
   @@index([levelId])
@@ -655,87 +688,87 @@ model ProgramLevelRequirement {
 
 // Legacy - to be deprecated
 model MembershipTier {
-  id          String   @id @default(cuid())
-  programId   String?
-  name        String
-  price       Decimal  @db.Decimal(10, 2)
-  interval    BillingInterval
-  description String?
-  features    String[] // Array of feature strings
+  id             String          @id @default(cuid())
+  programId      String?
+  name           String
+  price          Decimal         @db.Decimal(10, 2)
+  interval       BillingInterval
+  description    String?
+  features       String[] // Array of feature strings
   organizationId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  program     Program?  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  enrollments Enrollment[]
+  program      Program?     @relation(fields: [programId], references: [id], onDelete: Cascade)
+  enrollments  Enrollment[]
 }
 
 // New Membership Structure
 model MembershipGroup {
   id             String   @id @default(cuid())
   organizationId String
-  name           String   // e.g., "Annual Membership"
+  name           String // e.g., "Annual Membership"
   description    String?
   programTypes   String[] // Relevant program types
-  
+
   // Logic & Defaults
-  allowAutoRenew Boolean  @default(false)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  allowAutoRenew Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  instances      MembershipInstance[]
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  instances    MembershipInstance[]
 }
 
 model MembershipInstance {
-  id                String   @id @default(cuid())
+  id                String @id @default(cuid())
   membershipGroupId String
-  name              String   // e.g., "FY25"
-  
+  name              String // e.g., "FY25"
+
   // Billing
-  price             Decimal  @db.Decimal(10, 2)
-  billingInterval   BillingInterval
-  
+  price           Decimal         @db.Decimal(10, 2)
+  billingInterval BillingInterval
+
   // Validity
-  startDate         DateTime
-  endDate           DateTime
-  
+  startDate DateTime
+  endDate   DateTime
+
   // Renewal Logic
-  autoRenewDate     DateTime? // When to trigger creation of next instance (if handled by system)
-  
-  status            MembershipStatus @default(ACTIVE)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  autoRenewDate DateTime? // When to trigger creation of next instance (if handled by system)
+
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   // Relations
-  group             MembershipGroup @relation(fields: [membershipGroupId], references: [id], onDelete: Cascade)
-  athleteMemberships AthleteMembership[]
-  requiredForEvents Event[]
+  group               MembershipGroup     @relation(fields: [membershipGroupId], references: [id], onDelete: Cascade)
+  athleteMemberships  AthleteMembership[]
+  requiredForEvents   Event[]
   requiredForPrograms Program[]
 }
 
 model AthleteMembership {
-  id                   String   @id @default(cuid())
+  id                   String @id @default(cuid())
   athleteId            String
   membershipInstanceId String
-  
-  startDate            DateTime
-  endDate              DateTime?
-  status               MembershipStatus @default(ACTIVE)
-  
+
+  startDate DateTime
+  endDate   DateTime?
+  status    MembershipStatus @default(ACTIVE)
+
   // Auto-renewal for the athlete
-  autoRenew            Boolean @default(false)
-  
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  autoRenew Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  athlete              Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  instance             MembershipInstance @relation(fields: [membershipInstanceId], references: [id], onDelete: Cascade)
+  athlete  Athlete            @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  instance MembershipInstance @relation(fields: [membershipInstanceId], references: [id], onDelete: Cascade)
 }
 
 enum MembershipStatus {
@@ -752,22 +785,22 @@ enum BillingInterval {
 }
 
 model Enrollment {
-  id                String    @id @default(cuid())
-  athleteId         String
-  programId         String
-  membershipTierId  String?   // Legacy
-  familyId          String?   // The family responsible for this enrollment
-  startDate         DateTime
-  endDate           DateTime?
-  status            EnrollmentStatus @default(ACTIVE)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id               String           @id @default(cuid())
+  athleteId        String
+  programId        String
+  membershipTierId String? // Legacy
+  familyId         String? // The family responsible for this enrollment
+  startDate        DateTime
+  endDate          DateTime?
+  status           EnrollmentStatus @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   // Relations
-  athlete        Athlete        @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  program        Program        @relation(fields: [programId], references: [id], onDelete: Cascade)
+  athlete        Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  program        Program         @relation(fields: [programId], references: [id], onDelete: Cascade)
   membershipTier MembershipTier? @relation(fields: [membershipTierId], references: [id])
-  family         Family?        @relation(fields: [familyId], references: [id])
+  family         Family?         @relation(fields: [familyId], references: [id])
 }
 
 enum EnrollmentStatus {
@@ -778,38 +811,126 @@ enum EnrollmentStatus {
 }
 
 // ============================================
+// Program Instances (Individual Sessions)
+// ============================================
+
+model ProgramInstance {
+  id             String         @id @default(cuid())
+  programId      String
+  date           DateTime
+  startTime      String // e.g., "09:00"
+  endTime        String // e.g., "10:30"
+  facilityId     String? // Can override program's default facility
+  capacity       Int? // Can override program capacity
+  status         InstanceStatus @default(SCHEDULED)
+  notes          String?
+  organizationId String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  program       Program                @relation(fields: [programId], references: [id], onDelete: Cascade)
+  facility      Facility?              @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  organization  Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  registrations InstanceRegistration[]
+  attendances   InstanceAttendance[]
+
+  @@index([programId])
+  @@index([facilityId])
+  @@index([organizationId])
+  @@index([date])
+  @@index([status])
+}
+
+enum InstanceStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+// Instance Registration - for per-instance program registrations
+model InstanceRegistration {
+  id                String             @id @default(cuid())
+  programInstanceId String
+  athleteId         String
+  familyId          String?
+  status            RegistrationStatus @default(REGISTERED)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  // Relations
+  programInstance ProgramInstance @relation(fields: [programInstanceId], references: [id], onDelete: Cascade)
+  athlete         Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  family          Family?         @relation(fields: [familyId], references: [id], onDelete: SetNull)
+
+  @@unique([programInstanceId, athleteId])
+  @@index([programInstanceId])
+  @@index([athleteId])
+  @@index([familyId])
+  @@index([status])
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  WAITLISTED
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+// Instance Attendance - tracks attendance for specific program instances
+model InstanceAttendance {
+  id                String           @id @default(cuid())
+  programInstanceId String
+  athleteId         String
+  status            AttendanceStatus @default(REGISTERED)
+  checkedIn         DateTime?
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  programInstance ProgramInstance @relation(fields: [programInstanceId], references: [id], onDelete: Cascade)
+  athlete         Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@unique([programInstanceId, athleteId])
+  @@index([programInstanceId])
+  @@index([athleteId])
+}
+
+// ============================================
 // PHASE 3: Events & Attendance
 // ============================================
 
 model Event {
-  id             String    @id @default(cuid())
-  title          String
-  date           DateTime
-  startTime      String
-  endTime        String
-  type           EventType @default(CLASS)
-  description    String?
-  meetingLink    String?
-  timezone       String?
-  capacity       Int?
-  location       Json?     // { lat, lng, address, name } - for external/custom locations
-  details        Json?     // { whatToBring, whatToExpect, requirements }
-  programId      String?
-  coachId        String?
-  facilityId     String?   // Optional - links to a Facility for scheduling
+  id                  String               @id @default(cuid())
+  title               String
+  date                DateTime
+  startTime           String
+  endTime             String
+  type                EventType            @default(CLASS)
+  description         String?
+  meetingLink         String?
+  timezone            String?
+  capacity            Int?
+  location            Json? // { lat, lng, address, name } - for external/custom locations
+  details             Json? // { whatToBring, whatToExpect, requirements }
+  programId           String?
+  coachId             String?
+  facilityId          String? // Optional - links to a Facility for scheduling
   requiredMemberships MembershipInstance[]
-  organizationId String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  organizationId      String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  program      Program?     @relation(fields: [programId], references: [id])
-  coach        User?        @relation("EventCoach", fields: [coachId], references: [id])
-  facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  attendances  Attendance[]
-  lineItems    LineItem[]
-  media        Media[]
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program          Program?     @relation(fields: [programId], references: [id])
+  coach            User?        @relation("EventCoach", fields: [coachId], references: [id])
+  facility         Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  attendances      Attendance[]
+  lineItems        LineItem[]
+  media            Media[]
   staffAssignments EventStaff[]
 }
 
@@ -833,8 +954,8 @@ model Attendance {
   updatedAt DateTime         @updatedAt
 
   // Relations
-  athlete   Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([athleteId, eventId])
 }
@@ -882,12 +1003,12 @@ enum InvoiceStatus {
 }
 
 model LineItem {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   invoiceId   String
   description String
   quantity    Int
-  unitPrice   Decimal @db.Decimal(10, 2)
-  total       Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
   programId   String? // What program is this for?
   eventId     String? // What specific event?
   athleteId   String? // Which athlete?
@@ -895,10 +1016,10 @@ model LineItem {
   createdAt   DateTime @default(now())
 
   // Relations
-  invoice  Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  program  Program? @relation(fields: [programId], references: [id])
-  event    Event?   @relation(fields: [eventId], references: [id])
-  athlete  Athlete? @relation(fields: [athleteId], references: [id])
+  invoice  Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  program  Program?  @relation(fields: [programId], references: [id])
+  event    Event?    @relation(fields: [eventId], references: [id])
+  athlete  Athlete?  @relation(fields: [athleteId], references: [id])
   discount Discount? @relation(fields: [discountId], references: [id])
 }
 
@@ -909,7 +1030,7 @@ model Payment {
   amount        Decimal       @db.Decimal(10, 2)
   method        PaymentType
   status        PaymentStatus @default(PENDING)
-  transactionId String?       // Legacy field, keeping for backwards compatibility
+  transactionId String? // Legacy field, keeping for backwards compatibility
   processedAt   DateTime?
   createdAt     DateTime      @default(now())
 
@@ -934,21 +1055,21 @@ enum PaymentStatus {
 }
 
 model Discount {
-  id           String       @id @default(cuid())
-  name         String
-  code         String       @unique
-  type         DiscountType
-  amount       Decimal      @db.Decimal(10, 2)
-  validFrom    DateTime
-  validTo      DateTime?
-  userScope    UserScope    @default(ALL)
-  productScope ProductScope @default(ALL)
-  usageLimit   Int?
-  usageCount   Int          @default(0)
-  status       DiscountStatus @default(ACTIVE)
+  id             String         @id @default(cuid())
+  name           String
+  code           String         @unique
+  type           DiscountType
+  amount         Decimal        @db.Decimal(10, 2)
+  validFrom      DateTime
+  validTo        DateTime?
+  userScope      UserScope      @default(ALL)
+  productScope   ProductScope   @default(ALL)
+  usageLimit     Int?
+  usageCount     Int            @default(0)
+  status         DiscountStatus @default(ACTIVE)
   organizationId String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -982,17 +1103,17 @@ enum DiscountStatus {
 }
 
 model GLCode {
-  id          String       @id @default(cuid())
-  code        String       @unique
-  description String
-  type        GLCodeType
-  status      GLCodeStatus @default(ACTIVE)
+  id             String       @id @default(cuid())
+  code           String       @unique
+  description    String
+  type           GLCodeType
+  status         GLCodeStatus @default(ACTIVE)
   organizationId String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ledgerEntries LedgerEntry[]
 }
 
@@ -1010,20 +1131,20 @@ enum GLCodeStatus {
 }
 
 model LedgerEntry {
-  id          String            @id @default(cuid())
-  date        DateTime
-  description String
-  glCodeId    String
-  reference   String?
-  debit       Decimal?          @db.Decimal(10, 2)
-  credit      Decimal?          @db.Decimal(10, 2)
-  status      LedgerEntryStatus @default(PENDING)
+  id             String            @id @default(cuid())
+  date           DateTime
+  description    String
+  glCodeId       String
+  reference      String?
+  debit          Decimal?          @db.Decimal(10, 2)
+  credit         Decimal?          @db.Decimal(10, 2)
+  status         LedgerEntryStatus @default(PENDING)
   organizationId String
-  createdAt   DateTime          @default(now())
+  createdAt      DateTime          @default(now())
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  glCode GLCode @relation(fields: [glCodeId], references: [id])
+  glCode       GLCode       @relation(fields: [glCodeId], references: [id])
 }
 
 enum LedgerEntryStatus {
@@ -1036,21 +1157,21 @@ enum LedgerEntryStatus {
 // ============================================
 
 model Transaction {
-  id              String            @id @default(cuid())
-  organizationId  String
-  paymentId       String?           @unique
-  pspReference    String            @unique // Adyen PSP reference
-  merchantRef     String?           // Our internal reference
-  type            TransactionType
-  amount          Decimal           @db.Decimal(10, 2)
-  currency        String            @default("USD")
-  status          TransactionStatus
-  method          String?           // visa, mastercard, applepay, etc.
-  description     String?
-  metadata        Json?
-  settledAt       DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  organizationId String
+  paymentId      String?           @unique
+  pspReference   String            @unique // Adyen PSP reference
+  merchantRef    String? // Our internal reference
+  type           TransactionType
+  amount         Decimal           @db.Decimal(10, 2)
+  currency       String            @default("USD")
+  status         TransactionStatus
+  method         String? // visa, mastercard, applepay, etc.
+  description    String?
+  metadata       Json?
+  settledAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1091,7 +1212,7 @@ model Payout {
   net            Decimal      @db.Decimal(10, 2)
   currency       String       @default("USD")
   status         PayoutStatus
-  bankAccount    String?      // Last 4 digits
+  bankAccount    String? // Last 4 digits
   scheduledAt    DateTime?
   paidAt         DateTime?
   createdAt      DateTime     @default(now())
@@ -1154,31 +1275,31 @@ enum RecurringStatus {
 model Skill {
   id             String   @id @default(cuid())
   name           String
-  category       String   // e.g., "Vault", "Bars", "Beam", "Floor"
-  level          String?  // Legacy field - kept for backwards compatibility
+  category       String // e.g., "Vault", "Bars", "Beam", "Floor"
+  level          String? // Legacy field - kept for backwards compatibility
   description    String?  @db.Text
   organizationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  
+
   // Difficulty and age targeting
   difficultyLevel SkillDifficulty @default(BEGINNER)
-  minAge          Int?     // Suggested minimum age
-  maxAge          Int?     // Suggested maximum age
-  videoUrl        String?  // Demo video URL
-  imageUrl        String?  // Demo image URL
-  
+  minAge          Int? // Suggested minimum age
+  maxAge          Int? // Suggested maximum age
+  videoUrl        String? // Demo video URL
+  imageUrl        String? // Demo image URL
+
   // Level reference (new system)
-  levelId         String?  // FK to Level model
+  levelId String? // FK to Level model
 
   // Relations
-  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  skillLevel       Level?             @relation("SkillLevel", fields: [levelId], references: [id], onDelete: SetNull)
+  organization     Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  skillLevel       Level?                    @relation("SkillLevel", fields: [levelId], references: [id], onDelete: SetNull)
   evaluationSkills EvaluationSkill[]
   rotationSkills   RotationSkill[]
   templateSkills   EvaluationTemplateSkill[]
   athleteProgress  AthleteSkillProgress[]
-  
+
   @@index([levelId])
 }
 
@@ -1202,27 +1323,27 @@ model EvaluationTemplate {
   updatedAt       DateTime        @updatedAt
 
   // Auto-sync configuration
-  autoSyncEnabled    Boolean   @default(false)
-  autoSyncLevels     String[]  @default([])  // e.g., ["BEGINNER", "INTERMEDIATE"]
-  autoSyncCategories String[]  @default([])  // e.g., ["Vault", "Bars"]
+  autoSyncEnabled    Boolean  @default(false)
+  autoSyncLevels     String[] @default([]) // e.g., ["BEGINNER", "INTERMEDIATE"]
+  autoSyncCategories String[] @default([]) // e.g., ["Vault", "Bars"]
 
   // Scoring configuration
-  scoringType             ScoringType    @default(PASS_FAIL)
-  pointScaleMin           Int            @default(1)
-  pointScaleMax           Int            @default(10)
-  pointScalePassThreshold Int            @default(7)
+  scoringType             ScoringType @default(PASS_FAIL)
+  pointScaleMin           Int         @default(1)
+  pointScaleMax           Int         @default(10)
+  pointScalePassThreshold Int         @default(7)
 
   // Completion requirements for achievements
   completionType      CompletionType @default(PERCENTAGE)
   completionThreshold Decimal        @default(80) @db.Decimal(5, 2)
 
   // Relations
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization     Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   skills           EvaluationTemplateSkill[]
   evaluations      Evaluation[]
   programTemplates ProgramEvaluationTemplate[]
   achievements     Achievement[]
-  
+
   @@index([organizationId])
 }
 
@@ -1231,15 +1352,15 @@ model EvaluationTemplateSkill {
   id         String  @id @default(cuid())
   templateId String
   skillId    String
-  order      Int     @default(0)  // Display order
+  order      Int     @default(0) // Display order
   isRequired Boolean @default(true)
-  
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  template   EvaluationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  skill      Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  template EvaluationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  skill    Skill              @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([templateId, skillId])
   @@index([templateId])
@@ -1248,17 +1369,17 @@ model EvaluationTemplateSkill {
 
 // Junction table for linking evaluation templates to programs
 model ProgramEvaluationTemplate {
-  id          String    @id @default(cuid())
-  programId   String
-  templateId  String
-  isRequired  Boolean   @default(false)
-  dueDate     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  programId  String
+  templateId String
+  isRequired Boolean   @default(false)
+  dueDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   // Relations
-  program     Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
-  template    EvaluationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  program  Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
+  template EvaluationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@unique([programId, templateId])
   @@index([programId])
@@ -1322,8 +1443,8 @@ model Evaluation {
   id           String           @id @default(cuid())
   athleteId    String
   coachId      String
-  templateId   String?          // Optional link to evaluation template
-  programId    String?          // Optional link to program
+  templateId   String? // Optional link to evaluation template
+  programId    String? // Optional link to program
   date         DateTime
   level        String
   overallScore Decimal          @db.Decimal(3, 1)
@@ -1339,7 +1460,7 @@ model Evaluation {
   program             Program?             @relation(fields: [programId], references: [id], onDelete: SetNull)
   skillRatings        EvaluationSkill[]
   athleteAchievements AthleteAchievement[]
-  
+
   @@index([athleteId])
   @@index([coachId])
   @@index([templateId])
@@ -1347,8 +1468,8 @@ model Evaluation {
 }
 
 enum EvaluationStatus {
-  PENDING      // Evaluation assigned but not completed
-  IN_PROGRESS  // Evaluation started
+  PENDING // Evaluation assigned but not completed
+  IN_PROGRESS // Evaluation started
   PASS
   RETRY
   EXCELLENT
@@ -1359,8 +1480,8 @@ model EvaluationSkill {
   id            String             @id @default(cuid())
   evaluationId  String
   skillId       String
-  rating        Int?               // Legacy: 1-5, optional (can use attemptStatus instead)
-  pointScore    Int?               // For POINT_SCALE scoring type
+  rating        Int? // Legacy: 1-5, optional (can use attemptStatus instead)
+  pointScore    Int? // For POINT_SCALE scoring type
   attemptStatus SkillAttemptStatus @default(NOT_ATTEMPTED)
   passed        Boolean            @default(false) // Computed based on scoring type
   comment       String?
@@ -1382,15 +1503,15 @@ enum SkillAttemptStatus {
 
 // Scoring types for evaluations
 enum ScoringType {
-  PASS_FAIL    // 3 states: NOT_ATTEMPTED, ATTEMPTED, PASSED
-  POINT_SCALE  // Configurable range with pass threshold
+  PASS_FAIL // 3 states: NOT_ATTEMPTED, ATTEMPTED, PASSED
+  POINT_SCALE // Configurable range with pass threshold
 }
 
 // Completion requirement types for achievements
 enum CompletionType {
-  PERCENTAGE   // e.g., 80% of skills passed
-  COUNT        // e.g., 15 skills passed
-  ALL          // All required skills passed
+  PERCENTAGE // e.g., 80% of skills passed
+  COUNT // e.g., 15 skills passed
+  ALL // All required skills passed
 }
 
 // Track athlete progress on individual skills across all evaluations
@@ -1409,8 +1530,8 @@ model AthleteSkillProgress {
   updatedAt        DateTime           @updatedAt
 
   // Relations
-  athlete        Athlete     @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  skill          Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([athleteId, skillId])
   @@index([athleteId])
@@ -1439,20 +1560,20 @@ model Achievement {
 
 // Track athlete achievements earned
 model AthleteAchievement {
-  id                    String   @id @default(cuid())
-  athleteId             String
-  achievementId         String
-  evaluationId          String?  // The evaluation that earned this achievement
-  earnedAt              DateTime @default(now())
-  
+  id            String   @id @default(cuid())
+  athleteId     String
+  achievementId String
+  evaluationId  String? // The evaluation that earned this achievement
+  earnedAt      DateTime @default(now())
+
   // Best results by category at time of earning
-  bestResultsByCategory Json?    // { "Vault": 9.5, "Bars": 8.0, ... }
+  bestResultsByCategory Json? // { "Vault": 9.5, "Bars": 8.0, ... }
   overallScore          Decimal? @db.Decimal(5, 2)
 
   // Relations
-  athlete     Athlete      @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  achievement Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
-  evaluation  Evaluation?  @relation(fields: [evaluationId], references: [id], onDelete: SetNull)
+  athlete     Athlete     @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  evaluation  Evaluation? @relation(fields: [evaluationId], references: [id], onDelete: SetNull)
 
   @@unique([athleteId, achievementId])
   @@index([athleteId])
@@ -1465,22 +1586,22 @@ model AthleteAchievement {
 // ============================================
 
 model Announcement {
-  id             String              @id @default(cuid())
-  title          String
-  content        String              // HTML content from WYSIWYG
-  targetScope    AnnouncementScope   @default(ALL)
+  id              String               @id @default(cuid())
+  title           String
+  content         String // HTML content from WYSIWYG
+  targetScope     AnnouncementScope    @default(ALL)
   targetProgramId String?
-  targetEventId  String?
-  status         AnnouncementStatus  @default(DRAFT)
-  priority       AnnouncementPriority @default(NORMAL)
-  publishedAt    DateTime?
-  expiresAt      DateTime?
-  organizationId String
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  targetEventId   String?
+  status          AnnouncementStatus   @default(DRAFT)
+  priority        AnnouncementPriority @default(NORMAL)
+  publishedAt     DateTime?
+  expiresAt       DateTime?
+  organizationId  String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   readBy       AnnouncementRead[]
 }
 
@@ -1489,10 +1610,10 @@ model AnnouncementRead {
   announcementId String
   userId         String
   readAt         DateTime @default(now())
-  
-  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  user           User @relation("AnnouncementReads", fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation("AnnouncementReads", fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([announcementId, userId])
   @@index([userId])
   @@index([announcementId])
@@ -1500,22 +1621,22 @@ model AnnouncementRead {
 
 // System-wide announcements from superadmins (sent to all organizations)
 model SystemAnnouncement {
-  id          String   @id @default(cuid())
+  id          String               @id @default(cuid())
   title       String
-  content     String   @db.Text // HTML content from WYSIWYG
+  content     String               @db.Text // HTML content from WYSIWYG
   priority    AnnouncementPriority @default(NORMAL)
-  status      AnnouncementStatus @default(DRAFT)
+  status      AnnouncementStatus   @default(DRAFT)
   publishedAt DateTime?
   expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
   // Track who created it
   createdById String
-  createdBy   User @relation("SystemAnnouncementCreator", fields: [createdById], references: [id])
-  
+  createdBy   User   @relation("SystemAnnouncementCreator", fields: [createdById], references: [id])
+
   // Read tracking
-  readBy      SystemAnnouncementRead[]
+  readBy SystemAnnouncementRead[]
 }
 
 model SystemAnnouncementRead {
@@ -1523,10 +1644,10 @@ model SystemAnnouncementRead {
   announcementId String
   userId         String
   readAt         DateTime @default(now())
-  
-  announcement   SystemAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  user           User @relation("SystemAnnouncementReads", fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  announcement SystemAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User               @relation("SystemAnnouncementReads", fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([announcementId, userId])
   @@index([userId])
   @@index([announcementId])
@@ -1557,47 +1678,47 @@ enum AnnouncementPriority {
 // ============================================
 
 model SmsMessage {
-  id             String           @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
-  familyId       String?          // Recipient family (if outbound)
-  staffProfileId String?          // Recipient staff (if outbound)
-  campaignId     String?          // Part of a campaign
-  
+  familyId       String? // Recipient family (if outbound)
+  staffProfileId String? // Recipient staff (if outbound)
+  campaignId     String? // Part of a campaign
+
   // Message details
-  to             String           // E.164 format phone number
-  from           String           // Twilio number used
-  body           String           @db.Text
-  segments       Int              @default(1) // SMS segment count
-  
+  to       String // E.164 format phone number
+  from     String // Twilio number used
+  body     String @db.Text
+  segments Int    @default(1) // SMS segment count
+
   // Twilio tracking
-  twilioSid      String?          @unique // Twilio message SID
-  twilioStatus   SmsStatus        @default(QUEUED)
-  
+  twilioSid    String?   @unique // Twilio message SID
+  twilioStatus SmsStatus @default(QUEUED)
+
   // Direction
-  direction      SmsDirection     @default(OUTBOUND)
-  
+  direction SmsDirection @default(OUTBOUND)
+
   // Classification
   classification SmsClassification @default(GENERAL)
-  
+
   // Cost tracking (in cents)
-  cost           Decimal?         @db.Decimal(10, 4)
-  
+  cost Decimal? @db.Decimal(10, 4)
+
   // Timestamps
-  sentAt         DateTime?
-  deliveredAt    DateTime?
-  failedAt       DateTime?
-  
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  failedAt    DateTime?
+
   // Error handling
-  errorCode      String?
-  errorMessage   String?
-  
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  errorCode    String?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family         Family?          @relation(fields: [familyId], references: [id], onDelete: SetNull)
-  campaign       SmsCampaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family       Family?      @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  campaign     SmsCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([familyId])
@@ -1631,40 +1752,40 @@ enum SmsClassification {
 }
 
 model SmsCampaign {
-  id              String              @id @default(cuid())
-  organizationId  String
-  name            String
-  body            String              @db.Text
-  classification  SmsClassification   @default(GENERAL)
-  
+  id             String            @id @default(cuid())
+  organizationId String
+  name           String
+  body           String            @db.Text
+  classification SmsClassification @default(GENERAL)
+
   // Targeting
-  targetScope     AnnouncementScope   @default(ALL) // Reuse existing enum
+  targetScope     AnnouncementScope @default(ALL) // Reuse existing enum
   targetProgramId String?
   targetEventId   String?
-  
+
   // Status
-  status          SmsCampaignStatus   @default(DRAFT)
-  
+  status SmsCampaignStatus @default(DRAFT)
+
   // Statistics
-  totalRecipients Int                 @default(0)
-  sentCount       Int                 @default(0)
-  deliveredCount  Int                 @default(0)
-  failedCount     Int                 @default(0)
-  
+  totalRecipients Int @default(0)
+  sentCount       Int @default(0)
+  deliveredCount  Int @default(0)
+  failedCount     Int @default(0)
+
   // Scheduling
-  scheduledAt     DateTime?
-  startedAt       DateTime?
-  completedAt     DateTime?
-  
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+
   // Author
-  createdById     String?
-  
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  messages        SmsMessage[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages     SmsMessage[]
 
   @@index([organizationId])
   @@index([status])
@@ -1681,32 +1802,32 @@ enum SmsCampaignStatus {
 }
 
 model SmsUsage {
-  id               String   @id @default(cuid())
-  organizationId   String
-  
+  id             String @id @default(cuid())
+  organizationId String
+
   // Period tracking
-  periodStart      DateTime
-  periodEnd        DateTime
-  
+  periodStart DateTime
+  periodEnd   DateTime
+
   // Counts
-  messagesSent     Int      @default(0)
-  messagesDelivered Int     @default(0)
-  messagesFailed   Int      @default(0)
-  totalSegments    Int      @default(0)
-  
+  messagesSent      Int @default(0)
+  messagesDelivered Int @default(0)
+  messagesFailed    Int @default(0)
+  totalSegments     Int @default(0)
+
   // Cost tracking (in dollars)
-  totalCost        Decimal  @default(0) @db.Decimal(10, 2)
-  
+  totalCost Decimal @default(0) @db.Decimal(10, 2)
+
   // Plan-based tracking
-  includedMessages Int      @default(0) // From plan
-  overageMessages  Int      @default(0) // Beyond plan limit
-  overageCost      Decimal  @default(0) @db.Decimal(10, 2)
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  includedMessages Int     @default(0) // From plan
+  overageMessages  Int     @default(0) // Beyond plan limit
+  overageCost      Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, periodStart])
   @@index([organizationId])
@@ -1718,51 +1839,51 @@ model SmsUsage {
 // ============================================
 
 model EmailMessage {
-  id             String           @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
-  familyId       String?          // Recipient family
-  campaignId     String?          // Part of a campaign
-  
+  familyId       String? // Recipient family
+  campaignId     String? // Part of a campaign
+
   // Message details
-  to             String           // Recipient email address
-  from           String           // Sender email (org's from address)
-  subject        String
-  htmlBody       String           @db.Text
-  textBody       String?          @db.Text
-  
+  to       String // Recipient email address
+  from     String // Sender email (org's from address)
+  subject  String
+  htmlBody String  @db.Text
+  textBody String? @db.Text
+
   // SES tracking
-  sesMessageId   String?          @unique // SES message ID for tracking
-  status         EmailStatus      @default(QUEUED)
-  
+  sesMessageId String?     @unique // SES message ID for tracking
+  status       EmailStatus @default(QUEUED)
+
   // Classification
   classification EmailClassification @default(GENERAL)
-  
+
   // Engagement tracking
-  openedAt       DateTime?
-  openCount      Int              @default(0)
-  clickedAt      DateTime?
-  clickCount     Int              @default(0)
-  
+  openedAt   DateTime?
+  openCount  Int       @default(0)
+  clickedAt  DateTime?
+  clickCount Int       @default(0)
+
   // Timestamps
-  sentAt         DateTime?
-  deliveredAt    DateTime?
-  bouncedAt      DateTime?
-  complainedAt   DateTime?
-  failedAt       DateTime?
-  
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  bouncedAt    DateTime?
+  complainedAt DateTime?
+  failedAt     DateTime?
+
   // Error handling
-  bounceType     String?          // "Permanent" or "Transient"
-  bounceSubType  String?          // e.g., "General", "NoEmail", "Suppressed"
-  errorCode      String?
-  errorMessage   String?
-  
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  bounceType    String? // "Permanent" or "Transient"
+  bounceSubType String? // e.g., "General", "NoEmail", "Suppressed"
+  errorCode     String?
+  errorMessage  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family         Family?          @relation(fields: [familyId], references: [id], onDelete: SetNull)
-  campaign       EmailCampaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family       Family?        @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  campaign     EmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([familyId])
@@ -1794,49 +1915,49 @@ enum EmailClassification {
 }
 
 model EmailCampaign {
-  id              String              @id @default(cuid())
-  organizationId  String
-  name            String
-  subject         String
-  htmlBody        String              @db.Text
-  textBody        String?             @db.Text
-  classification  EmailClassification @default(GENERAL)
-  
+  id             String              @id @default(cuid())
+  organizationId String
+  name           String
+  subject        String
+  htmlBody       String              @db.Text
+  textBody       String?             @db.Text
+  classification EmailClassification @default(GENERAL)
+
   // Targeting - reuse AnnouncementScope enum
-  targetScope     AnnouncementScope   @default(ALL)
+  targetScope     AnnouncementScope @default(ALL)
   targetProgramId String?
   targetEventId   String?
-  
+
   // Additional targeting options
-  targetMembershipStatus String?      // "ACTIVE", "EXPIRED", or null for all
-  
+  targetMembershipStatus String? // "ACTIVE", "EXPIRED", or null for all
+
   // Status
-  status          EmailCampaignStatus @default(DRAFT)
-  
+  status EmailCampaignStatus @default(DRAFT)
+
   // Statistics
-  totalRecipients Int                 @default(0)
-  sentCount       Int                 @default(0)
-  deliveredCount  Int                 @default(0)
-  openedCount     Int                 @default(0)
-  clickedCount    Int                 @default(0)
-  bouncedCount    Int                 @default(0)
-  complainedCount Int                 @default(0)
-  failedCount     Int                 @default(0)
-  
+  totalRecipients Int @default(0)
+  sentCount       Int @default(0)
+  deliveredCount  Int @default(0)
+  openedCount     Int @default(0)
+  clickedCount    Int @default(0)
+  bouncedCount    Int @default(0)
+  complainedCount Int @default(0)
+  failedCount     Int @default(0)
+
   // Scheduling
-  scheduledAt     DateTime?
-  startedAt       DateTime?
-  completedAt     DateTime?
-  
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+
   // Author
-  createdById     String?
-  
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  messages        EmailMessage[]
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages     EmailMessage[]
 
   @@index([organizationId])
   @@index([status])
@@ -1853,32 +1974,32 @@ enum EmailCampaignStatus {
 }
 
 model EmailUsage {
-  id               String   @id @default(cuid())
-  organizationId   String
-  
+  id             String @id @default(cuid())
+  organizationId String
+
   // Period tracking
-  periodStart      DateTime
-  periodEnd        DateTime
-  
+  periodStart DateTime
+  periodEnd   DateTime
+
   // Counts
-  emailsSent       Int      @default(0)
-  emailsDelivered  Int      @default(0)
-  emailsOpened     Int      @default(0)
-  emailsClicked    Int      @default(0)
-  emailsBounced    Int      @default(0)
-  emailsComplained Int      @default(0)
-  emailsFailed     Int      @default(0)
-  
+  emailsSent       Int @default(0)
+  emailsDelivered  Int @default(0)
+  emailsOpened     Int @default(0)
+  emailsClicked    Int @default(0)
+  emailsBounced    Int @default(0)
+  emailsComplained Int @default(0)
+  emailsFailed     Int @default(0)
+
   // Plan-based tracking
-  includedEmails   Int      @default(0) // From plan
-  overageEmails    Int      @default(0) // Beyond plan limit
-  overageCost      Decimal  @default(0) @db.Decimal(10, 2)
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  includedEmails Int     @default(0) // From plan
+  overageEmails  Int     @default(0) // Beyond plan limit
+  overageCost    Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, periodStart])
   @@index([organizationId])
@@ -1890,57 +2011,57 @@ model EmailUsage {
 // ============================================
 
 model WebsiteConfig {
-  id                String   @id @default(cuid())
-  organizationId    String   @unique
-  
+  id             String @id @default(cuid())
+  organizationId String @unique
+
   // Theming
-  primaryColor      String?  @default("#000000")
-  secondaryColor    String?  @default("#ffffff")
-  
+  primaryColor   String? @default("#000000")
+  secondaryColor String? @default("#ffffff")
+
   // Assets
-  logo              String?
-  favicon           String?
-  
+  logo    String?
+  favicon String?
+
   // Content
-  heroImage         String?
-  heroHeadline      String?
-  heroSubheadline   String?
-  heroText          String?  @db.Text
-  heroAgeRange      String?  // e.g., "All Ages Welcome", "Ages 5-18"
+  heroImage          String?
+  heroHeadline       String?
+  heroSubheadline    String?
+  heroText           String? @db.Text
+  heroAgeRange       String? // e.g., "All Ages Welcome", "Ages 5-18"
   heroProgramPeriods String? // e.g., "Year-Round Programs", "Fall & Spring Sessions"
-  heroLocation      String?  // e.g., "Austin, TX"
-  
+  heroLocation       String? // e.g., "Austin, TX"
+
   // Visibility
-  showCalendar      Boolean  @default(true)
-  showRegistration  Boolean  @default(true)
-  showContact       Boolean  @default(true)
-  
+  showCalendar     Boolean @default(true)
+  showRegistration Boolean @default(true)
+  showContact      Boolean @default(true)
+
   // Domain
-  domain            String?  @unique
-  subdomain         String?  @unique // prefix to uplifterinc.com
+  domain            String? @unique
+  subdomain         String? @unique // prefix to uplifterinc.com
   emailSenderDomain String?
-  
+
   // Status
-  isPublished       Boolean  @default(false)
-  
+  isPublished Boolean @default(false)
+
   // SEO
-  seoDescription    String?  @db.Text  // Custom meta description for search engines
-  seoKeywords       String?            // Comma-separated keywords
-  googleVerification String?           // Google Search Console verification code
-  
+  seoDescription     String? @db.Text // Custom meta description for search engines
+  seoKeywords        String? // Comma-separated keywords
+  googleVerification String? // Google Search Console verification code
+
   // Information Boxes (up to 3 configurable boxes on home page)
-  infoBox1Title     String?
-  infoBox1Content   String?  @db.Text
-  infoBox2Title     String?
-  infoBox2Content   String?  @db.Text
-  infoBox3Title     String?
-  infoBox3Content   String?  @db.Text
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  infoBox1Title   String?
+  infoBox1Content String? @db.Text
+  infoBox2Title   String?
+  infoBox2Content String? @db.Text
+  infoBox3Title   String?
+  infoBox3Content String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 // ============================================
@@ -1956,15 +2077,15 @@ model Product {
   category         String   @default("General")
   price            Decimal  @db.Decimal(10, 2)
   imageUrl         String?
-  maxInventory     Int?     // null = unlimited
-  currentInventory Int?     // null = unlimited
+  maxInventory     Int? // null = unlimited
+  currentInventory Int? // null = unlimited
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   // Relations
-  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  stockMovements  StockMovement[]
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
 
   @@unique([organizationId, sku])
   @@index([organizationId])
@@ -1974,16 +2095,16 @@ model StockMovement {
   id          String            @id @default(cuid())
   productId   String
   type        StockMovementType
-  quantity    Int               // positive for additions, negative for sales
+  quantity    Int // positive for additions, negative for sales
   previousQty Int
   newQty      Int
-  referenceId String?           // invoiceId, orderId, etc.
+  referenceId String? // invoiceId, orderId, etc.
   notes       String?
   createdBy   String?
   createdAt   DateTime          @default(now())
 
   // Relations
-  product     Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
 }
@@ -2000,69 +2121,68 @@ enum StockMovementType {
 // ============================================
 
 enum FeatureStatus {
-  SUBMITTED     // New submission, pending review
-  PLANNED       // Accepted and on roadmap
-  IN_PROGRESS   // Currently being built
-  DONE          // Completed
-  CLOSED        // Rejected/won't do
+  SUBMITTED // New submission, pending review
+  PLANNED // Accepted and on roadmap
+  IN_PROGRESS // Currently being built
+  DONE // Completed
+  CLOSED // Rejected/won't do
 }
 
 model FeatureRequest {
-  id              String          @id @default(cuid())
+  id              String        @id @default(cuid())
   title           String
   description     String
-  status          FeatureStatus   @default(SUBMITTED)
-  isPublic        Boolean         @default(false)  // Only show on public roadmap if true
-  targetDate      DateTime?       // Target delivery date
-  statusChangedAt DateTime?       // Last status change timestamp
-  categories      String[]        // Array of category strings
-  mergedIntoId    String?         // If merged into another feature
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  userId          String?         // Author (submitter)
-  
+  status          FeatureStatus @default(SUBMITTED)
+  isPublic        Boolean       @default(false) // Only show on public roadmap if true
+  targetDate      DateTime? // Target delivery date
+  statusChangedAt DateTime? // Last status change timestamp
+  categories      String[] // Array of category strings
+  mergedIntoId    String? // If merged into another feature
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  userId          String? // Author (submitter)
+
   // Relations
-  user            User?           @relation("FeatureRequestAuthor", fields: [userId], references: [id], onDelete: SetNull)
-  mergedInto      FeatureRequest? @relation("FeatureMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
-  mergedFrom      FeatureRequest[] @relation("FeatureMerge")
-  comments        FeatureComment[]
-  votes           FeatureVote[]
-  
+  user       User?            @relation("FeatureRequestAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  mergedInto FeatureRequest?  @relation("FeatureMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom FeatureRequest[] @relation("FeatureMerge")
+  comments   FeatureComment[]
+  votes      FeatureVote[]
+
   @@index([status])
   @@index([isPublic])
   @@index([userId])
 }
 
 model FeatureVote {
-  id               String         @id @default(cuid())
+  id               String   @id @default(cuid())
   featureRequestId String
   userId           String
-  createdAt        DateTime       @default(now())
-  
-  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
-  user             User           @relation("FeatureVotes", fields: [userId], references: [id], onDelete: Cascade)
-  
+  createdAt        DateTime @default(now())
+
+  featureRequest FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+  user           User           @relation("FeatureVotes", fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([featureRequestId, userId]) // One vote per user per feature
   @@index([featureRequestId])
   @@index([userId])
 }
 
 model FeatureComment {
-  id               String         @id @default(cuid())
+  id               String   @id @default(cuid())
   featureRequestId String
   content          String
   userId           String
-  isStaffReply     Boolean        @default(false) // True if from superadmin/staff
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  
-  featureRequest   FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
-  user             User           @relation("FeatureComments", fields: [userId], references: [id], onDelete: Cascade)
-  
+  isStaffReply     Boolean  @default(false) // True if from superadmin/staff
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  featureRequest FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+  user           User           @relation("FeatureComments", fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([featureRequestId])
   @@index([userId])
 }
-
 
 // ============================================
 // Media
@@ -2074,7 +2194,7 @@ model Media {
   type           MediaType
   title          String?
   description    String?
-  fileSize       Int       @default(0)  // File size in bytes
+  fileSize       Int       @default(0) // File size in bytes
   athleteId      String?
   eventId        String?
   uploadedById   String
@@ -2083,10 +2203,10 @@ model Media {
   updatedAt      DateTime  @updatedAt
 
   // Relations
-  athlete      Athlete?      @relation(fields: [athleteId], references: [id], onDelete: SetNull)
-  event        Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  uploadedBy   User          @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  athlete      Athlete?     @relation(fields: [athleteId], references: [id], onDelete: SetNull)
+  event        Event?       @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([athleteId])
@@ -2104,38 +2224,40 @@ enum MediaType {
 // ============================================
 
 model Facility {
-  id             String         @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
   name           String
-  
+
   // Address
-  street         String?
-  city           String?
-  stateProvince  String?
-  postalCode     String?
-  country        String?
-  
+  street        String?
+  city          String?
+  stateProvince String?
+  postalCode    String?
+  country       String?
+
   // Contact
-  phone          String?
-  email          String?
-  
+  phone String?
+  email String?
+
   // Status & Metadata
-  status         FacilityStatus @default(ACTIVE)
-  isDefault      Boolean        @default(false)
-  squareFootage  Int?
-  maxCapacity    Int?
-  description    String?
-  
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  status        FacilityStatus @default(ACTIVE)
+  isDefault     Boolean        @default(false)
+  squareFootage Int?
+  maxCapacity   Int?
+  description   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  trainingZones  TrainingZone[]
-  equipment      Equipment[]
-  assignments    FacilityAssignment[]
-  events         Event[]
-  shifts         Shift[]
+  organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  trainingZones    TrainingZone[]
+  equipment        Equipment[]
+  assignments      FacilityAssignment[]
+  events           Event[]
+  shifts           Shift[]
+  programs         Program[]
+  programInstances ProgramInstance[]
 
   @@index([organizationId])
 }
@@ -2150,17 +2272,17 @@ model TrainingZone {
   id          String     @id @default(cuid())
   facilityId  String
   name        String
-  type        String     // e.g., "Floor", "Vault", "Bars", "Beam", "Trampoline"
+  type        String // e.g., "Floor", "Vault", "Bars", "Beam", "Trampoline"
   capacity    Int?
   status      ZoneStatus @default(OPEN)
   description String?
-  
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  facility    Facility   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  equipment   Equipment[]
+  facility  Facility    @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  equipment Equipment[]
 
   @@index([facilityId])
 }
@@ -2172,29 +2294,29 @@ enum ZoneStatus {
 }
 
 model Equipment {
-  id                 String             @id @default(cuid())
-  organizationId     String
-  facilityId         String?            // Optional - null means org-level equipment
-  trainingZoneId     String?            // Optional - for zone assignment within facility
-  
-  name               String
-  type               String             // e.g., "Apparatus", "Mat", "Training Aid"
-  serialNumber       String?
-  condition          EquipmentCondition @default(GOOD)
-  status             EquipmentStatus    @default(ACTIVE)
-  
+  id             String  @id @default(cuid())
+  organizationId String
+  facilityId     String? // Optional - null means org-level equipment
+  trainingZoneId String? // Optional - for zone assignment within facility
+
+  name         String
+  type         String // e.g., "Apparatus", "Mat", "Training Aid"
+  serialNumber String?
+  condition    EquipmentCondition @default(GOOD)
+  status       EquipmentStatus    @default(ACTIVE)
+
   // Tracking
   purchaseDate       DateTime?
   lastInspectionDate DateTime?
   notes              String?
-  
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  facility           Facility?          @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  trainingZone       TrainingZone?      @relation(fields: [trainingZoneId], references: [id], onDelete: SetNull)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility     Facility?     @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  trainingZone TrainingZone? @relation(fields: [trainingZoneId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([facilityId])
@@ -2216,17 +2338,17 @@ enum EquipmentStatus {
 }
 
 model FacilityAssignment {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   facilityId String
   userId     String
-  isPrimary  Boolean  @default(false)
-  
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  isPrimary  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([facilityId, userId])
   @@index([facilityId])
@@ -2238,18 +2360,18 @@ model FacilityAssignment {
 // ============================================
 
 model ReservedDomain {
-  id          String             @id @default(cuid())
-  pattern     String             @unique // The reserved domain or prefix pattern
-  type        ReservedDomainType @default(EXACT)
-  reason      String?            // Why this is reserved (e.g., "Brand protection", "System use")
-  createdBy   String?            // User ID who created this reservation
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id        String             @id @default(cuid())
+  pattern   String             @unique // The reserved domain or prefix pattern
+  type      ReservedDomainType @default(EXACT)
+  reason    String? // Why this is reserved (e.g., "Brand protection", "System use")
+  createdBy String? // User ID who created this reservation
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 }
 
 enum ReservedDomainType {
-  EXACT   // Exact match (e.g., "admin" blocks only "admin")
-  PREFIX  // Prefix match (e.g., "test-" blocks "test-anything")
+  EXACT // Exact match (e.g., "admin" blocks only "admin")
+  PREFIX // Prefix match (e.g., "test-" blocks "test-anything")
 }
 
 // ============================================
@@ -2257,93 +2379,93 @@ enum ReservedDomainType {
 // ============================================
 
 model SubscriptionPlan {
-  id                String   @id @default(cuid())
-  name              String   // e.g., "Free", "Starter", "Gold", "Platinum"
-  slug              String   @unique // URL-friendly identifier
-  description       String?
-  
+  id          String  @id @default(cuid())
+  name        String // e.g., "Free", "Starter", "Gold", "Platinum"
+  slug        String  @unique // URL-friendly identifier
+  description String?
+
   // Pricing
   monthlyPrice      Decimal  @db.Decimal(10, 2)
   yearlyPrice       Decimal? @db.Decimal(10, 2) // Optional yearly discount
   transactionFee    Decimal  @db.Decimal(5, 4) // e.g., 0.029 for 2.9%
   perTransactionFee Decimal  @db.Decimal(10, 2) // e.g., 0.30 for $0.30
-  
+
   // Limits
-  maxAthletes       Int?     // null = unlimited
-  maxUsers          Int?     // null = unlimited
-  maxPrograms       Int?     // null = unlimited
-  maxEvents         Int?     // null = unlimited
-  
+  maxAthletes Int? // null = unlimited
+  maxUsers    Int? // null = unlimited
+  maxPrograms Int? // null = unlimited
+  maxEvents   Int? // null = unlimited
+
   // SMS Limits
-  smsIncluded       Int?     // Messages included per month (null = no SMS)
-  smsOverageRate    Decimal? @db.Decimal(10, 4) // Cost per message over limit (e.g., 0.05 for $0.05)
-  
+  smsIncluded    Int? // Messages included per month (null = no SMS)
+  smsOverageRate Decimal? @db.Decimal(10, 4) // Cost per message over limit (e.g., 0.05 for $0.05)
+
   // Email Limits
-  emailIncluded     Int?     // Emails included per month (null = no email campaigns)
-  emailOverageRate  Decimal? @db.Decimal(10, 4) // Cost per email over limit
-  
+  emailIncluded    Int? // Emails included per month (null = no email campaigns)
+  emailOverageRate Decimal? @db.Decimal(10, 4) // Cost per email over limit
+
   // Storage Limits
-  maxStorageMB      Int?     // Storage in MB (null = unlimited)
-  
+  maxStorageMB Int? // Storage in MB (null = unlimited)
+
   // Membership Limits
-  maxMembershipTypes Int?    // Max membership groups (null = unlimited)
-  
+  maxMembershipTypes Int? // Max membership groups (null = unlimited)
+
   // Features (stored as JSON for flexibility)
-  features          Json     // Array of feature strings
-  
+  features Json // Array of feature strings
+
   // Display
-  isPopular         Boolean  @default(false)
-  displayOrder      Int      @default(0)
-  
+  isPopular    Boolean @default(false)
+  displayOrder Int     @default(0)
+
   // Status
-  isActive          Boolean  @default(true)
-  isPublic          Boolean  @default(true) // Can orgs self-select this plan?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  isActive Boolean @default(true)
+  isPublic Boolean @default(true) // Can orgs self-select this plan?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  subscriptions     OrganizationSubscription[]
+  subscriptions OrganizationSubscription[]
 }
 
 model OrganizationSubscription {
-  id                String             @id @default(cuid())
-  organizationId    String             @unique
-  planId            String
-  
+  id             String @id @default(cuid())
+  organizationId String @unique
+  planId         String
+
   // Billing
-  status            SubscriptionStatus @default(ACTIVE)
-  billingCycle      BillingCycle       @default(MONTHLY)
+  status             SubscriptionStatus @default(ACTIVE)
+  billingCycle       BillingCycle       @default(MONTHLY)
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
-  
+
   // Payment info (stored tokens, not actual card data)
-  stripeCustomerId  String?
+  stripeCustomerId     String?
   stripeSubscriptionId String?
-  
+
   // Adyen Payment Info
-  adyenShopperReference    String?  @unique // Unique ID for this org in Adyen
-  adyenRecurringDetailRef  String?          // Primary payment method token ID
-  
+  adyenShopperReference   String? @unique // Unique ID for this org in Adyen
+  adyenRecurringDetailRef String? // Primary payment method token ID
+
   // Admin controls
-  isLocked          Boolean  @default(false) // If true, org cannot change plan
-  lockedReason      String?  // Why it's locked (shown to org admins)
-  lockedBy          String?  // Super admin who locked it
-  lockedAt          DateTime?
-  
+  isLocked     Boolean   @default(false) // If true, org cannot change plan
+  lockedReason String? // Why it's locked (shown to org admins)
+  lockedBy     String? // Super admin who locked it
+  lockedAt     DateTime?
+
   // Trial
-  trialEndsAt       DateTime?
-  
+  trialEndsAt DateTime?
+
   // Cancellation
-  cancelAtPeriodEnd Boolean  @default(false)
+  cancelAtPeriodEnd Boolean   @default(false)
   cancelledAt       DateTime?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  plan              SubscriptionPlan @relation(fields: [planId], references: [id])
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         SubscriptionPlan @relation(fields: [planId], references: [id])
 }
 
 enum SubscriptionStatus {
@@ -2361,31 +2483,31 @@ enum BillingCycle {
 
 // Organization Payment Methods - for SaaS subscription billing via Adyen
 model OrganizationPaymentMethod {
-  id                    String   @id @default(cuid())
-  organizationId        String
-  
+  id             String @id @default(cuid())
+  organizationId String
+
   // Adyen Token Info
-  storedPaymentMethodId String   @unique  // Token from Adyen (storedPaymentMethodId)
-  shopperReference      String            // Links to org's Adyen identity
-  
+  storedPaymentMethodId String @unique // Token from Adyen (storedPaymentMethodId)
+  shopperReference      String // Links to org's Adyen identity
+
   // Card Display Info (safe to store - no sensitive data)
-  type                  String            // "scheme", "sepadirectdebit", etc.
-  brand                 String?           // "visa", "mc", "amex"
-  lastFour              String            // Last 4 digits of card
-  expiryMonth           String?           // "03"
-  expiryYear            String?           // "2030"
-  holderName            String?           // Cardholder name
-  
+  type        String // "scheme", "sepadirectdebit", etc.
+  brand       String? // "visa", "mc", "amex"
+  lastFour    String // Last 4 digits of card
+  expiryMonth String? // "03"
+  expiryYear  String? // "2030"
+  holderName  String? // Cardholder name
+
   // Status
-  isDefault             Boolean  @default(false)
-  isActive              Boolean  @default(true)
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  isDefault Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([organizationId])
   @@index([shopperReference])
 }
@@ -2396,32 +2518,32 @@ model OrganizationPaymentMethod {
 
 // Staff Profile - extends User with staff-specific data
 model StaffProfile {
-  id             String   @id @default(cuid())
-  userId         String   @unique
+  id             String @id @default(cuid())
+  userId         String @unique
   organizationId String
-  
+
   // Employment
   employmentType EmploymentType @default(FULL_TIME)
-  title          String?        // e.g., "Head Coach", "Assistant Coach"
+  title          String? // e.g., "Head Coach", "Assistant Coach"
   hourlyRate     Decimal?       @db.Decimal(10, 2)
   hireDate       DateTime?
-  
+
   // Certifications (JSON array for flexibility)
-  certifications Json?    // [{ name, expiresAt, verified }]
-  
+  certifications Json? // [{ name, expiresAt, verified }]
+
   // Contact (override user contact if needed)
-  phone          String?
-  emergencyContact Json?  // { name, phone, relationship }
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  phone            String?
+  emergencyContact Json? // { name, phone, relationship }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  shifts           Shift[]
-  availability     StaffAvailability[]
-  eventAssignments EventStaff[]
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shifts             Shift[]
+  availability       StaffAvailability[]
+  eventAssignments   EventStaff[]
   programAssignments ProgramStaff[]
 
   @@index([organizationId])
@@ -2436,17 +2558,17 @@ enum EmploymentType {
 
 // Event Staff - many-to-many with roles
 model EventStaff {
-  id             String   @id @default(cuid())
+  id             String         @id @default(cuid())
   eventId        String
   staffProfileId String
   role           EventStaffRole @default(ASSISTANT)
   notes          String?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
 
-  event          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, staffProfileId])
   @@index([eventId])
@@ -2462,18 +2584,18 @@ enum EventStaffRole {
 
 // Program Staff - many-to-many with roles (coach assignments)
 model ProgramStaff {
-  id             String   @id @default(cuid())
+  id             String           @id @default(cuid())
   programId      String
   staffProfileId String
   role           ProgramStaffRole @default(ASSISTANT_COACH)
-  isPrimary      Boolean  @default(false)
+  isPrimary      Boolean          @default(false)
   notes          String?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
 
-  program        Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
-  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
 
   @@unique([programId, staffProfileId])
   @@index([programId])
@@ -2489,29 +2611,29 @@ enum ProgramStaffRole {
 
 // Work Shifts - one-time scheduling assignments
 model Shift {
-  id             String      @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
   staffProfileId String
   facilityId     String?
-  
-  // Time
-  date           DateTime
-  startTime      String      // "09:00"
-  endTime        String      // "17:00"
-  
-  // Role/Type
-  shiftType      String      // e.g., "Opening Manager", "Coach", "Front Desk"
-  notes          String?
-  
-  // Status
-  status         ShiftStatus @default(SCHEDULED)
-  
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
-  facility       Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  // Time
+  date      DateTime
+  startTime String // "09:00"
+  endTime   String // "17:00"
+
+  // Role/Type
+  shiftType String // e.g., "Opening Manager", "Coach", "Front Desk"
+  notes     String?
+
+  // Status
+  status ShiftStatus @default(SCHEDULED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+  facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([staffProfileId])
@@ -2529,53 +2651,53 @@ enum ShiftStatus {
 
 // Recurring Schedule Templates - weekly patterns
 model ScheduleTemplate {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
-  name           String   // e.g., "Standard Week", "Summer Schedule"
-  isActive       Boolean  @default(true)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  name           String // e.g., "Standard Week", "Summer Schedule"
+  isActive       Boolean @default(true)
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  entries        ScheduleTemplateEntry[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries      ScheduleTemplateEntry[]
 
   @@index([organizationId])
 }
 
 model ScheduleTemplateEntry {
-  id                 String   @id @default(cuid())
-  templateId         String
-  
-  dayOfWeek          Int      // 0=Sunday, 1=Monday, ... 6=Saturday
-  startTime          String   // "09:00"
-  endTime            String   // "17:00"
-  shiftType          String   // Role/position type
-  staffProfileId     String?  // Optional - can be unassigned
-  facilityId         String?
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id         String @id @default(cuid())
+  templateId String
 
-  template           ScheduleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  dayOfWeek      Int // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime      String // "09:00"
+  endTime        String // "17:00"
+  shiftType      String // Role/position type
+  staffProfileId String? // Optional - can be unassigned
+  facilityId     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  template ScheduleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([templateId])
 }
 
 // Staff Availability - personal weekly availability
 model StaffAvailability {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   staffProfileId String
-  
-  dayOfWeek      Int      // 0=Sunday, 1=Monday, ... 6=Saturday
-  startTime      String   // "09:00"
-  endTime        String   // "17:00"
-  isAvailable    Boolean  @default(true)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
 
-  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime   String // "09:00"
+  endTime     String // "17:00"
+  isAvailable Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
 
   @@unique([staffProfileId, dayOfWeek]) // One entry per day per staff
   @@index([staffProfileId])
@@ -2587,28 +2709,28 @@ model StaffAvailability {
 
 // Queue configuration per organization or program
 model RegistrationQueueConfig {
-  id                 String   @id @default(cuid())
-  organizationId     String
-  programId          String?  // null = org-wide default
-  
+  id             String  @id @default(cuid())
+  organizationId String
+  programId      String? // null = org-wide default
+
   // Queue settings
-  isEnabled          Boolean  @default(false)
-  reservationMinutes Int      @default(10)  // How long a spot is reserved
-  maxConcurrent      Int      @default(50)  // Max users in registration at once
-  
+  isEnabled          Boolean @default(false)
+  reservationMinutes Int     @default(10) // How long a spot is reserved
+  maxConcurrent      Int     @default(50) // Max users in registration at once
+
   // Activation rules
-  activationType       QueueActivationType @default(ALWAYS)
-  activationThreshold  Int?     // For THRESHOLD type: activate when X users waiting
-  scheduledStart       DateTime? // For SCHEDULED type
-  scheduledEnd         DateTime?
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  activationType      QueueActivationType @default(ALWAYS)
+  activationThreshold Int? // For THRESHOLD type: activate when X users waiting
+  scheduledStart      DateTime? // For SCHEDULED type
+  scheduledEnd        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  program            Program?     @relation(fields: [programId], references: [id], onDelete: Cascade)
-  entries            QueueEntry[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program      Program?     @relation(fields: [programId], references: [id], onDelete: Cascade)
+  entries      QueueEntry[]
 
   @@unique([organizationId, programId])
   @@index([organizationId])
@@ -2616,36 +2738,36 @@ model RegistrationQueueConfig {
 }
 
 enum QueueActivationType {
-  ALWAYS        // Queue always active when enabled
-  THRESHOLD     // Activate when concurrent users exceed threshold
-  SCHEDULED     // Active during scheduled time windows
+  ALWAYS // Queue always active when enabled
+  THRESHOLD // Activate when concurrent users exceed threshold
+  SCHEDULED // Active during scheduled time windows
 }
 
 // Track users waiting in queue
 model QueueEntry {
-  id             String   @id @default(cuid())
-  queueConfigId  String
-  sessionToken   String   @unique  // Browser session identifier
-  
+  id            String @id @default(cuid())
+  queueConfigId String
+  sessionToken  String @unique // Browser session identifier
+
   // User info (may be anonymous until they identify)
-  email          String?
-  familyId       String?
-  
+  email    String?
+  familyId String?
+
   // Queue status
-  position       Int      // Current position in queue
-  status         QueueEntryStatus @default(WAITING)
-  
+  position Int // Current position in queue
+  status   QueueEntryStatus @default(WAITING)
+
   // Timing
-  enteredAt      DateTime @default(now())
-  admittedAt     DateTime?
-  exitedAt       DateTime?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  enteredAt  DateTime  @default(now())
+  admittedAt DateTime?
+  exitedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  queueConfig    RegistrationQueueConfig @relation(fields: [queueConfigId], references: [id], onDelete: Cascade)
-  reservation    QueueReservation?
+  queueConfig RegistrationQueueConfig @relation(fields: [queueConfigId], references: [id], onDelete: Cascade)
+  reservation QueueReservation?
 
   @@index([queueConfigId, status])
   @@index([sessionToken])
@@ -2653,33 +2775,33 @@ model QueueEntry {
 }
 
 enum QueueEntryStatus {
-  WAITING       // In queue
-  ADMITTED      // Let through, has active reservation
-  COMPLETED     // Successfully registered
-  EXPIRED       // Reservation timed out
-  ABANDONED     // Left the queue
+  WAITING // In queue
+  ADMITTED // Let through, has active reservation
+  COMPLETED // Successfully registered
+  EXPIRED // Reservation timed out
+  ABANDONED // Left the queue
 }
 
 // Active reservations for users in registration
 model QueueReservation {
-  id            String   @id @default(cuid())
-  queueEntryId  String   @unique
-  programId     String
-  
+  id           String @id @default(cuid())
+  queueEntryId String @unique
+  programId    String
+
   // Timing
-  startedAt     DateTime @default(now())
-  expiresAt     DateTime
-  completedAt   DateTime?
-  
+  startedAt   DateTime  @default(now())
+  expiresAt   DateTime
+  completedAt DateTime?
+
   // Status
-  status        ReservationStatus @default(ACTIVE)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  status ReservationStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  queueEntry    QueueEntry @relation(fields: [queueEntryId], references: [id], onDelete: Cascade)
-  program       Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+  queueEntry QueueEntry @relation(fields: [queueEntryId], references: [id], onDelete: Cascade)
+  program    Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   @@index([programId, status])
   @@index([expiresAt])
@@ -2699,63 +2821,63 @@ enum ReservationStatus {
 // Notification trigger types - what events can trigger a notification
 enum NotificationTriggerType {
   // Membership-related
-  MEMBERSHIP_EXPIRY         // Membership is expiring
-  MEMBERSHIP_EXPIRED        // Membership has expired
-  
+  MEMBERSHIP_EXPIRY // Membership is expiring
+  MEMBERSHIP_EXPIRED // Membership has expired
+
   // Payment-related
-  PAYMENT_DUE               // Payment is due
-  PAYMENT_OVERDUE           // Payment is overdue
-  PAYMENT_RECEIVED          // Payment was received
-  
+  PAYMENT_DUE // Payment is due
+  PAYMENT_OVERDUE // Payment is overdue
+  PAYMENT_RECEIVED // Payment was received
+
   // Program-related
-  PROGRAM_REMINDER          // Upcoming class/session reminder
-  PROGRAM_ENROLLMENT        // Athlete enrolled in program
-  PROGRAM_CANCELLATION      // Program/class cancelled
-  
+  PROGRAM_REMINDER // Upcoming class/session reminder
+  PROGRAM_ENROLLMENT // Athlete enrolled in program
+  PROGRAM_CANCELLATION // Program/class cancelled
+
   // Event-related
-  EVENT_REMINDER            // Upcoming event reminder
-  EVENT_REGISTRATION_OPEN   // Registration opens for an event
-  EVENT_REGISTRATION_CLOSE  // Registration closing soon
-  
+  EVENT_REMINDER // Upcoming event reminder
+  EVENT_REGISTRATION_OPEN // Registration opens for an event
+  EVENT_REGISTRATION_CLOSE // Registration closing soon
+
   // Athlete-related
-  ATTENDANCE_MISSED         // Athlete missed attendance
-  SKILL_ACHIEVED            // New skill achievement
-  EVALUATION_DUE            // Evaluation is due
-  EVALUATION_COMPLETED      // Evaluation was completed
-  BIRTHDAY                  // Athlete birthday
-  
+  ATTENDANCE_MISSED // Athlete missed attendance
+  SKILL_ACHIEVED // New skill achievement
+  EVALUATION_DUE // Evaluation is due
+  EVALUATION_COMPLETED // Evaluation was completed
+  BIRTHDAY // Athlete birthday
+
   // Administrative
-  WAITLIST_OPENING          // Spot available from waitlist
-  CONTRACT_RENEWAL          // Contract up for renewal
-  MAKEUP_CLASS_EXPIRING     // Makeup class credit expiring
-  
+  WAITLIST_OPENING // Spot available from waitlist
+  CONTRACT_RENEWAL // Contract up for renewal
+  MAKEUP_CLASS_EXPIRING // Makeup class credit expiring
+
   // Custom
-  CUSTOM                    // Custom/manual trigger
+  CUSTOM // Custom/manual trigger
 }
 
 // Action types - what happens when notification triggers
 enum NotificationActionType {
-  ANNOUNCEMENT              // Post an in-app announcement
-  EMAIL                     // Send an email
-  SMS                       // Send an SMS message
+  ANNOUNCEMENT // Post an in-app announcement
+  EMAIL // Send an email
+  SMS // Send an SMS message
   // PUSH                   // Push notification (future - for mobile app)
 }
 
 // Recipient types - who receives the notification
 enum NotificationRecipientType {
-  ALL_FAMILIES              // All families in organization
-  ALL_ATHLETES              // All athletes (via their guardians)
-  PROGRAM_MEMBERS           // Athletes/families in specific programs
-  MEMBERSHIP_HOLDERS        // Athletes with specific memberships
-  INTERNAL_USERS            // Staff, coaches, admins
-  CUSTOM                    // Custom filter combination
+  ALL_FAMILIES // All families in organization
+  ALL_ATHLETES // All athletes (via their guardians)
+  PROGRAM_MEMBERS // Athletes/families in specific programs
+  MEMBERSHIP_HOLDERS // Athletes with specific memberships
+  INTERNAL_USERS // Staff, coaches, admins
+  CUSTOM // Custom filter combination
 }
 
 // Timing direction - before or after the trigger event
 enum NotificationTimingDirection {
-  BEFORE                    // X days/hours before event
-  AFTER                     // X days/hours after event
-  AT                        // At the time of event (0 offset)
+  BEFORE // X days/hours before event
+  AFTER // X days/hours after event
+  AT // At the time of event (0 offset)
 }
 
 // Timing unit
@@ -2769,38 +2891,38 @@ enum NotificationTimingUnit {
 
 // Notification Rule - defines when and how to send notifications
 model NotificationRule {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
-  
+
   // Rule identification
-  name           String
-  description    String?  @db.Text
-  
+  name        String
+  description String? @db.Text
+
   // Trigger configuration
-  triggerType    NotificationTriggerType
-  
+  triggerType NotificationTriggerType
+
   // Timing configuration
-  timingValue    Int      @default(0)  // e.g., 3 (days)
-  timingUnit     NotificationTimingUnit @default(DAYS)
+  timingValue     Int                         @default(0) // e.g., 3 (days)
+  timingUnit      NotificationTimingUnit      @default(DAYS)
   timingDirection NotificationTimingDirection @default(BEFORE)
-  
+
   // Action configuration
-  actionType     NotificationActionType
-  
+  actionType NotificationActionType
+
   // System flag - true for mandatory rules that cannot be disabled/deleted
-  isSystem       Boolean  @default(false)
-  
+  isSystem Boolean @default(false)
+
   // Status
-  isActive       Boolean  @default(true)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  template       NotificationTemplate?
-  recipientConfig NotificationRecipientConfig?
-  logs           NotificationLog[]
+  organization         Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template             NotificationTemplate?
+  recipientConfig      NotificationRecipientConfig?
+  logs                 NotificationLog[]
   deduplicationRecords NotificationDeduplication[]
 
   @@index([organizationId])
@@ -2811,33 +2933,33 @@ model NotificationRule {
 
 // Notification Template - the message content with placeholders
 model NotificationTemplate {
-  id                String   @id @default(cuid())
-  notificationRuleId String  @unique
-  
+  id                 String @id @default(cuid())
+  notificationRuleId String @unique
+
   // Email-specific fields
-  subject           String?  // Email subject line (with placeholders)
-  
+  subject String? // Email subject line (with placeholders)
+
   // Message content
-  body              String   @db.Text  // Main message body (with placeholders)
-  
+  body String @db.Text // Main message body (with placeholders)
+
   // SMS-specific (shorter version)
-  smsBody           String?  @db.Text  // SMS-optimized version (shorter)
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  smsBody String? @db.Text // SMS-optimized version (shorter)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  notificationRule  NotificationRule @relation(fields: [notificationRuleId], references: [id], onDelete: Cascade)
+  notificationRule NotificationRule @relation(fields: [notificationRuleId], references: [id], onDelete: Cascade)
 }
 
 // Notification Recipient Config - who receives the notification
 model NotificationRecipientConfig {
-  id                String   @id @default(cuid())
-  notificationRuleId String  @unique
-  
+  id                 String @id @default(cuid())
+  notificationRuleId String @unique
+
   // Primary recipient type
-  recipientType     NotificationRecipientType @default(ALL_FAMILIES)
-  
+  recipientType NotificationRecipientType @default(ALL_FAMILIES)
+
   // Filters (JSON for flexibility)
   // Structure: {
   //   programIds?: string[],
@@ -2847,61 +2969,61 @@ model NotificationRecipientConfig {
   //   userRoles?: string[],
   //   includeInactive?: boolean
   // }
-  filters           Json?
-  
+  filters Json?
+
   // Include CC recipients (e.g., always CC the admin)
-  ccEmails          String[] @default([])
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  ccEmails String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  notificationRule  NotificationRule @relation(fields: [notificationRuleId], references: [id], onDelete: Cascade)
+  notificationRule NotificationRule @relation(fields: [notificationRuleId], references: [id], onDelete: Cascade)
 }
 
 // Notification Log - tracks sent notifications for auditing
 model NotificationLog {
-  id                String   @id @default(cuid())
-  organizationId    String
+  id                 String  @id @default(cuid())
+  organizationId     String
   notificationRuleId String?
-  
+
   // What was sent
-  triggerType       NotificationTriggerType
-  actionType        NotificationActionType
-  
+  triggerType NotificationTriggerType
+  actionType  NotificationActionType
+
   // Who received it
-  recipientEmail    String?
-  recipientPhone    String?
-  recipientName     String?
-  familyId          String?
-  athleteId         String?
-  userId            String?
-  
+  recipientEmail String?
+  recipientPhone String?
+  recipientName  String?
+  familyId       String?
+  athleteId      String?
+  userId         String?
+
   // Message content (rendered)
-  subject           String?
-  body              String   @db.Text
-  
+  subject String?
+  body    String  @db.Text
+
   // Status
-  status            NotificationLogStatus @default(PENDING)
-  
+  status NotificationLogStatus @default(PENDING)
+
   // Links to actual message records
-  emailMessageId    String?
-  smsMessageId      String?
-  announcementId    String?
-  
+  emailMessageId String?
+  smsMessageId   String?
+  announcementId String?
+
   // Error tracking
-  errorMessage      String?  @db.Text
-  
+  errorMessage String? @db.Text
+
   // Timing
-  scheduledFor      DateTime?
-  sentAt            DateTime?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  scheduledFor DateTime?
+  sentAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  notificationRule  NotificationRule? @relation(fields: [notificationRuleId], references: [id], onDelete: SetNull)
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  notificationRule NotificationRule? @relation(fields: [notificationRuleId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([notificationRuleId])
@@ -2913,24 +3035,24 @@ model NotificationLog {
 }
 
 enum NotificationLogStatus {
-  PENDING           // Queued but not sent
-  SENT              // Successfully sent
-  DELIVERED         // Confirmed delivered
-  FAILED            // Failed to send
-  SKIPPED           // Skipped (e.g., recipient opted out)
+  PENDING // Queued but not sent
+  SENT // Successfully sent
+  DELIVERED // Confirmed delivered
+  FAILED // Failed to send
+  SKIPPED // Skipped (e.g., recipient opted out)
 }
 
 // Notification Deduplication - prevents sending same notification twice for same entity
 model NotificationDeduplication {
-  id          String   @id @default(cuid())
-  ruleId      String
-  entityType  String   // "membership", "invoice", "event", "athlete" (for birthday), etc.
-  entityId    String   // The specific entity ID
-  familyId    String
-  sentAt      DateTime @default(now())
+  id         String   @id @default(cuid())
+  ruleId     String
+  entityType String // "membership", "invoice", "event", "athlete" (for birthday), etc.
+  entityId   String // The specific entity ID
+  familyId   String
+  sentAt     DateTime @default(now())
 
   // Relations
-  rule        NotificationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  rule NotificationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@unique([ruleId, entityType, entityId, familyId])
   @@index([ruleId])

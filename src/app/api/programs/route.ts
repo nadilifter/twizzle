@@ -2,20 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
+import { RRule } from "rrule";
+import { format, addMinutes, parse } from "date-fns";
 
 const createProgramSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   level: z.string().optional().default(""), // Legacy field - now optional
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).default("ACTIVE"),
-  // Program type and pricing
+  // Program type and pricing (legacy)
   programType: z.enum(["SINGLE_INSTANCE", "SUBSCRIPTION", "DROP_IN"]).default("SUBSCRIPTION"),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).default("FLAT_RATE"),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
+  // New calendar scheduling fields
+  recurrenceType: z.enum(["NON_RECURRING", "RECURRING"]).default("RECURRING"),
+  registrationType: z.enum(["ALL_INSTANCES", "PER_INSTANCE"]).optional().nullable(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
-  schedulePattern: z.any().optional().nullable(),
+  startTime: z.string().optional().nullable(), // e.g., "09:00"
+  duration: z.number().int().min(1).optional().nullable(), // minutes
+  rrule: z.string().optional().nullable(), // RFC 5545 RRULE string
+  facilityId: z.string().optional().nullable(),
+  schedulePattern: z.any().optional().nullable(), // Legacy
   capacity: z.number().int().min(1).optional().nullable(),
   levelId: z.string().optional().nullable(),
   showLevelOnSite: z.boolean().default(true),
@@ -37,6 +46,42 @@ const createProgramSchema = z.object({
     isPrimary: z.boolean().default(false),
   })).optional(),
 });
+
+/**
+ * Generate program instances from an RRULE and date range
+ */
+function generateInstanceDates(
+  startDate: Date,
+  endDate: Date,
+  rruleString: string | null
+): Date[] {
+  if (!rruleString) {
+    // For non-recurring programs, just return the start date
+    return [startDate];
+  }
+  
+  try {
+    // Parse the RRULE string
+    const rruleWithDtstart = `DTSTART:${format(startDate, "yyyyMMdd'T'HHmmss'Z'")}\nRRULE:${rruleString}`;
+    const rule = RRule.fromString(rruleWithDtstart);
+    
+    // Get all occurrences between start and end date
+    return rule.between(startDate, endDate, true);
+  } catch (error) {
+    console.error("Error parsing RRULE:", error);
+    return [startDate];
+  }
+}
+
+/**
+ * Calculate end time from start time and duration
+ */
+function calculateEndTime(startTime: string, durationMinutes: number): string {
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const startDate = new Date(2000, 0, 1, hours, minutes);
+  const endDate = addMinutes(startDate, durationMinutes);
+  return format(endDate, "HH:mm");
+}
 
 // GET /api/programs
 export async function GET(request: NextRequest) {
@@ -72,10 +117,14 @@ export async function GET(request: NextRequest) {
               enrollments: true,
               events: true,
               lessonPlans: true,
+              instances: true,
             },
           },
           membershipTiers: true,
           programLevel: true,
+          facility: {
+            select: { id: true, name: true, city: true, stateProvince: true },
+          },
           bulkDiscounts: {
             orderBy: [{ type: "asc" }, { minQuantity: "asc" }],
           },
@@ -182,8 +231,15 @@ export async function POST(request: NextRequest) {
           pricingModel: validatedData.pricingModel,
           basePrice: validatedData.basePrice,
           perSessionPrice: validatedData.perSessionPrice,
+          // New calendar scheduling fields
+          recurrenceType: validatedData.recurrenceType,
+          registrationType: validatedData.registrationType,
           startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
           endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
+          startTime: validatedData.startTime,
+          duration: validatedData.duration,
+          rrule: validatedData.rrule,
+          facilityId: validatedData.facilityId,
           schedulePattern: validatedData.schedulePattern,
           capacity: validatedData.capacity,
           levelId: validatedData.levelId,
@@ -227,12 +283,42 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Generate program instances based on schedule
+      if (validatedData.startDate && validatedData.startTime && validatedData.duration) {
+        const startDate = new Date(validatedData.startDate);
+        const endDate = validatedData.endDate ? new Date(validatedData.endDate) : startDate;
+        const endTime = calculateEndTime(validatedData.startTime, validatedData.duration);
+        
+        // Generate dates based on recurrence type
+        const instanceDates = validatedData.recurrenceType === "RECURRING" && validatedData.rrule
+          ? generateInstanceDates(startDate, endDate, validatedData.rrule)
+          : [startDate];
+        
+        // Create program instances
+        if (instanceDates.length > 0) {
+          await tx.programInstance.createMany({
+            data: instanceDates.map(date => ({
+              programId: newProgram.id,
+              date,
+              startTime: validatedData.startTime!,
+              endTime,
+              facilityId: validatedData.facilityId,
+              capacity: validatedData.capacity,
+              organizationId: session.user.organizationId!,
+            })),
+          });
+        }
+      }
+
       // Fetch the complete program with all relations
       return tx.program.findUnique({
         where: { id: newProgram.id },
         include: {
           membershipTiers: true,
           programLevel: true,
+          facility: {
+            select: { id: true, name: true, city: true, stateProvince: true },
+          },
           bulkDiscounts: true,
           levelRequirements: {
             include: {
@@ -264,6 +350,7 @@ export async function POST(request: NextRequest) {
               enrollments: true,
               events: true,
               lessonPlans: true,
+              instances: true,
             },
           },
         },

@@ -37,6 +37,10 @@ import {
   Trash2,
   Plus,
   Info,
+  MapPin,
+  Clock,
+  Repeat,
+  CalendarDays,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useStaff } from "@/hooks/use-staff"
@@ -44,12 +48,25 @@ import { useMemberships } from "@/hooks/use-memberships"
 import type { ProgramStaffRole } from "@/types/staff"
 import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload } from "@/types/programs"
 import { cn } from "@/lib/utils"
+import { RecurrencePicker, type RecurrenceConfig, configToRRule, parseRRule } from "@/components/ui/recurrence-picker"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { format, addMonths } from "date-fns"
 
 interface Level {
   id: string
   name: string
   color: string | null
   order: number
+}
+
+interface Facility {
+  id: string
+  name: string
+  street: string | null
+  city: string | null
+  stateProvince: string | null
 }
 
 interface MembershipInstance {
@@ -77,9 +94,19 @@ interface ProgramFormData {
   // Step 1: General
   name: string
   description: string
-  programType: "SINGLE_INSTANCE" | "SUBSCRIPTION" | "DROP_IN"
+  programType: "SINGLE_INSTANCE" | "SUBSCRIPTION" | "DROP_IN" // Legacy, kept for backward compatibility
+  recurrenceType: "NON_RECURRING" | "RECURRING"
+  registrationType: "ALL_INSTANCES" | "PER_INSTANCE" | null
   
-  // Step 2: Availability
+  // Step 2: Date & Location
+  startDate: Date | null
+  endDate: Date | null
+  startTime: string
+  duration: number | null
+  facilityId: string | null
+  rrule: string | null
+  
+  // Step 3: Availability
   hasLevelRestriction: boolean
   levelRequirementIds: string[]
   hasCapacityRestriction: boolean
@@ -90,7 +117,7 @@ interface ProgramFormData {
   hasMembershipRestriction: boolean
   membershipRequirementIds: string[]
   
-  // Step 3: Staff
+  // Step 4: Staff
   staffAssignments: StaffAssignment[]
   showCoachOnSite: boolean
 }
@@ -119,14 +146,28 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const [levels, setLevels] = React.useState<Level[]>([])
   const [loadingLevels, setLoadingLevels] = React.useState(true)
   
+  // Facilities state
+  const [facilities, setFacilities] = React.useState<Facility[]>([])
+  const [loadingFacilities, setLoadingFacilities] = React.useState(true)
+  
   // Form state
   const [formData, setFormData] = React.useState<ProgramFormData>(() => ({
     // Step 1: General
     name: program?.name || "",
     description: program?.description || "",
     programType: program?.programType || "SUBSCRIPTION",
+    recurrenceType: (program as any)?.recurrenceType || "RECURRING",
+    registrationType: (program as any)?.registrationType || "ALL_INSTANCES",
     
-    // Step 2: Availability
+    // Step 2: Date & Location
+    startDate: program?.startDate ? new Date(program.startDate) : null,
+    endDate: program?.endDate ? new Date(program.endDate) : null,
+    startTime: (program as any)?.startTime || "09:00",
+    duration: (program as any)?.duration || 60,
+    facilityId: (program as any)?.facilityId || null,
+    rrule: (program as any)?.rrule || null,
+    
+    // Step 3: Availability
     hasLevelRestriction: program?.hasLevelRestriction || false,
     levelRequirementIds: program?.levelRequirements?.map(lr => lr.levelId) || [],
     hasCapacityRestriction: program?.hasCapacityRestriction || false,
@@ -137,7 +178,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     hasMembershipRestriction: program?.hasMembershipRestriction || false,
     membershipRequirementIds: program?.requiredMemberships?.map(m => m.id) || [],
     
-    // Step 3: Staff
+    // Step 4: Staff
     staffAssignments: program?.staffAssignments?.map(sa => ({
       staffProfileId: sa.staffProfileId,
       role: sa.role,
@@ -166,6 +207,24 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       }
     }
     fetchLevels()
+  }, [])
+  
+  // Fetch facilities
+  React.useEffect(() => {
+    const fetchFacilities = async () => {
+      try {
+        const response = await fetch("/api/organization/facilities")
+        if (response.ok) {
+          const data = await response.json()
+          setFacilities(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch facilities:", error)
+      } finally {
+        setLoadingFacilities(false)
+      }
+    }
+    fetchFacilities()
   }, [])
   
   // Flatten membership instances from groups
@@ -197,6 +256,29 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         }
         return true
       case 2:
+        // Date & Location validation
+        if (!formData.startDate) {
+          toast.error("Start date is required")
+          return false
+        }
+        if (formData.recurrenceType === "RECURRING" && !formData.endDate) {
+          toast.error("End date is required for recurring programs")
+          return false
+        }
+        if (formData.endDate && formData.startDate && formData.endDate < formData.startDate) {
+          toast.error("End date must be after start date")
+          return false
+        }
+        if (!formData.startTime) {
+          toast.error("Start time is required")
+          return false
+        }
+        if (!formData.duration || formData.duration < 1) {
+          toast.error("Duration must be at least 1 minute")
+          return false
+        }
+        return true
+      case 3:
         if (formData.hasCapacityRestriction && (!formData.capacity || formData.capacity < 1)) {
           toast.error("Capacity must be at least 1 when enabled")
           return false
@@ -228,7 +310,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           return false
         }
         return true
-      case 3:
+      case 4:
         return true
       default:
         return true
@@ -237,7 +319,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3))
+      setCurrentStep(prev => Math.min(prev + 1, 4))
     }
   }
   
@@ -246,17 +328,32 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   }
   
   const handleSubmit = async () => {
-    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) {
       return
     }
     
     setIsSaving(true)
     
     try {
+      // Map recurrenceType to legacy programType for backwards compatibility
+      const legacyProgramType = formData.recurrenceType === "NON_RECURRING" 
+        ? "SINGLE_INSTANCE" 
+        : formData.registrationType === "PER_INSTANCE" 
+          ? "DROP_IN" 
+          : "SUBSCRIPTION"
+      
       const payload: CreateProgramPayload | UpdateProgramPayload = {
         name: formData.name,
         description: formData.description || undefined,
-        programType: formData.programType,
+        programType: legacyProgramType,
+        recurrenceType: formData.recurrenceType,
+        registrationType: formData.recurrenceType === "RECURRING" ? formData.registrationType : null,
+        startDate: formData.startDate?.toISOString(),
+        endDate: formData.endDate?.toISOString(),
+        startTime: formData.startTime,
+        duration: formData.duration,
+        facilityId: formData.facilityId,
+        rrule: formData.rrule,
         hasLevelRestriction: formData.hasLevelRestriction,
         hasCapacityRestriction: formData.hasCapacityRestriction,
         hasAgeRestriction: formData.hasAgeRestriction,
@@ -390,8 +487,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
             >
               <StepperIndicator />
               <div className="hidden sm:block text-left">
-                <StepperTitle>Availability</StepperTitle>
-                <StepperDescription>Restrictions & limits</StepperDescription>
+                <StepperTitle>Schedule</StepperTitle>
+                <StepperDescription>Date & location</StepperDescription>
               </div>
             </button>
             <StepperSeparator className="hidden sm:block" />
@@ -403,6 +500,22 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               onClick={() => currentStep > 2 && setCurrentStep(3)}
               className="flex items-center gap-3"
               disabled={currentStep < 3}
+            >
+              <StepperIndicator />
+              <div className="hidden sm:block text-left">
+                <StepperTitle>Availability</StepperTitle>
+                <StepperDescription>Restrictions & limits</StepperDescription>
+              </div>
+            </button>
+            <StepperSeparator className="hidden sm:block" />
+          </StepperItem>
+          
+          <StepperItem step={4} completed={currentStep > 4}>
+            <button
+              type="button"
+              onClick={() => currentStep > 3 && setCurrentStep(4)}
+              className="flex items-center gap-3"
+              disabled={currentStep < 4}
             >
               <StepperIndicator />
               <div className="hidden sm:block text-left">
@@ -445,44 +558,301 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="programType">Program Type</Label>
-                <Select
-                  value={formData.programType}
-                  onValueChange={(value: "SINGLE_INSTANCE" | "SUBSCRIPTION" | "DROP_IN") => 
-                    setFormData(prev => ({ ...prev, programType: value }))
+              {/* Schedule Type Selection */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Schedule Type</Label>
+                <RadioGroup
+                  value={formData.recurrenceType}
+                  onValueChange={(value: "NON_RECURRING" | "RECURRING") => 
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      recurrenceType: value,
+                      registrationType: value === "RECURRING" ? (prev.registrationType || "ALL_INSTANCES") : null,
+                    }))
                   }
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SUBSCRIPTION">
-                      <div className="flex flex-col items-start">
-                        <span>Subscription</span>
-                        <span className="text-xs text-muted-foreground">Recurring enrollment (e.g., monthly classes)</span>
+                  <label
+                    className={cn(
+                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                      formData.recurrenceType === "NON_RECURRING"
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <RadioGroupItem value="NON_RECURRING" className="mt-1" />
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Single Session</span>
                       </div>
-                    </SelectItem>
-                    <SelectItem value="SINGLE_INSTANCE">
-                      <div className="flex flex-col items-start">
-                        <span>Single Instance</span>
-                        <span className="text-xs text-muted-foreground">One-time event or camp</span>
+                      <p className="text-sm text-muted-foreground">
+                        One-time event like a camp, workshop, or clinic
+                      </p>
+                    </div>
+                  </label>
+                  
+                  <label
+                    className={cn(
+                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                      formData.recurrenceType === "RECURRING"
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <RadioGroupItem value="RECURRING" className="mt-1" />
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Repeat className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Repeating Schedule</span>
                       </div>
-                    </SelectItem>
-                    <SelectItem value="DROP_IN">
-                      <div className="flex flex-col items-start">
-                        <span>Drop-In</span>
-                        <span className="text-xs text-muted-foreground">Pay per session attendance</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                      <p className="text-sm text-muted-foreground">
+                        Weekly or recurring classes on a regular schedule
+                      </p>
+                    </div>
+                  </label>
+                </RadioGroup>
               </div>
+              
+              {/* Registration Type - only show for recurring programs */}
+              {formData.recurrenceType === "RECURRING" && (
+                <div className="space-y-4 rounded-lg border p-4 bg-muted/20">
+                  <Label className="text-base font-medium">Registration Style</Label>
+                  <RadioGroup
+                    value={formData.registrationType || "ALL_INSTANCES"}
+                    onValueChange={(value: "ALL_INSTANCES" | "PER_INSTANCE") => 
+                      setFormData(prev => ({ ...prev, registrationType: value }))
+                    }
+                    className="space-y-3"
+                  >
+                    <label
+                      className={cn(
+                        "flex items-start gap-3 rounded-lg border bg-background p-3 cursor-pointer transition-colors",
+                        formData.registrationType === "ALL_INSTANCES"
+                          ? "border-primary bg-primary/5"
+                          : "hover:bg-muted/50"
+                      )}
+                    >
+                      <RadioGroupItem value="ALL_INSTANCES" className="mt-0.5" />
+                      <div className="flex-1 space-y-1">
+                        <span className="font-medium text-sm">Enroll in entire program</span>
+                        <p className="text-xs text-muted-foreground">
+                          Athletes register once for all sessions during the program period
+                        </p>
+                      </div>
+                    </label>
+                    
+                    <label
+                      className={cn(
+                        "flex items-start gap-3 rounded-lg border bg-background p-3 cursor-pointer transition-colors",
+                        formData.registrationType === "PER_INSTANCE"
+                          ? "border-primary bg-primary/5"
+                          : "hover:bg-muted/50"
+                      )}
+                    >
+                      <RadioGroupItem value="PER_INSTANCE" className="mt-0.5" />
+                      <div className="flex-1 space-y-1">
+                        <span className="font-medium text-sm">Sign up per class</span>
+                        <p className="text-xs text-muted-foreground">
+                          Athletes register individually for each session they want to attend
+                        </p>
+                      </div>
+                    </label>
+                  </RadioGroup>
+                </div>
+              )}
             </CardContent>
           </Card>
         </StepperContent>
         
+        {/* Step 2: Date & Location */}
         <StepperContent value={2}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Date & Location
+              </CardTitle>
+              <CardDescription>
+                Set when and where this program takes place
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Date Selection */}
+              <div className={cn(
+                "grid gap-4",
+                formData.recurrenceType === "RECURRING" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+              )}>
+                <div className="space-y-2">
+                  <Label>{formData.recurrenceType === "RECURRING" ? "Start Date *" : "Program Date *"}</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formData.startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {formData.startDate ? format(formData.startDate, "PPP") : "Select date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={formData.startDate || undefined}
+                        onSelect={(date) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            startDate: date || null,
+                            // If end date is before new start date, reset it
+                            endDate: date && prev.endDate && prev.endDate < date ? null : prev.endDate,
+                          }))
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                {formData.recurrenceType === "RECURRING" && (
+                  <div className="space-y-2">
+                    <Label>End Date *</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.endDate && "text-muted-foreground"
+                          )}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {formData.endDate ? format(formData.endDate, "PPP") : "Select end date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={formData.endDate || undefined}
+                          onSelect={(date) => setFormData(prev => ({ ...prev, endDate: date || null }))}
+                          disabled={(date) => formData.startDate ? date < formData.startDate : false}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+              </div>
+              
+              {/* Time and Duration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startTime">Start Time *</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="startTime"
+                      type="time"
+                      value={formData.startTime}
+                      onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duration (minutes) *</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    min={1}
+                    max={480}
+                    placeholder="60"
+                    value={formData.duration || ""}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      duration: e.target.value ? parseInt(e.target.value) : null 
+                    }))}
+                  />
+                  {formData.duration && (
+                    <p className="text-xs text-muted-foreground">
+                      {Math.floor(formData.duration / 60)}h {formData.duration % 60}m
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Facility Selection */}
+              <div className="space-y-2">
+                <Label>Location</Label>
+                {loadingFacilities ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading facilities...
+                  </div>
+                ) : facilities.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-4 text-center">
+                    <MapPin className="h-6 w-6 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No facilities configured.{" "}
+                      <a href="/dashboard/settings/facilities" className="text-primary underline">
+                        Add a facility
+                      </a>
+                    </p>
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.facilityId || "__none__"}
+                    onValueChange={(value) => setFormData(prev => ({ 
+                      ...prev, 
+                      facilityId: value === "__none__" ? null : value 
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a facility (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No specific location</SelectItem>
+                      {facilities.map((facility) => (
+                        <SelectItem key={facility.id} value={facility.id}>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span>{facility.name}</span>
+                            {facility.city && (
+                              <span className="text-muted-foreground">
+                                - {facility.city}{facility.stateProvince && `, ${facility.stateProvince}`}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              
+              {/* Recurrence Pattern - only for recurring programs */}
+              {formData.recurrenceType === "RECURRING" && formData.startDate && formData.endDate && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-base font-medium">Recurrence Pattern</Label>
+                  </div>
+                  <RecurrencePicker
+                    startDate={formData.startDate}
+                    endDate={formData.endDate}
+                    onRRuleChange={(rrule) => setFormData(prev => ({ ...prev, rrule }))}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </StepperContent>
+        
+        {/* Step 3: Availability */}
+        <StepperContent value={3}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -733,7 +1103,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           </Card>
         </StepperContent>
         
-        <StepperContent value={3}>
+        {/* Step 4: Staff */}
+        <StepperContent value={4}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -916,7 +1287,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               </Button>
             )}
             
-            {currentStep < 3 ? (
+            {currentStep < 4 ? (
               <Button type="button" onClick={handleNext}>
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />

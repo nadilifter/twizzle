@@ -5,19 +5,15 @@ import { getAuthSession } from "@/lib/auth"
 
 export async function getUserOrganizations() {
   try {
-    console.log("getUserOrganizations: Starting")
     const session = await getAuthSession()
-    console.log("getUserOrganizations: Session retrieved", session ? "Session exists" : "No session", session?.user?.email)
     
     if (!session?.user?.id) {
-      console.log("getUserOrganizations: Unauthorized - No user ID")
       throw new Error("Unauthorized")
     }
 
     // Super admins have access to ALL organizations
     if (session.user.isSuperAdmin) {
-      console.log("getUserOrganizations: Super admin - returning all organizations")
-      const allOrganizations = await db.organization.findMany({
+      return await db.organization.findMany({
         select: {
           id: true,
           name: true,
@@ -28,8 +24,6 @@ export async function getUserOrganizations() {
           name: "asc",
         },
       })
-      console.log(`getUserOrganizations: Found ${allOrganizations.length} organizations for super admin`)
-      return allOrganizations
     }
 
     // Regular users only see organizations they're members of
@@ -49,12 +43,10 @@ export async function getUserOrganizations() {
         },
       },
     })
-    
-    console.log(`getUserOrganizations: Found ${memberships.length} memberships`)
 
     return memberships.map((m) => m.organization)
   } catch (error) {
-    console.error("getUserOrganizations: Error", error)
+    console.error("getUserOrganizations error:", error)
     throw error
   }
 }

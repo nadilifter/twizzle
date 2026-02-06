@@ -4,11 +4,12 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, Users, ShoppingCart, User, AlertCircle, Star } from "lucide-react";
+import { CalendarDays, Users, ShoppingCart, User, AlertCircle, Star, Clock, MapPin, Repeat } from "lucide-react";
 import { useCart } from "@/components/sites/cart-context";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MembershipRequirementDialog } from "@/components/sites/membership-requirement-dialog";
 import { useState } from "react";
+import { format } from "date-fns";
 
 interface MembershipTier {
   id: string;
@@ -58,6 +59,21 @@ interface BulkDiscount {
   description: string | null;
 }
 
+interface Facility {
+  id: string;
+  name: string;
+  city?: string | null;
+  stateProvince?: string | null;
+}
+
+interface ProgramInstance {
+  id: string;
+  date: string | Date;
+  startTime: string;
+  endTime: string;
+  status: string;
+}
+
 interface ProgramCardProps {
   program: {
     id: string;
@@ -76,6 +92,18 @@ interface ProgramCardProps {
     pricingModel?: string;
     basePrice?: number | string | null;
     perSessionPrice?: number | string | null;
+    // Calendar scheduling fields
+    recurrenceType?: "NON_RECURRING" | "RECURRING" | null;
+    registrationType?: "ALL_INSTANCES" | "PER_INSTANCE" | null;
+    startDate?: string | Date | null;
+    endDate?: string | Date | null;
+    startTime?: string | null;
+    duration?: number | null;
+    facility?: Facility | null;
+    instances?: ProgramInstance[];
+    _count?: {
+      instances?: number;
+    };
   };
   primaryColor?: string;
 }
@@ -254,6 +282,65 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           </p>
         )}
 
+        {/* Schedule & Location Section */}
+        {(program.startDate || program.startTime || program.facility || program.duration) && (
+          <div className="mt-4 space-y-2">
+            {/* Date/Time Row */}
+            {program.startDate && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {program.recurrenceType === "RECURRING" && program.endDate ? (
+                    <>
+                      {format(new Date(program.startDate), "MMM d")} - {format(new Date(program.endDate), "MMM d, yyyy")}
+                    </>
+                  ) : (
+                    format(new Date(program.startDate), "EEEE, MMM d, yyyy")
+                  )}
+                </span>
+              </div>
+            )}
+            
+            {/* Time & Duration Row */}
+            {program.startTime && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {program.startTime}
+                  {program.duration && ` (${program.duration} min)`}
+                </span>
+              </div>
+            )}
+
+            {/* Facility/Location Row */}
+            {program.facility && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {program.facility.name}
+                  {program.facility.city && `, ${program.facility.city}`}
+                </span>
+              </div>
+            )}
+
+            {/* Recurrence Info */}
+            {program.recurrenceType === "RECURRING" && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Repeat className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {program._count?.instances 
+                    ? `${program._count.instances} sessions`
+                    : "Recurring program"
+                  }
+                  {program.registrationType === "PER_INSTANCE" && (
+                    <span className="ml-1 text-primary">(drop-in available)</span>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-4 flex items-center gap-4">
           {showLevel && displayLevel && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -266,7 +353,7 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
               <CalendarDays className="h-3.5 w-3.5" />
               <span>{membershipTiers.length} option{membershipTiers.length !== 1 ? 's' : ''}</span>
             </div>
-          ) : program.programType && (
+          ) : program.programType && !program.recurrenceType && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5" />
               <span>

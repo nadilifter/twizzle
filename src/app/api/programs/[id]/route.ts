@@ -2,20 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { RRule } from "rrule";
+import { format, addMinutes } from "date-fns";
 
 const updateProgramSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   level: z.string().optional(), // Legacy field
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
-  // Program type and pricing
+  // Program type and pricing (legacy)
   programType: z.enum(["SINGLE_INSTANCE", "SUBSCRIPTION", "DROP_IN"]).optional(),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).optional(),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
+  // New calendar scheduling fields
+  recurrenceType: z.enum(["NON_RECURRING", "RECURRING"]).optional(),
+  registrationType: z.enum(["ALL_INSTANCES", "PER_INSTANCE"]).optional().nullable(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
-  schedulePattern: z.any().optional().nullable(),
+  startTime: z.string().optional().nullable(),
+  duration: z.number().int().min(1).optional().nullable(),
+  rrule: z.string().optional().nullable(),
+  facilityId: z.string().optional().nullable(),
+  schedulePattern: z.any().optional().nullable(), // Legacy
   capacity: z.number().int().min(1).optional().nullable(),
   levelId: z.string().optional().nullable(),
   showLevelOnSite: z.boolean().optional(),
@@ -36,7 +45,41 @@ const updateProgramSchema = z.object({
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
     isPrimary: z.boolean().default(false),
   })).optional(),
+  // Flag to regenerate instances
+  regenerateInstances: z.boolean().optional(),
 });
+
+/**
+ * Generate program instances from an RRULE and date range
+ */
+function generateInstanceDates(
+  startDate: Date,
+  endDate: Date,
+  rruleString: string | null
+): Date[] {
+  if (!rruleString) {
+    return [startDate];
+  }
+  
+  try {
+    const rruleWithDtstart = `DTSTART:${format(startDate, "yyyyMMdd'T'HHmmss'Z'")}\nRRULE:${rruleString}`;
+    const rule = RRule.fromString(rruleWithDtstart);
+    return rule.between(startDate, endDate, true);
+  } catch (error) {
+    console.error("Error parsing RRULE:", error);
+    return [startDate];
+  }
+}
+
+/**
+ * Calculate end time from start time and duration
+ */
+function calculateEndTime(startTime: string, durationMinutes: number): string {
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const startDateObj = new Date(2000, 0, 1, hours, minutes);
+  const endDateObj = addMinutes(startDateObj, durationMinutes);
+  return format(endDateObj, "HH:mm");
+}
 
 // GET /api/programs/[id]
 export async function GET(
@@ -58,6 +101,9 @@ export async function GET(
       include: {
         membershipTiers: true,
         programLevel: true,
+        facility: {
+          select: { id: true, name: true, city: true, stateProvince: true },
+        },
         bulkDiscounts: {
           orderBy: [{ type: "asc" }, { minQuantity: "asc" }],
         },
@@ -111,6 +157,15 @@ export async function GET(
             },
           },
         },
+        instances: {
+          orderBy: { date: "asc" },
+          take: 20,
+          include: {
+            _count: {
+              select: { registrations: true, attendances: true },
+            },
+          },
+        },
         events: {
           orderBy: { date: "desc" },
           take: 10,
@@ -143,6 +198,7 @@ export async function GET(
             enrollments: true,
             events: true,
             lessonPlans: true,
+            instances: true,
           },
         },
       },
@@ -208,14 +264,21 @@ export async function PATCH(
       if (validatedData.pricingModel !== undefined) updateData.pricingModel = validatedData.pricingModel;
       if (validatedData.basePrice !== undefined) updateData.basePrice = validatedData.basePrice;
       if (validatedData.perSessionPrice !== undefined) updateData.perSessionPrice = validatedData.perSessionPrice;
+      // New calendar scheduling fields
+      if (validatedData.recurrenceType !== undefined) updateData.recurrenceType = validatedData.recurrenceType;
+      if (validatedData.registrationType !== undefined) updateData.registrationType = validatedData.registrationType;
       if (validatedData.startDate !== undefined) updateData.startDate = validatedData.startDate ? new Date(validatedData.startDate) : null;
       if (validatedData.endDate !== undefined) updateData.endDate = validatedData.endDate ? new Date(validatedData.endDate) : null;
+      if (validatedData.startTime !== undefined) updateData.startTime = validatedData.startTime;
+      if (validatedData.duration !== undefined) updateData.duration = validatedData.duration;
+      if (validatedData.rrule !== undefined) updateData.rrule = validatedData.rrule;
+      if (validatedData.facilityId !== undefined) updateData.facilityId = validatedData.facilityId;
       if (validatedData.schedulePattern !== undefined) updateData.schedulePattern = validatedData.schedulePattern;
       if (validatedData.capacity !== undefined) updateData.capacity = validatedData.capacity;
       if (validatedData.levelId !== undefined) updateData.levelId = validatedData.levelId;
       if (validatedData.showLevelOnSite !== undefined) updateData.showLevelOnSite = validatedData.showLevelOnSite;
       if (validatedData.showCoachOnSite !== undefined) updateData.showCoachOnSite = validatedData.showCoachOnSite;
-      // New fields
+      // Age and restriction fields
       if (validatedData.minAge !== undefined) updateData.minAge = validatedData.minAge;
       if (validatedData.maxAge !== undefined) updateData.maxAge = validatedData.maxAge;
       if (validatedData.hasLevelRestriction !== undefined) updateData.hasLevelRestriction = validatedData.hasLevelRestriction;
@@ -224,10 +287,60 @@ export async function PATCH(
       if (validatedData.hasMembershipRestriction !== undefined) updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
 
       // Update the program
-      await tx.program.update({
+      const updatedProgram = await tx.program.update({
         where: { id },
         data: updateData,
       });
+
+      // Regenerate instances if requested or if schedule changed
+      if (validatedData.regenerateInstances) {
+        // Delete existing future instances (preserve past ones with registrations)
+        await tx.programInstance.deleteMany({
+          where: {
+            programId: id,
+            date: { gte: new Date() },
+            registrations: { none: {} },
+          },
+        });
+
+        // Generate new instances
+        const startDate = validatedData.startDate 
+          ? new Date(validatedData.startDate) 
+          : existing.startDate;
+        const endDate = validatedData.endDate 
+          ? new Date(validatedData.endDate) 
+          : existing.endDate;
+        const startTime = validatedData.startTime ?? (existing as any).startTime;
+        const duration = validatedData.duration ?? (existing as any).duration;
+        const recurrenceType = validatedData.recurrenceType ?? (existing as any).recurrenceType;
+        const rrule = validatedData.rrule ?? (existing as any).rrule;
+        const facilityId = validatedData.facilityId ?? (existing as any).facilityId;
+        const capacity = validatedData.capacity ?? existing.capacity;
+
+        if (startDate && startTime && duration) {
+          const endTime = calculateEndTime(startTime, duration);
+          const instanceDates = recurrenceType === "RECURRING" && rrule
+            ? generateInstanceDates(startDate, endDate || startDate, rrule)
+            : [startDate];
+
+          // Filter to only future dates
+          const futureDates = instanceDates.filter(d => d >= new Date());
+          
+          if (futureDates.length > 0) {
+            await tx.programInstance.createMany({
+              data: futureDates.map(date => ({
+                programId: id,
+                date,
+                startTime,
+                endTime,
+                facilityId,
+                capacity,
+                organizationId: session.user.organizationId!,
+              })),
+            });
+          }
+        }
+      }
 
       // Update level requirements if provided
       if (validatedData.levelRequirementIds !== undefined) {
@@ -283,6 +396,9 @@ export async function PATCH(
         include: {
           membershipTiers: true,
           programLevel: true,
+          facility: {
+            select: { id: true, name: true, city: true, stateProvince: true },
+          },
           bulkDiscounts: {
             orderBy: [{ type: "asc" }, { minQuantity: "asc" }],
           },
@@ -319,11 +435,21 @@ export async function PATCH(
               },
             },
           },
+          instances: {
+            orderBy: { date: "asc" },
+            take: 20,
+            include: {
+              _count: {
+                select: { registrations: true, attendances: true },
+              },
+            },
+          },
           _count: {
             select: {
               enrollments: true,
               events: true,
               lessonPlans: true,
+              instances: true,
             },
           },
         },

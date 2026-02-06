@@ -32,6 +32,12 @@ export interface ProgramRequiredMembership {
 export type ProgramType = "SINGLE_INSTANCE" | "SUBSCRIPTION" | "DROP_IN";
 export type PricingModel = "FLAT_RATE" | "PER_SESSION";
 
+// New calendar-based scheduling types
+export type RecurrenceType = "NON_RECURRING" | "RECURRING";
+export type RegistrationType = "ALL_INSTANCES" | "PER_INSTANCE";
+export type InstanceStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
+export type RegistrationStatus = "REGISTERED" | "WAITLISTED" | "CANCELLED" | "ATTENDED" | "NO_SHOW";
+
 export interface ProgramLevelRequirement {
   id: string;
   programId: string;
@@ -53,15 +59,25 @@ export interface Program {
   createdAt: string;
   updatedAt: string;
   
-  // Program type and pricing
+  // Program type and pricing (legacy)
   programType: ProgramType;
   pricingModel: PricingModel;
   basePrice: number | null;
   perSessionPrice: number | null;
   
+  // New calendar-based scheduling
+  recurrenceType: RecurrenceType;
+  registrationType: RegistrationType | null;
+  
   // Schedule
   startDate: string | null;
   endDate: string | null;
+  startTime: string | null;
+  duration: number | null;
+  rrule: string | null;
+  
+  // Location
+  facilityId: string | null;
   
   // Level configuration
   levelId: string | null;
@@ -80,6 +96,58 @@ export interface Program {
   hasCapacityRestriction: boolean;
   hasAgeRestriction: boolean;
   hasMembershipRestriction: boolean;
+}
+
+// Program Instance - individual occurrences of a program
+export interface ProgramInstance {
+  id: string;
+  programId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  facilityId: string | null;
+  capacity: number | null;
+  status: InstanceStatus;
+  notes: string | null;
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Relations
+  program?: Program;
+  facility?: {
+    id: string;
+    name: string;
+    city: string | null;
+    stateProvince: string | null;
+  } | null;
+  _count?: {
+    registrations: number;
+    attendances: number;
+  };
+}
+
+// Instance Registration - per-instance program registrations
+export interface InstanceRegistration {
+  id: string;
+  programInstanceId: string;
+  athleteId: string;
+  familyId: string | null;
+  status: RegistrationStatus;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Relations
+  programInstance?: ProgramInstance;
+  athlete?: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+  family?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export interface ProgramWithRelations extends Program {
@@ -115,8 +183,16 @@ export interface CreateProgramPayload {
   pricingModel?: PricingModel;
   basePrice?: number | null;
   perSessionPrice?: number | null;
+  // New calendar scheduling fields
+  recurrenceType?: RecurrenceType;
+  registrationType?: RegistrationType | null;
   startDate?: string | null;
   endDate?: string | null;
+  startTime?: string | null;
+  duration?: number | null;
+  rrule?: string | null;
+  facilityId?: string | null;
+  // Level configuration
   levelId?: string | null;
   showLevelOnSite?: boolean;
   showCoachOnSite?: boolean;
@@ -148,8 +224,16 @@ export interface UpdateProgramPayload {
   pricingModel?: PricingModel;
   basePrice?: number | null;
   perSessionPrice?: number | null;
+  // New calendar scheduling fields
+  recurrenceType?: RecurrenceType;
+  registrationType?: RegistrationType | null;
   startDate?: string | null;
   endDate?: string | null;
+  startTime?: string | null;
+  duration?: number | null;
+  rrule?: string | null;
+  facilityId?: string | null;
+  // Level configuration
   levelId?: string | null;
   showLevelOnSite?: boolean;
   showCoachOnSite?: boolean;

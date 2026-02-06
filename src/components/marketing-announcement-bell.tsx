@@ -11,7 +11,6 @@ export function MarketingAnnouncementBell({ organizationId }: MarketingAnnouncem
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    // Fetch unread count on mount
     const fetchUnreadCount = async () => {
       try {
         const params = new URLSearchParams()
@@ -29,10 +28,6 @@ export function MarketingAnnouncementBell({ organizationId }: MarketingAnnouncem
     }
 
     fetchUnreadCount()
-
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchUnreadCount, 60000)
-    return () => clearInterval(interval)
   }, [organizationId])
 
   return (

@@ -8,14 +8,18 @@ const nextAuthHandler = NextAuth(authOptions);
 
 /**
  * Debug logging helper for auth troubleshooting
- * Logs detailed request and response information for diagnosing auth issues
+ * Only logs when AUTH_DEBUG=true or in staging/development cloud environments
  */
 function logAuthDebug(phase: string, details: Record<string, unknown>) {
   const env = getCurrentEnvironment();
   const config = getEnvConfig();
   
-  // Always log in staging for debugging, only in development for local
-  if (env === 'staging' || env === 'development' || process.env.NODE_ENV === 'development') {
+  // Only log if AUTH_DEBUG is explicitly enabled, or in staging/development cloud environments
+  // Skip verbose logging in local dev to reduce noise
+  const shouldLog = process.env.AUTH_DEBUG === 'true' || 
+    (env === 'staging' || env === 'development');
+  
+  if (shouldLog) {
     console.log(`[Auth Debug][${env}][${phase}]`, JSON.stringify({
       ...details,
       env,

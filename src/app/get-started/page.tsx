@@ -2,7 +2,24 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Check, X, Info, Building2, User, Globe, CreditCard } from "lucide-react"
+import { 
+  Loader2, 
+  Check, 
+  X, 
+  Info, 
+  Building2, 
+  User, 
+  Globe, 
+  CreditCard,
+  Users,
+  UserPlus,
+  Calendar,
+  BookOpen,
+  MessageSquare,
+  Mail,
+  HardDrive,
+  Tag
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -39,11 +56,18 @@ interface SubscriptionPlan {
   description: string | null
   monthlyPrice: string
   yearlyPrice: string | null
+  transactionFee: string
+  perTransactionFee: string
   features: string[]
   isPopular: boolean
   maxAthletes: number | null
   maxUsers: number | null
+  maxPrograms: number | null
   maxEvents: number | null
+  smsIncluded: number | null
+  emailIncluded: number | null
+  maxStorageMB: number | null
+  maxMembershipTypes: number | null
 }
 
 const COUNTRIES = [
@@ -113,7 +137,7 @@ export default function SignupPage() {
   React.useEffect(() => {
     async function fetchPlans() {
       try {
-        const response = await fetch("/api/signups/plans")
+        const response = await fetch("/api/org-signup/plans")
         if (!response.ok) throw new Error("Failed to fetch plans")
         const data = await response.json()
         setPlans(data)
@@ -142,7 +166,7 @@ export default function SignupPage() {
 
     setSubdomainStatus("checking")
     try {
-      const response = await fetch(`/api/signups/check-subdomain?subdomain=${encodeURIComponent(subdomain)}`)
+      const response = await fetch(`/api/org-signup/check-subdomain?subdomain=${encodeURIComponent(subdomain)}`)
       const data = await response.json()
       setSubdomainStatus(data.available ? "available" : "taken")
     } catch (error) {
@@ -235,7 +259,7 @@ export default function SignupPage() {
 
     setIsLoading(true)
     try {
-      const response = await fetch("/api/signups", {
+      const response = await fetch("/api/org-signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -248,7 +272,7 @@ export default function SignupPage() {
       }
 
       toast.success("Organization created successfully!")
-      router.push(`/signups/success?subdomain=${formData.subdomain}&orgName=${encodeURIComponent(formData.orgName)}`)
+      router.push(`/org-signup/success?subdomain=${formData.subdomain}&orgName=${encodeURIComponent(formData.orgName)}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong")
     } finally {
@@ -533,7 +557,12 @@ export default function SignupPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className={cn(
+                  "grid gap-4",
+                  plans.length === 1 && "grid-cols-1",
+                  plans.length === 2 && "grid-cols-1 sm:grid-cols-2",
+                  plans.length >= 3 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                )}>
                   {plans.map((plan) => (
                     <div
                       key={plan.id}
@@ -550,36 +579,106 @@ export default function SignupPage() {
                           Popular
                         </Badge>
                       )}
-                      <div className="mb-3">
-                        <h3 className="font-semibold">{plan.name}</h3>
-                        <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-2xl font-bold">
-                            {formatCurrency(plan.monthlyPrice)}
-                          </span>
-                          <span className="text-muted-foreground text-sm">/mo</span>
-                        </div>
-                      </div>
-                      <Badge variant="secondary" className="mb-3">
-                        Free for 30 days
-                      </Badge>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                        {plan.features.slice(0, 3).map((feature, i) => (
-                          <li key={i} className="flex items-center gap-1">
-                            <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
-                            <span className="truncate">{feature}</span>
-                          </li>
-                        ))}
-                        {plan.features.length > 3 && (
-                          <li className="text-xs">+{plan.features.length - 3} more</li>
-                        )}
-                      </ul>
+                      {/* Selection indicator */}
                       {formData.planId === plan.id && (
-                        <div className="absolute top-2 left-2">
-                          <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center">
+                        <div className="absolute -top-2 -left-2">
+                          <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center ring-2 ring-background">
                             <Check className="h-3 w-3 text-primary-foreground" />
                           </div>
                         </div>
                       )}
+                      
+                      {/* Plan name and price */}
+                      <div className="mb-3">
+                        <h3 className="font-semibold text-lg">{plan.name}</h3>
+                        {plan.description && (
+                          <p className="text-sm text-muted-foreground mt-0.5">{plan.description}</p>
+                        )}
+                        <div className="flex items-baseline gap-1 mt-2">
+                          <span className="text-3xl font-bold">
+                            {formatCurrency(plan.monthlyPrice)}
+                          </span>
+                          <span className="text-muted-foreground text-sm">/mo</span>
+                        </div>
+                        {plan.yearlyPrice && (
+                          <p className="text-sm text-muted-foreground">
+                            or {formatCurrency(plan.yearlyPrice)}/year
+                          </p>
+                        )}
+                      </div>
+
+                      <Badge variant="secondary" className="mb-3">
+                        Free for 30 days
+                      </Badge>
+
+                      {/* Limits grid */}
+                      <div className="grid grid-cols-4 gap-1 text-center text-xs mb-3 py-2 border-y">
+                        <div>
+                          <Users className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
+                          <p className="font-medium">{plan.maxAthletes || "∞"}</p>
+                          <p className="text-muted-foreground">Athletes</p>
+                        </div>
+                        <div>
+                          <UserPlus className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
+                          <p className="font-medium">{plan.maxUsers || "∞"}</p>
+                          <p className="text-muted-foreground">Users</p>
+                        </div>
+                        <div>
+                          <BookOpen className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
+                          <p className="font-medium">{plan.maxPrograms || "∞"}</p>
+                          <p className="text-muted-foreground">Programs</p>
+                        </div>
+                        <div>
+                          <Calendar className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
+                          <p className="font-medium">{plan.maxEvents || "∞"}</p>
+                          <p className="text-muted-foreground">Events</p>
+                        </div>
+                      </div>
+
+                      {/* Usage limits grid */}
+                      <div className="grid grid-cols-4 gap-1 text-center text-xs mb-3 pb-3 border-b">
+                        <div>
+                          <MessageSquare className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
+                          <p className="font-medium">{plan.smsIncluded || "—"}</p>
+                          <p className="text-muted-foreground">SMS/mo</p>
+                        </div>
+                        <div>
+                          <Mail className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
+                          <p className="font-medium">{plan.emailIncluded || "—"}</p>
+                          <p className="text-muted-foreground">Email/mo</p>
+                        </div>
+                        <div>
+                          <HardDrive className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
+                          <p className="font-medium">
+                            {plan.maxStorageMB 
+                              ? plan.maxStorageMB >= 1000 
+                                ? `${plan.maxStorageMB / 1000}GB` 
+                                : `${plan.maxStorageMB}MB`
+                              : "∞"}
+                          </p>
+                          <p className="text-muted-foreground">Storage</p>
+                        </div>
+                        <div>
+                          <Tag className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
+                          <p className="font-medium">{plan.maxMembershipTypes || "∞"}</p>
+                          <p className="text-muted-foreground">Memberships</p>
+                        </div>
+                      </div>
+
+                      {/* Features list */}
+                      <ul className="space-y-1.5 text-sm">
+                        {plan.features.slice(0, 4).map((feature, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">{feature}</span>
+                          </li>
+                        ))}
+                        {plan.features.length > 4 && (
+                          <li className="text-xs text-muted-foreground pl-6">
+                            +{plan.features.length - 4} more features
+                          </li>
+                        )}
+                      </ul>
                     </div>
                   ))}
                 </div>

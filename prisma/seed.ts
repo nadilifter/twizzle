@@ -692,12 +692,18 @@ async function main() {
   // ============================================
   console.log("\n📚 Creating programs...");
   await Promise.all([
+    // Recurring program with all-instance registration (traditional subscription)
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-bronze` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-rec-bronze`, name: "Recreational Bronze", description: "Introduction to gymnastics for beginners ages 5-7", 
       level: "Bronze", status: "ACTIVE", organizationId: ORG1_ID,
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 85,
       levelId: `${ORG1_ID}-level-bronze`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
+      // New calendar scheduling fields
+      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      startTime: "16:00", duration: 60,
+      facilityId: `${ORG1_ID}-facility-main`,
+      rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
       // Availability restrictions
       hasAgeRestriction: true, minAge: 5, maxAge: 7,
       hasLevelRestriction: true, hasCapacityRestriction: false, hasMembershipRestriction: false,
@@ -708,6 +714,11 @@ async function main() {
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 115,
       levelId: `${ORG1_ID}-level-silver`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
+      // New calendar scheduling fields
+      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      startTime: "17:00", duration: 75,
+      facilityId: `${ORG1_ID}-facility-main`,
+      rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR",
       // Availability restrictions: requires Bronze level, ages 7-10
       hasAgeRestriction: true, minAge: 7, maxAge: 10,
       hasLevelRestriction: true, hasCapacityRestriction: false, hasMembershipRestriction: false,
@@ -718,6 +729,11 @@ async function main() {
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 145,
       levelId: `${ORG1_ID}-level-gold`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
+      // New calendar scheduling fields
+      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      startTime: "18:30", duration: 90,
+      facilityId: `${ORG1_ID}-facility-main`,
+      rrule: "FREQ=WEEKLY;BYDAY=TU,TH,SA",
     }}),
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-jo` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-jo`, name: "Junior Olympics Team", description: "Competitive gymnastics program - Levels 4-10", 
@@ -725,23 +741,41 @@ async function main() {
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 2400,
       levelId: `${ORG1_ID}-level-competitive`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 30,
+      // New calendar scheduling fields
+      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      startTime: "15:30", duration: 180,
+      facilityId: `${ORG1_ID}-facility-main`,
+      rrule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
       // Availability restrictions: capacity limited, requires competitive level, minimum age 6
       hasAgeRestriction: true, minAge: 6, maxAge: null,
       hasLevelRestriction: true, hasCapacityRestriction: true, hasMembershipRestriction: true,
     }}),
+    // Drop-in program with per-instance registration
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-preschool` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-preschool`, name: "Tiny Tumblers", description: "Parent-child gymnastics for ages 2-4", 
       level: "Preschool", status: "ACTIVE", organizationId: ORG1_ID,
       programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 25,
       levelId: `${ORG1_ID}-level-preschool`, showLevelOnSite: true, showCoachOnSite: false,
       capacity: 12,
+      startDate: daysAgo(7), endDate: daysFromNow(90),
+      // New calendar scheduling fields - drop-in with per-instance registration
+      recurrenceType: "RECURRING", registrationType: "PER_INSTANCE",
+      startTime: "09:30", duration: 45,
+      facilityId: `${ORG1_ID}-facility-satellite`,
+      rrule: "FREQ=WEEKLY;BYDAY=SA",
     }}),
+    // Metro Sports programs
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-soccer` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-soccer`, name: "Youth Soccer League", description: "Recreational soccer for ages 6-14", 
       level: "All Levels", status: "ACTIVE", organizationId: ORG2_ID,
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 175,
       levelId: `${ORG2_ID}-level-beginner`, showLevelOnSite: false, showCoachOnSite: true,
       startDate: daysAgo(15), endDate: daysFromNow(90),
+      // New calendar scheduling fields
+      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      startTime: "10:00", duration: 90,
+      facilityId: `${ORG2_ID}-facility-main`,
+      rrule: "FREQ=WEEKLY;BYDAY=SA",
     }}),
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-basketball` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-basketball`, name: "Teen Basketball", description: "Basketball skills and games for ages 12-18", 
@@ -749,6 +783,11 @@ async function main() {
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 95,
       levelId: `${ORG2_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(60),
+      // New calendar scheduling fields
+      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      startTime: "18:00", duration: 90,
+      facilityId: `${ORG2_ID}-facility-main`,
+      rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
     }}),
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-swim` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-swim`, name: "Swim Team", description: "Competitive swimming for all ages", 
@@ -756,13 +795,25 @@ async function main() {
       programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 1200,
       levelId: `${ORG2_ID}-level-competitive`, showLevelOnSite: true, showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 40,
+      // New calendar scheduling fields
+      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      startTime: "06:00", duration: 120,
+      facilityId: `${ORG2_ID}-facility-main`,
+      rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR,SA",
     }}),
+    // Drop-in fitness with per-instance registration
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-fitness` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-fitness`, name: "Kids Fitness", description: "General fitness and movement for ages 5-10", 
       level: "Beginner", status: "ACTIVE", organizationId: ORG2_ID,
       programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15,
       levelId: `${ORG2_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: false,
       capacity: 20,
+      startDate: daysAgo(7), endDate: daysFromNow(60),
+      // New calendar scheduling fields - drop-in with per-instance registration
+      recurrenceType: "RECURRING", registrationType: "PER_INSTANCE",
+      startTime: "14:00", duration: 45,
+      facilityId: `${ORG2_ID}-facility-main`,
+      rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR",
     }}),
   ]);
   console.log("  ✓ Created 9 base programs");
@@ -1001,50 +1052,241 @@ async function main() {
   console.log(`  ✓ Created ${dcPrograms.length} Discover Circus programs`);
 
   // ============================================
+  // PROGRAM INSTANCES
+  // ============================================
+  console.log("\n📅 Creating program instances...");
+  
+  // Helper function to generate weekly dates
+  const generateWeeklyDates = (startDate: Date, endDate: Date, weekdays: number[]): Date[] => {
+    const dates: Date[] = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      if (weekdays.includes(current.getDay())) {
+        dates.push(new Date(current));
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return dates;
+  };
+
+  // Helper to calculate end time
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    const [hours, minutes] = startTime.split(":").map(Number);
+    const totalMinutes = hours * 60 + minutes + durationMinutes;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMins = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
+  };
+
+  // Generate instances for select programs
+  const programInstanceData: Array<{
+    id: string;
+    programId: string;
+    organizationId: string;
+    date: Date;
+    startTime: string;
+    endTime: string;
+    facilityId: string | null;
+    capacity: number | null;
+    status: string;
+  }> = [];
+
+  // Recreational Bronze - Tuesday/Thursday 4:00 PM, 60 min
+  const bronzeDates = generateWeeklyDates(daysAgo(30), daysFromNow(60), [2, 4]); // Tue, Thu
+  bronzeDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG1_ID}-prog-rec-bronze-inst-${i}`,
+      programId: `${ORG1_ID}-prog-rec-bronze`,
+      organizationId: ORG1_ID,
+      date,
+      startTime: "16:00",
+      endTime: calculateEndTime("16:00", 60),
+      facilityId: `${ORG1_ID}-facility-main`,
+      capacity: null,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Tiny Tumblers - Saturday 9:30 AM (per-instance drop-in)
+  const tinyTumblersDates = generateWeeklyDates(daysAgo(7), daysFromNow(60), [6]); // Saturday
+  tinyTumblersDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG1_ID}-prog-preschool-inst-${i}`,
+      programId: `${ORG1_ID}-prog-preschool`,
+      organizationId: ORG1_ID,
+      date,
+      startTime: "09:30",
+      endTime: calculateEndTime("09:30", 45),
+      facilityId: `${ORG1_ID}-facility-satellite`,
+      capacity: 12,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Kids Fitness - Mon/Wed/Fri 2:00 PM (per-instance drop-in)
+  const fitnessDates = generateWeeklyDates(daysAgo(7), daysFromNow(30), [1, 3, 5]); // Mon, Wed, Fri
+  fitnessDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG2_ID}-prog-fitness-inst-${i}`,
+      programId: `${ORG2_ID}-prog-fitness`,
+      organizationId: ORG2_ID,
+      date,
+      startTime: "14:00",
+      endTime: calculateEndTime("14:00", 45),
+      facilityId: `${ORG2_ID}-facility-main`,
+      capacity: 20,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Youth Soccer - Saturday 10:00 AM
+  const soccerDates = generateWeeklyDates(daysAgo(14), daysFromNow(60), [6]); // Saturday
+  soccerDates.forEach((date, i) => {
+    programInstanceData.push({
+      id: `${ORG2_ID}-prog-soccer-inst-${i}`,
+      programId: `${ORG2_ID}-prog-soccer`,
+      organizationId: ORG2_ID,
+      date,
+      startTime: "10:00",
+      endTime: calculateEndTime("10:00", 90),
+      facilityId: `${ORG2_ID}-facility-main`,
+      capacity: null,
+      status: date < new Date() ? "COMPLETED" : "SCHEDULED",
+    });
+  });
+
+  // Create all instances (using createMany for efficiency, but handling potential duplicates)
+  let instancesCreated = 0;
+  for (const instance of programInstanceData) {
+    try {
+      await prisma.programInstance.upsert({
+        where: { id: instance.id },
+        update: {},
+        create: instance as any,
+      });
+      instancesCreated++;
+    } catch (e) {
+      // Skip duplicates silently
+    }
+  }
+  console.log(`  ✓ Created ${instancesCreated} program instances`);
+
+  // Add sample instance registrations for drop-in programs
+  console.log("  📝 Creating sample instance registrations...");
+  
+  // Get upcoming Tiny Tumblers and Kids Fitness instances
+  const upcomingTinyTumblers = programInstanceData.filter(
+    i => i.programId === `${ORG1_ID}-prog-preschool` && i.status === "SCHEDULED"
+  ).slice(0, 3);
+  
+  const upcomingFitness = programInstanceData.filter(
+    i => i.programId === `${ORG2_ID}-prog-fitness` && i.status === "SCHEDULED"
+  ).slice(0, 5);
+
+  const instanceRegistrations: Array<{
+    id: string;
+    programInstanceId: string;
+    athleteId: string;
+    familyId: string | null;
+    status: string;
+  }> = [];
+
+  // Add registrations for Tiny Tumblers
+  upcomingTinyTumblers.forEach((instance, idx) => {
+    // 3-5 athletes per session
+    const numAthletes = 3 + (idx % 3);
+    for (let a = 0; a < numAthletes; a++) {
+      const athleteIndex = a + 1;
+      instanceRegistrations.push({
+        id: `${instance.id}-reg-${a}`,
+        programInstanceId: instance.id,
+        athleteId: `${ORG1_ID}-ath-${athleteIndex}`,
+        familyId: `${ORG1_ID}-fam-${Math.ceil(athleteIndex / 2)}`,
+        status: "REGISTERED",
+      });
+    }
+  });
+
+  // Add registrations for Kids Fitness
+  upcomingFitness.forEach((instance, idx) => {
+    // 5-10 athletes per session
+    const numAthletes = 5 + (idx % 6);
+    for (let a = 0; a < numAthletes; a++) {
+      const athleteIndex = a + 1;
+      instanceRegistrations.push({
+        id: `${instance.id}-reg-${a}`,
+        programInstanceId: instance.id,
+        athleteId: `${ORG2_ID}-ath-${athleteIndex}`,
+        familyId: `${ORG2_ID}-fam-${Math.ceil(athleteIndex / 2)}`,
+        status: "REGISTERED",
+      });
+    }
+  });
+
+  let regsCreated = 0;
+  for (const reg of instanceRegistrations) {
+    try {
+      await prisma.instanceRegistration.upsert({
+        where: { id: reg.id },
+        update: {},
+        create: reg as any,
+      });
+      regsCreated++;
+    } catch (e) {
+      // Skip if athlete/family doesn't exist or duplicates
+    }
+  }
+  console.log(`  ✓ Created ${regsCreated} instance registrations`);
+
+  // ============================================
   // PROGRAM LEVEL REQUIREMENTS (many-to-many)
   // ============================================
   console.log("\n📊 Creating program level requirements...");
-  // Silver program requires Bronze level
-  await prisma.programLevelRequirement.upsert({
-    where: { programId_levelId: { programId: `${ORG1_ID}-prog-rec-silver`, levelId: `${ORG1_ID}-level-bronze` } },
-    update: {},
-    create: {
-      id: `${ORG1_ID}-levelreq-silver-bronze`,
-      programId: `${ORG1_ID}-prog-rec-silver`,
-      levelId: `${ORG1_ID}-level-bronze`,
-    },
-  });
-  // JO Team requires multiple levels (any of Gold, Platinum, or Competitive)
-  await Promise.all([
-    prisma.programLevelRequirement.upsert({
-      where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-gold` } },
+  try {
+    // Silver program requires Bronze level
+    await prisma.programLevelRequirement.upsert({
+      where: { programId_levelId: { programId: `${ORG1_ID}-prog-rec-silver`, levelId: `${ORG1_ID}-level-bronze` } },
       update: {},
       create: {
-        id: `${ORG1_ID}-levelreq-jo-gold`,
-        programId: `${ORG1_ID}-prog-jo`,
-        levelId: `${ORG1_ID}-level-gold`,
+        id: `${ORG1_ID}-levelreq-silver-bronze`,
+        programId: `${ORG1_ID}-prog-rec-silver`,
+        levelId: `${ORG1_ID}-level-bronze`,
       },
-    }),
-    prisma.programLevelRequirement.upsert({
-      where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-platinum` } },
-      update: {},
-      create: {
-        id: `${ORG1_ID}-levelreq-jo-platinum`,
-        programId: `${ORG1_ID}-prog-jo`,
-        levelId: `${ORG1_ID}-level-platinum`,
-      },
-    }),
-    prisma.programLevelRequirement.upsert({
-      where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-competitive` } },
-      update: {},
-      create: {
-        id: `${ORG1_ID}-levelreq-jo-competitive`,
-        programId: `${ORG1_ID}-prog-jo`,
-        levelId: `${ORG1_ID}-level-competitive`,
-      },
-    }),
-  ]);
-  console.log("  ✓ Created 4 program level requirements");
+    });
+    // JO Team requires multiple levels (any of Gold, Platinum, or Competitive)
+    await Promise.all([
+      prisma.programLevelRequirement.upsert({
+        where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-gold` } },
+        update: {},
+        create: {
+          id: `${ORG1_ID}-levelreq-jo-gold`,
+          programId: `${ORG1_ID}-prog-jo`,
+          levelId: `${ORG1_ID}-level-gold`,
+        },
+      }),
+      prisma.programLevelRequirement.upsert({
+        where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-platinum` } },
+        update: {},
+        create: {
+          id: `${ORG1_ID}-levelreq-jo-platinum`,
+          programId: `${ORG1_ID}-prog-jo`,
+          levelId: `${ORG1_ID}-level-platinum`,
+        },
+      }),
+      prisma.programLevelRequirement.upsert({
+        where: { programId_levelId: { programId: `${ORG1_ID}-prog-jo`, levelId: `${ORG1_ID}-level-competitive` } },
+        update: {},
+        create: {
+          id: `${ORG1_ID}-levelreq-jo-competitive`,
+          programId: `${ORG1_ID}-prog-jo`,
+          levelId: `${ORG1_ID}-level-competitive`,
+        },
+      }),
+    ]);
+    console.log("  ✓ Created 4 program level requirements");
+  } catch (e) {
+    console.log("  ⚠ Skipped program level requirements (missing dependencies)");
+  }
 
   // ============================================
   // PROGRAM BULK DISCOUNTS

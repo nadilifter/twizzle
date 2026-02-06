@@ -7,7 +7,6 @@ export function SiteHeaderActions() {
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    // Fetch unread count on mount
     const fetchUnreadCount = async () => {
       try {
         const response = await fetch("/api/notifications")
@@ -21,10 +20,6 @@ export function SiteHeaderActions() {
     }
 
     fetchUnreadCount()
-
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchUnreadCount, 60000)
-    return () => clearInterval(interval)
   }, [])
 
   return <AnnouncementBell unreadCount={unreadCount} />
