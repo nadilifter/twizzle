@@ -109,7 +109,6 @@ export default function ProgramsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle>{program.name}</CardTitle>
-                    <CardDescription className="mt-1">{program.level}</CardDescription>
                   </div>
                   <Badge variant="secondary" className="ml-2 shrink-0">
                     {program._count.enrollments} Athletes

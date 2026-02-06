@@ -1,27 +1,7 @@
 export type BillingInterval = "MONTHLY" | "YEARLY" | "SESSION";
 export type MembershipStatus = "ACTIVE" | "EXPIRED" | "CANCELLED" | "ARCHIVED";
 
-// Legacy Type - To be removed
-export interface MembershipTier {
-  id: string;
-  programId: string;
-  name: string;
-  price: number;
-  interval: BillingInterval;
-  description: string | null;
-  features: string[];
-  createdAt: string;
-  updatedAt: string;
-  program?: {
-    id: string;
-    name: string;
-  };
-  _count?: {
-    enrollments: number;
-  };
-}
-
-// New Types
+// Types
 export interface MembershipGroup {
   id: string;
   organizationId: string;

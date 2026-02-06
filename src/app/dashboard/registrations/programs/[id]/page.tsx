@@ -55,7 +55,6 @@ interface Program {
     capacity: number | null;
     basePrice: number | null;
     facility: { id: string; name: string; city?: string } | null;
-    programLevel: { id: string; name: string; color: string | null } | null;
     _count: {
         instances: number;
         enrollments: number;

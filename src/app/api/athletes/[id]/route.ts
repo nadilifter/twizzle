@@ -50,7 +50,6 @@ export async function GET(
         enrollments: {
           include: {
             program: true,
-            membershipTier: true,
           },
         },
         attendances: {

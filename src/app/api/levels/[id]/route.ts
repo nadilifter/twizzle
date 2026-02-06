@@ -34,17 +34,8 @@ export async function GET(
       include: {
         _count: {
           select: {
-            programs: true,
             skills: true,
           },
-        },
-        programs: {
-          select: {
-            id: true,
-            name: true,
-            status: true,
-          },
-          take: 10,
         },
         skills: {
           select: {
@@ -126,7 +117,6 @@ export async function PUT(
       include: {
         _count: {
           select: {
-            programs: true,
             skills: true,
           },
         },
@@ -178,7 +168,6 @@ export async function DELETE(
       include: {
         _count: {
           select: {
-            programs: true,
             skills: true,
           },
         },
@@ -190,12 +179,11 @@ export async function DELETE(
     }
 
     // Check if level is in use
-    if (existingLevel._count.programs > 0 || existingLevel._count.skills > 0) {
+    if (existingLevel._count.skills > 0) {
       return NextResponse.json(
         { 
           error: "Cannot delete level that is in use",
           details: {
-            programs: existingLevel._count.programs,
             skills: existingLevel._count.skills,
           }
         },

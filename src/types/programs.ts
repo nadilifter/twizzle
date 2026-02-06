@@ -2,18 +2,6 @@ import type { ProgramStaffWithProfile } from "./staff";
 
 export type ProgramStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
 
-export interface MembershipTier {
-  id: string;
-  programId: string | null;
-  name: string;
-  price: number;
-  interval: "MONTHLY" | "YEARLY" | "SESSION";
-  description: string | null;
-  features: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 // Simplified membership instance for program requirements
 export interface ProgramRequiredMembership {
   id: string;
@@ -29,10 +17,9 @@ export interface ProgramRequiredMembership {
   };
 }
 
-export type ProgramType = "SINGLE_INSTANCE" | "SUBSCRIPTION" | "DROP_IN";
 export type PricingModel = "FLAT_RATE" | "PER_SESSION";
 
-// New calendar-based scheduling types
+// Calendar-based scheduling types
 export type RecurrenceType = "NON_RECURRING" | "RECURRING";
 export type RegistrationType = "ALL_INSTANCES" | "PER_INSTANCE";
 export type InstanceStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
@@ -53,19 +40,17 @@ export interface Program {
   id: string;
   name: string;
   description: string | null;
-  level: string;
   status: ProgramStatus;
   organizationId: string;
   createdAt: string;
   updatedAt: string;
   
-  // Program type and pricing (legacy)
-  programType: ProgramType;
+  // Pricing
   pricingModel: PricingModel;
   basePrice: number | null;
   perSessionPrice: number | null;
   
-  // New calendar-based scheduling
+  // Calendar-based scheduling
   recurrenceType: RecurrenceType;
   registrationType: RegistrationType | null;
   
@@ -79,9 +64,7 @@ export interface Program {
   // Location
   facilityId: string | null;
   
-  // Level configuration
-  levelId: string | null;
-  showLevelOnSite: boolean;
+  // Display
   showCoachOnSite: boolean;
   
   // Capacity
@@ -156,15 +139,9 @@ export interface ProgramWithRelations extends Program {
     events: number;
     lessonPlans: number;
   };
-  membershipTiers: MembershipTier[];
   staffAssignments?: ProgramStaffWithProfile[];
   requiredMemberships?: ProgramRequiredMembership[];
   levelRequirements?: ProgramLevelRequirement[];
-  programLevel?: {
-    id: string;
-    name: string;
-    color: string | null;
-  } | null;
 }
 
 export interface ProgramsListResponse {
@@ -177,13 +154,10 @@ export interface ProgramsListResponse {
 export interface CreateProgramPayload {
   name: string;
   description?: string;
-  level?: string;
   status?: ProgramStatus;
-  programType?: ProgramType;
   pricingModel?: PricingModel;
   basePrice?: number | null;
   perSessionPrice?: number | null;
-  // New calendar scheduling fields
   recurrenceType?: RecurrenceType;
   registrationType?: RegistrationType | null;
   startDate?: string | null;
@@ -192,9 +166,6 @@ export interface CreateProgramPayload {
   duration?: number | null;
   rrule?: string | null;
   facilityId?: string | null;
-  // Level configuration
-  levelId?: string | null;
-  showLevelOnSite?: boolean;
   showCoachOnSite?: boolean;
   capacity?: number | null;
   minAge?: number | null;
@@ -218,13 +189,10 @@ export interface CreateProgramPayload {
 export interface UpdateProgramPayload {
   name?: string;
   description?: string;
-  level?: string;
   status?: ProgramStatus;
-  programType?: ProgramType;
   pricingModel?: PricingModel;
   basePrice?: number | null;
   perSessionPrice?: number | null;
-  // New calendar scheduling fields
   recurrenceType?: RecurrenceType;
   registrationType?: RegistrationType | null;
   startDate?: string | null;
@@ -233,9 +201,6 @@ export interface UpdateProgramPayload {
   duration?: number | null;
   rrule?: string | null;
   facilityId?: string | null;
-  // Level configuration
-  levelId?: string | null;
-  showLevelOnSite?: boolean;
   showCoachOnSite?: boolean;
   capacity?: number | null;
   minAge?: number | null;

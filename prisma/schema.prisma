@@ -35,7 +35,6 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Relations
-  membershipTiers     MembershipTier[] // Legacy, to be removed
   membershipGroups    MembershipGroup[]
   members             OrganizationMember[]
   users               User[] // Legacy relation, keep for now but rely on members
@@ -535,7 +534,6 @@ model Level {
 
   // Relations
   organization        Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  programs            Program[]
   skills              Skill[]                   @relation("SkillLevel")
   programRequirements ProgramLevelRequirement[]
 
@@ -547,16 +545,12 @@ model Program {
   id             String        @id @default(cuid())
   name           String
   description    String?
-  level          String // Legacy field - kept for backwards compatibility
   status         ProgramStatus @default(ACTIVE)
   organizationId String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  // Program Type (Legacy - kept for backwards compatibility)
-  programType ProgramType @default(SUBSCRIPTION)
-
-  // New Calendar-based scheduling
+  // Calendar-based scheduling
   recurrenceType   RecurrenceType    @default(RECURRING)
   registrationType RegistrationType? // Only for recurring: all-at-once or per-instance
 
@@ -566,12 +560,11 @@ model Program {
   perSessionPrice Decimal?     @db.Decimal(10, 2) // For per-session pricing
 
   // Schedule Configuration
-  startDate       DateTime?
-  endDate         DateTime?
-  schedulePattern Json? // Legacy: { days: ["MON", "WED", "FRI"], time: "09:00" }
-  rrule           String? // RFC 5545 RRULE string (e.g., "FREQ=WEEKLY;BYDAY=MO,WE,FR")
-  startTime       String? // Default start time (e.g., "09:00")
-  duration        Int? // Duration in minutes
+  startDate DateTime?
+  endDate   DateTime?
+  rrule     String? // RFC 5545 RRULE string (e.g., "FREQ=WEEKLY;BYDAY=MO,WE,FR")
+  startTime String? // Default start time (e.g., "09:00")
+  duration  Int? // Duration in minutes
 
   // Default Facility
   facilityId String? // Default facility for this program
@@ -579,9 +572,7 @@ model Program {
   // Capacity (for classes)
   capacity Int?
 
-  // Level Configuration
-  levelId         String? // FK to Level model (legacy single level)
-  showLevelOnSite Boolean @default(true)
+  // Display
   showCoachOnSite Boolean @default(true)
 
   // Age Restrictions
@@ -596,13 +587,11 @@ model Program {
 
   // Relations
   organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  programLevel        Level?                      @relation(fields: [levelId], references: [id], onDelete: SetNull)
   facility            Facility?                   @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   events              Event[]
   lessonPlans         LessonPlan[]
   enrollments         Enrollment[]
   lineItems           LineItem[]
-  membershipTiers     MembershipTier[] // Legacy
   staffAssignments    ProgramStaff[]
   requiredMemberships MembershipInstance[]
   evaluations         Evaluation[]
@@ -615,7 +604,6 @@ model Program {
   queueConfigs      RegistrationQueueConfig[]
   queueReservations QueueReservation[]
 
-  @@index([levelId])
   @@index([facilityId])
 }
 
@@ -626,13 +614,6 @@ enum ProgramStatus {
 }
 
 // Legacy - kept for backwards compatibility during migration
-enum ProgramType {
-  SINGLE_INSTANCE // One-off class/event
-  SUBSCRIPTION // Recurring within period (annual membership style)
-  DROP_IN // Individually purchased classes
-}
-
-// New calendar-based program scheduling
 enum RecurrenceType {
   NON_RECURRING // Single date/time event
   RECURRING // Repeats on a schedule
@@ -687,25 +668,7 @@ model ProgramLevelRequirement {
 }
 
 // Legacy - to be deprecated
-model MembershipTier {
-  id             String          @id @default(cuid())
-  programId      String?
-  name           String
-  price          Decimal         @db.Decimal(10, 2)
-  interval       BillingInterval
-  description    String?
-  features       String[] // Array of feature strings
-  organizationId String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-
-  // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  program      Program?     @relation(fields: [programId], references: [id], onDelete: Cascade)
-  enrollments  Enrollment[]
-}
-
-// New Membership Structure
+// Membership Structure
 model MembershipGroup {
   id             String   @id @default(cuid())
   organizationId String
@@ -786,21 +749,19 @@ enum BillingInterval {
 
 model Enrollment {
   id               String           @id @default(cuid())
-  athleteId        String
-  programId        String
-  membershipTierId String? // Legacy
-  familyId         String? // The family responsible for this enrollment
-  startDate        DateTime
-  endDate          DateTime?
-  status           EnrollmentStatus @default(ACTIVE)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  athleteId String
+  programId String
+  familyId  String? // The family responsible for this enrollment
+  startDate DateTime
+  endDate   DateTime?
+  status    EnrollmentStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   // Relations
-  athlete        Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  program        Program         @relation(fields: [programId], references: [id], onDelete: Cascade)
-  membershipTier MembershipTier? @relation(fields: [membershipTierId], references: [id])
-  family         Family?         @relation(fields: [familyId], references: [id])
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  family  Family? @relation(fields: [familyId], references: [id])
 }
 
 enum EnrollmentStatus {

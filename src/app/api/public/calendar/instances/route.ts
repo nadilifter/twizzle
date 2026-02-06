@@ -63,9 +63,6 @@ export async function GET(request: NextRequest) {
             name: true,
             recurrenceType: true,
             registrationType: true,
-            programLevel: {
-              select: { id: true, name: true, color: true },
-            },
           },
         },
         facility: {
@@ -90,8 +87,8 @@ export async function GET(request: NextRequest) {
       capacity: null,
       registrationCount: 0,
       attendanceCount: 0,
-      color: instance.program.programLevel?.color || "#3b82f6",
-      levelName: instance.program.programLevel?.name || null,
+      color: "#3b82f6",
+      levelName: null,
       recurrenceType: instance.program.recurrenceType,
       registrationType: instance.program.registrationType,
     }));

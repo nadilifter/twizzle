@@ -4,19 +4,11 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, Users, ShoppingCart, User, AlertCircle, Star, Clock, MapPin, Repeat } from "lucide-react";
+import { CalendarDays, ShoppingCart, User, AlertCircle, Star, Clock, MapPin, Repeat } from "lucide-react";
 import { useCart } from "@/components/sites/cart-context";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MembershipRequirementDialog } from "@/components/sites/membership-requirement-dialog";
 import { useState } from "react";
 import { format } from "date-fns";
-
-interface MembershipTier {
-  id: string;
-  name: string;
-  price: number | string;
-  interval?: string;
-}
 
 interface StaffAssignment {
   id: string;
@@ -42,12 +34,6 @@ interface RequiredMembership {
     id: string;
     name: string;
   };
-}
-
-interface ProgramLevel {
-  id: string;
-  name: string;
-  color: string | null;
 }
 
 interface BulkDiscount {
@@ -79,16 +65,10 @@ interface ProgramCardProps {
     id: string;
     name: string;
     description: string | null;
-    level: string;
-    membershipTiers?: MembershipTier[];
     staffAssignments?: StaffAssignment[];
     requiredMemberships?: RequiredMembership[];
-    // New fields
-    programLevel?: ProgramLevel | null;
-    showLevelOnSite?: boolean;
     showCoachOnSite?: boolean;
     bulkDiscounts?: BulkDiscount[];
-    programType?: string;
     pricingModel?: string;
     basePrice?: number | string | null;
     perSessionPrice?: number | string | null;
@@ -121,80 +101,32 @@ function formatPrice(price: number | string): string {
 
 export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   const { addItem } = useCart();
-  const membershipTiers = program.membershipTiers || [];
   const staffAssignments = program.staffAssignments || [];
   const requiredMemberships = program.requiredMemberships || [];
   const bulkDiscounts = program.bulkDiscounts || [];
   
   // Display options default to true for backwards compatibility
-  const showLevel = program.showLevelOnSite !== false;
   const showCoach = program.showCoachOnSite !== false;
   
-  // Get display level - prefer programLevel if available
-  const displayLevel = program.programLevel?.name || program.level;
-  const levelColor = program.programLevel?.color || null;
-  
-  const [selectedTierId, setSelectedTierId] = useState<string>(
-    membershipTiers.length === 1 ? membershipTiers[0].id : ""
-  );
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
-  const [pendingCartAdd, setPendingCartAdd] = useState<{ tier?: MembershipTier; direct?: boolean } | null>(null);
+  const [pendingCartAdd, setPendingCartAdd] = useState<{ direct?: boolean } | null>(null);
 
-  // Get the program's direct price (when no tiers) - defaults to 0 (free) if no price is set
+  // Get the program's direct price - defaults to 0 (free) if no price is set
   const directPrice = program.basePrice 
     ? (typeof program.basePrice === "string" ? parseFloat(program.basePrice) : program.basePrice)
     : program.perSessionPrice
     ? (typeof program.perSessionPrice === "string" ? parseFloat(program.perSessionPrice) : program.perSessionPrice)
     : 0;
-  
-  // Determine if this program can be added (has tiers OR direct pricing including free)
-  const hasTiers = membershipTiers.length > 0;
-  const canAddToCart = hasTiers ? !!selectedTierId : true;
 
   const handleAddToCart = () => {
-    if (hasTiers) {
-      // Tier-based program
-      if (!selectedTierId) return;
-      const tier = membershipTiers.find((t) => t.id === selectedTierId);
-      if (!tier) return;
-
-      // Check if there are required memberships
-      if (requiredMemberships.length > 0) {
-        setPendingCartAdd({ tier });
-        setShowMembershipDialog(true);
-        return;
-      }
-
-      addProgramToCart(tier);
-    } else {
-      // Direct pricing program (no tiers) - includes free programs
-
-      // Check if there are required memberships
-      if (requiredMemberships.length > 0) {
-        setPendingCartAdd({ direct: true });
-        setShowMembershipDialog(true);
-        return;
-      }
-
-      addProgramDirectly();
+    // Check if there are required memberships
+    if (requiredMemberships.length > 0) {
+      setPendingCartAdd({ direct: true });
+      setShowMembershipDialog(true);
+      return;
     }
-  };
 
-  const addProgramToCart = (tier: MembershipTier) => {
-    addItem({
-      referenceId: tier.id,
-      type: "program",
-      name: `${program.name} - ${tier.name}`,
-      description: program.description || undefined,
-      price: typeof tier.price === "string" ? parseFloat(tier.price) : tier.price,
-      quantity: 1,
-      details: {
-        programId: program.id,
-        level: program.level,
-        interval: tier.interval,
-        requiredMemberships: requiredMemberships.map(m => m.id),
-      }
-    });
+    addProgramDirectly();
   };
 
   const addProgramDirectly = () => {
@@ -207,7 +139,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
       quantity: 1,
       details: {
         programId: program.id,
-        level: program.level,
         pricingModel: program.pricingModel,
         requiredMemberships: requiredMemberships.map(m => m.id),
       }
@@ -237,22 +168,15 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
     });
 
     // Also add the program if there was a pending add
-    if (pendingCartAdd) {
-      if (pendingCartAdd.tier) {
-        addProgramToCart(pendingCartAdd.tier);
-      } else if (pendingCartAdd.direct) {
-        addProgramDirectly();
-      }
+    if (pendingCartAdd?.direct) {
+      addProgramDirectly();
     }
 
     setShowMembershipDialog(false);
     setPendingCartAdd(null);
   };
 
-  // Calculate display price - prefer tiers, fallback to direct pricing
-  const lowestPrice = membershipTiers.length > 0
-    ? Math.min(...membershipTiers.map(t => typeof t.price === "string" ? parseFloat(t.price) : t.price))
-    : directPrice;
+  const lowestPrice = directPrice;
 
   return (
     <Card className="group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
@@ -261,15 +185,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           <h3 className="font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
             {program.name}
           </h3>
-          {showLevel && displayLevel && (
-            <Badge 
-              variant="secondary" 
-              className="shrink-0 text-xs"
-              style={levelColor ? { backgroundColor: `${levelColor}20`, color: levelColor, borderColor: levelColor } : undefined}
-            >
-              {displayLevel}
-            </Badge>
-          )}
         </div>
       </CardHeader>
 
@@ -338,30 +253,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
             )}
           </div>
         )}
-
-        <div className="mt-4 flex items-center gap-4">
-          {showLevel && displayLevel && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Users className="h-3.5 w-3.5" />
-              <span>{displayLevel}</span>
-            </div>
-          )}
-          {membershipTiers.length > 0 ? (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span>{membershipTiers.length} option{membershipTiers.length !== 1 ? 's' : ''}</span>
-            </div>
-          ) : program.programType && !program.recurrenceType && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span>
-                {program.programType === "SUBSCRIPTION" ? "Subscription" 
-                  : program.programType === "DROP_IN" ? "Drop-in" 
-                  : "One-time"}
-              </span>
-            </div>
-          )}
-        </div>
 
         {/* Bulk Discounts Section */}
         {bulkDiscounts.length > 0 && (
@@ -433,38 +324,15 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
       </CardContent>
 
       <CardFooter className="flex flex-col gap-3 border-t bg-muted/30 pt-4">
-        {membershipTiers.length > 1 ? (
-            <div className="w-full space-y-2">
-                <Select value={selectedTierId} onValueChange={setSelectedTierId}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select an option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {membershipTiers.map(tier => (
-                            <SelectItem key={tier.id} value={tier.id}>
-                                {tier.name} - {formatPrice(tier.price)}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        ) : membershipTiers.length === 1 ? (
-             <div className="flex items-center justify-between w-full">
-                <span className="text-sm font-medium">{membershipTiers[0].name}</span>
-                <span className="font-bold">{formatPrice(membershipTiers[0].price)}</span>
-             </div>
-        ) : (
-            <div className="flex items-center justify-between w-full">
-                <span className="text-sm font-medium">
-                  {directPrice === 0 ? "Free Program" : program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee"}
-                </span>
-                <span className="font-bold">{formatPrice(directPrice)}</span>
-            </div>
-        )}
+        <div className="flex items-center justify-between w-full">
+            <span className="text-sm font-medium">
+              {lowestPrice === 0 ? "Free Program" : program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee"}
+            </span>
+            <span className="font-bold">{formatPrice(lowestPrice)}</span>
+        </div>
 
         <Button
           onClick={handleAddToCart}
-          disabled={!canAddToCart}
           className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
         >
           <ShoppingCart className="h-4 w-4" />

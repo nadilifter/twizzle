@@ -695,9 +695,9 @@ async function main() {
     // Recurring program with all-instance registration (traditional subscription)
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-bronze` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-rec-bronze`, name: "Recreational Bronze", description: "Introduction to gymnastics for beginners ages 5-7", 
-      level: "Bronze", status: "ACTIVE", organizationId: ORG1_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 85,
-      levelId: `${ORG1_ID}-level-bronze`, showLevelOnSite: true, showCoachOnSite: true,
+      status: "ACTIVE", organizationId: ORG1_ID,
+      pricingModel: "FLAT_RATE", basePrice: 85,
+      showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
       // New calendar scheduling fields
       recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
@@ -710,9 +710,9 @@ async function main() {
     }}),
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-silver` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-rec-silver`, name: "Recreational Silver", description: "Intermediate recreational program for ages 7-10", 
-      level: "Silver", status: "ACTIVE", organizationId: ORG1_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 115,
-      levelId: `${ORG1_ID}-level-silver`, showLevelOnSite: true, showCoachOnSite: true,
+      status: "ACTIVE", organizationId: ORG1_ID,
+      pricingModel: "FLAT_RATE", basePrice: 115,
+      showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
       // New calendar scheduling fields
       recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
@@ -725,9 +725,9 @@ async function main() {
     }}),
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-gold` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-rec-gold`, name: "Recreational Gold", description: "Advanced recreational program for ages 10+", 
-      level: "Gold", status: "ACTIVE", organizationId: ORG1_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 145,
-      levelId: `${ORG1_ID}-level-gold`, showLevelOnSite: true, showCoachOnSite: true,
+      status: "ACTIVE", organizationId: ORG1_ID,
+      pricingModel: "FLAT_RATE", basePrice: 145,
+      showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
       // New calendar scheduling fields
       recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
@@ -737,9 +737,9 @@ async function main() {
     }}),
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-jo` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-jo`, name: "Junior Olympics Team", description: "Competitive gymnastics program - Levels 4-10", 
-      level: "Competitive", status: "ACTIVE", organizationId: ORG1_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 2400,
-      levelId: `${ORG1_ID}-level-competitive`, showLevelOnSite: true, showCoachOnSite: true,
+      status: "ACTIVE", organizationId: ORG1_ID,
+      pricingModel: "FLAT_RATE", basePrice: 2400,
+      showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 30,
       // New calendar scheduling fields
       recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
@@ -753,9 +753,9 @@ async function main() {
     // Drop-in program with per-instance registration
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-preschool` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-preschool`, name: "Tiny Tumblers", description: "Parent-child gymnastics for ages 2-4", 
-      level: "Preschool", status: "ACTIVE", organizationId: ORG1_ID,
-      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 25,
-      levelId: `${ORG1_ID}-level-preschool`, showLevelOnSite: true, showCoachOnSite: false,
+      status: "ACTIVE", organizationId: ORG1_ID,
+      pricingModel: "PER_SESSION", perSessionPrice: 25,
+      showCoachOnSite: false,
       capacity: 12,
       startDate: daysAgo(7), endDate: daysFromNow(90),
       // New calendar scheduling fields - drop-in with per-instance registration
@@ -767,9 +767,9 @@ async function main() {
     // Metro Sports programs
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-soccer` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-soccer`, name: "Youth Soccer League", description: "Recreational soccer for ages 6-14", 
-      level: "All Levels", status: "ACTIVE", organizationId: ORG2_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 175,
-      levelId: `${ORG2_ID}-level-beginner`, showLevelOnSite: false, showCoachOnSite: true,
+      status: "ACTIVE", organizationId: ORG2_ID,
+      pricingModel: "FLAT_RATE", basePrice: 175,
+      showCoachOnSite: true,
       startDate: daysAgo(15), endDate: daysFromNow(90),
       // New calendar scheduling fields
       recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
@@ -779,9 +779,9 @@ async function main() {
     }}),
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-basketball` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-basketball`, name: "Teen Basketball", description: "Basketball skills and games for ages 12-18", 
-      level: "Intermediate", status: "ACTIVE", organizationId: ORG2_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 95,
-      levelId: `${ORG2_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true,
+      status: "ACTIVE", organizationId: ORG2_ID,
+      pricingModel: "FLAT_RATE", basePrice: 95,
+      showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(60),
       // New calendar scheduling fields
       recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
@@ -791,9 +791,9 @@ async function main() {
     }}),
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-swim` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-swim`, name: "Swim Team", description: "Competitive swimming for all ages", 
-      level: "Competitive", status: "ACTIVE", organizationId: ORG2_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 1200,
-      levelId: `${ORG2_ID}-level-competitive`, showLevelOnSite: true, showCoachOnSite: true,
+      status: "ACTIVE", organizationId: ORG2_ID,
+      pricingModel: "FLAT_RATE", basePrice: 1200,
+      showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 40,
       // New calendar scheduling fields
       recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
@@ -804,9 +804,9 @@ async function main() {
     // Drop-in fitness with per-instance registration
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-fitness` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-fitness`, name: "Kids Fitness", description: "General fitness and movement for ages 5-10", 
-      level: "Beginner", status: "ACTIVE", organizationId: ORG2_ID,
-      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15,
-      levelId: `${ORG2_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: false,
+      status: "ACTIVE", organizationId: ORG2_ID,
+      pricingModel: "PER_SESSION", perSessionPrice: 15,
+      showCoachOnSite: false,
       capacity: 20,
       startDate: daysAgo(7), endDate: daysFromNow(60),
       // New calendar scheduling fields - drop-in with per-instance registration
@@ -824,228 +824,228 @@ async function main() {
     // Adult Aerial Hoop Programs
     prisma.program.upsert({ where: { id: "dc-prog-ah-intro" }, update: {}, create: {
       id: "dc-prog-ah-intro", name: "Intro to Aerial Hoop", description: "Adult Aerial Hoop",
-      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ahl1" }, update: {}, create: {
       id: "dc-prog-ahl1", name: "Adult Aerial Hoop Level 1", description: "Adult Aerial Hoop",
-      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 28.5,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ahl2" }, update: {}, create: {
       id: "dc-prog-ahl2", name: "Adult Aerial Hoop Level 2", description: "Adult Aerial Hoop",
-      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 28.5,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ahl3" }, update: {}, create: {
       id: "dc-prog-ahl3", name: "Adult Aerial Hoop Level 3", description: "Adult Aerial Hoop",
-      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 28.5,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ahl4" }, update: {}, create: {
       id: "dc-prog-ahl4", name: "Adult Aerial Hoop Level 4", description: "Adult Aerial Hoop",
-      level: "Inter-Adv", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-adv`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 28.5,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ahl5" }, update: {}, create: {
       id: "dc-prog-ahl5", name: "Adult Aerial Hoop Level 5", description: "Adult Aerial Hoop",
-      level: "Advanced", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 38.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-advanced`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 38.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     // Adult Aerial Silks Programs
     prisma.program.upsert({ where: { id: "dc-prog-as-intro" }, update: {}, create: {
       id: "dc-prog-as-intro", name: "Adult Intro Aerial Silks", description: "Adult Aerial Silks & Sling",
-      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-asl1" }, update: {}, create: {
       id: "dc-prog-asl1", name: "Adult Aerial Silks Level 1", description: "Adult Aerial Silks & Sling",
-      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 23.75,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 23.75,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-asl2" }, update: {}, create: {
       id: "dc-prog-asl2", name: "Adult Aerial Silks Level 2", description: "Adult Aerial Silks & Sling",
-      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 28.5,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-asl3" }, update: {}, create: {
       id: "dc-prog-asl3", name: "Adult Aerial Silks Level 3", description: "Adult Aerial Silks & Sling",
-      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 38.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 38.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     // Kids Programs
     prisma.program.upsert({ where: { id: "dc-prog-ksl1" }, update: {}, create: {
       id: "dc-prog-ksl1", name: "Kids Aerial Silks Level 1", description: "Kids Aerial Silks (Age 7-11)",
-      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ksl2" }, update: {}, create: {
       id: "dc-prog-ksl2", name: "Kids Aerial Silks Level 2", description: "Kids Aerial Silks (Age 7-11)",
-      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ksl3" }, update: {}, create: {
       id: "dc-prog-ksl3", name: "Kids Aerial Silks Level 3", description: "Kids Aerial Silks (Age 7-11)",
-      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ck" }, update: {}, create: {
       id: "dc-prog-ck", name: "Circus Kids", description: "Circus Kids (Age 5-12)",
-      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 10,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 10,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-kc" }, update: {}, create: {
       id: "dc-prog-kc", name: "Kindy Circus", description: "Circus Kids (Age 5-12)",
-      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-pnm" }, update: {}, create: {
       id: "dc-prog-pnm", name: "Parent & Me", description: "Circus Tots & Parents (Age 0-5)",
-      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 17.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 17.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     // Youth Programs
     prisma.program.upsert({ where: { id: "dc-prog-ysl1" }, update: {}, create: {
       id: "dc-prog-ysl1", name: "Youth Aerial Silks Level 1", description: "Youth Aerial Silks (Age 12-17)",
-      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ysl2" }, update: {}, create: {
       id: "dc-prog-ysl2", name: "Youth Aerial Silks Level 2", description: "Youth Aerial Silks (Age 12-17)",
-      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 23.75,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 23.75,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ysl3" }, update: {}, create: {
       id: "dc-prog-ysl3", name: "Youth Aerial Silks Level 3", description: "Youth Aerial Silks (Age 12-17)",
-      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 28.5,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-ysl4" }, update: {}, create: {
       id: "dc-prog-ysl4", name: "Youth Aerial Silks Level 4", description: "Youth Aerial Silks (Age 12-17)",
-      level: "Inter-Adv", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-adv`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 28.5,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     // Straps
     prisma.program.upsert({ where: { id: "dc-prog-st-intro" }, update: {}, create: {
       id: "dc-prog-st-intro", name: "Intro to Aerial Straps", description: "Straps",
-      level: "Intro", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 8,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-stl1" }, update: {}, create: {
       id: "dc-prog-stl1", name: "Aerial Straps Level 1", description: "Straps",
-      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-stl2" }, update: {}, create: {
       id: "dc-prog-stl2", name: "Aerial Straps Level 2", description: "Straps",
-      level: "Inter-Beg", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 23.75,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-inter-beg`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 23.75,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
     }}),
     // Open Level Classes
     prisma.program.upsert({ where: { id: "dc-prog-handstands" }, update: {}, create: {
       id: "dc-prog-handstands", name: "Handstands & Beyond", description: "Acro & Handstand",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-pa1" }, update: {}, create: {
       id: "dc-prog-pa1", name: "Partner Acro - Level 1", description: "Acro & Handstand",
-      level: "Beginner", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-beginner`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-pa2" }, update: {}, create: {
       id: "dc-prog-pa2", name: "Partner Acro - Level 2", description: "Acro & Handstand",
-      level: "Intermediate", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 28.5,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intermediate`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 28.5,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-beast" }, update: {}, create: {
       id: "dc-prog-beast", name: "Beast Mode - Conditioning Class", description: "Open Level Classes",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-flex" }, update: {}, create: {
       id: "dc-prog-flex", name: "Flexibility in Flight", description: "Open Level Classes",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 19.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 19.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(51), capacity: 12,
     }}),
     // Open Gym / Drop-In
     prisma.program.upsert({ where: { id: "dc-prog-opengym-mon" }, update: {}, create: {
       id: "dc-prog-opengym-mon", name: "Open Gym Monday", description: "Open Gym",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 5,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "PER_SESSION", perSessionPrice: 15.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 5,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-opengym-wed" }, update: {}, create: {
       id: "dc-prog-opengym-wed", name: "Open Gym Wednesday", description: "Open Gym",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 5,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "PER_SESSION", perSessionPrice: 15.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 5,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-opengym-thu" }, update: {}, create: {
       id: "dc-prog-opengym-thu", name: "Open Gym Thursday", description: "Open Gym",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 15.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 4,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "PER_SESSION", perSessionPrice: 15.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 4,
     }}),
     // Jams
     prisma.program.upsert({ where: { id: "dc-prog-acrojam" }, update: {}, create: {
       id: "dc-prog-acrojam", name: "Acro Jam @ DC", description: "Flow & Acro Jams",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 10.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 12,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "PER_SESSION", perSessionPrice: 10.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 12,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-flowjam" }, update: {}, create: {
       id: "dc-prog-flowjam", name: "Flow & Acro Jam @ North Shore Hall", description: "Flow & Acro Jams",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 4.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 20,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "PER_SESSION", perSessionPrice: 4.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 20,
     }}),
     // Artist Empowerment Program
     prisma.program.upsert({ where: { id: "dc-prog-aep-adult" }, update: {}, create: {
       id: "dc-prog-aep-adult", name: "The Collective - Artist Empowerment Program - Adult", description: "The Collective - Artist Empowerment Program (All Ages)",
-      level: "Advanced", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 38.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-advanced`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 38.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     prisma.program.upsert({ where: { id: "dc-prog-aep-youth" }, update: {}, create: {
       id: "dc-prog-aep-youth", name: "The Collective - Artist Empowerment Program - Youth", description: "The Collective - Artist Empowerment Program (All Ages)",
-      level: "Advanced", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "SUBSCRIPTION", pricingModel: "FLAT_RATE", basePrice: 38.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-advanced`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "FLAT_RATE", basePrice: 38.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 6,
     }}),
     // Private Lessons
     prisma.program.upsert({ where: { id: "dc-prog-private" }, update: {}, create: {
       id: "dc-prog-private", name: "Private Lesson Booking", description: "Private Lessons",
-      level: "Open", status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
-      programType: "DROP_IN", pricingModel: "PER_SESSION", perSessionPrice: 90.0,
-      levelId: `${ORG_DISCOVER_CIRCUS_ID}-level-intro`, showLevelOnSite: true, showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 1,
+      status: "ACTIVE", organizationId: ORG_DISCOVER_CIRCUS_ID,
+      pricingModel: "PER_SESSION", perSessionPrice: 90.0,
+      showCoachOnSite: true, startDate: daysAgo(31), endDate: daysFromNow(142), capacity: 1,
     }}),
   ];
   await Promise.all(dcPrograms);
@@ -1309,24 +1309,6 @@ async function main() {
   console.log(`  ✓ Created ${bulkDiscountData.length} bulk discounts`);
 
   // ============================================
-  // MEMBERSHIP TIERS (Legacy)
-  // ============================================
-  console.log("\n🎫 Creating membership tiers...");
-  const tierData = [
-    { id: `${ORG1_ID}-tier-bronze`, programId: `${ORG1_ID}-prog-rec-bronze`, name: "Bronze Monthly", price: 85, interval: "MONTHLY" as const, description: "Monthly recreational bronze", features: ["1 class per week", "Open gym access"], organizationId: ORG1_ID },
-    { id: `${ORG1_ID}-tier-silver`, programId: `${ORG1_ID}-prog-rec-silver`, name: "Silver Monthly", price: 115, interval: "MONTHLY" as const, description: "Monthly recreational silver", features: ["2 classes per week", "Open gym access"], organizationId: ORG1_ID },
-    { id: `${ORG1_ID}-tier-gold`, programId: `${ORG1_ID}-prog-rec-gold`, name: "Gold Monthly", price: 145, interval: "MONTHLY" as const, description: "Monthly recreational gold", features: ["3 classes per week", "Skills clinics"], organizationId: ORG1_ID },
-    { id: `${ORG1_ID}-tier-jo`, programId: `${ORG1_ID}-prog-jo`, name: "JO Team Annual", price: 2400, interval: "YEARLY" as const, description: "Annual JO team", features: ["Unlimited training", "Competition fees"], organizationId: ORG1_ID },
-    { id: `${ORG2_ID}-tier-soccer`, programId: `${ORG2_ID}-prog-soccer`, name: "Soccer Season", price: 175, interval: "SESSION" as const, description: "One soccer season", features: ["Weekly games", "Team jersey"], organizationId: ORG2_ID },
-    { id: `${ORG2_ID}-tier-basketball`, programId: `${ORG2_ID}-prog-basketball`, name: "Basketball Monthly", price: 95, interval: "MONTHLY" as const, description: "Monthly basketball", features: ["2 sessions per week"], organizationId: ORG2_ID },
-    { id: `${ORG2_ID}-tier-swim`, programId: `${ORG2_ID}-prog-swim`, name: "Swim Team Annual", price: 1200, interval: "YEARLY" as const, description: "Annual swim team", features: ["Daily practice", "Meets included"], organizationId: ORG2_ID },
-  ];
-  for (const tier of tierData) {
-    await prisma.membershipTier.upsert({ where: { id: tier.id }, update: {}, create: tier });
-  }
-  console.log(`  ✓ Created ${tierData.length} membership tiers`);
-
-  // ============================================
   // MEMBERSHIP GROUPS & INSTANCES
   // ============================================
   console.log("\n📋 Creating membership groups and instances...");
@@ -1368,13 +1350,13 @@ async function main() {
   // ============================================
   console.log("\n📝 Creating enrollments...");
   const enrollmentData = [
-    { id: `${ORG1_ID}-enr-1`, athleteId: `${ORG1_ID}-ath-1`, programId: `${ORG1_ID}-prog-rec-bronze`, membershipTierId: `${ORG1_ID}-tier-bronze`, familyId: `${ORG1_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
-    { id: `${ORG1_ID}-enr-2`, athleteId: `${ORG1_ID}-ath-2`, programId: `${ORG1_ID}-prog-rec-silver`, membershipTierId: `${ORG1_ID}-tier-silver`, familyId: `${ORG1_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
-    { id: `${ORG1_ID}-enr-3`, athleteId: `${ORG1_ID}-ath-3`, programId: `${ORG1_ID}-prog-jo`, membershipTierId: `${ORG1_ID}-tier-jo`, familyId: `${ORG1_ID}-fam-2`, startDate: daysAgo(120), status: "ACTIVE" as const },
-    { id: `${ORG1_ID}-enr-4`, athleteId: `${ORG1_ID}-ath-4`, programId: `${ORG1_ID}-prog-rec-bronze`, membershipTierId: `${ORG1_ID}-tier-bronze`, familyId: `${ORG1_ID}-fam-3`, startDate: daysAgo(30), status: "ACTIVE" as const },
-    { id: `${ORG2_ID}-enr-1`, athleteId: `${ORG2_ID}-ath-1`, programId: `${ORG2_ID}-prog-soccer`, membershipTierId: `${ORG2_ID}-tier-soccer`, familyId: `${ORG2_ID}-fam-1`, startDate: daysAgo(30), status: "ACTIVE" as const },
-    { id: `${ORG2_ID}-enr-2`, athleteId: `${ORG2_ID}-ath-2`, programId: `${ORG2_ID}-prog-basketball`, membershipTierId: `${ORG2_ID}-tier-basketball`, familyId: `${ORG2_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
-    { id: `${ORG2_ID}-enr-3`, athleteId: `${ORG2_ID}-ath-4`, programId: `${ORG2_ID}-prog-swim`, membershipTierId: `${ORG2_ID}-tier-swim`, familyId: `${ORG2_ID}-fam-2`, startDate: daysAgo(90), status: "ACTIVE" as const },
+    { id: `${ORG1_ID}-enr-1`, athleteId: `${ORG1_ID}-ath-1`, programId: `${ORG1_ID}-prog-rec-bronze`, familyId: `${ORG1_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
+    { id: `${ORG1_ID}-enr-2`, athleteId: `${ORG1_ID}-ath-2`, programId: `${ORG1_ID}-prog-rec-silver`, familyId: `${ORG1_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
+    { id: `${ORG1_ID}-enr-3`, athleteId: `${ORG1_ID}-ath-3`, programId: `${ORG1_ID}-prog-jo`, familyId: `${ORG1_ID}-fam-2`, startDate: daysAgo(120), status: "ACTIVE" as const },
+    { id: `${ORG1_ID}-enr-4`, athleteId: `${ORG1_ID}-ath-4`, programId: `${ORG1_ID}-prog-rec-bronze`, familyId: `${ORG1_ID}-fam-3`, startDate: daysAgo(30), status: "ACTIVE" as const },
+    { id: `${ORG2_ID}-enr-1`, athleteId: `${ORG2_ID}-ath-1`, programId: `${ORG2_ID}-prog-soccer`, familyId: `${ORG2_ID}-fam-1`, startDate: daysAgo(30), status: "ACTIVE" as const },
+    { id: `${ORG2_ID}-enr-2`, athleteId: `${ORG2_ID}-ath-2`, programId: `${ORG2_ID}-prog-basketball`, familyId: `${ORG2_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
+    { id: `${ORG2_ID}-enr-3`, athleteId: `${ORG2_ID}-ath-4`, programId: `${ORG2_ID}-prog-swim`, familyId: `${ORG2_ID}-fam-2`, startDate: daysAgo(90), status: "ACTIVE" as const },
   ];
   for (const enr of enrollmentData) {
     await prisma.enrollment.upsert({ where: { id: enr.id }, update: {}, create: enr });

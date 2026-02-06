@@ -6,7 +6,6 @@ import { z } from "zod";
 const createEnrollmentSchema = z.object({
   athleteId: z.string().min(1, "Athlete is required"),
   programId: z.string().min(1, "Program is required"),
-  membershipTierId: z.string().optional().nullable(),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional().nullable(),
   status: z.enum(["ACTIVE", "PAUSED", "CANCELLED", "COMPLETED"]).default("ACTIVE"),
@@ -60,10 +59,8 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              level: true,
             },
           },
-          membershipTier: true,
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -169,7 +166,6 @@ export async function POST(request: NextRequest) {
       data: {
         athleteId: validatedData.athleteId,
         programId: validatedData.programId,
-        membershipTierId: validatedData.membershipTierId,
         startDate: new Date(validatedData.startDate),
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
         status: validatedData.status,
@@ -178,7 +174,6 @@ export async function POST(request: NextRequest) {
       include: {
         athlete: true,
         program: true,
-        membershipTier: true,
         family: true,
       },
     });

@@ -209,7 +209,6 @@ export default function QueuesPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <CardTitle className="text-base">{program.name}</CardTitle>
-                            <CardDescription>{program.level}</CardDescription>
                           </div>
                           <Badge variant="outline">{program.status}</Badge>
                         </div>
@@ -289,7 +288,6 @@ export default function QueuesPage() {
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle>{config.program?.name || "Unknown Program"}</CardTitle>
-                          <CardDescription className="mt-1">{config.program?.level}</CardDescription>
                         </div>
                         <Switch
                           checked={config.isEnabled}

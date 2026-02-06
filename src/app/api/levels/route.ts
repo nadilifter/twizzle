@@ -40,7 +40,6 @@ export async function GET(request: NextRequest) {
       include: {
         _count: {
           select: {
-            programs: true,
             skills: true,
           },
         },
@@ -107,7 +106,6 @@ export async function POST(request: NextRequest) {
       include: {
         _count: {
           select: {
-            programs: true,
             skills: true,
           },
         },

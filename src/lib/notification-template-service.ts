@@ -59,7 +59,6 @@ export interface TemplateContext {
   
   // Program context
   programName?: string;
-  programLevel?: string;
   programDescription?: string;
   
   // Event context
@@ -271,13 +270,6 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     label: "Program Name",
     description: "Name of the program",
     example: "JO Team Training",
-    category: "program",
-  },
-  {
-    key: "programLevel",
-    label: "Program Level",
-    description: "Level of the program",
-    example: "Advanced",
     category: "program",
   },
   {

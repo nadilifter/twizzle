@@ -272,12 +272,6 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
       const isFlatRate =
         formData.recurrenceType === "RECURRING" &&
         formData.registrationType === "ALL_INSTANCES"
-      const legacyProgramType =
-        formData.recurrenceType === "NON_RECURRING"
-          ? "SINGLE_INSTANCE"
-          : formData.registrationType === "PER_INSTANCE"
-            ? "DROP_IN"
-            : "SUBSCRIPTION"
       const priceValue =
         formData.price != null
           ? Math.max(0, Math.round(formData.price * 100) / 100)
@@ -286,7 +280,6 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
       await updateProgram(program.id, {
         name: formData.name,
         description: formData.description || undefined,
-        programType: legacyProgramType as any,
         recurrenceType: formData.recurrenceType as any,
         registrationType:
           formData.recurrenceType === "RECURRING"

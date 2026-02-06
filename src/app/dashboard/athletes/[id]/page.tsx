@@ -365,11 +365,6 @@ export default function AthleteProfilePage() {
                           <p className="text-sm text-muted-foreground">
                             {formatDate(enrollment.startDate)} - {enrollment.endDate ? formatDate(enrollment.endDate) : "Ongoing"}
                           </p>
-                          {enrollment.membershipTier && (
-                            <p className="text-sm text-muted-foreground">
-                              Tier: {enrollment.membershipTier.name} (${enrollment.membershipTier.price})
-                            </p>
-                          )}
                         </div>
                       </div>
                       <Badge variant={enrollment.status === "ACTIVE" ? "default" : "secondary"}>

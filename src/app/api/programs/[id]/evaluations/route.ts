@@ -251,7 +251,7 @@ export async function POST(
             templateId: validatedData.templateId,
             programId,
             date: evaluationDate,
-            level: athlete?.level || program.level,
+            level: athlete?.level || null,
             overallScore: 0,
             status: "PENDING",
             skillRatings: {

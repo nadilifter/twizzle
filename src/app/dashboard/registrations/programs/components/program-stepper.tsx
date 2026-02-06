@@ -94,7 +94,6 @@ interface ProgramFormData {
   // Step 1: General
   name: string
   description: string
-  programType: "SINGLE_INSTANCE" | "SUBSCRIPTION" | "DROP_IN" // Legacy, kept for backward compatibility
   recurrenceType: "NON_RECURRING" | "RECURRING"
   registrationType: "ALL_INSTANCES" | "PER_INSTANCE" | null
   /** Single price: per-session (single session or per-class) or flat rate (entire program). Null/0 = free. */
@@ -157,7 +156,6 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     // Step 1: General
     name: program?.name || "",
     description: program?.description || "",
-    programType: program?.programType || "SUBSCRIPTION",
     recurrenceType: (program as any)?.recurrenceType || "RECURRING",
     registrationType: (program as any)?.registrationType || "ALL_INSTANCES",
     price: (() => {
@@ -348,20 +346,12 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     setIsSaving(true)
     
     try {
-      // Map recurrenceType to legacy programType for backwards compatibility
-      const legacyProgramType = formData.recurrenceType === "NON_RECURRING" 
-        ? "SINGLE_INSTANCE" 
-        : formData.registrationType === "PER_INSTANCE" 
-          ? "DROP_IN" 
-          : "SUBSCRIPTION"
-      
       const isFlatRate = formData.recurrenceType === "RECURRING" && formData.registrationType === "ALL_INSTANCES"
       const priceValue = formData.price != null ? Math.max(0, Math.round(formData.price * 100) / 100) : null
 
       const payload: CreateProgramPayload | UpdateProgramPayload = {
         name: formData.name,
         description: formData.description || undefined,
-        programType: legacyProgramType,
         recurrenceType: formData.recurrenceType,
         registrationType: formData.recurrenceType === "RECURRING" ? formData.registrationType : null,
         pricingModel: isFlatRate ? "FLAT_RATE" : "PER_SESSION",

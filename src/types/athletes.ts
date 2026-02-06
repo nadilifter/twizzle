@@ -166,13 +166,7 @@ export interface FamilyWithPaymentMethods extends FamilySummary {
 // Full athlete detail for profile page
 export interface AthleteDetail extends Athlete {
   family: FamilyWithPaymentMethods;
-  enrollments: (EnrollmentWithProgram & {
-    membershipTier?: {
-      id: string;
-      name: string;
-      price: number;
-    } | null;
-  })[];
+  enrollments: EnrollmentWithProgram[];
   attendances: AttendanceWithEvent[];
   evaluations: Evaluation[];
   lineItems: LineItemWithInvoice[];

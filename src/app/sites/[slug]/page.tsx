@@ -33,8 +33,6 @@ export default async function SitePage({ params }: { params: { slug: string } })
       status: "ACTIVE",
     },
     include: {
-      membershipTiers: true,
-      programLevel: true,
       bulkDiscounts: true,
       staffAssignments: {
         where: {
@@ -217,10 +215,6 @@ export default async function SitePage({ params }: { params: { slug: string } })
               ...program,
               basePrice: program.basePrice ? Number(program.basePrice) : null,
               perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
-              membershipTiers: program.membershipTiers.map(tier => ({
-                ...tier,
-                price: Number(tier.price)
-              })),
               requiredMemberships: program.requiredMemberships.map(m => ({
                 ...m,
                 price: Number(m.price),

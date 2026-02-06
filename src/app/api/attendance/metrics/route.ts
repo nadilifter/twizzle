@@ -128,7 +128,6 @@ export async function GET(request: NextRequest) {
                 select: {
                   id: true,
                   name: true,
-                  level: true,
                 },
               },
             },
@@ -140,7 +139,6 @@ export async function GET(request: NextRequest) {
       const programStats = new Map<string, {
         id: string;
         name: string;
-        level: string | null;
         total: number;
         present: number;
         absent: number;
@@ -157,7 +155,6 @@ export async function GET(request: NextRequest) {
           programStats.set(programId, {
             id: programId,
             name: program?.name || "Unknown",
-            level: program?.level || null,
             total: 0,
             present: 0,
             absent: 0,

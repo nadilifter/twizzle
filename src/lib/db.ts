@@ -23,7 +23,6 @@ const TENANT_MODELS = [
   "Announcement",
   "WebsiteConfig",
   "OrganizationMember",
-  "MembershipTier",
   "MembershipGroup",
   "Discount",
   "GLCode",

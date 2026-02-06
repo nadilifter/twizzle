@@ -19,8 +19,6 @@ export default async function RegisterPage({ params }: { params: { slug: string 
             status: "ACTIVE"
         },
         include: {
-            membershipTiers: true,
-            programLevel: true,
             bulkDiscounts: true,
             staffAssignments: {
                 where: {
@@ -63,10 +61,6 @@ export default async function RegisterPage({ params }: { params: { slug: string 
         // Serialize decimal fields to numbers
         basePrice: program.basePrice ? Number(program.basePrice) : null,
         perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
-        membershipTiers: program.membershipTiers.map(tier => ({
-            ...tier,
-            price: Number(tier.price)
-        })),
         bulkDiscounts: program.bulkDiscounts.map(discount => ({
             ...discount,
             discountValue: Number(discount.discountValue),

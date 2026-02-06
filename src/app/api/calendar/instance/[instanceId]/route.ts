@@ -30,13 +30,6 @@ export async function GET(
             perSessionPrice: true,
             recurrenceType: true,
             registrationType: true,
-            programLevel: {
-              select: {
-                id: true,
-                name: true,
-                color: true,
-              },
-            },
           },
         },
         facility: {

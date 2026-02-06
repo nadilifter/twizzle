@@ -8,10 +8,7 @@ import { format, addMinutes } from "date-fns";
 const updateProgramSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  level: z.string().optional(), // Legacy field
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
-  // Program type and pricing (legacy)
-  programType: z.enum(["SINGLE_INSTANCE", "SUBSCRIPTION", "DROP_IN"]).optional(),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).optional(),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
@@ -24,10 +21,7 @@ const updateProgramSchema = z.object({
   duration: z.number().int().min(1).optional().nullable(),
   rrule: z.string().optional().nullable(),
   facilityId: z.string().optional().nullable(),
-  schedulePattern: z.any().optional().nullable(), // Legacy
   capacity: z.number().int().min(1).optional().nullable(),
-  levelId: z.string().optional().nullable(),
-  showLevelOnSite: z.boolean().optional(),
   showCoachOnSite: z.boolean().optional(),
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
@@ -99,8 +93,6 @@ export async function GET(
         organizationId: session.user.organizationId,
       },
       include: {
-        membershipTiers: true,
-        programLevel: true,
         facility: {
           select: { id: true, name: true, city: true, stateProvince: true },
         },
@@ -258,9 +250,7 @@ export async function PATCH(
       
       if (validatedData.name !== undefined) updateData.name = validatedData.name;
       if (validatedData.description !== undefined) updateData.description = validatedData.description;
-      if (validatedData.level !== undefined) updateData.level = validatedData.level;
       if (validatedData.status !== undefined) updateData.status = validatedData.status;
-      if (validatedData.programType !== undefined) updateData.programType = validatedData.programType;
       if (validatedData.pricingModel !== undefined) updateData.pricingModel = validatedData.pricingModel;
       if (validatedData.basePrice !== undefined) updateData.basePrice = validatedData.basePrice;
       if (validatedData.perSessionPrice !== undefined) updateData.perSessionPrice = validatedData.perSessionPrice;
@@ -273,10 +263,7 @@ export async function PATCH(
       if (validatedData.duration !== undefined) updateData.duration = validatedData.duration;
       if (validatedData.rrule !== undefined) updateData.rrule = validatedData.rrule;
       if (validatedData.facilityId !== undefined) updateData.facilityId = validatedData.facilityId;
-      if (validatedData.schedulePattern !== undefined) updateData.schedulePattern = validatedData.schedulePattern;
       if (validatedData.capacity !== undefined) updateData.capacity = validatedData.capacity;
-      if (validatedData.levelId !== undefined) updateData.levelId = validatedData.levelId;
-      if (validatedData.showLevelOnSite !== undefined) updateData.showLevelOnSite = validatedData.showLevelOnSite;
       if (validatedData.showCoachOnSite !== undefined) updateData.showCoachOnSite = validatedData.showCoachOnSite;
       // Age and restriction fields
       if (validatedData.minAge !== undefined) updateData.minAge = validatedData.minAge;
@@ -394,8 +381,6 @@ export async function PATCH(
       return tx.program.findUnique({
         where: { id },
         include: {
-          membershipTiers: true,
-          programLevel: true,
           facility: {
             select: { id: true, name: true, city: true, stateProvince: true },
           },

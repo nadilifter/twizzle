@@ -6,7 +6,6 @@ export interface Enrollment {
   id: string;
   athleteId: string;
   programId: string;
-  membershipTierId: string | null;
   startDate: string;
   endDate: string | null;
   status: EnrollmentStatus;
@@ -29,12 +28,6 @@ export interface EnrollmentWithRelations extends Enrollment {
     name: string;
     level: string;
   };
-  membershipTier: {
-    id: string;
-    name: string;
-    price: number;
-    interval: string;
-  } | null;
 }
 
 // API Response types
@@ -49,7 +42,6 @@ export interface EnrollmentsListResponse {
 export interface CreateEnrollmentPayload {
   athleteId: string;
   programId: string;
-  membershipTierId?: string | null;
   startDate: string;
   endDate?: string | null;
   status?: EnrollmentStatus;

@@ -8,10 +8,7 @@ import { format, addMinutes, parse } from "date-fns";
 const createProgramSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  level: z.string().optional().default(""), // Legacy field - now optional
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).default("ACTIVE"),
-  // Program type and pricing (legacy)
-  programType: z.enum(["SINGLE_INSTANCE", "SUBSCRIPTION", "DROP_IN"]).default("SUBSCRIPTION"),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).default("FLAT_RATE"),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
@@ -24,10 +21,7 @@ const createProgramSchema = z.object({
   duration: z.number().int().min(1).optional().nullable(), // minutes
   rrule: z.string().optional().nullable(), // RFC 5545 RRULE string
   facilityId: z.string().optional().nullable(),
-  schedulePattern: z.any().optional().nullable(), // Legacy
   capacity: z.number().int().min(1).optional().nullable(),
-  levelId: z.string().optional().nullable(),
-  showLevelOnSite: z.boolean().default(true),
   showCoachOnSite: z.boolean().default(true),
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
@@ -120,8 +114,6 @@ export async function GET(request: NextRequest) {
               instances: true,
             },
           },
-          membershipTiers: true,
-          programLevel: true,
           facility: {
             select: { id: true, name: true, city: true, stateProvince: true },
           },
@@ -225,9 +217,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: validatedData.name,
           description: validatedData.description,
-          level: validatedData.level || "",
           status: validatedData.status,
-          programType: validatedData.programType,
           pricingModel: validatedData.pricingModel,
           basePrice: validatedData.basePrice,
           perSessionPrice: validatedData.perSessionPrice,
@@ -240,10 +230,7 @@ export async function POST(request: NextRequest) {
           duration: validatedData.duration,
           rrule: validatedData.rrule,
           facilityId: validatedData.facilityId,
-          schedulePattern: validatedData.schedulePattern,
           capacity: validatedData.capacity,
-          levelId: validatedData.levelId,
-          showLevelOnSite: validatedData.showLevelOnSite,
           showCoachOnSite: validatedData.showCoachOnSite,
           minAge: validatedData.minAge,
           maxAge: validatedData.maxAge,
@@ -314,8 +301,6 @@ export async function POST(request: NextRequest) {
       return tx.program.findUnique({
         where: { id: newProgram.id },
         include: {
-          membershipTiers: true,
-          programLevel: true,
           facility: {
             select: { id: true, name: true, city: true, stateProvince: true },
           },

@@ -34,7 +34,6 @@ export async function GET(
           select: {
             id: true,
             name: true,
-            level: true,
             status: true,
           },
         },
@@ -135,7 +134,6 @@ export async function PATCH(
           select: {
             id: true,
             name: true,
-            level: true,
             status: true,
           },
         },

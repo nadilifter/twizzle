@@ -49,8 +49,6 @@ erDiagram
 
     Program ||--o{ Event : schedules
     Program ||--o{ Enrollment : accepts
-    Program ||--o{ MembershipTier : defines
-
     Event ||--o{ Attendance : tracks
     Event }o--o| Facility : hosted_at
     Event ||--o{ EventStaff : staffed_by
@@ -257,7 +255,6 @@ classDiagram
         +String id
         +String name
         +String description
-        +String level
         +ProgramStatus status
         +String organizationId
     }
@@ -291,16 +288,6 @@ classDiagram
         +Boolean autoRenew
     }
 
-    class MembershipTier {
-        +String id
-        +String programId
-        +String name
-        +Decimal price
-        +BillingInterval interval
-        +String[] features
-    }
-
-    Program "1" --> "*" MembershipTier : legacy
     MembershipGroup "1" --> "*" MembershipInstance
     MembershipInstance "1" --> "*" AthleteMembership
 ```

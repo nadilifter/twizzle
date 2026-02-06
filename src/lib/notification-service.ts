@@ -673,7 +673,6 @@ export async function buildTemplateContext(
     });
     if (program) {
       context.programName = program.name;
-      context.programLevel = program.level || undefined;
       context.programDescription = program.description || undefined;
     }
   }

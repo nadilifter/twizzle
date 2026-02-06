@@ -88,11 +88,6 @@ interface ProgramInstance {
     perSessionPrice: number | null;
     recurrenceType: string;
     registrationType: string;
-    programLevel: {
-      id: string;
-      name: string;
-      color: string;
-    } | null;
   };
   facility: {
     id: string;
@@ -327,17 +322,6 @@ export default function InstanceDetailPage() {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{instance.program.name}</h1>
-            {instance.program.programLevel && (
-              <Badge
-                variant="outline"
-                style={{
-                  color: instance.program.programLevel.color,
-                  borderColor: instance.program.programLevel.color,
-                }}
-              >
-                {instance.program.programLevel.name}
-              </Badge>
-            )}
             <Badge
               variant={
                 instance.status === "SCHEDULED"

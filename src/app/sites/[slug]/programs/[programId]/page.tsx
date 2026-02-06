@@ -49,10 +49,6 @@ export default async function ProgramDetailPage({
             facility: {
                 select: { id: true, name: true, city: true, stateProvince: true }
             },
-            programLevel: {
-                select: { id: true, name: true, color: true }
-            },
-            membershipTiers: true,
             bulkDiscounts: true,
             staffAssignments: {
                 where: {
@@ -131,10 +127,6 @@ export default async function ProgramDetailPage({
         ...program,
         basePrice: program.basePrice ? Number(program.basePrice) : null,
         perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
-        membershipTiers: program.membershipTiers.map(tier => ({
-            ...tier,
-            price: Number(tier.price)
-        })),
         bulkDiscounts: program.bulkDiscounts.map(discount => ({
             ...discount,
             discountValue: Number(discount.discountValue),
@@ -175,17 +167,6 @@ export default async function ProgramDetailPage({
                     {/* Program Header */}
                     <div>
                         <div className="flex items-center gap-2 mb-3 flex-wrap">
-                            {program.programLevel && (
-                                <span 
-                                    className="text-xs font-medium px-2.5 py-1 rounded-full"
-                                    style={{ 
-                                        backgroundColor: program.programLevel.color ? `${program.programLevel.color}20` : undefined,
-                                        color: program.programLevel.color || undefined
-                                    }}
-                                >
-                                    {program.programLevel.name}
-                                </span>
-                            )}
                             {isRecurring && (
                                 <span className="text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30 px-2.5 py-1 rounded-full">
                                     Recurring Program
@@ -368,58 +349,22 @@ export default async function ProgramDetailPage({
                     <div className="rounded-xl border bg-card p-6">
                             <h2 className="text-lg font-semibold text-foreground mb-4">Pricing & Options</h2>
                             
-                            {/* Membership Tiers */}
-                            {program.membershipTiers.length > 0 && (
-                                <div className="space-y-3 mb-4">
-                                    {program.membershipTiers.map(tier => (
-                                        <div key={tier.id} className="flex items-start justify-between p-3 rounded-lg bg-muted/40">
-                                            <div className="min-w-0 flex-1">
-                                                <div className="text-sm font-medium text-foreground">{tier.name}</div>
-                                                {tier.description && (
-                                                    <p className="text-xs text-muted-foreground mt-0.5">{tier.description}</p>
-                                                )}
-                                                {tier.features && tier.features.length > 0 && (
-                                                    <ul className="mt-2 space-y-1">
-                                                        {tier.features.map((feature, idx) => (
-                                                            <li key={idx} className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                                                <span className="h-1 w-1 rounded-full bg-primary shrink-0" />
-                                                                {feature}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                )}
-                                            </div>
-                                            <div className="text-sm font-bold text-foreground ml-4 shrink-0">
-                                                ${Number(tier.price).toFixed(0)}
-                                                {tier.interval && (
-                                                    <span className="text-xs font-normal text-muted-foreground">
-                                                        /{tier.interval.toLowerCase().replace("ly", "")}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
                             {/* Direct Pricing / Free */}
-                            {program.membershipTiers.length === 0 && (
-                                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                        <span className="text-sm font-medium text-foreground">
-                                            {(program.basePrice || program.perSessionPrice)
-                                                ? (program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee")
-                                                : "Free Program"}
-                                        </span>
-                                    </div>
-                                    <span className="text-sm font-bold text-foreground">
+                            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 mb-4">
+                                <div className="flex items-center gap-2">
+                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium text-foreground">
                                         {(program.basePrice || program.perSessionPrice)
-                                            ? `$${Number(program.basePrice || program.perSessionPrice).toFixed(2)}`
-                                            : "FREE"}
+                                            ? (program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee")
+                                            : "Free Program"}
                                     </span>
                                 </div>
-                            )}
+                                <span className="text-sm font-bold text-foreground">
+                                    {(program.basePrice || program.perSessionPrice)
+                                        ? `$${Number(program.basePrice || program.perSessionPrice).toFixed(2)}`
+                                        : "FREE"}
+                                </span>
+                            </div>
 
                             {/* Bulk Discounts */}
                             {program.bulkDiscounts.length > 0 && (

@@ -33,7 +33,6 @@ interface Program {
   id: string;
   name: string;
   description: string | null;
-  level: string;
   status: string;
   assignmentSource: "staff" | "event";
   myRole: string | null;
@@ -156,7 +155,6 @@ export default function CoachProgramsPage() {
                       <CardDescription>{program.description}</CardDescription>
                     )}
                   </div>
-                  <Badge variant="outline">{program.level}</Badge>
                 </div>
               </CardHeader>
               <CardContent>
