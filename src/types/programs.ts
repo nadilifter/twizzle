@@ -36,6 +36,17 @@ export interface ProgramLevelRequirement {
   };
 }
 
+export interface ProgramWaiverRequirement {
+  id: string;
+  programId: string;
+  waiverId: string;
+  waiver: {
+    id: string;
+    title: string;
+    status: string;
+  };
+}
+
 export interface Program {
   id: string;
   name: string;
@@ -79,6 +90,7 @@ export interface Program {
   hasCapacityRestriction: boolean;
   hasAgeRestriction: boolean;
   hasMembershipRestriction: boolean;
+  hasWaiverRestriction: boolean;
 }
 
 // Program Instance - individual occurrences of a program
@@ -142,6 +154,7 @@ export interface ProgramWithRelations extends Program {
   staffAssignments?: ProgramStaffWithProfile[];
   requiredMemberships?: ProgramRequiredMembership[];
   levelRequirements?: ProgramLevelRequirement[];
+  waiverRequirements?: ProgramWaiverRequirement[];
 }
 
 export interface ProgramsListResponse {
@@ -174,6 +187,7 @@ export interface CreateProgramPayload {
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
   hasMembershipRestriction?: boolean;
+  hasWaiverRestriction?: boolean;
   // For staff assignments during creation
   staffAssignments?: Array<{
     staffProfileId: string;
@@ -184,6 +198,8 @@ export interface CreateProgramPayload {
   levelRequirementIds?: string[];
   // For membership requirements during creation
   membershipRequirementIds?: string[];
+  // For waiver requirements during creation
+  waiverRequirementIds?: string[];
 }
 
 export interface UpdateProgramPayload {
@@ -209,6 +225,7 @@ export interface UpdateProgramPayload {
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
   hasMembershipRestriction?: boolean;
+  hasWaiverRestriction?: boolean;
   // For staff assignments
   staffAssignments?: Array<{
     staffProfileId: string;
@@ -219,6 +236,8 @@ export interface UpdateProgramPayload {
   levelRequirementIds?: string[];
   // For membership requirements
   membershipRequirementIds?: string[];
+  // For waiver requirements
+  waiverRequirementIds?: string[];
 }
 
 export interface ProgramsQueryParams {

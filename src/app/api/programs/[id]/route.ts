@@ -31,9 +31,11 @@ const updateProgramSchema = z.object({
   hasCapacityRestriction: z.boolean().optional(),
   hasAgeRestriction: z.boolean().optional(),
   hasMembershipRestriction: z.boolean().optional(),
+  hasWaiverRestriction: z.boolean().optional(),
   // Related data for updates
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
+  waiverRequirementIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
     staffProfileId: z.string(),
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
@@ -133,6 +135,13 @@ export async function GET(
                 id: true,
                 name: true,
               },
+            },
+          },
+        },
+        waiverRequirements: {
+          include: {
+            waiver: {
+              select: { id: true, title: true, status: true },
             },
           },
         },
@@ -272,6 +281,7 @@ export async function PATCH(
       if (validatedData.hasCapacityRestriction !== undefined) updateData.hasCapacityRestriction = validatedData.hasCapacityRestriction;
       if (validatedData.hasAgeRestriction !== undefined) updateData.hasAgeRestriction = validatedData.hasAgeRestriction;
       if (validatedData.hasMembershipRestriction !== undefined) updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
+      if (validatedData.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = validatedData.hasWaiverRestriction;
 
       // Update the program
       const updatedProgram = await tx.program.update({
@@ -358,6 +368,21 @@ export async function PATCH(
         });
       }
 
+      // Update waiver requirements if provided
+      if (validatedData.waiverRequirementIds !== undefined) {
+        await tx.programWaiverRequirement.deleteMany({
+          where: { programId: id },
+        });
+        if (validatedData.waiverRequirementIds.length > 0) {
+          await tx.programWaiverRequirement.createMany({
+            data: validatedData.waiverRequirementIds.map(waiverId => ({
+              programId: id,
+              waiverId,
+            })),
+          });
+        }
+      }
+
       // Update staff assignments if provided
       if (validatedData.staffAssignments !== undefined) {
         // Delete existing assignments
@@ -417,6 +442,13 @@ export async function PATCH(
                   id: true,
                   name: true,
                 },
+              },
+            },
+          },
+          waiverRequirements: {
+            include: {
+              waiver: {
+                select: { id: true, title: true, status: true },
               },
             },
           },

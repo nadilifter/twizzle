@@ -44,7 +44,60 @@ export async function POST(
 
     const organizationId = config.organizationId;
 
-    // 2. Calculate Totals (Verify prices from DB ideally, but using cart for now for speed)
+    // 2. Server-side waiver verification
+    // Check that all required waivers for cart programs are signed
+    const programItems = items.filter((item: CartItem) => item.type === "program");
+    if (programItems.length > 0) {
+      const programIds = programItems
+        .map((item: CartItem) => item.details?.programId || item.referenceId)
+        .filter(Boolean);
+
+      const waiverRequirements = await db.programWaiverRequirement.findMany({
+        where: {
+          programId: { in: programIds },
+          waiver: { organizationId, status: "ACTIVE" },
+        },
+        select: { waiverId: true },
+      });
+
+      const requiredWaiverIds = [...new Set(waiverRequirements.map((r) => r.waiverId))];
+
+      if (requiredWaiverIds.length > 0) {
+        // Find or check family by email
+        const checkFamily = await db.family.findFirst({
+          where: { email: userDetails.email, organizationId },
+          select: { id: true },
+        });
+
+        if (checkFamily) {
+          const acceptances = await db.waiverAcceptance.findMany({
+            where: {
+              familyId: checkFamily.id,
+              waiverId: { in: requiredWaiverIds },
+            },
+            select: { waiverId: true },
+          });
+
+          const signedIds = new Set(acceptances.map((a) => a.waiverId));
+          const unsignedWaivers = requiredWaiverIds.filter((id) => !signedIds.has(id));
+
+          if (unsignedWaivers.length > 0) {
+            return NextResponse.json(
+              { error: "Required waivers have not been signed. Please sign all waivers before proceeding to payment." },
+              { status: 400 }
+            );
+          }
+        } else {
+          // No family exists yet, so waivers definitely haven't been signed
+          return NextResponse.json(
+            { error: "Required waivers have not been signed. Please sign all waivers before proceeding to payment." },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // 3. Calculate Totals (Verify prices from DB ideally, but using cart for now for speed)
     // In production, fetch items from DB to verify prices
     const subtotal = items.reduce(
       (sum: number, item: CartItem) => sum + Number(item.price) * item.quantity,
@@ -54,7 +107,7 @@ export async function POST(
     const tax = subtotal * taxRate;
     const total = subtotal + tax;
 
-    // 3. Find or Create Family/User
+    // 4. Find or Create Family/User
     // Simple logic: match by email on Family.primaryContactEmail or User.email
     // For this demo, we'll create a Family if it doesn't exist
     let family = await db.family.findFirst({
@@ -77,9 +130,8 @@ export async function POST(
         });
     }
 
-    // 4. Create Invoice with metadata for post-payment processing
-    const membershipItems = items.filter(item => item.type === "membership");
-    const programItems = items.filter(item => item.type === "program");
+    // 5. Create Invoice with metadata for post-payment processing
+    const membershipItems = items.filter((item: CartItem) => item.type === "membership");
     
     // Build metadata for webhook processing
     const invoiceMetadata = {
@@ -108,7 +160,7 @@ export async function POST(
         }
     });
 
-    // 5. Create Line Items with appropriate metadata
+    // 6. Create Line Items with appropriate metadata
     await db.lineItem.createMany({
         data: items.map((item: CartItem) => ({
             invoiceId: invoice.id,
@@ -122,7 +174,7 @@ export async function POST(
         }))
     });
 
-    // 6. Create Adyen Session
+    // 7. Create Adyen Session
     // We'll use the invoice ID as reference so we can update it later
     const protocol = request.headers.get("x-forwarded-proto") || "http";
     const host = request.headers.get("host");

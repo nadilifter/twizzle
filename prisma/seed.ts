@@ -3994,6 +3994,205 @@ See you at Metro Sports!
   console.log(`  ✓ Created ${metroNotificationRules.length} notification rules for Metro Sports`);
 
   // ============================================
+  // WAIVERS & DIGITAL SIGNATURES
+  // ============================================
+  console.log("\n📝 Creating waivers...");
+
+  // Sunrise Gymnastics Academy - General Liability Waiver (2 pages)
+  await prisma.waiver.upsert({
+    where: { id: `${ORG1_ID}-waiver-liability` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-waiver-liability`,
+      organizationId: ORG1_ID,
+      title: "General Liability Waiver",
+      status: "ACTIVE",
+    },
+  });
+
+  await prisma.waiverPage.upsert({
+    where: { id: `${ORG1_ID}-waiver-liability-p1` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-waiver-liability-p1`,
+      waiverId: `${ORG1_ID}-waiver-liability`,
+      pageNumber: 1,
+      title: "Assumption of Risk & Release of Liability",
+      content: `<h2>Assumption of Risk & Release of Liability</h2>
+<p>I, the undersigned participant (or parent/guardian of a minor participant), acknowledge and agree to the following:</p>
+<h3>1. Assumption of Risk</h3>
+<p>I understand that participation in gymnastics and related activities involves inherent risks of physical injury, including but not limited to sprains, fractures, concussions, paralysis, and in rare cases, death. I voluntarily assume all risks associated with participation in programs offered by Sunrise Gymnastics Academy.</p>
+<h3>2. Release of Liability</h3>
+<p>In consideration of being permitted to participate in programs, I hereby release, waive, and discharge Sunrise Gymnastics Academy, its owners, officers, employees, coaches, volunteers, and agents from any and all liability, claims, demands, actions, or causes of action arising out of or related to any loss, damage, or injury that may be sustained during participation.</p>
+<h3>3. Indemnification</h3>
+<p>I agree to indemnify and hold harmless Sunrise Gymnastics Academy from any loss, liability, damage, or cost it may incur due to my (or my child's) participation in programs, whether caused by negligence or otherwise.</p>
+<p><strong>I have read this Assumption of Risk & Release of Liability, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
+    },
+  });
+
+  await prisma.waiverPage.upsert({
+    where: { id: `${ORG1_ID}-waiver-liability-p2` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-waiver-liability-p2`,
+      waiverId: `${ORG1_ID}-waiver-liability`,
+      pageNumber: 2,
+      title: "Medical Authorization & Emergency Contact",
+      content: `<h2>Medical Authorization & Emergency Contact Consent</h2>
+<h3>4. Medical Authorization</h3>
+<p>In the event of an emergency, I authorize Sunrise Gymnastics Academy staff to seek and obtain emergency medical treatment for the participant. I understand that I will be responsible for the cost of any such treatment.</p>
+<p>I certify that the participant is in good physical health and has no conditions that would prevent safe participation in gymnastics activities, unless otherwise disclosed in writing to the Academy.</p>
+<h3>5. Emergency Contact Consent</h3>
+<p>I consent to being contacted at the phone number and email address provided on my registration form in case of emergency. I understand that the Academy will make reasonable efforts to contact me before seeking emergency medical treatment.</p>
+<h3>6. Photo/Video for Safety Documentation</h3>
+<p>I understand that the Academy may use video monitoring for safety and coaching purposes within the facility. This footage is for internal use only and will not be shared publicly without separate consent.</p>
+<p><strong>I have read this Medical Authorization & Emergency Contact Consent, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
+    },
+  });
+
+  // Sunrise Gymnastics Academy - Photo & Video Release (1 page)
+  await prisma.waiver.upsert({
+    where: { id: `${ORG1_ID}-waiver-photo` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-waiver-photo`,
+      organizationId: ORG1_ID,
+      title: "Photo & Video Release",
+      status: "ACTIVE",
+    },
+  });
+
+  await prisma.waiverPage.upsert({
+    where: { id: `${ORG1_ID}-waiver-photo-p1` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-waiver-photo-p1`,
+      waiverId: `${ORG1_ID}-waiver-photo`,
+      pageNumber: 1,
+      title: "Photo & Video Consent",
+      content: `<h2>Photo & Video Release Consent</h2>
+<p>I, the undersigned (or parent/guardian of a minor participant), hereby grant Sunrise Gymnastics Academy permission to:</p>
+<ul>
+<li>Take photographs and/or video recordings of the participant during programs, events, competitions, and activities.</li>
+<li>Use such photographs and recordings for promotional purposes including but not limited to the Academy's website, social media channels, printed marketing materials, newsletters, and press releases.</li>
+</ul>
+<h3>Terms</h3>
+<p>I understand that:</p>
+<ul>
+<li>No compensation will be provided for the use of these images or recordings.</li>
+<li>The Academy will not use images in a manner that is harmful or defamatory.</li>
+<li>I may revoke this consent at any time by providing written notice to the Academy, though images already published may not be retrievable.</li>
+<li>This release is valid for the duration of the participant's enrollment at Sunrise Gymnastics Academy.</li>
+</ul>
+<p><strong>I have read this Photo & Video Release, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
+    },
+  });
+
+  // Metro Sports Complex - Participant Waiver & Release of Liability (2 pages)
+  await prisma.waiver.upsert({
+    where: { id: `${ORG2_ID}-waiver-participant` },
+    update: {},
+    create: {
+      id: `${ORG2_ID}-waiver-participant`,
+      organizationId: ORG2_ID,
+      title: "Participant Waiver & Release of Liability",
+      status: "ACTIVE",
+    },
+  });
+
+  await prisma.waiverPage.upsert({
+    where: { id: `${ORG2_ID}-waiver-participant-p1` },
+    update: {},
+    create: {
+      id: `${ORG2_ID}-waiver-participant-p1`,
+      waiverId: `${ORG2_ID}-waiver-participant`,
+      pageNumber: 1,
+      title: "Assumption of Risk & Hold-Harmless Agreement",
+      content: `<h2>Assumption of Risk & Hold-Harmless Agreement</h2>
+<p>I, the undersigned participant (or parent/legal guardian of a minor participant), acknowledge the following in connection with participation in programs and activities offered by Metro Sports Complex:</p>
+<h3>1. Acknowledgment of Risk</h3>
+<p>I understand that participation in sports and recreational activities, including but not limited to soccer, basketball, swimming, fitness classes, and general facility use, carries inherent risks of physical injury. These risks include but are not limited to muscle strains, ligament tears, broken bones, concussions, drowning, heat-related illness, and other injuries that may result from the physical nature of these activities.</p>
+<h3>2. Voluntary Participation</h3>
+<p>I voluntarily choose to participate (or allow my child to participate) in programs at Metro Sports Complex with full knowledge and understanding of the associated risks. I accept personal responsibility for any injury that may occur.</p>
+<h3>3. Hold-Harmless Agreement</h3>
+<p>I agree to release, hold harmless, and indemnify Metro Sports Complex, its owners, managers, employees, coaches, trainers, volunteers, and affiliated organizations from any and all claims, liabilities, damages, costs, or expenses arising from participation in programs or use of facilities.</p>
+<p><strong>I have read this Assumption of Risk & Hold-Harmless Agreement, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
+    },
+  });
+
+  await prisma.waiverPage.upsert({
+    where: { id: `${ORG2_ID}-waiver-participant-p2` },
+    update: {},
+    create: {
+      id: `${ORG2_ID}-waiver-participant-p2`,
+      waiverId: `${ORG2_ID}-waiver-participant`,
+      pageNumber: 2,
+      title: "Facility Rules & Emergency Medical Authorization",
+      content: `<h2>Acknowledgement of Facility Rules & Emergency Medical Authorization</h2>
+<h3>4. Facility Rules</h3>
+<p>I acknowledge that I have been informed of and agree to abide by all rules and regulations of Metro Sports Complex, including but not limited to:</p>
+<ul>
+<li>Following all posted safety signs and instructions from staff.</li>
+<li>Using equipment only as intended and under appropriate supervision.</li>
+<li>Reporting any unsafe conditions or injuries to staff immediately.</li>
+<li>Wearing appropriate athletic attire and footwear for each activity.</li>
+<li>Not participating while under the influence of alcohol or drugs.</li>
+</ul>
+<p>Failure to comply with facility rules may result in removal from programs without refund.</p>
+<h3>5. Emergency Medical Authorization</h3>
+<p>In the event of an injury or medical emergency, I authorize Metro Sports Complex staff to administer first aid and/or call emergency medical services (911). I understand that I (or my insurance) will be responsible for any medical costs incurred. I consent to being transported to the nearest medical facility if deemed necessary by emergency personnel.</p>
+<h3>6. Communication Consent</h3>
+<p>I consent to receiving communications from Metro Sports Complex regarding schedules, cancellations, and safety updates via email, phone, or text message at the contact information provided during registration.</p>
+<p><strong>I have read this Acknowledgement of Facility Rules & Emergency Medical Authorization, fully understand its terms, and sign it freely and voluntarily.</strong></p>`,
+    },
+  });
+
+  // Attach waivers as program requirements
+  // Sunrise: General Liability Waiver on the Bronze program
+  await prisma.programWaiverRequirement.upsert({
+    where: {
+      programId_waiverId: {
+        programId: `${ORG1_ID}-prog-rec-bronze`,
+        waiverId: `${ORG1_ID}-waiver-liability`,
+      },
+    },
+    update: {},
+    create: {
+      programId: `${ORG1_ID}-prog-rec-bronze`,
+      waiverId: `${ORG1_ID}-waiver-liability`,
+    },
+  });
+
+  // Update the program to have the waiver restriction flag
+  await prisma.program.update({
+    where: { id: `${ORG1_ID}-prog-rec-bronze` },
+    data: { hasWaiverRestriction: true },
+  });
+
+  // Metro: Participant Waiver on the soccer program
+  await prisma.programWaiverRequirement.upsert({
+    where: {
+      programId_waiverId: {
+        programId: `${ORG2_ID}-prog-soccer`,
+        waiverId: `${ORG2_ID}-waiver-participant`,
+      },
+    },
+    update: {},
+    create: {
+      programId: `${ORG2_ID}-prog-soccer`,
+      waiverId: `${ORG2_ID}-waiver-participant`,
+    },
+  });
+
+  await prisma.program.update({
+    where: { id: `${ORG2_ID}-prog-soccer` },
+    data: { hasWaiverRestriction: true },
+  });
+
+  console.log("  ✓ Created 3 waivers (2 Sunrise, 1 Metro) with pages");
+  console.log("  ✓ Attached waiver requirements to Bronze Gymnastics and Youth Soccer");
+
+  // ============================================
   // COMPLETE
   // ============================================
   console.log("\n" + "=".repeat(50));
@@ -4030,6 +4229,7 @@ See you at Metro Sports!
   console.log("  • 6 email campaigns (newsletters, program updates, scheduled)");
   console.log("  • Email usage tracking for both organizations");
   console.log("  • 12 notification rules (system + custom for both orgs)");
+  console.log("  • 3 waivers with pages (2 Sunrise, 1 Metro) + program requirements");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (password: password123):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");

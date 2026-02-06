@@ -105,6 +105,9 @@ model Organization {
   // Levels
   levels Level[]
 
+  // Waivers
+  waivers Waiver[]
+
   // Organization Payment Methods (for SaaS subscription billing)
   organizationPaymentMethods OrganizationPaymentMethod[]
 
@@ -314,6 +317,8 @@ model Family {
   smsMessages           SmsMessage[]
   emailMessages         EmailMessage[]
   instanceRegistrations InstanceRegistration[] // Per-instance program registrations
+  waiverSignatures      WaiverSignature[]
+  waiverAcceptances     WaiverAcceptance[]
 
   // Auth Link
   userId String? @unique
@@ -584,6 +589,7 @@ model Program {
   hasCapacityRestriction   Boolean @default(false)
   hasAgeRestriction        Boolean @default(false)
   hasMembershipRestriction Boolean @default(false)
+  hasWaiverRestriction     Boolean @default(false)
 
   // Relations
   organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -598,6 +604,7 @@ model Program {
   evaluationTemplates ProgramEvaluationTemplate[]
   bulkDiscounts       ProgramBulkDiscount[]
   levelRequirements   ProgramLevelRequirement[]
+  waiverRequirements  ProgramWaiverRequirement[]
   instances           ProgramInstance[]
 
   // Registration Queue
@@ -3018,4 +3025,109 @@ model NotificationDeduplication {
   @@unique([ruleId, entityType, entityId, familyId])
   @@index([ruleId])
   @@index([sentAt])
+}
+
+// ============================================
+// PHASE 12: Waivers & Digital Signatures
+// ============================================
+
+enum WaiverStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+// Waiver - top-level waiver entity owned by an organization
+model Waiver {
+  id             String       @id @default(cuid())
+  organizationId String
+  title          String
+  status         WaiverStatus @default(DRAFT)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  organization        Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pages               WaiverPage[]
+  programRequirements ProgramWaiverRequirement[]
+  signatures          WaiverSignature[]
+  acceptances         WaiverAcceptance[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+// WaiverPage - individual page of a waiver with rich text content
+model WaiverPage {
+  id         String  @id @default(cuid())
+  waiverId   String
+  pageNumber Int // Ordering: 1, 2, 3...
+  title      String? // Optional page title (e.g., "Section A: Liability")
+  content    String  @db.Text // HTML content from WYSIWYG editor
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  waiver     Waiver            @relation(fields: [waiverId], references: [id], onDelete: Cascade)
+  signatures WaiverSignature[]
+
+  @@index([waiverId])
+  @@index([waiverId, pageNumber])
+}
+
+// ProgramWaiverRequirement - junction table linking Programs to required Waivers
+model ProgramWaiverRequirement {
+  id        String   @id @default(cuid())
+  programId String
+  waiverId  String
+  createdAt DateTime @default(now())
+
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  waiver  Waiver  @relation(fields: [waiverId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, waiverId])
+  @@index([programId])
+  @@index([waiverId])
+}
+
+// WaiverSignature - records a customer's signature on a specific waiver page
+model WaiverSignature {
+  id            String   @id @default(cuid())
+  waiverId      String
+  waiverPageId  String
+  familyId      String
+  signatureData String   @db.Text // Base64 PNG from signature canvas
+  signedByName  String // Full name of signer
+  signedByEmail String // Email of signer
+  ipAddress     String? // IP address at time of signing
+  userAgent     String? // Browser user agent at time of signing
+  signedAt      DateTime @default(now())
+
+  // Relations
+  waiver     Waiver     @relation(fields: [waiverId], references: [id], onDelete: Cascade)
+  waiverPage WaiverPage @relation(fields: [waiverPageId], references: [id], onDelete: Cascade)
+  family     Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([waiverPageId, familyId]) // One signature per page per family
+  @@index([waiverId])
+  @@index([waiverPageId])
+  @@index([familyId])
+}
+
+// WaiverAcceptance - rolled-up record: family has fully signed all pages of a waiver
+// This is the table queried to check "has this customer already signed?" for sign-once behavior
+model WaiverAcceptance {
+  id          String   @id @default(cuid())
+  waiverId    String
+  familyId    String
+  completedAt DateTime @default(now())
+
+  // Relations
+  waiver Waiver @relation(fields: [waiverId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([waiverId, familyId]) // One acceptance per waiver per family
+  @@index([waiverId])
+  @@index([familyId])
 }

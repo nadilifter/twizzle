@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -34,82 +35,93 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import type { Waiver } from "@/types/waivers"
 
-export type Waiver = {
-  id: string
-  title: string
-  status: "active" | "draft" | "archived"
-  signedCount: number
-  createdAt: string
+function getColumns(onDelete: (id: string) => void, router: ReturnType<typeof useRouter>): ColumnDef<Waiver>[] {
+  return [
+    {
+      accessorKey: "title",
+      header: "Title",
+      cell: ({ row }) => <div className="font-medium">{row.getValue("title")}</div>,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string
+        return (
+          <Badge
+            variant={
+              status === "ACTIVE" ? "default" : status === "DRAFT" ? "secondary" : "outline"
+            }
+          >
+            {status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}
+          </Badge>
+        )
+      },
+    },
+    {
+      id: "pages",
+      header: "Pages",
+      cell: ({ row }) => (
+        <div className="text-center">{row.original._count?.pages || 0}</div>
+      ),
+    },
+    {
+      id: "signed",
+      header: "Signed",
+      cell: ({ row }) => (
+        <div className="text-center">{row.original._count?.acceptances || 0}</div>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => {
+        const date = new Date(row.getValue("createdAt") as string)
+        return <div>{date.toLocaleDateString()}</div>
+      },
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const waiver = row.original
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => router.push(`/dashboard/forms/waivers/${waiver.id}`)}>
+                Edit Waiver
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => onDelete(waiver.id)}
+              >
+                Delete Waiver
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+  ]
 }
 
-export const columns: ColumnDef<Waiver>[] = [
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => <div className="font-medium">{row.getValue("title")}</div>,
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.getValue("status") as string
-      return (
-        <Badge variant={status === "active" ? "default" : status === "draft" ? "secondary" : "outline"}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </Badge>
-      )
-    },
-  },
-  {
-    accessorKey: "signedCount",
-    header: "Signed",
-    cell: ({ row }) => <div className="text-center">{row.getValue("signedCount")}</div>,
-  },
-  {
-    accessorKey: "createdAt",
-    header: "Created At",
-    cell: ({ row }) => <div>{row.getValue("createdAt")}</div>,
-  },
-  {
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const waiver = row.original
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(waiver.id)}
-            >
-              Copy ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View Signatures</DropdownMenuItem>
-            <DropdownMenuItem>Edit Waiver</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete Waiver</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
-  },
-]
-
-export function WaiverTable({ data }: { data: Waiver[] }) {
+export function WaiverTable({ data, onDelete }: { data: Waiver[]; onDelete: (id: string) => void }) {
+  const router = useRouter()
+  const columns = React.useMemo(() => getColumns(onDelete, router), [onDelete, router])
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
   const table = useReactTable({
@@ -191,7 +203,7 @@ export function WaiverTable({ data }: { data: Waiver[] }) {
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No waivers yet. Create your first waiver to get started.
                 </TableCell>
               </TableRow>
             )}
@@ -221,4 +233,3 @@ export function WaiverTable({ data }: { data: Waiver[] }) {
     </div>
   )
 }
-

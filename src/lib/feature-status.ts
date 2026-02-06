@@ -244,8 +244,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Survey builder uses sample data",
   },
   "/dashboard/forms/waivers": {
-    status: "demo",
-    description: "Waiver management uses sample data",
+    status: "live",
+    description: "Waiver management with WYSIWYG builder and digital signatures",
+    apiRoutes: ["/api/waivers", "/api/waivers/[id]", "/api/waivers/[id]/sign", "/api/waivers/check"],
   },
 
   // Campaigns Section

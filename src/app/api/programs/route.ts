@@ -31,9 +31,11 @@ const createProgramSchema = z.object({
   hasCapacityRestriction: z.boolean().default(false),
   hasAgeRestriction: z.boolean().default(false),
   hasMembershipRestriction: z.boolean().default(false),
+  hasWaiverRestriction: z.boolean().default(false),
   // Related data for creation
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
+  waiverRequirementIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
     staffProfileId: z.string(),
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
@@ -145,6 +147,13 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          waiverRequirements: {
+            include: {
+              waiver: {
+                select: { id: true, title: true, status: true },
+              },
+            },
+          },
         },
         orderBy: { name: "asc" },
         take: limit,
@@ -238,6 +247,7 @@ export async function POST(request: NextRequest) {
           hasCapacityRestriction: validatedData.hasCapacityRestriction,
           hasAgeRestriction: validatedData.hasAgeRestriction,
           hasMembershipRestriction: validatedData.hasMembershipRestriction,
+          hasWaiverRestriction: validatedData.hasWaiverRestriction,
           organizationId: session.user.organizationId,
           // Connect membership requirements in initial create
           ...(validatedData.membershipRequirementIds?.length && {
@@ -254,6 +264,16 @@ export async function POST(request: NextRequest) {
           data: validatedData.levelRequirementIds.map(levelId => ({
             programId: newProgram.id,
             levelId,
+          })),
+        });
+      }
+
+      // Create waiver requirements if provided
+      if (validatedData.waiverRequirementIds?.length) {
+        await tx.programWaiverRequirement.createMany({
+          data: validatedData.waiverRequirementIds.map(waiverId => ({
+            programId: newProgram.id,
+            waiverId,
           })),
         });
       }
@@ -327,6 +347,13 @@ export async function POST(request: NextRequest) {
             include: {
               group: {
                 select: { id: true, name: true },
+              },
+            },
+          },
+          waiverRequirements: {
+            include: {
+              waiver: {
+                select: { id: true, title: true, status: true },
               },
             },
           },

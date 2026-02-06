@@ -26,6 +26,7 @@ import {
   Repeat,
   CalendarDays,
   Info,
+  FileText,
 } from "lucide-react"
 import { toast } from "sonner"
 import { usePrograms } from "@/hooks/use-programs"
@@ -99,6 +100,10 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [loadingFacilities, setLoadingFacilities] = useState(true)
 
+  // Waivers state
+  const [waivers, setWaivers] = useState<Array<{ id: string; title: string; status: string }>>([])
+  const [loadingWaivers, setLoadingWaivers] = useState(true)
+
   // Form state - mirrors the stepper's ProgramFormData
   const [formData, setFormData] = useState(() => ({
     // General
@@ -130,6 +135,8 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     maxAge: (program.maxAge ?? null) as number | null,
     hasMembershipRestriction: program.hasMembershipRestriction || false,
     membershipRequirementIds: (program.requiredMemberships?.map((m: any) => m.id) || []) as string[],
+    hasWaiverRestriction: (program as any).hasWaiverRestriction || false,
+    waiverRequirementIds: ((program as any).waiverRequirements?.map((wr: any) => wr.waiverId) || []) as string[],
 
     // Staff
     staffAssignments: (program.staffAssignments?.map((sa: any) => ({
@@ -175,6 +182,24 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
       }
     }
     fetchFacilities()
+  }, [])
+
+  // Fetch waivers
+  useEffect(() => {
+    const fetchWaivers = async () => {
+      try {
+        const response = await fetch("/api/waivers?status=ACTIVE")
+        if (response.ok) {
+          const data = await response.json()
+          setWaivers(data.data || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch waivers:", error)
+      } finally {
+        setLoadingWaivers(false)
+      }
+    }
+    fetchWaivers()
   }, [])
 
   // Flatten membership instances from groups
@@ -361,6 +386,10 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
       toast.error("Select at least one membership when membership restriction is enabled")
       return
     }
+    if (formData.hasWaiverRestriction && formData.waiverRequirementIds.length === 0) {
+      toast.error("Select at least one waiver when waiver restriction is enabled")
+      return
+    }
 
     setIsSaving(true)
     try {
@@ -375,6 +404,10 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
         hasMembershipRestriction: formData.hasMembershipRestriction,
         membershipRequirementIds: formData.hasMembershipRestriction
           ? formData.membershipRequirementIds
+          : [],
+        hasWaiverRestriction: formData.hasWaiverRestriction,
+        waiverRequirementIds: formData.hasWaiverRestriction
+          ? formData.waiverRequirementIds
           : [],
       } as any)
       toast.success("Requirements saved")
@@ -1060,6 +1093,79 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                             <span className="text-xs text-muted-foreground">
                               ${instance.price.toFixed(2)}
                             </span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Waiver Requirement */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Waiver Requirement</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require customers to sign a waiver before checkout
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasWaiverRestriction}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasWaiverRestriction: checked,
+                      waiverRequirementIds: checked ? prev.waiverRequirementIds : [],
+                    }))
+                  }
+                />
+              </div>
+
+              {formData.hasWaiverRestriction && (
+                <div className="pt-2 border-t">
+                  {loadingWaivers ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading waivers...
+                    </div>
+                  ) : waivers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No active waivers found.{" "}
+                      <a href="/dashboard/forms/waivers/new" className="text-primary underline">
+                        Create a waiver
+                      </a>{" "}
+                      first.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {waivers.map((waiver) => (
+                        <label
+                          key={waiver.id}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                            formData.waiverRequirementIds.includes(waiver.id)
+                              ? "border-primary bg-primary/5"
+                              : "hover:bg-muted/50"
+                          )}
+                        >
+                          <Checkbox
+                            checked={formData.waiverRequirementIds.includes(waiver.id)}
+                            onCheckedChange={(checked) => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                waiverRequirementIds: checked
+                                  ? [...prev.waiverRequirementIds, waiver.id]
+                                  : prev.waiverRequirementIds.filter((id) => id !== waiver.id),
+                              }))
+                            }}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">{waiver.title}</span>
+                            </div>
                           </div>
                         </label>
                       ))}
