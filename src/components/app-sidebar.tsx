@@ -120,10 +120,6 @@ const data = {
           title: "Dashboard",
           url: "/dashboard",
         },
-        {
-          title: "Calendar",
-          url: "/dashboard/calendar",
-        },
         /*
         {
           title: "Overview",
