@@ -8,6 +8,8 @@ import {
   endOfMonth,
   startOfWeek,
   endOfWeek,
+  startOfDay,
+  endOfDay,
   addDays,
   addMonths,
   subMonths,
@@ -55,6 +57,18 @@ import {
   getEventCardClasses,
   getBadgeColorClasses,
 } from "@/components/program-calendar/color-utils";
+
+/**
+ * Convert 24-hour time string to 12-hour AM/PM format
+ * @param compact - If true, uses compact format "9:30a" instead of "9:30 AM"
+ */
+function formatTime12h(time24: string, compact: boolean = false): string {
+  const [hoursStr, minutes] = time24.split(":");
+  const hours = parseInt(hoursStr, 10);
+  const period = hours >= 12 ? (compact ? "p" : "PM") : (compact ? "a" : "AM");
+  const hours12 = hours % 12 || 12;
+  return compact ? `${hours12}:${minutes}${period}` : `${hours12}:${minutes} ${period}`;
+}
 
 interface CalendarEvent {
   id: string;
@@ -140,8 +154,8 @@ export default function CalendarPage() {
         start = startOfWeek(currentDate, { weekStartsOn: 0 });
         end = endOfWeek(currentDate, { weekStartsOn: 0 });
       } else {
-        start = currentDate;
-        end = currentDate;
+        start = startOfDay(currentDate);
+        end = endOfDay(currentDate);
       }
 
       const params = new URLSearchParams({
@@ -236,14 +250,14 @@ export default function CalendarPage() {
         ? startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 })
         : viewMode === "week"
         ? startOfWeek(currentDate, { weekStartsOn: 0 })
-        : currentDate;
+        : startOfDay(currentDate);
 
     const calendarEnd =
       viewMode === "month"
         ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
         : viewMode === "week"
         ? endOfWeek(currentDate, { weekStartsOn: 0 })
-        : currentDate;
+        : endOfDay(currentDate);
 
     return events.filter((event) => {
       try {
@@ -283,11 +297,19 @@ export default function CalendarPage() {
         }}
         className={cn(
           getEventPillClasses(event.color, isCancelled),
-          "w-full text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+          "w-full text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+          !compact && "flex flex-col"
         )}
-        title={`${event.title} - ${event.startTime} to ${event.endTime}`}
+        title={`${event.title} - ${formatTime12h(event.startTime)} to ${formatTime12h(event.endTime)}`}
       >
-        {compact ? event.startTime : `${event.startTime} ${event.title}`}
+        {compact ? (
+          formatTime12h(event.startTime, true)
+        ) : (
+          <>
+            <span className="text-[10px] opacity-75">{formatTime12h(event.startTime, true)}</span>
+            <span className="truncate">{event.title}</span>
+          </>
+        )}
       </button>
     );
   };
@@ -328,7 +350,7 @@ export default function CalendarPage() {
           <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3 shrink-0" />
-              {event.startTime} - {event.endTime}
+              {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
             </span>
             {event.facilityName && (
               <span className="flex items-center gap-1 truncate max-w-[150px]">

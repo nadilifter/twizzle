@@ -106,7 +106,7 @@ export function MonthView() {
               </div>
               <div className="space-y-0.5">
                 {dayEvents.slice(0, 3).map((event) => (
-                  <EventPill key={event.id} event={event} showTime={false} />
+                  <EventPill key={event.id} event={event} showTime={true} />
                 ))}
                 {dayEvents.length > 3 && (
                   <button

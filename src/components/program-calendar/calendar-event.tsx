@@ -11,6 +11,20 @@ import {
 } from "./color-utils";
 import type { CalendarEvent } from "./types";
 
+/**
+ * Convert 24-hour time string to 12-hour AM/PM format
+ * @param time24 - Time in "HH:mm" format (e.g., "14:30")
+ * @param compact - If true, uses compact format "9:30a" instead of "9:30 AM"
+ * @returns Time in AM/PM format
+ */
+function formatTime12h(time24: string, compact: boolean = false): string {
+  const [hoursStr, minutes] = time24.split(":");
+  const hours = parseInt(hoursStr, 10);
+  const period = hours >= 12 ? (compact ? "p" : "PM") : (compact ? "a" : "AM");
+  const hours12 = hours % 12 || 12;
+  return compact ? `${hours12}:${minutes}${period}` : `${hours12}:${minutes} ${period}`;
+}
+
 interface EventPillProps {
   event: CalendarEvent;
   showTime?: boolean;
@@ -33,11 +47,19 @@ export function EventPill({ event, showTime = true, className }: EventPillProps)
       className={cn(
         getEventPillClasses(event.color, isCancelled),
         "w-full text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+        showTime && "flex flex-col",
         className
       )}
-      title={`${event.title} - ${event.startTime} to ${event.endTime}`}
+      title={`${event.title} - ${formatTime12h(event.startTime)} to ${formatTime12h(event.endTime)}`}
     >
-      {showTime ? `${event.startTime} ${event.title}` : event.title}
+      {showTime ? (
+        <>
+          <span className="text-[10px] opacity-75">{formatTime12h(event.startTime, true)}</span>
+          <span className="truncate">{event.title}</span>
+        </>
+      ) : (
+        <span className="truncate">{event.title}</span>
+      )}
     </button>
   );
 }
@@ -92,7 +114,7 @@ export function EventCard({ event, className }: EventCardProps) {
         <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3 shrink-0" />
-            {event.startTime} - {event.endTime}
+            {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
           </span>
           {event.facilityName && (
             <span className="flex items-center gap-1 truncate max-w-[150px]">
@@ -142,7 +164,7 @@ export function EventCompactCard({ event, className }: EventCompactCardProps) {
             {event.title}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            {event.startTime} - {event.endTime}
+            {formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}
           </div>
         </div>
         {event.levelName && (

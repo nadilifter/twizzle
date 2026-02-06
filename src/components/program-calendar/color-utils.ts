@@ -289,7 +289,7 @@ export function getEventPillClasses(
   const colors = getEventColorClasses(hexColor);
   return cn(
     "rounded px-1.5 py-0.5 text-xs font-medium transition-all",
-    "border-l-3 truncate",
+    "border-l-3",
     colors.bg,
     colors.text,
     colors.hover,
