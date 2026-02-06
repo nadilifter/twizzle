@@ -96,7 +96,7 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
 
   return (
     <div className="flex flex-col gap-6 p-4">
-      <Breadcrumb>
+      <Breadcrumb className="hidden md:block">
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>

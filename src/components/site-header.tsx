@@ -13,7 +13,9 @@ export function SiteHeader() {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
-        <DynamicBreadcrumb />
+        <div className="hidden md:block">
+          <DynamicBreadcrumb />
+        </div>
         <div className="ml-auto flex items-center gap-2">
           <SiteHeaderActions />
           <AnimatedThemeToggler />
