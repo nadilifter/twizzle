@@ -7,20 +7,35 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search, Dumbbell, Settings, Loader2, AlertCircle, CalendarDays } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { 
+  Plus, Search, Settings, Loader2, AlertCircle, CalendarDays, 
+  Clock, MapPin, Users, UserCheck, Shield, DollarSign, Repeat, Star, User
+} from "lucide-react"
 import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet"
 import { usePrograms } from "@/hooks/use-programs"
 import { ProgramConfiguration } from "./program-configuration"
+
+function formatPrice(price: number | string | null | undefined): string {
+  if (price === null || price === undefined) return "Free";
+  const numPrice = typeof price === "string" ? parseFloat(price) : price;
+  if (numPrice === 0) return "Free";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(numPrice);
+}
 
 export default function ProgramsPage() {
   const router = useRouter()
@@ -85,7 +100,7 @@ export default function ProgramsPage() {
         </div>
       )}
 
-      {/* Quick Configuration Sheet - kept for advanced settings */}
+      {/* Quick Configuration Sheet */}
       <Sheet open={isConfigOpen} onOpenChange={setIsConfigOpen}>
         <SheetContent className="sm:max-w-2xl p-0">
             {selectedProgram ? (
@@ -103,42 +118,165 @@ export default function ProgramsPage() {
 
       {!isLoading && !error && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {programs.map((program) => (
-            <Card key={program.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle>{program.name}</CardTitle>
+          {programs.map((program) => {
+            const p = program as any;
+            const price = p.basePrice || p.perSessionPrice;
+            const isRecurring = p.recurrenceType === "RECURRING";
+            const levelReqs = p.levelRequirements || [];
+            const staffAssignments = p.staffAssignments || [];
+            const requiredMemberships = p.requiredMemberships || [];
+            const capacity = p.capacity || 0;
+            const enrolled = program._count?.enrollments || 0;
+            const hasCapacity = p.hasCapacityRestriction && capacity > 0;
+            const spotsLeft = hasCapacity ? Math.max(0, capacity - enrolled) : null;
+
+            // Age restriction label
+            const hasAge = p.hasAgeRestriction && (p.minAge !== null || p.maxAge !== null);
+            const ageLabel = hasAge
+              ? p.minAge && p.maxAge
+                ? `Ages ${p.minAge}–${p.maxAge}`
+                : p.minAge
+                ? `Ages ${p.minAge}+`
+                : `Up to age ${p.maxAge}`
+              : null;
+
+            return (
+              <Card key={program.id} className="flex flex-col">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1.5 min-w-0">
+                      <CardTitle className="leading-tight">{program.name}</CardTitle>
+                      {/* Level requirement badges */}
+                      {levelReqs.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {levelReqs.map((lr: any) => (
+                            <Badge 
+                              key={lr.id}
+                              variant="secondary" 
+                              className="text-[10px] px-1.5 py-0"
+                              style={lr.level?.color ? { backgroundColor: `${lr.level.color}15`, color: lr.level.color, borderColor: `${lr.level.color}40` } : undefined}
+                            >
+                              {lr.level?.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge variant={program.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px]">
+                        {program.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant="secondary" className="ml-2 shrink-0">
-                    {program._count.enrollments} Athletes
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <p className="text-sm text-muted-foreground mb-4">
-                  {program.description || "No description provided."}
-                </p>
-                <div className="space-y-2">
-                  <div className="text-sm font-medium flex items-center gap-2">
-                    <Dumbbell className="h-4 w-4" />
-                    Status: <Badge variant="outline">{program.status}</Badge>
+                </CardHeader>
+                <CardContent className="flex-1 pb-3">
+                  {program.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      {program.description}
+                    </p>
+                  )}
+
+                  {/* Info grid */}
+                  <div className="space-y-1.5">
+                    {/* Schedule type + price */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        {isRecurring ? <Repeat className="h-3.5 w-3.5" /> : <CalendarDays className="h-3.5 w-3.5" />}
+                        <span>{isRecurring ? "Recurring" : "Single Session"}</span>
+                        {isRecurring && p.registrationType === "PER_INSTANCE" && (
+                          <span className="text-primary">(Drop-in)</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs font-medium">
+                        <DollarSign className="h-3 w-3 text-muted-foreground" />
+                        <span>{formatPrice(price)}</span>
+                        {price && p.pricingModel === "PER_SESSION" && <span className="text-muted-foreground">/session</span>}
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    {p.facility && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span>{p.facility.name}{p.facility.city && `, ${p.facility.city}`}</span>
+                      </div>
+                    )}
+
+                    {/* Time */}
+                    {p.startTime && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>{p.startTime}{p.duration ? ` (${p.duration} min)` : ""}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t pt-4 gap-2">
-                <Button variant="outline" className="flex-1" asChild>
-                  <Link href={`/dashboard/registrations/programs/${program.id}/sessions`}>
-                    <CalendarDays className="mr-2 h-4 w-4" />
-                    {(program as any).recurrenceType === "NON_RECURRING" ? "View Session" : "View Sessions"}
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleQuickConfigure(program)} title="Configure">
-                    <Settings className="h-4 w-4" />
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+
+                  {/* Tags row: capacity, age, membership */}
+                  {(hasCapacity || ageLabel || requiredMemberships.length > 0) && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {hasCapacity && (
+                        <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded-full">
+                          <Users className="h-3 w-3" />
+                          {spotsLeft !== null ? `${enrolled}/${capacity}` : `${capacity} cap`}
+                        </div>
+                      )}
+                      {ageLabel && (
+                        <div className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded-full">
+                          <UserCheck className="h-3 w-3" />
+                          {ageLabel}
+                        </div>
+                      )}
+                      {requiredMemberships.length > 0 && (
+                        <div className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded-full">
+                          <Shield className="h-3 w-3" />
+                          Membership Req.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Coaches */}
+                  {staffAssignments.length > 0 && (
+                    <div className="mt-3 pt-2.5 border-t flex items-center gap-2">
+                      <div className="flex -space-x-1.5">
+                        {staffAssignments.slice(0, 3).map((sa: any) => (
+                          <Avatar key={sa.id} className="h-6 w-6 border-2 border-background">
+                            <AvatarImage src={sa.staffProfile?.user?.avatar || ""} />
+                            <AvatarFallback className="text-[10px]">
+                              <User className="h-3 w-3" />
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {staffAssignments.slice(0, 2).map((sa: any, i: number) => (
+                          <span key={sa.id}>
+                            {i > 0 && ", "}
+                            {sa.staffProfile?.user?.name}
+                            {sa.isPrimary && <Star className="h-3 w-3 inline ml-0.5 text-amber-500" />}
+                          </span>
+                        ))}
+                        {staffAssignments.length > 2 && (
+                          <span> +{staffAssignments.length - 2}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="border-t pt-3 gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" asChild>
+                    <Link href={`/dashboard/registrations/programs/${program.id}/sessions`}>
+                      <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                      {isRecurring ? "Sessions" : "Session"}
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleQuickConfigure(program)} title="Configure">
+                      <Settings className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
           {programs.length === 0 && (
             <div className="col-span-full text-center py-12 text-muted-foreground">
               No programs found. Create one to get started.

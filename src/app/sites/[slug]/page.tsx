@@ -33,7 +33,20 @@ export default async function SitePage({ params }: { params: { slug: string } })
       status: "ACTIVE",
     },
     include: {
+      facility: {
+        select: { id: true, name: true, city: true, stateProvince: true }
+      },
       bulkDiscounts: true,
+      levelRequirements: {
+        include: {
+          level: {
+            select: { id: true, name: true, color: true },
+          },
+        },
+      },
+      _count: {
+        select: { instances: true, enrollments: true },
+      },
       staffAssignments: {
         where: {
           role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] }, // Only show coaches, not substitutes/volunteers

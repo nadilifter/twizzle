@@ -50,6 +50,13 @@ export default async function ProgramDetailPage({
                 select: { id: true, name: true, city: true, stateProvince: true }
             },
             bulkDiscounts: true,
+            levelRequirements: {
+                include: {
+                    level: {
+                        select: { id: true, name: true, color: true },
+                    },
+                },
+            },
             staffAssignments: {
                 where: {
                     role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
@@ -182,6 +189,18 @@ export default async function ProgramDetailPage({
                                     {ageLabel}
                                 </span>
                             )}
+                            {program.levelRequirements?.map((lr) => (
+                                <span 
+                                    key={lr.id}
+                                    className="text-xs font-medium px-2.5 py-1 rounded-full"
+                                    style={lr.level.color 
+                                        ? { backgroundColor: `${lr.level.color}15`, color: lr.level.color } 
+                                        : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                                    }
+                                >
+                                    {lr.level.name}
+                                </span>
+                            ))}
                         </div>
                         <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
                             {program.name}

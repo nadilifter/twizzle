@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, ShoppingCart, User, AlertCircle, Star, Clock, MapPin, Repeat } from "lucide-react";
+import { CalendarDays, ShoppingCart, User, AlertCircle, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield } from "lucide-react";
 import { useCart } from "@/components/sites/cart-context";
 import { MembershipRequirementDialog } from "@/components/sites/membership-requirement-dialog";
 import { useState } from "react";
@@ -33,6 +33,16 @@ interface RequiredMembership {
   group: {
     id: string;
     name: string;
+  };
+}
+
+interface LevelRequirement {
+  id: string;
+  levelId: string;
+  level: {
+    id: string;
+    name: string;
+    color: string | null;
   };
 }
 
@@ -67,6 +77,7 @@ interface ProgramCardProps {
     description: string | null;
     staffAssignments?: StaffAssignment[];
     requiredMemberships?: RequiredMembership[];
+    levelRequirements?: LevelRequirement[];
     showCoachOnSite?: boolean;
     bulkDiscounts?: BulkDiscount[];
     pricingModel?: string;
@@ -81,8 +92,17 @@ interface ProgramCardProps {
     duration?: number | null;
     facility?: Facility | null;
     instances?: ProgramInstance[];
+    // Capacity & restrictions
+    capacity?: number | null;
+    hasCapacityRestriction?: boolean;
+    hasAgeRestriction?: boolean;
+    minAge?: number | null;
+    maxAge?: number | null;
+    hasLevelRestriction?: boolean;
+    hasMembershipRestriction?: boolean;
     _count?: {
       instances?: number;
+      enrollments?: number;
     };
   };
   primaryColor?: string;
@@ -103,6 +123,7 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   const { addItem } = useCart();
   const staffAssignments = program.staffAssignments || [];
   const requiredMemberships = program.requiredMemberships || [];
+  const levelRequirements = program.levelRequirements || [];
   const bulkDiscounts = program.bulkDiscounts || [];
   
   // Display options default to true for backwards compatibility
@@ -117,6 +138,20 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
     : program.perSessionPrice
     ? (typeof program.perSessionPrice === "string" ? parseFloat(program.perSessionPrice) : program.perSessionPrice)
     : 0;
+
+  // Capacity info
+  const totalCapacity = program.capacity || 0;
+  const enrolled = program._count?.enrollments || 0;
+  const spotsAvailable = program.hasCapacityRestriction && totalCapacity > 0 ? Math.max(0, totalCapacity - enrolled) : null;
+
+  // Age restriction label
+  const ageLabel = program.hasAgeRestriction && (program.minAge !== null || program.maxAge !== null)
+    ? program.minAge && program.maxAge
+      ? `Ages ${program.minAge}–${program.maxAge}`
+      : program.minAge
+      ? `Ages ${program.minAge}+`
+      : `Up to age ${program.maxAge}`
+    : null;
 
   const handleAddToCart = () => {
     // Check if there are required memberships
@@ -176,8 +211,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
     setPendingCartAdd(null);
   };
 
-  const lowestPrice = directPrice;
-
   return (
     <Card className="group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
       <CardHeader className="pb-3">
@@ -185,7 +218,35 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           <h3 className="font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
             {program.name}
           </h3>
+          <div className="flex items-center gap-1">
+            {spotsAvailable !== null && spotsAvailable <= 5 && spotsAvailable > 0 && (
+              <Badge variant="destructive" className="shrink-0 text-[10px] px-1.5 py-0">
+                {spotsAvailable} spot{spotsAvailable !== 1 ? "s" : ""} left
+              </Badge>
+            )}
+            {spotsAvailable === 0 && (
+              <Badge variant="destructive" className="shrink-0 text-[10px] px-1.5 py-0">
+                Full
+              </Badge>
+            )}
+          </div>
         </div>
+        
+        {/* Level requirement badges */}
+        {levelRequirements.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {levelRequirements.map((lr) => (
+              <Badge 
+                key={lr.id}
+                variant="secondary" 
+                className="text-[10px] px-1.5 py-0"
+                style={lr.level.color ? { backgroundColor: `${lr.level.color}15`, color: lr.level.color, borderColor: `${lr.level.color}40` } : undefined}
+              >
+                {lr.level.name}
+              </Badge>
+            ))}
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="flex-1 pb-4">
@@ -197,7 +258,7 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
 
         {/* Schedule & Location Section */}
         {(program.startDate || program.startTime || program.facility || program.duration) && (
-          <div className="mt-4 space-y-2">
+          <div className="mt-3 space-y-1.5">
             {/* Date/Time Row */}
             {program.startDate && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -249,6 +310,30 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
                     <span className="ml-1 text-primary">(drop-in available)</span>
                   )}
                 </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Requirements & Details Chips */}
+        {(ageLabel || (program.hasCapacityRestriction && totalCapacity > 0) || requiredMemberships.length > 0) && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {ageLabel && (
+              <div className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full">
+                <UserCheck className="h-3 w-3" />
+                {ageLabel}
+              </div>
+            )}
+            {program.hasCapacityRestriction && totalCapacity > 0 && (
+              <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">
+                <Users className="h-3 w-3" />
+                {spotsAvailable !== null ? `${spotsAvailable}/${totalCapacity} spots` : `${totalCapacity} spots`}
+              </div>
+            )}
+            {requiredMemberships.length > 0 && (
+              <div className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full">
+                <Shield className="h-3 w-3" />
+                Membership Required
               </div>
             )}
           </div>
@@ -306,37 +391,23 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
             </div>
           </div>
         )}
-
-        {/* Required Memberships Warning */}
-        {requiredMemberships.length > 0 && (
-          <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-md border border-amber-200 dark:border-amber-800">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 shrink-0" />
-              <div className="text-xs">
-                <p className="font-medium text-amber-800 dark:text-amber-200">Membership Required</p>
-                <p className="text-amber-700 dark:text-amber-300">
-                  {requiredMemberships.map(m => m.group.name).join(", ")}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </CardContent>
 
       <CardFooter className="flex flex-col gap-3 border-t bg-muted/30 pt-4">
         <div className="flex items-center justify-between w-full">
             <span className="text-sm font-medium">
-              {lowestPrice === 0 ? "Free Program" : program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee"}
+              {directPrice === 0 ? "Free Program" : program.pricingModel === "PER_SESSION" ? "Per Session" : "Program Fee"}
             </span>
-            <span className="font-bold">{formatPrice(lowestPrice)}</span>
+            <span className="font-bold">{formatPrice(directPrice)}</span>
         </div>
 
         <Button
           onClick={handleAddToCart}
+          disabled={spotsAvailable === 0}
           className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
         >
           <ShoppingCart className="h-4 w-4" />
-          Add to Cart
+          {spotsAvailable === 0 ? "Currently Full" : "Add to Cart"}
         </Button>
       </CardFooter>
       

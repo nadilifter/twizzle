@@ -28,6 +28,16 @@ interface RequiredMembership {
   };
 }
 
+interface LevelRequirement {
+  id: string;
+  levelId: string;
+  level: {
+    id: string;
+    name: string;
+    color: string | null;
+  };
+}
+
 interface BulkDiscount {
   id: string;
   type: "FAMILY_SIBLING" | "MULTI_SESSION";
@@ -43,11 +53,23 @@ interface Program {
   description: string | null;
   staffAssignments?: StaffAssignment[];
   requiredMemberships?: RequiredMembership[];
+  levelRequirements?: LevelRequirement[];
   showCoachOnSite?: boolean;
   bulkDiscounts?: BulkDiscount[];
   pricingModel?: string;
   basePrice?: number | string | null;
   perSessionPrice?: number | string | null;
+  capacity?: number | null;
+  hasCapacityRestriction?: boolean;
+  hasAgeRestriction?: boolean;
+  minAge?: number | null;
+  maxAge?: number | null;
+  hasLevelRestriction?: boolean;
+  hasMembershipRestriction?: boolean;
+  _count?: {
+    instances?: number;
+    enrollments?: number;
+  };
 }
 
 interface ProgramListProps {
