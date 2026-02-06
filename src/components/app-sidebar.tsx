@@ -285,10 +285,6 @@ const data = {
       url: "/dashboard/forms",
       items: [
         {
-          title: "Surveys",
-          url: "/dashboard/forms/surveys",
-        },
-        {
           title: "Waivers",
           url: "/dashboard/forms/waivers",
         },
