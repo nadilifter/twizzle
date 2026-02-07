@@ -228,8 +228,8 @@ export default function EvaluationsPage() {
   // Fetch levels
   const fetchLevels = async () => {
     try {
-      const response = await api.get<{ data: Level[] }>("/api/levels")
-      setLevels(response.data)
+      const response = await api.get<Level[]>("/api/levels")
+      setLevels(response)
     } catch (error) {
       console.error("Error fetching levels:", error)
     }
