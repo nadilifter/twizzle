@@ -166,6 +166,10 @@ const data = {
           title: "Queues",
           url: "/dashboard/registrations/queues",
         },
+        {
+          title: "Waivers",
+          url: "/dashboard/forms/waivers",
+        },
       ],
     },
     {
@@ -280,17 +284,12 @@ const data = {
         },
       ],
     },
+    /*
     {
       title: "Forms",
       url: "/dashboard/forms",
-      items: [
-        {
-          title: "Waivers",
-          url: "/dashboard/forms/waivers",
-        },
-      ],
+      items: [],
     },
-    /*
     {
       title: "Campaigns",
       url: "/campaigns",
