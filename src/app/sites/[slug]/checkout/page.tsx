@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft } from "lucide-react"
+import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User } from "lucide-react"
 import Link from "next/link"
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 import { SignaturePad, SignaturePadRef } from "@/components/ui/signature-pad"
 import { toast } from "sonner"
 import { useRouter, useParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate"
 import { ReservationTimer } from "@/components/sites/reservation-timer"
 import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
@@ -33,8 +34,9 @@ interface WaiverPageData {
 }
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
-  const { items, subtotal, removeItem, clearCart, getDependentItems, removeItemWithDependents } = useCart()
+  const { items, subtotal, removeItem, clearCart, getDependentItems, removeItemWithDependents, getItemsByAthlete } = useCart()
   const router = useRouter()
+  const { data: session } = useSession()
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("details")
   const [formData, setFormData] = useState({
     firstName: "",
@@ -45,6 +47,22 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     city: "",
     postalCode: "",
   })
+
+  // Pre-fill contact info from session when available
+  useEffect(() => {
+    if (session?.user) {
+      setFormData((prev) => {
+        // Only pre-fill empty fields to avoid overwriting user edits
+        const nameParts = (session.user?.name || "").split(" ")
+        return {
+          ...prev,
+          firstName: prev.firstName || nameParts[0] || "",
+          lastName: prev.lastName || nameParts.slice(1).join(" ") || "",
+          email: prev.email || session.user?.email || "",
+        }
+      })
+    }
+  }, [session])
   const [discountCode, setDiscountCode] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(null)
@@ -588,23 +606,36 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                {items.map((item) => (
-                  <div key={item.id} className="flex justify-between gap-4 text-sm">
-                    <div className="flex-1">
-                        <span className="font-medium">{item.name}</span>
-                        <div className="text-xs text-muted-foreground mt-1">
-                            Qty: {item.quantity} 
-                            {checkoutStep === "details" && (
-                                <button 
-                                    onClick={() => handleRemoveClick(item)}
-                                    className="ml-2 text-destructive hover:underline"
-                                >
-                                    Remove
-                                </button>
-                            )}
-                        </div>
+                {Array.from(getItemsByAthlete().entries()).map(([athleteId, { athleteName, items: athleteItems }]) => (
+                  <div key={athleteId}>
+                    {/* Athlete section header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary">
+                        <User className="h-3 w-3" />
+                      </div>
+                      <span className="text-xs font-semibold text-foreground">{athleteName}</span>
                     </div>
-                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    <div className="space-y-2 pl-2 mb-3">
+                      {athleteItems.map((item) => (
+                        <div key={item.id} className="flex justify-between gap-4 text-sm">
+                          <div className="flex-1">
+                            <span className="font-medium">{item.name}</span>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Qty: {item.quantity}
+                              {checkoutStep === "details" && (
+                                <button
+                                  onClick={() => handleRemoveClick(item)}
+                                  className="ml-2 text-destructive hover:underline"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <span>${(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -11,8 +11,12 @@ export type CartItem = {
   description?: string
   price: number
   quantity: number
-  details?: Record<string, any> // Additional details like size, color, athleteId, requiredMemberships, etc.
+  athleteId: string // ID of the athlete this item is for
+  athleteName: string // Display name of the athlete
+  details?: Record<string, any> // Additional details like size, color, requiredMemberships, etc.
 }
+
+export type CartItemsByAthlete = Map<string, { athleteName: string; items: CartItem[] }>
 
 interface CartContextType {
   items: CartItem[]
@@ -26,6 +30,7 @@ interface CartContextType {
   totalItems: number
   getDependentItems: (id: string) => CartItem[]
   removeItemWithDependents: (id: string) => void
+  getItemsByAthlete: () => CartItemsByAthlete
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -57,9 +62,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = (item: Omit<CartItem, "id">) => {
     setItems((prev) => {
-      // Check if item already exists with same referenceId and details
+      // Check if item already exists with same referenceId, athleteId, and details
       const existingItemIndex = prev.findIndex(
-        (i) => i.referenceId === item.referenceId && JSON.stringify(i.details) === JSON.stringify(item.details)
+        (i) => i.referenceId === item.referenceId && i.athleteId === item.athleteId && JSON.stringify(i.details) === JSON.stringify(item.details)
       )
 
       if (existingItemIndex > -1) {
@@ -128,6 +133,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const getItemsByAthlete = (): CartItemsByAthlete => {
+    const grouped = new Map<string, { athleteName: string; items: CartItem[] }>()
+    for (const item of items) {
+      const key = item.athleteId
+      if (!grouped.has(key)) {
+        grouped.set(key, { athleteName: item.athleteName, items: [] })
+      }
+      grouped.get(key)!.items.push(item)
+    }
+    return grouped
+  }
+
   const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0)
   const totalItems = items.reduce((total, item) => total + item.quantity, 0)
 
@@ -145,6 +162,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         totalItems,
         getDependentItems,
         removeItemWithDependents,
+        getItemsByAthlete,
       }}
     >
       {children}

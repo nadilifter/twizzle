@@ -7,7 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarDays, ShoppingCart, User, AlertCircle, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield } from "lucide-react";
 import { useCart } from "@/components/sites/cart-context";
 import { MembershipRequirementDialog } from "@/components/sites/membership-requirement-dialog";
+import { AthleteSelectionDialog } from "@/components/sites/athlete-selection-dialog";
 import { useState } from "react";
+import { useSession, signIn } from "next-auth/react";
+import { useParams } from "next/navigation";
 import { format } from "date-fns";
 
 interface StaffAssignment {
@@ -121,6 +124,9 @@ function formatPrice(price: number | string): string {
 
 export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   const { addItem } = useCart();
+  const { data: session } = useSession();
+  const params = useParams();
+  const slug = (params?.slug as string) || "";
   const staffAssignments = program.staffAssignments || [];
   const requiredMemberships = program.requiredMemberships || [];
   const levelRequirements = program.levelRequirements || [];
@@ -130,7 +136,10 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   const showCoach = program.showCoachOnSite !== false;
   
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
+  const [showAthleteDialog, setShowAthleteDialog] = useState(false);
   const [pendingCartAdd, setPendingCartAdd] = useState<{ direct?: boolean } | null>(null);
+  // Stores the selected athlete for the pending add-to-cart operation
+  const [selectedAthlete, setSelectedAthlete] = useState<{ id: string; name: string } | null>(null);
 
   // Get the program's direct price - defaults to 0 (free) if no price is set
   const directPrice = program.basePrice 
@@ -154,6 +163,20 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
     : null;
 
   const handleAddToCart = () => {
+    // Require sign-in before adding to cart
+    if (!session?.user) {
+      signIn(undefined, { callbackUrl: window.location.href });
+      return;
+    }
+
+    // Show athlete selection dialog
+    setShowAthleteDialog(true);
+  };
+
+  const handleAthleteSelected = (athlete: { id: string; name: string }) => {
+    setSelectedAthlete(athlete);
+    setShowAthleteDialog(false);
+
     // Check if there are required memberships
     if (requiredMemberships.length > 0) {
       setPendingCartAdd({ direct: true });
@@ -161,10 +184,17 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
       return;
     }
 
-    addProgramDirectly();
+    addProgramForAthlete(athlete);
   };
 
   const addProgramDirectly = () => {
+    // Fallback: use selectedAthlete if available
+    if (selectedAthlete) {
+      addProgramForAthlete(selectedAthlete);
+    }
+  };
+
+  const addProgramForAthlete = (athlete: { id: string; name: string }) => {
     addItem({
       referenceId: program.id,
       type: "program",
@@ -172,6 +202,8 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
       description: program.description || undefined,
       price: directPrice,
       quantity: 1,
+      athleteId: athlete.id,
+      athleteName: athlete.name,
       details: {
         programId: program.id,
         pricingModel: program.pricingModel,
@@ -183,9 +215,12 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
   const handleMembershipDialogCancel = () => {
     setShowMembershipDialog(false);
     setPendingCartAdd(null);
+    setSelectedAthlete(null);
   };
 
   const handleAddMembership = (membership: RequiredMembership) => {
+    if (!selectedAthlete) return;
+
     // Add the membership to cart
     addItem({
       referenceId: membership.id,
@@ -194,6 +229,8 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
       description: `${membership.group.name} Membership`,
       price: typeof membership.price === "string" ? parseFloat(membership.price) : membership.price,
       quantity: 1,
+      athleteId: selectedAthlete.id,
+      athleteName: selectedAthlete.name,
       details: {
         membershipInstanceId: membership.id,
         groupId: membership.group.id,
@@ -204,11 +241,12 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
 
     // Also add the program if there was a pending add
     if (pendingCartAdd?.direct) {
-      addProgramDirectly();
+      addProgramForAthlete(selectedAthlete);
     }
 
     setShowMembershipDialog(false);
     setPendingCartAdd(null);
+    setSelectedAthlete(null);
   };
 
   return (
@@ -411,6 +449,14 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
         </Button>
       </CardFooter>
       
+      {/* Athlete Selection Dialog */}
+      <AthleteSelectionDialog
+        open={showAthleteDialog}
+        onOpenChange={setShowAthleteDialog}
+        onAthleteSelected={handleAthleteSelected}
+        slug={slug}
+      />
+
       {/* Membership Requirement Dialog */}
       <MembershipRequirementDialog
         open={showMembershipDialog}

@@ -326,13 +326,16 @@ model Family {
 
 model Athlete {
   id        String        @id @default(cuid())
-  name      String
+  name      String // Deprecated: use firstName + lastName
+  firstName String        @default("")
+  lastName  String        @default("")
   email     String?
   level     String
   group     String
   status    AthleteStatus @default(ACTIVE)
   avatar    String?
   birthDate DateTime?
+  gender    GenderDeclaration?
   familyId  String? // Deprecated: Use guardians relation
 
   // New fields for refactor
@@ -386,6 +389,13 @@ enum AthleteStatus {
   INACTIVE
   TRIAL
   GRADUATED
+}
+
+enum GenderDeclaration {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
 }
 
 // ============================================

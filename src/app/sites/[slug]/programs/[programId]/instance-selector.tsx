@@ -6,6 +6,8 @@ import { useCart } from "@/components/sites/cart-context";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, Clock, MapPin, ShoppingCart } from "lucide-react";
+import { useSession, signIn } from "next-auth/react";
+import { AthleteSelectionDialog } from "@/components/sites/athlete-selection-dialog";
 
 interface Instance {
     id: string;
@@ -37,6 +39,8 @@ export function ProgramInstanceSelector({
 }: ProgramInstanceSelectorProps) {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const { addItem, setIsOpen } = useCart();
+    const { data: session } = useSession();
+    const [showAthleteDialog, setShowAthleteDialog] = useState(false);
 
     // Pre-select the highlighted instance on mount
     useEffect(() => {
@@ -73,16 +77,30 @@ export function ProgramInstanceSelector({
     };
 
     const addToCart = () => {
+        // Require sign-in before adding to cart
+        if (!session?.user) {
+            signIn(undefined, { callbackUrl: window.location.href });
+            return;
+        }
+
+        // Show athlete selection dialog
+        setShowAthleteDialog(true);
+    };
+
+    const handleAthleteSelected = (athlete: { id: string; name: string }) => {
+        setShowAthleteDialog(false);
         const selectedInstances = instances.filter(i => selectedIds.has(i.id));
         
         selectedInstances.forEach(instance => {
             addItem({
                 referenceId: instance.id,
-                type: "program-instance",
+                type: "program" as const,
                 name: `${program.name} - ${format(new Date(instance.date), "MMM d, yyyy")}`,
                 description: `${instance.startTime} - ${instance.endTime}`,
                 price: program.perSessionPrice || 0,
                 quantity: 1,
+                athleteId: athlete.id,
+                athleteName: athlete.name,
                 details: {
                     programId: program.id,
                     instanceId: instance.id,
@@ -219,6 +237,14 @@ export function ProgramInstanceSelector({
                     No upcoming sessions available for this program.
                 </div>
             )}
+
+            {/* Athlete Selection Dialog */}
+            <AthleteSelectionDialog
+                open={showAthleteDialog}
+                onOpenChange={setShowAthleteDialog}
+                onAthleteSelected={handleAthleteSelected}
+                slug={subdomain}
+            />
         </div>
     );
 }
