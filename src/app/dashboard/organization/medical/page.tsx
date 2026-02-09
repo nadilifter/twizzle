@@ -532,31 +532,6 @@ export default function MedicalSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Registration Integration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Registration Integration</CardTitle>
-          <CardDescription>
-            Configure when to collect medical information
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Require During Registration</Label>
-              <p className="text-sm text-muted-foreground">
-                Prompt for medical information during the program registration process
-              </p>
-            </div>
-            <Switch
-              checked={config?.requireDuringRegistration === true}
-              onCheckedChange={(checked) => handleConfigChange("requireDuringRegistration", checked)}
-              disabled={configSaving}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Custom Questions */}
       <Card>
         <CardHeader>
