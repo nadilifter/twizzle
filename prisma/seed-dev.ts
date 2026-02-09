@@ -2779,7 +2779,6 @@ async function main() {
         collectEmergencyContact: true,
         collectDietaryRestrictions: true,
         collectInsuranceInfo: false,
-        requireDuringRegistration: true,
       },
     }),
     prisma.medicalFormConfig.upsert({
@@ -2793,7 +2792,6 @@ async function main() {
         collectEmergencyContact: true,
         collectDietaryRestrictions: false,
         collectInsuranceInfo: true,
-        requireDuringRegistration: false,
       },
     }),
   ]);

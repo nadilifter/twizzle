@@ -27,6 +27,7 @@ import {
   CalendarDays,
   Info,
   FileText,
+  Heart,
 } from "lucide-react"
 import { toast } from "sonner"
 import { usePrograms } from "@/hooks/use-programs"
@@ -137,6 +138,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     membershipRequirementIds: (program.requiredMemberships?.map((m: any) => m.id) || []) as string[],
     hasWaiverRestriction: (program as any).hasWaiverRestriction || false,
     waiverRequirementIds: ((program as any).waiverRequirements?.map((wr: any) => wr.waiverId) || []) as string[],
+    hasMedicalRequirement: (program as any).hasMedicalRequirement || false,
 
     // Staff
     staffAssignments: (program.staffAssignments?.map((sa: any) => ({
@@ -409,6 +411,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
         waiverRequirementIds: formData.hasWaiverRestriction
           ? formData.waiverRequirementIds
           : [],
+        hasMedicalRequirement: formData.hasMedicalRequirement,
       } as any)
       toast.success("Requirements saved")
       fetchPrograms()
@@ -1171,6 +1174,41 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* Medical Information Requirement */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Medical Information Requirement</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require athletes to provide medical information during checkout
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasMedicalRequirement}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasMedicalRequirement: checked,
+                    }))
+                  }
+                />
+              </div>
+
+              {formData.hasMedicalRequirement && (
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Heart className="h-4 w-4" />
+                    <span>
+                      Medical information categories are configured in your{" "}
+                      <a href="/dashboard/organization/medical" className="text-primary underline">
+                        Medical Information Settings
+                      </a>.
+                    </span>
+                  </div>
                 </div>
               )}
             </div>

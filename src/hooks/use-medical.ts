@@ -311,3 +311,106 @@ export function useAthleteMedicalInfo(athleteId: string | null): UseAthleteMedic
     clearError,
   };
 }
+
+// ============================================
+// Public Medical Info Hook (for checkout flow)
+// ============================================
+
+interface UsePublicAthleteMedicalInfoReturn {
+  medicalInfo: AthleteMedicalInfoWithResponses | null;
+  isLoading: boolean;
+  isSaving: boolean;
+  error: string | null;
+  fetchMedicalInfo: () => Promise<void>;
+  saveMedicalInfo: (data: UpsertAthleteMedicalInfoPayload) => Promise<boolean>;
+  clearError: () => void;
+}
+
+export function usePublicAthleteMedicalInfo(
+  athleteId: string | null,
+  organizationId: string | null,
+  email: string | null
+): UsePublicAthleteMedicalInfoReturn {
+  const [medicalInfo, setMedicalInfo] = useState<AthleteMedicalInfoWithResponses | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMedicalInfo = useCallback(async () => {
+    if (!athleteId || !organizationId || !email) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/public/athletes/${athleteId}/medical?organizationId=${organizationId}&email=${encodeURIComponent(email)}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch medical info");
+      }
+
+      const data = await response.json();
+      setMedicalInfo(data.medicalInfo?.id ? data.medicalInfo : null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch medical info";
+      setError(message);
+      console.error("Error fetching public medical info:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [athleteId, organizationId, email]);
+
+  const saveMedicalInfo = useCallback(async (data: UpsertAthleteMedicalInfoPayload): Promise<boolean> => {
+    if (!athleteId || !organizationId || !email) return false;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/public/athletes/${athleteId}/medical`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          organizationId,
+          email,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save medical info");
+      }
+
+      const result = await response.json();
+      setMedicalInfo(result.medicalInfo);
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save medical info";
+      setError(message);
+      console.error("Error saving public medical info:", err);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [athleteId, organizationId, email]);
+
+  const clearError = useCallback(() => setError(null), []);
+
+  useEffect(() => {
+    if (athleteId && organizationId && email) {
+      fetchMedicalInfo();
+    }
+  }, [athleteId, organizationId, email, fetchMedicalInfo]);
+
+  return {
+    medicalInfo,
+    isLoading,
+    isSaving,
+    error,
+    fetchMedicalInfo,
+    saveMedicalInfo,
+    clearError,
+  };
+}

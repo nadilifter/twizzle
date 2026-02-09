@@ -367,6 +367,10 @@ model Athlete {
   // Program instance registrations & attendance
   instanceRegistrations InstanceRegistration[]
   instanceAttendances   InstanceAttendance[]
+
+  // Waiver signatures & acceptances per athlete
+  waiverSignatures  WaiverSignature[]
+  waiverAcceptances WaiverAcceptance[]
 }
 
 model AthleteGuardian {
@@ -422,9 +426,6 @@ model MedicalFormConfig {
   collectEmergencyContact    Boolean @default(true)
   collectDietaryRestrictions Boolean @default(false)
   collectInsuranceInfo       Boolean @default(false)
-
-  // Registration integration
-  requireDuringRegistration Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -602,6 +603,7 @@ model Program {
   hasAgeRestriction        Boolean @default(false)
   hasMembershipRestriction Boolean @default(false)
   hasWaiverRestriction     Boolean @default(false)
+  hasMedicalRequirement    Boolean @default(false)
 
   // Relations
   organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -3106,6 +3108,7 @@ model WaiverSignature {
   waiverId      String
   waiverPageId  String
   familyId      String
+  athleteId     String?  // The athlete this signature is for (waivers are per-athlete)
   signatureData String   @db.Text // Base64 PNG from signature canvas
   signedByName  String // Full name of signer
   signedByEmail String // Email of signer
@@ -3117,11 +3120,13 @@ model WaiverSignature {
   waiver     Waiver     @relation(fields: [waiverId], references: [id], onDelete: Cascade)
   waiverPage WaiverPage @relation(fields: [waiverPageId], references: [id], onDelete: Cascade)
   family     Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  athlete    Athlete?   @relation(fields: [athleteId], references: [id], onDelete: SetNull)
 
-  @@unique([waiverPageId, familyId]) // One signature per page per family
+  @@unique([waiverPageId, familyId, athleteId]) // One signature per page per family per athlete
   @@index([waiverId])
   @@index([waiverPageId])
   @@index([familyId])
+  @@index([athleteId])
 }
 
 // WaiverAcceptance - rolled-up record: family has fully signed all pages of a waiver
@@ -3130,13 +3135,16 @@ model WaiverAcceptance {
   id          String   @id @default(cuid())
   waiverId    String
   familyId    String
+  athleteId   String?  // The athlete this acceptance is for (waivers are per-athlete)
   completedAt DateTime @default(now())
 
   // Relations
-  waiver Waiver @relation(fields: [waiverId], references: [id], onDelete: Cascade)
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  waiver  Waiver   @relation(fields: [waiverId], references: [id], onDelete: Cascade)
+  family  Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  athlete Athlete? @relation(fields: [athleteId], references: [id], onDelete: SetNull)
 
-  @@unique([waiverId, familyId]) // One acceptance per waiver per family
+  @@unique([waiverId, familyId, athleteId]) // One acceptance per waiver per family per athlete
   @@index([waiverId])
   @@index([familyId])
+  @@index([athleteId])
 }

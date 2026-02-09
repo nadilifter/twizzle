@@ -42,6 +42,7 @@ import {
   Repeat,
   CalendarDays,
   FileText,
+  Heart,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useStaff } from "@/hooks/use-staff"
@@ -120,6 +121,7 @@ interface ProgramFormData {
   membershipRequirementIds: string[]
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
+  hasMedicalRequirement: boolean
   
   // Step 4: Staff
   staffAssignments: StaffAssignment[]
@@ -193,6 +195,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     membershipRequirementIds: program?.requiredMemberships?.map(m => m.id) || [],
     hasWaiverRestriction: (program as any)?.hasWaiverRestriction || false,
     waiverRequirementIds: (program as any)?.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
+    hasMedicalRequirement: program?.hasMedicalRequirement || false,
     
     // Step 4: Staff
     staffAssignments: program?.staffAssignments?.map(sa => ({
@@ -399,6 +402,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         hasAgeRestriction: formData.hasAgeRestriction,
         hasMembershipRestriction: formData.hasMembershipRestriction,
         hasWaiverRestriction: formData.hasWaiverRestriction,
+        hasMedicalRequirement: formData.hasMedicalRequirement,
         capacity: formData.hasCapacityRestriction ? formData.capacity : null,
         minAge: formData.hasAgeRestriction ? formData.minAge : null,
         maxAge: formData.hasAgeRestriction ? formData.maxAge : null,
@@ -1253,6 +1257,39 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Medical Information Requirement */}
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Medical Information Requirement</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Require athletes to provide medical information during checkout
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.hasMedicalRequirement}
+                    onCheckedChange={checked => setFormData(prev => ({
+                      ...prev,
+                      hasMedicalRequirement: checked,
+                    }))}
+                  />
+                </div>
+
+                {formData.hasMedicalRequirement && (
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Heart className="h-4 w-4" />
+                      <span>
+                        Medical information categories are configured in your{" "}
+                        <a href="/dashboard/organization/medical" className="text-primary underline">
+                          Medical Information Settings
+                        </a>.
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>

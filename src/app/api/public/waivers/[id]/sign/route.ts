@@ -5,6 +5,7 @@ import { z } from "zod";
 const publicSignWaiverSchema = z.object({
   organizationId: z.string().min(1),
   familyId: z.string().nullish(), // May not exist yet - null from check endpoint, undefined if omitted
+  athleteId: z.string().nullish(), // The athlete this waiver is being signed for
   email: z.string().email(),
   name: z.string().min(1, "Signer name is required"),
   signatures: z.array(z.object({
@@ -77,57 +78,75 @@ export async function POST(
       request.headers.get("x-real-ip") || null;
     const userAgent = request.headers.get("user-agent") || null;
 
+    const athleteId = validatedData.athleteId || null;
+
     const result = await db.$transaction(async (tx) => {
-      // Create signature records
+      // Create signature records per athlete
       for (const sig of validatedData.signatures) {
-        await tx.waiverSignature.upsert({
+        // Check for existing signature for this page + family + athlete
+        const existing = await tx.waiverSignature.findFirst({
           where: {
-            waiverPageId_familyId: {
-              waiverPageId: sig.waiverPageId,
-              familyId,
-            },
-          },
-          update: {
-            signatureData: sig.signatureData,
-            signedByName: validatedData.name,
-            signedByEmail: validatedData.email,
-            ipAddress,
-            userAgent,
-            signedAt: new Date(),
-          },
-          create: {
-            waiverId,
             waiverPageId: sig.waiverPageId,
             familyId,
-            signatureData: sig.signatureData,
-            signedByName: validatedData.name,
-            signedByEmail: validatedData.email,
-            ipAddress,
-            userAgent,
+            athleteId,
           },
         });
+
+        if (existing) {
+          await tx.waiverSignature.update({
+            where: { id: existing.id },
+            data: {
+              signatureData: sig.signatureData,
+              signedByName: validatedData.name,
+              signedByEmail: validatedData.email,
+              ipAddress,
+              userAgent,
+              signedAt: new Date(),
+            },
+          });
+        } else {
+          await tx.waiverSignature.create({
+            data: {
+              waiverId,
+              waiverPageId: sig.waiverPageId,
+              familyId,
+              athleteId,
+              signatureData: sig.signatureData,
+              signedByName: validatedData.name,
+              signedByEmail: validatedData.email,
+              ipAddress,
+              userAgent,
+            },
+          });
+        }
       }
 
-      // Check if ALL pages signed
+      // Check if ALL pages signed for this athlete
       const totalPages = waiver.pages.length;
       const signedPages = await tx.waiverSignature.count({
         where: {
           waiverId,
           familyId,
+          athleteId,
         },
       });
 
       if (signedPages >= totalPages) {
-        await tx.waiverAcceptance.upsert({
-          where: {
-            waiverId_familyId: {
-              waiverId,
-              familyId,
-            },
-          },
-          update: { completedAt: new Date() },
-          create: { waiverId, familyId },
+        // Check for existing acceptance
+        const existingAcceptance = await tx.waiverAcceptance.findFirst({
+          where: { waiverId, familyId, athleteId },
         });
+
+        if (existingAcceptance) {
+          await tx.waiverAcceptance.update({
+            where: { id: existingAcceptance.id },
+            data: { completedAt: new Date() },
+          });
+        } else {
+          await tx.waiverAcceptance.create({
+            data: { waiverId, familyId, athleteId },
+          });
+        }
 
         return { allPagesSigned: true, familyId };
       }

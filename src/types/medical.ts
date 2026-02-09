@@ -16,7 +16,6 @@ export interface MedicalFormConfig {
   collectEmergencyContact: boolean;
   collectDietaryRestrictions: boolean;
   collectInsuranceInfo: boolean;
-  requireDuringRegistration: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -28,7 +27,6 @@ export interface UpdateMedicalFormConfigPayload {
   collectEmergencyContact?: boolean;
   collectDietaryRestrictions?: boolean;
   collectInsuranceInfo?: boolean;
-  requireDuringRegistration?: boolean;
 }
 
 // ============================================

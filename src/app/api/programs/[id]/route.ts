@@ -32,6 +32,7 @@ const updateProgramSchema = z.object({
   hasAgeRestriction: z.boolean().optional(),
   hasMembershipRestriction: z.boolean().optional(),
   hasWaiverRestriction: z.boolean().optional(),
+  hasMedicalRequirement: z.boolean().optional(),
   // Related data for updates
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
@@ -282,6 +283,7 @@ export async function PATCH(
       if (validatedData.hasAgeRestriction !== undefined) updateData.hasAgeRestriction = validatedData.hasAgeRestriction;
       if (validatedData.hasMembershipRestriction !== undefined) updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
       if (validatedData.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = validatedData.hasWaiverRestriction;
+      if (validatedData.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
 
       // Update the program
       const updatedProgram = await tx.program.update({

@@ -9,6 +9,8 @@ interface CartItem {
   description?: string;
   price: number;
   quantity: number;
+  athleteId?: string;
+  athleteName?: string;
   details?: {
     programId?: string;
     membershipInstanceId?: string;
@@ -44,10 +46,11 @@ export async function POST(
 
     const organizationId = config.organizationId;
 
-    // 2. Server-side waiver verification
-    // Check that all required waivers for cart programs are signed
+    // 2. Server-side waiver verification (per-athlete)
+    // Each athlete in the cart needs waivers signed specifically for them
     const programItems = items.filter((item: CartItem) => item.type === "program");
     if (programItems.length > 0) {
+      // Build a map of programId -> required waiver IDs
       const programIds = programItems
         .map((item: CartItem) => item.details?.programId || item.referenceId)
         .filter(Boolean);
@@ -57,42 +60,108 @@ export async function POST(
           programId: { in: programIds },
           waiver: { organizationId, status: "ACTIVE" },
         },
-        select: { waiverId: true },
+        select: { waiverId: true, programId: true },
       });
 
-      const requiredWaiverIds = [...new Set(waiverRequirements.map((r) => r.waiverId))];
+      // Map each program to its required waiver IDs
+      const programWaiverMap: Record<string, string[]> = {};
+      waiverRequirements.forEach((r) => {
+        if (!programWaiverMap[r.programId]) programWaiverMap[r.programId] = [];
+        if (!programWaiverMap[r.programId].includes(r.waiverId)) {
+          programWaiverMap[r.programId].push(r.waiverId);
+        }
+      });
 
-      if (requiredWaiverIds.length > 0) {
-        // Find or check family by email
-        const checkFamily = await db.family.findFirst({
-          where: { email: userDetails.email, organizationId },
-          select: { id: true },
+      // Find family by email
+      const checkFamily = await db.family.findFirst({
+        where: { email: userDetails.email, organizationId },
+        select: { id: true },
+      });
+
+      // Check each athlete's waivers individually
+      for (const item of programItems) {
+        const pId = item.details?.programId || item.referenceId;
+        const athleteId = item.athleteId || item.details?.athleteId;
+        const requiredWaiverIds = programWaiverMap[pId] || [];
+
+        if (requiredWaiverIds.length === 0) continue;
+
+        if (!checkFamily) {
+          return NextResponse.json(
+            { error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.` },
+            { status: 400 }
+          );
+        }
+
+        // Check acceptances for this specific athlete
+        const acceptances = await db.waiverAcceptance.findMany({
+          where: {
+            familyId: checkFamily.id,
+            waiverId: { in: requiredWaiverIds },
+            athleteId: athleteId || null,
+          },
+          select: { waiverId: true },
         });
 
-        if (checkFamily) {
-          const acceptances = await db.waiverAcceptance.findMany({
+        const signedIds = new Set(acceptances.map((a) => a.waiverId));
+        const unsignedWaivers = requiredWaiverIds.filter((id) => !signedIds.has(id));
+
+        if (unsignedWaivers.length > 0) {
+          return NextResponse.json(
+            { error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // 2b. Server-side medical info verification
+    // Check that all athletes in programs requiring medical info have completed it
+    if (programItems.length > 0) {
+      const programIds = programItems
+        .map((item: CartItem) => item.details?.programId || item.referenceId)
+        .filter(Boolean);
+
+      const programsWithMedical = await db.program.findMany({
+        where: {
+          id: { in: programIds },
+          organizationId,
+          hasMedicalRequirement: true,
+        },
+        select: { id: true },
+      });
+
+      if (programsWithMedical.length > 0) {
+        // Collect unique athlete IDs from program items whose programs require medical
+        const medicalProgramIds = new Set(programsWithMedical.map((p) => p.id));
+        const athleteIds = [...new Set(
+          programItems
+            .filter((item: CartItem) => {
+              const pid = item.details?.programId || item.referenceId;
+              return pid && medicalProgramIds.has(pid);
+            })
+            .map((item: CartItem) => item.athleteId || item.details?.athleteId)
+            .filter(Boolean) as string[]
+        )];
+
+        if (athleteIds.length > 0) {
+          // Check that each athlete has medical info
+          const medicalInfoRecords = await db.athleteMedicalInfo.findMany({
             where: {
-              familyId: checkFamily.id,
-              waiverId: { in: requiredWaiverIds },
+              athleteId: { in: athleteIds },
             },
-            select: { waiverId: true },
+            select: { athleteId: true },
           });
 
-          const signedIds = new Set(acceptances.map((a) => a.waiverId));
-          const unsignedWaivers = requiredWaiverIds.filter((id) => !signedIds.has(id));
+          const athletesWithMedical = new Set(medicalInfoRecords.map((r) => r.athleteId));
+          const athletesMissing = athleteIds.filter((id) => !athletesWithMedical.has(id));
 
-          if (unsignedWaivers.length > 0) {
+          if (athletesMissing.length > 0) {
             return NextResponse.json(
-              { error: "Required waivers have not been signed. Please sign all waivers before proceeding to payment." },
+              { error: "Medical information is required for all athletes. Please complete the medical information forms before proceeding to payment." },
               { status: 400 }
             );
           }
-        } else {
-          // No family exists yet, so waivers definitely haven't been signed
-          return NextResponse.json(
-            { error: "Required waivers have not been signed. Please sign all waivers before proceeding to payment." },
-            { status: 400 }
-          );
         }
       }
     }

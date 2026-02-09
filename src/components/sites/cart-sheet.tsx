@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Minus, Plus, ShoppingCart, Trash2, User } from "lucide-react"
+import { Minus, Plus, ShoppingCart, Trash2, User, Info } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -156,6 +156,12 @@ export function CartSheet() {
               <span>Subtotal</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
+            {items.some((item) => item.type === "program") && (
+              <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>Some programs may require waivers or medical information during checkout.</span>
+              </div>
+            )}
             <SheetFooter>
                 <Button className="w-full" asChild onClick={() => setIsOpen(false)}>
                   <Link href={slug ? `/sites/${slug}/checkout` : '/checkout'}>

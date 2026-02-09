@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, waiverIds, organizationId } = body;
+    const { email, waiverIds, organizationId, athleteId } = body;
 
     if (!email || !waiverIds?.length || !organizationId) {
       return NextResponse.json(
@@ -47,11 +47,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check acceptances
+    // Check acceptances — per athlete if athleteId is provided
     const acceptances = await db.waiverAcceptance.findMany({
       where: {
         familyId: family.id,
         waiverId: { in: waiverIds },
+        ...(athleteId ? { athleteId } : {}),
       },
       select: { waiverId: true },
     });

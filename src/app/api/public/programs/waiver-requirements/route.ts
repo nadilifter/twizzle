@@ -29,13 +29,25 @@ export async function GET(request: NextRequest) {
       },
       select: {
         waiverId: true,
+        programId: true,
       },
+    });
+
+    // Build per-program waiver map
+    const programWaiverMap: Record<string, string[]> = {};
+    requirements.forEach((r) => {
+      if (!programWaiverMap[r.programId]) {
+        programWaiverMap[r.programId] = [];
+      }
+      if (!programWaiverMap[r.programId].includes(r.waiverId)) {
+        programWaiverMap[r.programId].push(r.waiverId);
+      }
     });
 
     // Deduplicate waiver IDs
     const waiverIds = [...new Set(requirements.map((r) => r.waiverId))];
 
-    return NextResponse.json({ waiverIds });
+    return NextResponse.json({ waiverIds, programWaiverMap });
   } catch (error) {
     console.error("Error fetching waiver requirements:", error);
     return NextResponse.json(

@@ -91,6 +91,7 @@ export interface Program {
   hasAgeRestriction: boolean;
   hasMembershipRestriction: boolean;
   hasWaiverRestriction: boolean;
+  hasMedicalRequirement: boolean;
 }
 
 // Program Instance - individual occurrences of a program
@@ -188,6 +189,7 @@ export interface CreateProgramPayload {
   hasAgeRestriction?: boolean;
   hasMembershipRestriction?: boolean;
   hasWaiverRestriction?: boolean;
+  hasMedicalRequirement?: boolean;
   // For staff assignments during creation
   staffAssignments?: Array<{
     staffProfileId: string;
@@ -226,6 +228,7 @@ export interface UpdateProgramPayload {
   hasAgeRestriction?: boolean;
   hasMembershipRestriction?: boolean;
   hasWaiverRestriction?: boolean;
+  hasMedicalRequirement?: boolean;
   // For staff assignments
   staffAssignments?: Array<{
     staffProfileId: string;

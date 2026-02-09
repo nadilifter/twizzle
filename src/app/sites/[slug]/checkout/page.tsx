@@ -7,18 +7,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User } from "lucide-react"
+import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 import { SignaturePad, SignaturePadRef } from "@/components/ui/signature-pad"
+import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
 import { toast } from "sonner"
 import { useRouter, useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate"
 import { ReservationTimer } from "@/components/sites/reservation-timer"
 import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
+import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
 
-type CheckoutStep = "details" | "waivers" | "payment"
+type CheckoutStep = "details" | "waivers" | "medical" | "payment"
 
 interface WaiverToSign {
   waiverId: string
@@ -31,6 +33,13 @@ interface WaiverPageData {
   pageNumber: number
   title: string | null
   content: string
+}
+
+interface AthleteRequirements {
+  athleteId: string
+  athleteName: string
+  requiredWaiverIds: string[]
+  needsMedical: boolean
 }
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
@@ -80,6 +89,20 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const signaturePadRef = useRef<SignaturePadRef>(null)
   const [signatureEmpty, setSignatureEmpty] = useState(true)
 
+  // Medical state
+  const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null)
+  const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([])
+
+  // Per-athlete requirements flow
+  const [athleteQueue, setAthleteQueue] = useState<AthleteRequirements[]>([])
+  const [currentAthleteIndex, setCurrentAthleteIndex] = useState(0)
+  const [athleteWaiverComplete, setAthleteWaiverComplete] = useState<Set<string>>(new Set())
+  const [athleteMedicalComplete, setAthleteMedicalComplete] = useState<Set<string>>(new Set())
+  // Track signed waivers per athlete: Map<athleteId, Set<waiverId>>
+  const signedWaiverIdsRef = useRef<Map<string, Set<string>>>(new Map())
+  const athleteQueueRef = useRef<AthleteRequirements[]>([])
+  const organizationIdRef = useRef<string | null>(null)
+
   // State for remove confirmation dialog
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null)
@@ -121,7 +144,92 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  // Check for required waivers and proceed accordingly
+  // Process per-athlete requirements starting from the given index
+  // Iterates through the queue, showing waivers/medical as needed per athlete
+  const advanceToNextRequirement = async (startIndex: number) => {
+    const queue = athleteQueueRef.current
+    const orgId = organizationIdRef.current
+
+    for (let i = startIndex; i < queue.length; i++) {
+      const athlete = queue[i]
+      setCurrentAthleteIndex(i)
+
+      // Check unsigned waivers for this specific athlete
+      const athleteSigned = signedWaiverIdsRef.current.get(athlete.athleteId) || new Set()
+      const unsignedIds = athlete.requiredWaiverIds.filter(
+        (id) => !athleteSigned.has(id)
+      )
+
+      if (unsignedIds.length > 0 && orgId) {
+        // Verify with server which are actually unsigned
+        const checkResponse = await fetch("/api/public/waivers/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            waiverIds: unsignedIds,
+            organizationId: orgId,
+            athleteId: athlete.athleteId,
+          }),
+        })
+
+        if (!checkResponse.ok) {
+          throw new Error("Failed to check waiver status")
+        }
+
+        const checkData = await checkResponse.json()
+        setFamilyId(checkData.familyId)
+
+        // Update local signed set with server data (per athlete)
+        if (!signedWaiverIdsRef.current.has(athlete.athleteId)) {
+          signedWaiverIdsRef.current.set(athlete.athleteId, new Set())
+        }
+        const athleteSignedSet = signedWaiverIdsRef.current.get(athlete.athleteId)!
+        checkData.data.forEach((w: WaiverToSign) => {
+          if (w.isSigned) athleteSignedSet.add(w.waiverId)
+        })
+
+        const stillUnsigned = checkData.data.filter((w: WaiverToSign) => !w.isSigned)
+
+        if (stillUnsigned.length > 0) {
+          // Show waiver signing step for this athlete
+          setRequiredWaivers(stillUnsigned)
+          setCurrentWaiverIndex(0)
+          setCheckoutStep("waivers")
+          setSignAllMode(false)
+          signaturePadRef.current?.clear()
+          setSignatureEmpty(true)
+          await loadWaiverContent(stillUnsigned[0].waiverId, orgId)
+          return // Exit — waiver step shown, flow continues after signing
+        }
+      }
+
+      // All waivers for this athlete are done
+      setAthleteWaiverComplete((prev) => {
+        const next = new Set(prev)
+        next.add(athlete.athleteId)
+        return next
+      })
+
+      // Check medical
+      if (athlete.needsMedical) {
+        setCheckoutStep("medical")
+        return // Exit — medical step shown, flow continues after completion
+      }
+
+      // No medical needed — mark complete and continue to next athlete
+      setAthleteMedicalComplete((prev) => {
+        const next = new Set(prev)
+        next.add(athlete.athleteId)
+        return next
+      })
+    }
+
+    // All athletes processed — proceed to payment
+    await createPaymentSession()
+  }
+
+  // Check for per-athlete requirements (waivers + medical) and proceed accordingly
   const handleProceedToPayment = async () => {
     if (!formData.firstName || !formData.lastName || !formData.email) {
       toast.error("Please fill in all required fields")
@@ -139,58 +247,94 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         const siteData = await siteResponse.json()
         orgId = siteData.organizationId
         setOrganizationId(orgId)
+        organizationIdRef.current = orgId
       }
 
-      // Collect program IDs from cart to check for waiver requirements
-      const programIds = items
-        .filter((item) => item.type === "program")
+      if (!orgId) {
+        toast.error("Unable to determine organization. Please try again.")
+        return
+      }
+
+      // Collect program items from cart
+      const programItems = items.filter((item) => item.type === "program")
+      const programIds = programItems
         .map((item) => item.details?.programId || item.referenceId)
         .filter(Boolean)
 
-      if (programIds.length > 0 && orgId) {
-        // Fetch programs to check for waiver requirements
-        const programsResponse = await fetch(
-          `/api/public/programs/waiver-requirements?programIds=${programIds.join(",")}&organizationId=${orgId}`
-        )
+      if (programIds.length === 0) {
+        // No programs — go straight to payment
+        await createPaymentSession()
+        return
+      }
 
-        if (programsResponse.ok) {
-          const programsData = await programsResponse.json()
-          const requiredWaiverIds: string[] = programsData.waiverIds || []
+      // Fetch waiver and medical requirements in parallel
+      const [waiverResponse, medicalResponse] = await Promise.all([
+        fetch(`/api/public/programs/waiver-requirements?programIds=${programIds.join(",")}&organizationId=${orgId}`),
+        fetch(`/api/public/programs/medical-requirements?programIds=${programIds.join(",")}&organizationId=${orgId}`),
+      ])
 
-          if (requiredWaiverIds.length > 0) {
-            // Check which waivers are already signed
-            const checkResponse = await fetch("/api/public/waivers/check", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                email: formData.email,
-                waiverIds: requiredWaiverIds,
-                organizationId: orgId,
-              }),
-            })
+      let programWaiverMap: Record<string, string[]> = {}
+      if (waiverResponse.ok) {
+        const waiverData = await waiverResponse.json()
+        programWaiverMap = waiverData.programWaiverMap || {}
+      }
 
-            if (checkResponse.ok) {
-              const checkData = await checkResponse.json()
-              setFamilyId(checkData.familyId)
-
-              if (!checkData.allSigned) {
-                // Show waiver signing step
-                const unsignedWaivers = checkData.data.filter((w: WaiverToSign) => !w.isSigned)
-                setRequiredWaivers(unsignedWaivers)
-                setCurrentWaiverIndex(0)
-                setCheckoutStep("waivers")
-                // Load the first waiver
-                await loadWaiverContent(unsignedWaivers[0].waiverId, orgId)
-                setIsProcessing(false)
-                return
-              }
-            }
-          }
+      let programIdsRequiringMedical: string[] = []
+      if (medicalResponse.ok) {
+        const medData = await medicalResponse.json()
+        if (medData.required && medData.config) {
+          programIdsRequiringMedical = medData.programIdsRequiringMedical || []
+          setMedicalConfig(medData.config)
+          setMedicalCustomQuestions(medData.customQuestions || [])
         }
       }
 
-      // No waivers needed or all already signed -- proceed to payment
-      await createPaymentSession()
+      // Build per-athlete requirements queue
+      const athleteMap = new Map<string, { athleteName: string; programIds: string[] }>()
+      programItems.forEach((item) => {
+        const programId = item.details?.programId || item.referenceId
+        if (!programId || !item.athleteId) return
+        const existing = athleteMap.get(item.athleteId) || { athleteName: item.athleteName, programIds: [] }
+        if (!existing.programIds.includes(programId)) {
+          existing.programIds.push(programId)
+        }
+        athleteMap.set(item.athleteId, existing)
+      })
+
+      const queue: AthleteRequirements[] = Array.from(athleteMap.entries()).map(
+        ([athleteId, { athleteName, programIds: athleteProgramIds }]) => {
+          // Compute required waiver IDs for this athlete's programs
+          const waiverIdSet = new Set<string>()
+          athleteProgramIds.forEach((pid) => {
+            const waiverIds = programWaiverMap[pid] || []
+            waiverIds.forEach((wid) => waiverIdSet.add(wid))
+          })
+
+          // Check if any of this athlete's programs need medical
+          const needsMedical = athleteProgramIds.some((pid) => programIdsRequiringMedical.includes(pid))
+
+          return {
+            athleteId,
+            athleteName,
+            requiredWaiverIds: Array.from(waiverIdSet),
+            needsMedical,
+          }
+        }
+      )
+
+      // Store queue in both state and ref
+      setAthleteQueue(queue)
+      athleteQueueRef.current = queue
+      signedWaiverIdsRef.current = new Map()
+
+      // If no requirements at all, go straight to payment
+      if (queue.length === 0 || queue.every((a) => a.requiredWaiverIds.length === 0 && !a.needsMedical)) {
+        await createPaymentSession()
+        return
+      }
+
+      // Start processing from the first athlete
+      await advanceToNextRequirement(0)
     } catch (error) {
       console.error(error)
       toast.error("Failed to process. Please try again.")
@@ -240,12 +384,15 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             },
           ]
 
+      const currentAthlete = athleteQueueRef.current[currentAthleteIndex]
+
       const response = await fetch(`/api/public/waivers/${currentWaiver.waiverId}/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organizationId,
+          organizationId: organizationIdRef.current,
           familyId,
+          athleteId: currentAthlete?.athleteId || null,
           email: formData.email,
           name: `${formData.firstName} ${formData.lastName}`,
           signatures: pagesToSign,
@@ -260,7 +407,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       setFamilyId(result.familyId)
 
       if (result.allPagesSigned || signAllMode) {
-        // This waiver is complete - move to next waiver or proceed to payment
+        // This waiver is complete - move to next waiver or check medical/payment
         toast.success(`"${currentWaiver.waiverTitle}" signed successfully`)
         
         if (currentWaiverIndex < requiredWaivers.length - 1) {
@@ -269,11 +416,34 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           setSignAllMode(false)
           signaturePadRef.current?.clear()
           setSignatureEmpty(true)
-          await loadWaiverContent(requiredWaivers[nextIndex].waiverId, organizationId!)
+          await loadWaiverContent(requiredWaivers[nextIndex].waiverId, organizationIdRef.current!)
         } else {
-          // All waivers signed - proceed to payment
-          setCheckoutStep("payment")
-          await createPaymentSession()
+          // All waivers for this athlete signed
+          const currentAthlete = athleteQueueRef.current[currentAthleteIndex]
+          if (currentAthlete) {
+            // Track all of this athlete's required waivers as signed (per athlete)
+            if (!signedWaiverIdsRef.current.has(currentAthlete.athleteId)) {
+              signedWaiverIdsRef.current.set(currentAthlete.athleteId, new Set())
+            }
+            const signedSet = signedWaiverIdsRef.current.get(currentAthlete.athleteId)!
+            currentAthlete.requiredWaiverIds.forEach((id) => signedSet.add(id))
+            setAthleteWaiverComplete((prev) => {
+              const next = new Set(prev)
+              next.add(currentAthlete.athleteId)
+              return next
+            })
+
+            if (currentAthlete.needsMedical) {
+              setCheckoutStep("medical")
+            } else {
+              setAthleteMedicalComplete((prev) => {
+                const next = new Set(prev)
+                next.add(currentAthlete.athleteId)
+                return next
+              })
+              await advanceToNextRequirement(currentAthleteIndex + 1)
+            }
+          }
         }
       } else {
         // More pages to sign for this waiver
@@ -466,7 +636,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <CardFooter>
                     <Button onClick={handleProceedToPayment} disabled={isProcessing} className="w-full">
                         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Proceed to Payment
+                        Continue
+                        <ChevronRight className="ml-1 h-4 w-4" />
                     </Button>
                 </CardFooter>
             )}
@@ -479,12 +650,22 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Waiver Required
+                  {athleteQueue.length > 0 && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      — for {athleteQueue[currentAthleteIndex]?.athleteName}
+                    </span>
+                  )}
                 </CardTitle>
                 <CardDescription>
-                  Please review and sign the following waiver{requiredWaivers.length > 1 ? "s" : ""} before proceeding to payment.
+                  Please review and sign the following waiver{requiredWaivers.length > 1 ? "s" : ""} before proceeding.
                   {requiredWaivers.length > 1 && (
                     <span className="block mt-1">
                       Waiver {currentWaiverIndex + 1} of {requiredWaivers.length}: <strong>{requiredWaivers[currentWaiverIndex]?.waiverTitle}</strong>
+                    </span>
+                  )}
+                  {athleteQueue.length > 1 && (
+                    <span className="block mt-1 text-xs">
+                      Athlete {currentAthleteIndex + 1} of {athleteQueue.length}
                     </span>
                   )}
                 </CardDescription>
@@ -567,12 +748,56 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       ? "Sign & Next Page"
                       : currentWaiverIndex < requiredWaivers.length - 1
                         ? "Sign & Next Waiver"
-                        : "Sign & Proceed to Payment"
+                        : "Sign & Continue"
                   )}
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </CardFooter>
             </Card>
+          )}
+
+          {/* Medical Information Step */}
+          {checkoutStep === "medical" && medicalConfig && athleteQueue.length > 0 && (
+            <>
+              {athleteQueue.length > 1 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Heart className="h-4 w-4" />
+                  <span>
+                    Athlete {currentAthleteIndex + 1} of {athleteQueue.length}
+                  </span>
+                </div>
+              )}
+              <CheckoutMedicalForm
+                key={athleteQueue[currentAthleteIndex]?.athleteId}
+                athleteId={athleteQueue[currentAthleteIndex]?.athleteId}
+                athleteName={athleteQueue[currentAthleteIndex]?.athleteName}
+                config={medicalConfig}
+                customQuestions={medicalCustomQuestions}
+                organizationId={organizationId!}
+                email={formData.email}
+                onComplete={async () => {
+                  const currentAthlete = athleteQueueRef.current[currentAthleteIndex]
+                  // Mark this athlete's medical as complete
+                  setAthleteMedicalComplete((prev) => {
+                    const next = new Set(prev)
+                    next.add(currentAthlete.athleteId)
+                    return next
+                  })
+
+                  // Advance to next athlete or payment
+                  setIsProcessing(true)
+                  try {
+                    await advanceToNextRequirement(currentAthleteIndex + 1)
+                  } finally {
+                    setIsProcessing(false)
+                  }
+                }}
+                onBack={() => {
+                  // Go back to details — signed waivers and saved medical info persist server-side
+                  setCheckoutStep("details")
+                }}
+              />
+            </>
           )}
 
           {/* Payment Section */}
@@ -614,6 +839,41 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         <User className="h-3 w-3" />
                       </div>
                       <span className="text-xs font-semibold text-foreground">{athleteName}</span>
+                      {/* Requirement status indicators */}
+                      {checkoutStep !== "details" && (() => {
+                        const reqs = athleteQueue.find((a) => a.athleteId === athleteId)
+                        if (!reqs) return null
+                        return (
+                          <>
+                            {reqs.requiredWaiverIds.length > 0 && (
+                              athleteWaiverComplete.has(athleteId) ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-1.5 py-0.5 rounded-full">
+                                  <Check className="h-2.5 w-2.5" />
+                                  Waivers
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-full">
+                                  <AlertCircle className="h-2.5 w-2.5" />
+                                  Waivers
+                                </span>
+                              )
+                            )}
+                            {reqs.needsMedical && (
+                              athleteMedicalComplete.has(athleteId) ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-1.5 py-0.5 rounded-full">
+                                  <Check className="h-2.5 w-2.5" />
+                                  Medical
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-full">
+                                  <AlertCircle className="h-2.5 w-2.5" />
+                                  Medical
+                                </span>
+                              )
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
                     <div className="space-y-2 pl-2 mb-3">
                       {athleteItems.map((item) => (
@@ -683,11 +943,19 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                     {checkoutStep !== "details" ? "Contact info complete" : "Fill in contact info"}
                   </span>
                 </div>
-                {requiredWaivers.length > 0 && (
+                {athleteQueue.length > 0 && (
                   <div className="flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full ${checkoutStep === "waivers" ? "bg-primary" : checkoutStep === "payment" ? "bg-green-500" : "bg-muted"}`} />
+                    <div className={`h-2 w-2 rounded-full ${
+                      checkoutStep === "payment" ? "bg-green-500"
+                      : (checkoutStep === "waivers" || checkoutStep === "medical") ? "bg-primary"
+                      : "bg-muted"
+                    }`} />
                     <span className={checkoutStep === "payment" ? "text-green-600" : ""}>
-                      {checkoutStep === "payment" ? "Waivers signed" : "Sign required waivers"}
+                      {checkoutStep === "payment"
+                        ? "All requirements complete"
+                        : (checkoutStep === "waivers" || checkoutStep === "medical")
+                          ? `Athlete requirements (${currentAthleteIndex + 1}/${athleteQueue.length})`
+                          : "Complete requirements"}
                     </span>
                   </div>
                 )}

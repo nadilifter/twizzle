@@ -10,7 +10,6 @@ const medicalConfigSchema = z.object({
   collectEmergencyContact: z.boolean().optional(),
   collectDietaryRestrictions: z.boolean().optional(),
   collectInsuranceInfo: z.boolean().optional(),
-  requireDuringRegistration: z.boolean().optional(),
 });
 
 // GET /api/organization/medical-config
@@ -49,7 +48,6 @@ export async function GET() {
       collectEmergencyContact: true,
       collectDietaryRestrictions: false,
       collectInsuranceInfo: false,
-      requireDuringRegistration: false,
     });
   } catch (error) {
     console.error("Error fetching medical config:", error);

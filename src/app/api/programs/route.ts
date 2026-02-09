@@ -32,6 +32,7 @@ const createProgramSchema = z.object({
   hasAgeRestriction: z.boolean().default(false),
   hasMembershipRestriction: z.boolean().default(false),
   hasWaiverRestriction: z.boolean().default(false),
+  hasMedicalRequirement: z.boolean().default(false),
   // Related data for creation
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
@@ -248,6 +249,7 @@ export async function POST(request: NextRequest) {
           hasAgeRestriction: validatedData.hasAgeRestriction,
           hasMembershipRestriction: validatedData.hasMembershipRestriction,
           hasWaiverRestriction: validatedData.hasWaiverRestriction,
+          hasMedicalRequirement: validatedData.hasMedicalRequirement,
           organizationId: session.user.organizationId,
           // Connect membership requirements in initial create
           ...(validatedData.membershipRequirementIds?.length && {
