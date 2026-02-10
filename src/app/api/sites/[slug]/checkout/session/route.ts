@@ -27,9 +27,13 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { items, userDetails, discountCode } = body as { 
+    const { items, userDetails, contactId, billingAddressId, editingContact, editingAddress, discountCode } = body as { 
       items: CartItem[]; 
       userDetails: any; 
+      contactId?: string;
+      billingAddressId?: string;
+      editingContact?: boolean;
+      editingAddress?: boolean;
       discountCode?: string 
     };
     const subdomain = params.slug;
@@ -177,26 +181,163 @@ export async function POST(
     const total = subtotal + tax;
 
     // 4. Find or Create Family/User
-    // Simple logic: match by email on Family.primaryContactEmail or User.email
-    // For this demo, we'll create a Family if it doesn't exist
+    // Resolve contact details: use saved contact if contactId provided, else use form data
+    let resolvedContact = {
+      firstName: userDetails.firstName,
+      lastName: userDetails.lastName,
+      email: userDetails.email,
+      phone: userDetails.phone,
+    };
+
+    if (contactId) {
+      if (editingContact) {
+        // User is editing the saved contact — use form data and update the saved record
+        resolvedContact = {
+          firstName: userDetails.firstName,
+          lastName: userDetails.lastName,
+          email: userDetails.email,
+          phone: userDetails.phone,
+        };
+        await db.familyContact.update({
+          where: { id: contactId },
+          data: {
+            firstName: userDetails.firstName,
+            lastName: userDetails.lastName,
+            email: userDetails.email,
+            phone: userDetails.phone,
+          },
+        });
+      } else {
+        // Use the saved contact data as-is
+        const savedContact = await db.familyContact.findUnique({ where: { id: contactId } });
+        if (savedContact) {
+          resolvedContact = {
+            firstName: savedContact.firstName,
+            lastName: savedContact.lastName,
+            email: savedContact.email,
+            phone: savedContact.phone,
+          };
+        }
+      }
+    }
+
+    // Resolve billing address: use saved address if billingAddressId provided, else use form data
+    let resolvedAddress = {
+      street: userDetails.address || "",
+      city: userDetails.city || "",
+      stateProvince: userDetails.stateProvince || "",
+      postalCode: userDetails.postalCode || "",
+    };
+
+    if (billingAddressId) {
+      if (editingAddress) {
+        // User is editing the saved address — use form data and update the saved record
+        resolvedAddress = {
+          street: userDetails.address || "",
+          city: userDetails.city || "",
+          stateProvince: userDetails.stateProvince || "",
+          postalCode: userDetails.postalCode || "",
+        };
+        await db.familyBillingAddress.update({
+          where: { id: billingAddressId },
+          data: {
+            street: userDetails.address || "",
+            city: userDetails.city || "",
+            stateProvince: userDetails.stateProvince || null,
+            postalCode: userDetails.postalCode || "",
+          },
+        });
+      } else {
+        // Use the saved address data as-is
+        const savedAddress = await db.familyBillingAddress.findUnique({ where: { id: billingAddressId } });
+        if (savedAddress) {
+          resolvedAddress = {
+            street: savedAddress.street,
+            city: savedAddress.city,
+            stateProvince: savedAddress.stateProvince || "",
+            postalCode: savedAddress.postalCode,
+          };
+        }
+      }
+    }
+
     let family = await db.family.findFirst({
         where: {
             organizationId,
-            email: userDetails.email
+            email: resolvedContact.email
         }
     });
 
     if (!family) {
         family = await db.family.create({
             data: {
-                name: `${userDetails.lastName} Family`,
-                primaryContact: `${userDetails.firstName} ${userDetails.lastName}`,
-                email: userDetails.email,
-                phone: userDetails.phone,
-                address: userDetails.address, // combining address fields would be better
+                name: `${resolvedContact.lastName} Family`,
+                primaryContact: `${resolvedContact.firstName} ${resolvedContact.lastName}`,
+                email: resolvedContact.email,
+                phone: resolvedContact.phone,
+                address: [resolvedAddress.street, resolvedAddress.city, resolvedAddress.stateProvince, resolvedAddress.postalCode].filter(Boolean).join(", "),
                 organizationId
             }
         });
+    } else {
+        // Update the family's flat address field for backward compatibility
+        await db.family.update({
+            where: { id: family.id },
+            data: {
+                address: [resolvedAddress.street, resolvedAddress.city, resolvedAddress.stateProvince, resolvedAddress.postalCode].filter(Boolean).join(", "),
+                phone: resolvedContact.phone || family.phone,
+            },
+        });
+    }
+
+    // Save new contact to family profile if not using a saved one
+    if (!contactId && resolvedContact.firstName && resolvedContact.email) {
+      // Check if a contact with this email already exists for this family
+      const existingContact = await db.familyContact.findFirst({
+        where: { familyId: family.id, email: resolvedContact.email },
+      });
+      if (!existingContact) {
+        const hasAnyContacts = await db.familyContact.count({ where: { familyId: family.id } });
+        await db.familyContact.create({
+          data: {
+            familyId: family.id,
+            firstName: resolvedContact.firstName,
+            lastName: resolvedContact.lastName,
+            email: resolvedContact.email,
+            phone: resolvedContact.phone,
+            relationship: "Parent",
+            isPrimary: hasAnyContacts === 0,
+          },
+        });
+      }
+    }
+
+    // Save new billing address to family profile if not using a saved one
+    if (!billingAddressId && resolvedAddress.street) {
+      // Check if this exact address already exists for this family
+      const existingAddress = await db.familyBillingAddress.findFirst({
+        where: {
+          familyId: family.id,
+          street: resolvedAddress.street,
+          city: resolvedAddress.city,
+          postalCode: resolvedAddress.postalCode,
+        },
+      });
+      if (!existingAddress) {
+        const hasAnyAddresses = await db.familyBillingAddress.count({ where: { familyId: family.id } });
+        await db.familyBillingAddress.create({
+          data: {
+            familyId: family.id,
+            label: "Home",
+            street: resolvedAddress.street,
+            city: resolvedAddress.city,
+            stateProvince: resolvedAddress.stateProvince || null,
+            postalCode: resolvedAddress.postalCode,
+            country: "US",
+            isPrimary: hasAnyAddresses === 0,
+          },
+        });
+      }
     }
 
     // 5. Create Invoice with metadata for post-payment processing
@@ -254,7 +395,7 @@ export async function POST(
         "USD",
         invoice.id, // Using invoice ID as reference for webhook matching
         returnUrl,
-        userDetails.email
+        resolvedContact.email
     );
 
     return NextResponse.json({

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle } from "lucide-react"
+import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle, Plus, Pencil } from "lucide-react"
 import Link from "next/link"
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 import { SignaturePad, SignaturePadRef } from "@/components/ui/signature-pad"
@@ -18,7 +18,29 @@ import { useSession } from "next-auth/react"
 import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate"
 import { ReservationTimer } from "@/components/sites/reservation-timer"
 import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
+
+interface SavedContact {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  relationship: string | null
+  isPrimary: boolean
+}
+
+interface SavedBillingAddress {
+  id: string
+  label: string | null
+  street: string
+  city: string
+  stateProvince: string | null
+  postalCode: string
+  country: string
+  isPrimary: boolean
+}
 
 type CheckoutStep = "details" | "waivers" | "medical" | "payment"
 
@@ -54,12 +76,140 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     phone: "",
     address: "",
     city: "",
+    stateProvince: "",
     postalCode: "",
   })
 
-  // Pre-fill contact info from session when available
+  // Saved contacts & billing addresses
+  const [savedContacts, setSavedContacts] = useState<SavedContact[]>([])
+  const [savedAddresses, setSavedAddresses] = useState<SavedBillingAddress[]>([])
+  const [selectedContactId, setSelectedContactId] = useState<string>("new")
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("new")
+  const [isEditingContact, setIsEditingContact] = useState(false)
+  const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const formDataInitialized = useRef(false)
+
+  // Persist formData to sessionStorage so it survives page navigations
+  const FORM_STORAGE_KEY = `checkout-form-${params.slug}`
+  const CONTACT_STORAGE_KEY = `checkout-contact-${params.slug}`
+  const ADDRESS_STORAGE_KEY = `checkout-address-${params.slug}`
+  const EDITING_CONTACT_KEY = `checkout-editing-contact-${params.slug}`
+  const EDITING_ADDRESS_KEY = `checkout-editing-address-${params.slug}`
+
+  // Save form data to sessionStorage whenever it changes
   useEffect(() => {
-    if (session?.user) {
+    if (!formDataInitialized.current) return
+    try {
+      sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData))
+      sessionStorage.setItem(CONTACT_STORAGE_KEY, selectedContactId)
+      sessionStorage.setItem(ADDRESS_STORAGE_KEY, selectedAddressId)
+      sessionStorage.setItem(EDITING_CONTACT_KEY, isEditingContact ? "1" : "0")
+      sessionStorage.setItem(EDITING_ADDRESS_KEY, isEditingAddress ? "1" : "0")
+    } catch {
+      // sessionStorage may not be available
+    }
+  }, [formData, selectedContactId, selectedAddressId, isEditingContact, isEditingAddress, FORM_STORAGE_KEY, CONTACT_STORAGE_KEY, ADDRESS_STORAGE_KEY, EDITING_CONTACT_KEY, EDITING_ADDRESS_KEY])
+
+  // Fetch saved contacts & addresses on mount when authenticated
+  useEffect(() => {
+    if (!session?.user?.email) return
+    const fetchSaved = async () => {
+      try {
+        const [contactsRes, addressesRes] = await Promise.all([
+          fetch(`/api/sites/${params.slug}/family/contacts`),
+          fetch(`/api/sites/${params.slug}/family/billing-addresses`),
+        ])
+
+        // Try to restore from sessionStorage first
+        let restoredForm: typeof formData | null = null
+        let restoredContactId: string | null = null
+        let restoredAddressId: string | null = null
+        let restoredEditingContact = false
+        let restoredEditingAddress = false
+        try {
+          const stored = sessionStorage.getItem(FORM_STORAGE_KEY)
+          if (stored) restoredForm = JSON.parse(stored)
+          restoredContactId = sessionStorage.getItem(CONTACT_STORAGE_KEY)
+          restoredAddressId = sessionStorage.getItem(ADDRESS_STORAGE_KEY)
+          restoredEditingContact = sessionStorage.getItem(EDITING_CONTACT_KEY) === "1"
+          restoredEditingAddress = sessionStorage.getItem(EDITING_ADDRESS_KEY) === "1"
+        } catch {
+          // ignore
+        }
+
+        if (contactsRes.ok) {
+          const { contacts } = await contactsRes.json()
+          setSavedContacts(contacts || [])
+
+          if (restoredForm && restoredContactId) {
+            // Restore previously entered data
+            setSelectedContactId(restoredContactId)
+            setIsEditingContact(restoredEditingContact)
+            setFormData((prev) => ({
+              ...prev,
+              firstName: restoredForm!.firstName,
+              lastName: restoredForm!.lastName,
+              email: restoredForm!.email,
+              phone: restoredForm!.phone,
+            }))
+          } else {
+            // Auto-select primary contact if available
+            const primary = (contacts || []).find((c: SavedContact) => c.isPrimary)
+            if (primary) {
+              setSelectedContactId(primary.id)
+              setFormData((prev) => ({
+                ...prev,
+                firstName: primary.firstName,
+                lastName: primary.lastName,
+                email: primary.email,
+                phone: primary.phone,
+              }))
+            }
+          }
+        }
+        if (addressesRes.ok) {
+          const { addresses } = await addressesRes.json()
+          setSavedAddresses(addresses || [])
+
+          if (restoredForm && restoredAddressId) {
+            // Restore previously entered data
+            setSelectedAddressId(restoredAddressId)
+            setIsEditingAddress(restoredEditingAddress)
+            setFormData((prev) => ({
+              ...prev,
+              address: restoredForm!.address,
+              city: restoredForm!.city,
+              stateProvince: restoredForm!.stateProvince,
+              postalCode: restoredForm!.postalCode,
+            }))
+          } else {
+            // Auto-select primary address if available
+            const primary = (addresses || []).find((a: SavedBillingAddress) => a.isPrimary)
+            if (primary) {
+              setSelectedAddressId(primary.id)
+              setFormData((prev) => ({
+                ...prev,
+                address: primary.street,
+                city: primary.city,
+                stateProvince: primary.stateProvince || "",
+                postalCode: primary.postalCode,
+              }))
+            }
+          }
+        }
+      } catch (err) {
+        // Silently fail -- user can still fill in manually
+        console.error("Failed to fetch saved family data:", err)
+      } finally {
+        formDataInitialized.current = true
+      }
+    }
+    fetchSaved()
+  }, [session, params.slug, FORM_STORAGE_KEY, CONTACT_STORAGE_KEY, ADDRESS_STORAGE_KEY, EDITING_CONTACT_KEY, EDITING_ADDRESS_KEY])
+
+  // Pre-fill contact info from session when available (only if no saved contacts loaded)
+  useEffect(() => {
+    if (session?.user && savedContacts.length === 0) {
       setFormData((prev) => {
         // Only pre-fill empty fields to avoid overwriting user edits
         const nameParts = (session.user?.name || "").split(" ")
@@ -71,7 +221,47 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         }
       })
     }
-  }, [session])
+  }, [session, savedContacts.length])
+
+  // Handle saved contact selection
+  const handleContactSelect = (contactId: string) => {
+    setSelectedContactId(contactId)
+    setIsEditingContact(false)
+    if (contactId === "new") {
+      setFormData((prev) => ({ ...prev, firstName: "", lastName: "", email: "", phone: "" }))
+    } else {
+      const contact = savedContacts.find((c) => c.id === contactId)
+      if (contact) {
+        setFormData((prev) => ({
+          ...prev,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          email: contact.email,
+          phone: contact.phone,
+        }))
+      }
+    }
+  }
+
+  // Handle saved address selection
+  const handleAddressSelect = (addressId: string) => {
+    setSelectedAddressId(addressId)
+    setIsEditingAddress(false)
+    if (addressId === "new") {
+      setFormData((prev) => ({ ...prev, address: "", city: "", stateProvince: "", postalCode: "" }))
+    } else {
+      const addr = savedAddresses.find((a) => a.id === addressId)
+      if (addr) {
+        setFormData((prev) => ({
+          ...prev,
+          address: addr.street,
+          city: addr.city,
+          stateProvince: addr.stateProvince || "",
+          postalCode: addr.postalCode,
+        }))
+      }
+    }
+  }
   const [discountCode, setDiscountCode] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(null)
@@ -468,6 +658,10 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         body: JSON.stringify({
           items,
           userDetails: formData,
+          contactId: selectedContactId !== "new" ? selectedContactId : undefined,
+          billingAddressId: selectedAddressId !== "new" ? selectedAddressId : undefined,
+          editingContact: isEditingContact && selectedContactId !== "new",
+          editingAddress: isEditingAddress && selectedAddressId !== "new",
           discountCode,
         }),
       })
@@ -490,6 +684,16 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   const handlePaymentCompleted = async (result: any) => {
     if (result.resultCode === "Authorised" || result.resultCode === "Pending" || result.resultCode === "Received") {
+      // Clean up persisted checkout form data
+      try {
+        sessionStorage.removeItem(FORM_STORAGE_KEY)
+        sessionStorage.removeItem(CONTACT_STORAGE_KEY)
+        sessionStorage.removeItem(ADDRESS_STORAGE_KEY)
+        sessionStorage.removeItem(EDITING_CONTACT_KEY)
+        sessionStorage.removeItem(EDITING_ADDRESS_KEY)
+      } catch {
+        // ignore
+      }
       clearCart()
       await completeRegistration()
     }
@@ -546,6 +750,47 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
+              {savedContacts.length > 0 && checkoutStep === "details" && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Saved Contacts</Label>
+                  <Select value={selectedContactId} onValueChange={handleContactSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a contact" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {savedContacts.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.firstName} {c.lastName} — {c.email}
+                          {c.isPrimary ? " (Primary)" : ""}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="new">
+                        <span className="flex items-center gap-1"><Plus className="h-3 w-3" /> Add new contact</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {selectedContactId !== "new" && !isEditingContact && checkoutStep === "details" && (
+                <div className="md:col-span-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingContact(true)}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    Edit Contact
+                  </Button>
+                </div>
+              )}
+              {isEditingContact && selectedContactId !== "new" && checkoutStep === "details" && (
+                <div className="md:col-span-2">
+                  <p className="text-sm text-muted-foreground">
+                    Editing saved contact. Changes will be saved when you continue.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
                 <Input 
@@ -554,7 +799,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   value={formData.firstName} 
                   onChange={handleInputChange} 
                   required 
-                  disabled={checkoutStep !== "details"}
+                  disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
                 />
               </div>
               <div className="space-y-2">
@@ -565,7 +810,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   value={formData.lastName} 
                   onChange={handleInputChange} 
                   required 
-                  disabled={checkoutStep !== "details"}
+                  disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -577,7 +822,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   value={formData.email} 
                   onChange={handleInputChange} 
                   required 
-                  disabled={checkoutStep !== "details"}
+                  disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -589,7 +834,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   value={formData.phone} 
                   onChange={handleInputChange} 
                   required 
-                  disabled={checkoutStep !== "details"}
+                  disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
                 />
               </div>
             </CardContent>
@@ -601,34 +846,85 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               <CardTitle>Billing Address</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
-                 <div className="space-y-2 md:col-span-2">
+              {savedAddresses.length > 0 && checkoutStep === "details" && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Saved Addresses</Label>
+                  <Select value={selectedAddressId} onValueChange={handleAddressSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an address" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {savedAddresses.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.label ? `${a.label} — ` : ""}{a.street}, {a.city}{a.stateProvince ? `, ${a.stateProvince}` : ""} {a.postalCode}
+                          {a.isPrimary ? " (Primary)" : ""}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="new">
+                        <span className="flex items-center gap-1"><Plus className="h-3 w-3" /> Add new address</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {selectedAddressId !== "new" && !isEditingAddress && checkoutStep === "details" && (
+                <div className="md:col-span-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingAddress(true)}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    Edit Address
+                  </Button>
+                </div>
+              )}
+              {isEditingAddress && selectedAddressId !== "new" && checkoutStep === "details" && (
+                <div className="md:col-span-2">
+                  <p className="text-sm text-muted-foreground">
+                    Editing saved address. Changes will be saved when you continue.
+                  </p>
+                </div>
+              )}
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="address">Street Address</Label>
                 <Input 
                   id="address" 
                   name="address" 
                   value={formData.address} 
                   onChange={handleInputChange} 
-                  disabled={checkoutStep !== "details"}
+                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
                 />
               </div>
-               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
                 <Input 
                   id="city" 
                   name="city" 
                   value={formData.city} 
                   onChange={handleInputChange} 
-                  disabled={checkoutStep !== "details"}
+                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
                 />
               </div>
-               <div className="space-y-2">
+              <div className="space-y-2">
+                <Label htmlFor="stateProvince">State / Province</Label>
+                <Input 
+                  id="stateProvince" 
+                  name="stateProvince" 
+                  value={formData.stateProvince} 
+                  onChange={handleInputChange} 
+                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="postalCode">Postal Code</Label>
                 <Input 
                   id="postalCode" 
                   name="postalCode" 
                   value={formData.postalCode} 
                   onChange={handleInputChange} 
-                  disabled={checkoutStep !== "details"}
+                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
                 />
               </div>
             </CardContent>

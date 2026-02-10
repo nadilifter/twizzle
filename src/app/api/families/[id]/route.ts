@@ -63,6 +63,12 @@ export async function GET(
           },
         },
         paymentMethods: true,
+        contacts: {
+          orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+        },
+        billingAddresses: {
+          orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+        },
         invoices: {
           include: {
             lineItems: true,

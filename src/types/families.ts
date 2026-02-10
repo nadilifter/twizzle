@@ -99,10 +99,41 @@ export interface FamilyWithRelations extends Family {
   };
 }
 
+// Family contact (parents, guardians, siblings, etc.)
+export interface FamilyContact {
+  id: string;
+  familyId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  relationship: string | null;
+  isPrimary: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Family billing address
+export interface FamilyBillingAddress {
+  id: string;
+  familyId: string;
+  label: string | null;
+  street: string;
+  city: string;
+  stateProvince: string | null;
+  postalCode: string;
+  country: string;
+  isPrimary: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Full family detail with all related data
 export interface FamilyDetail extends Family {
   athletes: AthleteWithEnrollments[];
   paymentMethods: PaymentMethod[];
+  contacts: FamilyContact[];
+  billingAddresses: FamilyBillingAddress[];
   invoices: InvoiceWithLineItems[];
 }
 

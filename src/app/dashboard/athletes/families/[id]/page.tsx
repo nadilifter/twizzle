@@ -13,7 +13,8 @@ import {
   FileText,
   User,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Star
 } from "lucide-react"
 import Link from "next/link"
 
@@ -152,6 +153,7 @@ export default function FamilyDetailPage() {
            <Tabs defaultValue="members" className="w-full">
             <TabsList className="w-full justify-start">
               <TabsTrigger value="members">Members</TabsTrigger>
+              <TabsTrigger value="contacts">Contacts & Addresses</TabsTrigger>
               <TabsTrigger value="billing">Billing & Invoices</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
@@ -197,6 +199,90 @@ export default function FamilyDetailPage() {
                    </div>
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="contacts" className="mt-6 space-y-6">
+              {/* Contacts */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contacts</CardTitle>
+                  <CardDescription>People associated with this family who can register athletes.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {family.contacts && family.contacts.length > 0 ? (
+                    <div className="space-y-3">
+                      {family.contacts.map((contact: any) => (
+                        <div key={contact.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                          <div className="p-2 bg-muted rounded-full">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">
+                                {contact.firstName} {contact.lastName}
+                              </p>
+                              {contact.isPrimary && (
+                                <Badge variant="secondary" className="text-[10px] h-5">
+                                  <Star className="h-3 w-3 mr-0.5" />
+                                  Primary
+                                </Badge>
+                              )}
+                              {contact.relationship && (
+                                <Badge variant="outline" className="text-[10px] h-5">
+                                  {contact.relationship}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{contact.email} &middot; {contact.phone}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No contacts saved.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Billing Addresses */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Billing Addresses</CardTitle>
+                  <CardDescription>Addresses used during checkout.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {family.billingAddresses && family.billingAddresses.length > 0 ? (
+                    <div className="space-y-3">
+                      {family.billingAddresses.map((addr: any) => (
+                        <div key={addr.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                          <div className="p-2 bg-muted rounded-full">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">
+                                {addr.label || "Billing Address"}
+                              </p>
+                              {addr.isPrimary && (
+                                <Badge variant="secondary" className="text-[10px] h-5">
+                                  <Star className="h-3 w-3 mr-0.5" />
+                                  Primary
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {addr.street}, {addr.city}{addr.stateProvince ? `, ${addr.stateProvince}` : ""} {addr.postalCode}
+                              {addr.country ? ` ${addr.country}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No billing addresses saved.</p>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="billing" className="mt-6 space-y-6">

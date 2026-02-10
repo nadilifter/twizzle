@@ -320,8 +320,43 @@ model Family {
   waiverSignatures      WaiverSignature[]
   waiverAcceptances     WaiverAcceptance[]
 
+  // Contacts & Billing
+  contacts         FamilyContact[]
+  billingAddresses FamilyBillingAddress[]
+
   // Auth Link
   userId String? @unique
+}
+
+model FamilyContact {
+  id           String   @id @default(cuid())
+  familyId     String
+  firstName    String
+  lastName     String
+  email        String
+  phone        String
+  relationship String? // e.g. "Parent", "Guardian", "Sibling"
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+}
+
+model FamilyBillingAddress {
+  id            String   @id @default(cuid())
+  familyId      String
+  label         String? // e.g. "Home", "Work"
+  street        String
+  city          String
+  stateProvince String?
+  postalCode    String
+  country       String   @default("US")
+  isPrimary     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 }
 
 model Athlete {
