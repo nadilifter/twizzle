@@ -25,6 +25,9 @@ interface ProgramInstanceSelectorProps {
         id: string;
         name: string;
         perSessionPrice?: number;
+        hasAgeRestriction?: boolean;
+        minAge?: number | null;
+        maxAge?: number | null;
     };
     subdomain: string;
     /** If provided, this instance will be pre-selected */
@@ -244,6 +247,9 @@ export function ProgramInstanceSelector({
                 onOpenChange={setShowAthleteDialog}
                 onAthleteSelected={handleAthleteSelected}
                 slug={subdomain}
+                hasAgeRestriction={program.hasAgeRestriction}
+                minAge={program.minAge}
+                maxAge={program.maxAge}
             />
         </div>
     );

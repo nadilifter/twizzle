@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { usePathname } from "next/navigation"
-import { Loader2, Plus, User, Calendar, ChevronLeft } from "lucide-react"
+import { Loader2, Plus, User, Calendar, ChevronLeft, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
+import { calculateAge, isAgeEligible } from "@/lib/age-utils"
 
 import {
   Dialog,
@@ -38,6 +39,12 @@ interface AthleteSelectionDialogProps {
   onAthleteSelected: (athlete: { id: string; name: string }) => void
   /** The slug of the current marketing site */
   slug: string
+  /** Whether the program has an active age restriction */
+  hasAgeRestriction?: boolean
+  /** Minimum age allowed (inclusive) */
+  minAge?: number | null
+  /** Maximum age allowed (inclusive) */
+  maxAge?: number | null
 }
 
 const GENDER_LABELS: Record<string, string> = {
@@ -52,6 +59,9 @@ export function AthleteSelectionDialog({
   onOpenChange,
   onAthleteSelected,
   slug,
+  hasAgeRestriction,
+  minAge,
+  maxAge,
 }: AthleteSelectionDialogProps) {
   const [athletes, setAthletes] = useState<AthleteOption[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -64,6 +74,34 @@ export function AthleteSelectionDialog({
     birthDate: "",
     gender: "",
   })
+
+  // Build the age requirement label for display
+  const ageRestrictionActive = hasAgeRestriction && (minAge != null || maxAge != null)
+  const ageLabel = ageRestrictionActive
+    ? minAge != null && maxAge != null
+      ? `Ages ${minAge}–${maxAge}`
+      : minAge != null
+      ? `Ages ${minAge}+`
+      : `Up to age ${maxAge}`
+    : null
+
+  // Split athletes into eligible and ineligible based on age
+  const { eligibleAthletes, ineligibleAthletes } = useMemo(() => {
+    if (!ageRestrictionActive) {
+      return { eligibleAthletes: athletes, ineligibleAthletes: [] }
+    }
+    const eligible: AthleteOption[] = []
+    const ineligible: AthleteOption[] = []
+    for (const athlete of athletes) {
+      const age = calculateAge(athlete.birthDate)
+      if (isAgeEligible(age, minAge, maxAge)) {
+        eligible.push(athlete)
+      } else {
+        ineligible.push(athlete)
+      }
+    }
+    return { eligibleAthletes: eligible, ineligibleAthletes: ineligible }
+  }, [athletes, ageRestrictionActive, minAge, maxAge])
 
   // Fetch athletes when dialog opens
   useEffect(() => {
@@ -131,6 +169,22 @@ export function AthleteSelectionDialog({
       const created = data.athlete
       const displayName = `${created.firstName} ${created.lastName}`.trim() || created.name
       toast.success(`${displayName} added successfully`)
+
+      // Check age eligibility for the newly created athlete
+      if (ageRestrictionActive) {
+        const age = calculateAge(newAthlete.birthDate)
+        if (!isAgeEligible(age, minAge, maxAge)) {
+          toast.error(
+            `${displayName} does not meet the age requirement (${ageLabel}) for this program`
+          )
+          // Refetch so the new athlete appears in the ineligible section
+          await fetchAthletes()
+          setShowCreateForm(false)
+          setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "" })
+          return
+        }
+      }
+
       onAthleteSelected({ id: created.id, name: displayName })
       onOpenChange(false)
       resetForm()
@@ -259,9 +313,18 @@ export function AthleteSelectionDialog({
         ) : (
           /* Athlete Selection List */
           <div className="space-y-3">
+            {/* Age restriction banner */}
+            {ageRestrictionActive && ageLabel && (
+              <div className="flex items-center gap-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-3 py-2 rounded-lg">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                This program requires athletes to be {ageLabel.toLowerCase()}
+              </div>
+            )}
+
             {athletes.length > 0 && (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {athletes.map((athlete) => {
+                {/* Eligible athletes */}
+                {eligibleAthletes.map((athlete) => {
                   const displayName =
                     `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
                   const birthLabel = athlete.birthDate
@@ -301,6 +364,60 @@ export function AthleteSelectionDialog({
                     </button>
                   )
                 })}
+
+                {/* Ineligible athletes */}
+                {ineligibleAthletes.length > 0 && (
+                  <>
+                    <div className="pt-2 pb-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Ineligible for this program
+                      </p>
+                    </div>
+                    {ineligibleAthletes.map((athlete) => {
+                      const displayName =
+                        `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
+                      const age = calculateAge(athlete.birthDate)
+                      const birthLabel = athlete.birthDate
+                        ? new Date(athlete.birthDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : null
+                      const genderLabel = athlete.gender
+                        ? GENDER_LABELS[athlete.gender] || athlete.gender
+                        : null
+
+                      return (
+                        <div
+                          key={athlete.id}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg border border-border bg-card opacity-50 cursor-not-allowed text-left"
+                        >
+                          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-muted text-muted-foreground shrink-0">
+                            <User className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">
+                              {displayName}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              {birthLabel && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {birthLabel}
+                                </span>
+                              )}
+                              {genderLabel && <span>{genderLabel}</span>}
+                            </div>
+                            <div className="text-xs text-destructive mt-1">
+                              Age {age} — requires {ageLabel?.toLowerCase()}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
               </div>
             )}
 

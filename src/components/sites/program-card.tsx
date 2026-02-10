@@ -455,6 +455,9 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
         onOpenChange={setShowAthleteDialog}
         onAthleteSelected={handleAthleteSelected}
         slug={slug}
+        hasAgeRestriction={program.hasAgeRestriction}
+        minAge={program.minAge}
+        maxAge={program.maxAge}
       />
 
       {/* Membership Requirement Dialog */}

@@ -473,7 +473,10 @@ export default async function ProgramDetailPage({
                                 program={{
                                     id: program.id,
                                     name: program.name,
-                                    perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : undefined
+                                    perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : undefined,
+                                    hasAgeRestriction: program.hasAgeRestriction,
+                                    minAge: program.minAge,
+                                    maxAge: program.maxAge,
                                 }}
                                 subdomain={subdomain}
                                 highlightInstanceId={highlightInstanceId}
