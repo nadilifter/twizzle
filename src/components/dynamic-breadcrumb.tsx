@@ -11,6 +11,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
+// Section paths that exist only as navigation groups and don't have their own page
+const sectionOnlyPaths = new Set([
+  "/dashboard/communication",
+])
+
 function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
@@ -67,6 +72,8 @@ export function DynamicBreadcrumb() {
             <BreadcrumbItem>
               {item.isLast ? (
                 <BreadcrumbPage>{item.title}</BreadcrumbPage>
+              ) : sectionOnlyPaths.has(item.href) ? (
+                <span className="font-normal text-muted-foreground">{item.title}</span>
               ) : (
                 <BreadcrumbLink href={item.href}>{item.title}</BreadcrumbLink>
               )}
