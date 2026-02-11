@@ -37,7 +37,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "User registration",
     apiRoutes: ["/api/auth"],
   },
-  "/dashboard/settings/users": {
+  "/dashboard/organization/users": {
     status: "live",
     description: "User management with full CRUD and permissions",
     apiRoutes: ["/api/users"],
@@ -138,7 +138,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "demo",
     description: "Chat feature uses sample conversations",
   },
-  "/dashboard/communication/email": {
+  "/dashboard/usage/email": {
     status: "live",
     description: "Email management uses sample data",
   },
@@ -147,7 +147,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Notification rules management with templates and recipient configuration",
     apiRoutes: ["/api/notifications/rules", "/api/notifications/placeholders", "/api/notifications/preview", "/api/notifications/logs"],
   },
-  "/dashboard/communication/sms": {
+  "/dashboard/usage/sms": {
     status: "live",
     description: "SMS messaging with Twilio integration, usage tracking, and campaigns",
     apiRoutes: ["/api/sms", "/api/sms/sync", "/api/sms/campaigns", "/api/twilio/webhook", "/api/organization/sms-usage"],
@@ -271,12 +271,8 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Sponsorship management uses sample data",
   },
 
-  // Settings Section
-  "/dashboard/settings": {
-    status: "demo",
-    description: "General settings use sample data",
-  },
-  "/dashboard/settings/billing": {
+  // Usage Section
+  "/dashboard/usage/billing": {
     status: "live",
     description: "Subscription billing with plan management",
     apiRoutes: ["/api/organization/subscription"],

@@ -14,6 +14,8 @@ import {
 // Section paths that exist only as navigation groups and don't have their own page
 const sectionOnlyPaths = new Set([
   "/dashboard/communication",
+  "/dashboard/usage",
+  "/dashboard/organization",
 ])
 
 function capitalize(str: string) {

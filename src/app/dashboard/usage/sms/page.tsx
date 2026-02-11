@@ -3,25 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import {
   Sheet,
   SheetContent,
@@ -34,7 +16,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
-import { SendIcon, Plus, Loader2, AlertCircle, RefreshCw } from "lucide-react"
+import { Loader2, AlertCircle, RefreshCw } from "lucide-react"
 import { MessagesTable, Message } from "@/components/messages-table"
 import { SmsStatsCards, SmsStatsProps } from "@/components/sms-stats-cards"
 import { SmsChartAreaInteractive } from "@/components/sms-chart-area-interactive"
@@ -120,13 +102,8 @@ function transformToTableMessage(msg: SmsMessage, index: number): Message {
 }
 
 export default function SMSPage() {
-  const [message, setMessage] = useState("")
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [classification, setClassification] = useState("GENERAL")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isSending, setIsSending] = useState(false)
   const [apiData, setApiData] = useState<ApiResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -169,42 +146,6 @@ export default function SMSPage() {
     fetchMessages(true)
   }, [fetchMessages])
 
-  const handleSendMessage = async () => {
-    if (!message || !phoneNumber) {
-      toast.error("Please enter a phone number and message")
-      return
-    }
-
-    setIsSending(true)
-    try {
-      const response = await fetch("/api/sms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: phoneNumber,
-          body: message,
-          classification,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send message")
-      }
-
-      toast.success("Message sent successfully!")
-      setMessage("")
-      setPhoneNumber("")
-      setIsDialogOpen(false)
-      fetchMessages(false) // Refresh the list without syncing (just sent, no status to sync yet)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send message")
-    } finally {
-      setIsSending(false)
-    }
-  }
-
   // Build stats for the cards
   const stats: SmsStatsProps | undefined = apiData
     ? {
@@ -234,116 +175,9 @@ export default function SMSPage() {
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         <div className="flex items-center justify-between px-4 lg:px-6">
           <h1 className="text-2xl font-bold tracking-tight">SMS Messaging</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={() => fetchMessages(true)} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            </Button>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button disabled={!apiData?.configured || !apiData?.limits?.allowed}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Message
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Send SMS Message</DialogTitle>
-                  <DialogDescription>
-                    Send a text message to a phone number.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Phone Number</label>
-                    <Input
-                      placeholder="+1 (555) 123-4567"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Enter phone number in E.164 format or standard US format
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Classification</label>
-                    <Select value={classification} onValueChange={setClassification}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select classification" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="GENERAL">General</SelectItem>
-                        <SelectItem value="REMINDER">Reminder</SelectItem>
-                        <SelectItem value="ALERT">Alert</SelectItem>
-                        <SelectItem value="BILLING">Billing</SelectItem>
-                        <SelectItem value="EVENT">Event</SelectItem>
-                        <SelectItem value="NEWS">News</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Message</label>
-                    <Textarea
-                      placeholder="Type your message here..."
-                      className="min-h-[120px]"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      maxLength={1600}
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{message.length} / 1600 characters</span>
-                      <span>~{Math.ceil(message.length / 160) || 1} segment(s)</span>
-                    </div>
-                  </div>
-
-                  {apiData?.limits && !apiData.limits.allowed && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Limit Reached</AlertTitle>
-                      <AlertDescription>
-                        You&apos;ve reached your SMS limit for this billing period.
-                        {apiData.limits.overageRate
-                          ? ` Overage rate: $${apiData.limits.overageRate.toFixed(2)}/message`
-                          : " Upgrade your plan to send more messages."}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {apiData?.limits && apiData.limits.remaining < 10 && apiData.limits.allowed && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Low Balance</AlertTitle>
-                      <AlertDescription>
-                        You have {apiData.limits.remaining} messages remaining in your plan.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!message || !phoneNumber || isSending}
-                  >
-                    {isSending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <SendIcon className="mr-2 h-4 w-4" />
-                        Send Message
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <Button variant="outline" size="icon" onClick={() => fetchMessages(true)} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          </Button>
         </div>
 
         {error && (
@@ -372,16 +206,9 @@ export default function SMSPage() {
           <div className="px-4 lg:px-6">
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-muted-foreground mb-4">
-                  No messages sent yet. Send your first SMS message to get started.
+                <p className="text-muted-foreground">
+                  No messages sent yet.
                 </p>
-                <Button
-                  onClick={() => setIsDialogOpen(true)}
-                  disabled={!apiData?.configured}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Send First Message
-                </Button>
               </CardContent>
             </Card>
           </div>

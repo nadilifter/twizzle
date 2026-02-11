@@ -199,16 +199,8 @@ const data = {
           url: "/dashboard/communication/announcements",
         },
         {
-          title: "Email",
-          url: "/dashboard/communication/email",
-        },
-        {
           title: "Notifications",
           url: "/dashboard/communication/notifications",
-        },
-        {
-          title: "SMS",
-          url: "/dashboard/communication/sms",
         },
       ],
     },
@@ -235,6 +227,10 @@ const data = {
         {
           title: "Store",
           url: "/dashboard/organization/store",
+        },
+        {
+          title: "Users",
+          url: "/dashboard/organization/users",
         },
         {
           title: "Website",
@@ -314,16 +310,20 @@ const data = {
     },
     */
     {
-      title: "Settings",
-      url: "/dashboard/settings",
+      title: "Usage",
+      url: "/dashboard/usage",
       items: [
         {
           title: "Billing",
-          url: "/dashboard/settings/billing",
+          url: "/dashboard/usage/billing",
         },
         {
-          title: "Users",
-          url: "/dashboard/settings/users",
+          title: "Email",
+          url: "/dashboard/usage/email",
+        },
+        {
+          title: "SMS",
+          url: "/dashboard/usage/sms",
         },
       ],
     },

@@ -175,6 +175,19 @@ export async function middleware(req: NextRequest) {
         // Allow pass-through to dashboard logic
     }
 
+    // Redirects for moved pages (sidebar refactor)
+    const adminRedirects: Record<string, string> = {
+      "/settings/billing": "/usage/billing",
+      "/settings/users": "/organization/users",
+      "/communication/email": "/usage/email",
+      "/communication/sms": "/usage/sms",
+    };
+    const redirectTarget = adminRedirects[path];
+    if (redirectTarget) {
+      const adminHost = getSubdomainHost("admin");
+      return NextResponse.redirect(`${protocol}//${adminHost}${redirectTarget}`);
+    }
+
     // Rewrite to /dashboard directory
     let newPath = path;
     if (path === "/") {
