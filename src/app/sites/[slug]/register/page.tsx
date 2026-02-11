@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { ProgramCard } from "@/components/sites/program-card";
 import { QueueGateWrapper } from "@/components/sites/queue-gate-wrapper";
+import { FilterableProgramList } from "@/components/sites/filterable-program-list";
 
 export default async function RegisterPage({ params }: { params: { slug: string } }) {
     const subdomain = params.slug;
@@ -13,61 +13,69 @@ export default async function RegisterPage({ params }: { params: { slug: string 
 
     if (!config) return notFound();
 
-    const programs = await db.program.findMany({
-        where: {
-            organizationId: config.organizationId,
-            status: "ACTIVE"
-        },
-        include: {
-            facility: {
-                select: { id: true, name: true, city: true, stateProvince: true }
+    // Fetch active programs and levels in parallel
+    const [programs, levels] = await Promise.all([
+        db.program.findMany({
+            where: {
+                organizationId: config.organizationId,
+                status: "ACTIVE"
             },
-            bulkDiscounts: true,
-            levelRequirements: {
-                include: {
-                    level: {
-                        select: { id: true, name: true, color: true },
+            include: {
+                facility: {
+                    select: { id: true, name: true, city: true, stateProvince: true }
+                },
+                bulkDiscounts: true,
+                levelRequirements: {
+                    include: {
+                        level: {
+                            select: { id: true, name: true, color: true },
+                        },
                     },
                 },
-            },
-            _count: {
-                select: { instances: true, enrollments: true },
-            },
-            staffAssignments: {
-                where: {
-                    role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
+                _count: {
+                    select: { instances: true, enrollments: true },
                 },
-                include: {
-                    staffProfile: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    avatar: true,
+                staffAssignments: {
+                    where: {
+                        role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
+                    },
+                    include: {
+                        staffProfile: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        avatar: true,
+                                    },
                                 },
                             },
                         },
                     },
+                    orderBy: [
+                        { isPrimary: "desc" },
+                        { role: "asc" },
+                    ],
+                    take: 3,
                 },
-                orderBy: [
-                    { isPrimary: "desc" },
-                    { role: "asc" },
-                ],
-                take: 3,
-            },
-            requiredMemberships: {
-                include: {
-                    group: {
-                        select: {
-                            id: true,
-                            name: true,
+                requiredMemberships: {
+                    include: {
+                        group: {
+                            select: {
+                                id: true,
+                                name: true,
+                            },
                         },
                     },
                 },
-            },
-        }
-    });
+            }
+        }),
+        db.level.findMany({
+            where: { organizationId: config.organizationId },
+            select: { id: true, name: true, color: true },
+            orderBy: { order: "asc" },
+        }),
+    ]);
 
     const serializedPrograms = programs.map(program => ({
         ...program,
@@ -106,21 +114,12 @@ export default async function RegisterPage({ params }: { params: { slug: string 
                     Register online to secure your spot today.
                 </p>
                 
-                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                    {serializedPrograms.map(program => (
-                        <ProgramCard 
-                            key={program.id} 
-                            program={program} 
-                            primaryColor={config.primaryColor || undefined} 
-                        />
-                    ))}
-                </div>
-
-                {programs.length === 0 && (
-                    <div className="text-center py-16 border rounded-xl bg-slate-50">
-                        <p className="text-muted-foreground text-lg">No programs are currently open for registration.</p>
-                    </div>
-                )}
+                <FilterableProgramList
+                    programs={serializedPrograms}
+                    levels={levels}
+                    slug={subdomain}
+                    primaryColor={config.primaryColor || undefined}
+                />
             </div>
         </QueueGateWrapper>
     );

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, MapPin, Trophy } from "lucide-react";
-import { ProgramList } from "@/components/sites/program-list";
+import { FilterableProgramList } from "@/components/sites/filterable-program-list";
 import { InfoSection } from "@/components/sites/info-section";
 
 // Helper to check if HTML content has actual text (not just empty tags)
@@ -26,62 +26,69 @@ export default async function SitePage({ params }: { params: { slug: string } })
 
   const primaryColor = config.primaryColor || "#000000";
 
-  // Fetch active programs for this organization
-  const programs = await db.program.findMany({
-    where: {
-      organizationId: config.organizationId,
-      status: "ACTIVE",
-    },
-    include: {
-      facility: {
-        select: { id: true, name: true, city: true, stateProvince: true }
+  // Fetch active programs and levels for this organization
+  const [programs, levels] = await Promise.all([
+    db.program.findMany({
+      where: {
+        organizationId: config.organizationId,
+        status: "ACTIVE",
       },
-      bulkDiscounts: true,
-      levelRequirements: {
-        include: {
-          level: {
-            select: { id: true, name: true, color: true },
+      include: {
+        facility: {
+          select: { id: true, name: true, city: true, stateProvince: true }
+        },
+        bulkDiscounts: true,
+        levelRequirements: {
+          include: {
+            level: {
+              select: { id: true, name: true, color: true },
+            },
           },
         },
-      },
-      _count: {
-        select: { instances: true, enrollments: true },
-      },
-      staffAssignments: {
-        where: {
-          role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] }, // Only show coaches, not substitutes/volunteers
+        _count: {
+          select: { instances: true, enrollments: true },
         },
-        include: {
-          staffProfile: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  avatar: true,
+        staffAssignments: {
+          where: {
+            role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] }, // Only show coaches, not substitutes/volunteers
+          },
+          include: {
+            staffProfile: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    avatar: true,
+                  },
                 },
               },
             },
           },
+          orderBy: [
+            { isPrimary: "desc" },
+            { role: "asc" },
+          ],
+          take: 3, // Limit to top 3 coaches for card display
         },
-        orderBy: [
-          { isPrimary: "desc" },
-          { role: "asc" },
-        ],
-        take: 3, // Limit to top 3 coaches for card display
-      },
-      requiredMemberships: {
-        include: {
-          group: {
-            select: {
-              id: true,
-              name: true,
+        requiredMemberships: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    db.level.findMany({
+      where: { organizationId: config.organizationId },
+      select: { id: true, name: true, color: true },
+      orderBy: { order: "asc" },
+    }),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -223,7 +230,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
             </p>
           </div>
 
-          <ProgramList 
+          <FilterableProgramList
             programs={programs.map(program => ({
               ...program,
               basePrice: program.basePrice ? Number(program.basePrice) : null,
@@ -236,8 +243,10 @@ export default async function SitePage({ params }: { params: { slug: string } })
                 ...d,
                 discountValue: Number(d.discountValue),
               })) || [],
-            }))} 
-            slug={params.slug} 
+            }))}
+            levels={levels}
+            slug={params.slug}
+            primaryColor={primaryColor}
           />
         </section>
       )}
