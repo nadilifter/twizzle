@@ -179,7 +179,6 @@ export async function middleware(req: NextRequest) {
     const adminRedirects: Record<string, string> = {
       "/settings/billing": "/usage/billing",
       "/settings/users": "/organization/users",
-      "/communication/email": "/usage/email",
       "/communication/sms": "/usage/sms",
     };
     const redirectTarget = adminRedirects[path];

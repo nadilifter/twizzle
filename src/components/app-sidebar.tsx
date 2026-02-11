@@ -199,6 +199,10 @@ const data = {
           url: "/dashboard/communication/announcements",
         },
         {
+          title: "Email Campaigns",
+          url: "/dashboard/communication/email",
+        },
+        {
           title: "Notifications",
           url: "/dashboard/communication/notifications",
         },

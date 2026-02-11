@@ -5,6 +5,7 @@ import type {
   EmailStatus,
   EmailCampaignStatus,
   AnnouncementScope,
+  EmailTargetType,
 } from "@prisma/client";
 
 /**
@@ -331,8 +332,19 @@ export async function getEmailUsageStats(organizationId: string): Promise<EmailU
 // Recipient Selection
 // ============================================
 
+export interface ExpandedTargetingParams {
+  organizationId: string;
+  targetType: EmailTargetType;
+  targetProgramId?: string;
+  targetEventId?: string;
+  targetMembershipStatus?: "ACTIVE" | "EXPIRED";
+  targetProgramInstanceId?: string;
+  targetMembershipGroupIds?: string[];
+  targetFamilyIds?: string[];
+}
+
 /**
- * Get email recipients for a campaign target
+ * Get email recipients for a campaign target (legacy - kept for backward compat)
  */
 export async function getCampaignRecipients(
   organizationId: string,
@@ -341,6 +353,40 @@ export async function getCampaignRecipients(
   targetEventId?: string,
   targetMembershipStatus?: "ACTIVE" | "EXPIRED"
 ): Promise<EmailRecipient[]> {
+  // Map legacy scope to new target type
+  const targetTypeMap: Record<string, EmailTargetType> = {
+    ALL: "ALL_MEMBERS",
+    PROGRAM: "PROGRAM_ANY_INSTANCE",
+    EVENT: "ALL_MEMBERS", // Events will be handled via legacy path
+    FAMILY: "ALL_FAMILIES",
+  };
+
+  return getExpandedCampaignRecipients({
+    organizationId,
+    targetType: targetTypeMap[targetScope] || "ALL_MEMBERS",
+    targetProgramId,
+    targetEventId: targetScope === "EVENT" ? targetEventId : undefined,
+    targetMembershipStatus,
+  });
+}
+
+/**
+ * Get email recipients using expanded targeting (new 8-category system)
+ */
+export async function getExpandedCampaignRecipients(
+  params: ExpandedTargetingParams
+): Promise<EmailRecipient[]> {
+  const {
+    organizationId,
+    targetType,
+    targetProgramId,
+    targetEventId,
+    targetMembershipStatus,
+    targetProgramInstanceId,
+    targetMembershipGroupIds,
+    targetFamilyIds,
+  } = params;
+
   const recipients: EmailRecipient[] = [];
   const seenEmails = new Set<string>();
 
@@ -356,58 +402,284 @@ export async function getCampaignRecipients(
     }
   };
 
-  if (targetScope === "ALL") {
-    // All families in organization (not opted out)
-    const families = await db.family.findMany({
-      where: {
-        organizationId,
-        emailOptOut: false,
-        email: { not: "" },
-      },
-      select: {
-        id: true,
-        email: true,
-        primaryContact: true,
-      },
-    });
+  // Helper to add a user (org member) directly
+  const addUser = (user: { email: string; name: string }) => {
+    if (user.email && !seenEmails.has(user.email.toLowerCase())) {
+      seenEmails.add(user.email.toLowerCase());
+      recipients.push({
+        familyId: "", // No family for org users
+        email: user.email,
+        name: user.name,
+      });
+    }
+  };
 
-    families.forEach(addFamily);
-  } else if (targetScope === "PROGRAM" && targetProgramId) {
-    // Families with athletes enrolled in the program
-    const enrollments = await db.enrollment.findMany({
-      where: {
-        programId: targetProgramId,
-        status: "ACTIVE",
-      },
-      include: {
-        athlete: {
-          include: {
-            guardians: {
-              include: {
-                family: {
-                  select: {
-                    id: true,
-                    email: true,
-                    primaryContact: true,
-                    emailOptOut: true,
+  switch (targetType) {
+    case "ALL_USERS": {
+      // Staff/org members (OrganizationMember → User)
+      const members = await db.organizationMember.findMany({
+        where: {
+          organizationId,
+          status: "ACTIVE",
+        },
+        include: {
+          user: {
+            select: {
+              email: true,
+              name: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      members.forEach((m) => {
+        if (m.user.status === "ACTIVE") {
+          addUser({ email: m.user.email, name: m.user.name });
+        }
+      });
+      break;
+    }
+
+    case "ALL_MEMBERS":
+    case "ALL_FAMILIES": {
+      // All families in organization (not opted out)
+      const families = await db.family.findMany({
+        where: {
+          organizationId,
+          emailOptOut: false,
+          email: { not: "" },
+        },
+        select: {
+          id: true,
+          email: true,
+          primaryContact: true,
+        },
+      });
+
+      families.forEach(addFamily);
+      break;
+    }
+
+    case "ALL_PROGRAM_REGISTRANTS": {
+      // All families with at least one active enrollment in any program
+      const enrollments = await db.enrollment.findMany({
+        where: {
+          status: "ACTIVE",
+          athlete: {
+            organizationId,
+          },
+        },
+        include: {
+          athlete: {
+            include: {
+              guardians: {
+                include: {
+                  family: {
+                    select: {
+                      id: true,
+                      email: true,
+                      primaryContact: true,
+                      emailOptOut: true,
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-    });
-
-    enrollments.forEach((e) => {
-      e.athlete.guardians.forEach((g) => {
-        if (!g.family.emailOptOut) {
-          addFamily(g.family);
-        }
       });
-    });
-  } else if (targetScope === "EVENT" && targetEventId) {
-    // Families with athletes registered for the event
+
+      enrollments.forEach((e) => {
+        e.athlete.guardians.forEach((g) => {
+          if (!g.family.emailOptOut) {
+            addFamily(g.family);
+          }
+        });
+      });
+      break;
+    }
+
+    case "PROGRAM_ANY_INSTANCE": {
+      if (!targetProgramId) break;
+
+      // Families via InstanceRegistration for ANY instance of the given program
+      const registrations = await db.instanceRegistration.findMany({
+        where: {
+          programInstance: {
+            programId: targetProgramId,
+          },
+          status: { in: ["REGISTERED", "ATTENDED"] },
+        },
+        include: {
+          athlete: {
+            include: {
+              guardians: {
+                include: {
+                  family: {
+                    select: {
+                      id: true,
+                      email: true,
+                      primaryContact: true,
+                      emailOptOut: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      registrations.forEach((r) => {
+        r.athlete.guardians.forEach((g) => {
+          if (!g.family.emailOptOut) {
+            addFamily(g.family);
+          }
+        });
+      });
+
+      // Also include legacy Enrollment-based registrations
+      const enrollments = await db.enrollment.findMany({
+        where: {
+          programId: targetProgramId,
+          status: "ACTIVE",
+        },
+        include: {
+          athlete: {
+            include: {
+              guardians: {
+                include: {
+                  family: {
+                    select: {
+                      id: true,
+                      email: true,
+                      primaryContact: true,
+                      emailOptOut: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      enrollments.forEach((e) => {
+        e.athlete.guardians.forEach((g) => {
+          if (!g.family.emailOptOut) {
+            addFamily(g.family);
+          }
+        });
+      });
+      break;
+    }
+
+    case "PROGRAM_SPECIFIC_INSTANCE": {
+      if (!targetProgramInstanceId) break;
+
+      // Families via InstanceRegistration for a SPECIFIC program instance
+      const registrations = await db.instanceRegistration.findMany({
+        where: {
+          programInstanceId: targetProgramInstanceId,
+          status: { in: ["REGISTERED", "ATTENDED"] },
+        },
+        include: {
+          athlete: {
+            include: {
+              guardians: {
+                include: {
+                  family: {
+                    select: {
+                      id: true,
+                      email: true,
+                      primaryContact: true,
+                      emailOptOut: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      registrations.forEach((r) => {
+        r.athlete.guardians.forEach((g) => {
+          if (!g.family.emailOptOut) {
+            addFamily(g.family);
+          }
+        });
+      });
+      break;
+    }
+
+    case "MEMBERSHIP_HOLDERS": {
+      if (!targetMembershipGroupIds?.length) break;
+
+      // Families with athletes holding memberships in the specified group(s)
+      const memberships = await db.athleteMembership.findMany({
+        where: {
+          status: "ACTIVE",
+          instance: {
+            membershipGroupId: { in: targetMembershipGroupIds },
+          },
+        },
+        include: {
+          athlete: {
+            include: {
+              guardians: {
+                include: {
+                  family: {
+                    select: {
+                      id: true,
+                      email: true,
+                      primaryContact: true,
+                      emailOptOut: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      memberships.forEach((m) => {
+        m.athlete.guardians.forEach((g) => {
+          if (!g.family.emailOptOut) {
+            addFamily(g.family);
+          }
+        });
+      });
+      break;
+    }
+
+    case "SPECIFIC_USERS": {
+      if (!targetFamilyIds?.length) break;
+
+      // Direct lookup of hand-picked families
+      const families = await db.family.findMany({
+        where: {
+          id: { in: targetFamilyIds },
+          organizationId,
+          emailOptOut: false,
+          email: { not: "" },
+        },
+        select: {
+          id: true,
+          email: true,
+          primaryContact: true,
+        },
+      });
+
+      families.forEach(addFamily);
+      break;
+    }
+  }
+
+  // Handle legacy event targeting
+  if (targetEventId) {
     const attendances = await db.attendance.findMany({
       where: {
         eventId: targetEventId,
@@ -432,36 +704,32 @@ export async function getCampaignRecipients(
       },
     });
 
+    // Clear and rebuild recipients for event targeting
+    const eventRecipients: EmailRecipient[] = [];
+    const eventSeenEmails = new Set<string>();
+
     attendances.forEach((a) => {
       a.athlete.guardians.forEach((g) => {
-        if (!g.family.emailOptOut) {
-          addFamily(g.family);
+        if (!g.family.emailOptOut && g.family.email && !eventSeenEmails.has(g.family.email.toLowerCase())) {
+          eventSeenEmails.add(g.family.email.toLowerCase());
+          eventRecipients.push({
+            familyId: g.family.id,
+            email: g.family.email,
+            name: g.family.primaryContact,
+          });
         }
       });
     });
-  } else if (targetScope === "FAMILY") {
-    // All families (same as ALL for now, could be customized)
-    const families = await db.family.findMany({
-      where: {
-        organizationId,
-        emailOptOut: false,
-        email: { not: "" },
-      },
-      select: {
-        id: true,
-        email: true,
-        primaryContact: true,
-      },
-    });
 
-    families.forEach(addFamily);
+    return eventRecipients;
   }
 
   // Additional filtering by membership status if specified
-  if (targetMembershipStatus && recipients.length > 0) {
-    const familyIds = recipients.map((r) => r.familyId);
-    
-    // Get athletes for these families and check membership status
+  if (targetMembershipStatus && recipients.length > 0 && targetType !== "MEMBERSHIP_HOLDERS") {
+    const familyIds = recipients.filter((r) => r.familyId).map((r) => r.familyId);
+
+    if (familyIds.length === 0) return recipients;
+
     const familiesWithMembership = await db.family.findMany({
       where: {
         id: { in: familyIds },
@@ -491,7 +759,7 @@ export async function getCampaignRecipients(
         if (!membership) {
           return targetMembershipStatus === "EXPIRED";
         }
-        const isActive = membership.endDate > now;
+        const isActive = membership.endDate && membership.endDate > now;
         return targetMembershipStatus === "ACTIVE" ? isActive : !isActive;
       });
 
@@ -500,7 +768,7 @@ export async function getCampaignRecipients(
       }
     });
 
-    return recipients.filter((r) => validFamilyIds.has(r.familyId));
+    return recipients.filter((r) => !r.familyId || validFamilyIds.has(r.familyId));
   }
 
   return recipients;
@@ -714,6 +982,115 @@ export async function createEmailCampaign(
 }
 
 /**
+ * Build template context for a specific recipient (family-based)
+ */
+async function buildRecipientContext(
+  organizationId: string,
+  familyId: string
+): Promise<Record<string, string>> {
+  const context: Record<string, string> = {};
+
+  // Organization context
+  const org = await db.organization.findUnique({
+    where: { id: organizationId },
+  });
+  if (org) {
+    context.organizationName = org.name;
+    if (org.email) context.organizationEmail = org.email;
+    if (org.phone) context.organizationPhone = org.phone;
+    const addressParts = [org.street, org.city, org.stateProvince, org.postalCode].filter(Boolean);
+    if (addressParts.length > 0) context.organizationAddress = addressParts.join(", ");
+  }
+
+  // Date context
+  const now = new Date();
+  context.currentDate = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  context.currentYear = now.getFullYear().toString();
+
+  // Family context
+  if (!familyId) return context;
+
+  const family = await db.family.findUnique({
+    where: { id: familyId },
+    include: {
+      guardians: {
+        include: {
+          athlete: {
+            include: {
+              memberships: {
+                where: { status: "ACTIVE" },
+                include: { instance: { include: { group: true } } },
+                take: 1,
+              },
+              enrollments: {
+                where: { status: "ACTIVE" },
+                include: { program: true },
+                take: 1,
+              },
+            },
+          },
+        },
+        take: 1, // Get primary athlete for context
+      },
+    },
+  });
+
+  if (family) {
+    context.familyName = family.name;
+    context.primaryContact = family.primaryContact;
+    context.primaryContactFirstName = family.primaryContact.split(" ")[0];
+    context.familyEmail = family.email;
+    context.familyPhone = family.phone;
+    context.familyBalance = `$${Number(family.balance).toFixed(2)}`;
+
+    // Athlete context from first guardian's athlete
+    const athlete = family.guardians[0]?.athlete;
+    if (athlete) {
+      context.athleteName = athlete.name;
+      const nameParts = athlete.name.split(" ");
+      context.athleteFirstName = nameParts[0];
+      if (nameParts.length > 1) context.athleteLastName = nameParts.slice(1).join(" ");
+      if (athlete.email) context.athleteEmail = athlete.email;
+      if (athlete.level) context.athleteLevel = athlete.level;
+      if (athlete.group) context.athleteGroup = athlete.group;
+
+      // Membership context
+      const membership = athlete.memberships[0];
+      if (membership) {
+        context.membershipName = membership.instance.name;
+        context.membershipGroupName = membership.instance.group.name;
+        context.membershipStartDate = membership.startDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+        if (membership.endDate) {
+          context.membershipEndDate = membership.endDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+          const daysRemaining = Math.ceil((membership.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          context.membershipDaysRemaining = daysRemaining.toString();
+        }
+        context.membershipStatus = membership.status;
+        context.membershipPrice = `$${Number(membership.instance.price).toFixed(2)}`;
+      }
+
+      // Program context
+      const enrollment = athlete.enrollments[0];
+      if (enrollment) {
+        context.programName = enrollment.program.name;
+        if (enrollment.program.description) context.programDescription = enrollment.program.description;
+      }
+    }
+  }
+
+  return context;
+}
+
+/**
+ * Render placeholders in a template string using a context map
+ */
+function renderPlaceholders(template: string, context: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    return context[key] || "";
+  });
+}
+
+/**
  * Execute an email campaign (send all messages)
  */
 export async function executeEmailCampaign(campaignId: string): Promise<void> {
@@ -739,28 +1116,47 @@ export async function executeEmailCampaign(campaignId: string): Promise<void> {
     },
   });
 
-  // Get recipients
-  const recipients = await getCampaignRecipients(
-    campaign.organizationId,
-    campaign.targetScope,
-    campaign.targetProgramId ?? undefined,
-    campaign.targetEventId ?? undefined,
-    campaign.targetMembershipStatus as "ACTIVE" | "EXPIRED" | undefined
-  );
+  // Get recipients using expanded targeting
+  const recipients = await getExpandedCampaignRecipients({
+    organizationId: campaign.organizationId,
+    targetType: campaign.targetType,
+    targetProgramId: campaign.targetProgramId ?? undefined,
+    targetEventId: campaign.targetEventId ?? undefined,
+    targetMembershipStatus: campaign.targetMembershipStatus as "ACTIVE" | "EXPIRED" | undefined,
+    targetProgramInstanceId: campaign.targetProgramInstanceId ?? undefined,
+    targetMembershipGroupIds: campaign.targetMembershipGroupIds,
+    targetFamilyIds: campaign.targetFamilyIds,
+  });
 
   let sentCount = 0;
   let failedCount = 0;
 
-  // Send to each recipient
+  // Send to each recipient with per-recipient placeholder rendering
   for (const recipient of recipients) {
+    // Build context for this recipient
+    const context = recipient.familyId
+      ? await buildRecipientContext(campaign.organizationId, recipient.familyId)
+      : {
+          organizationName: campaign.organization.name,
+          currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+          currentYear: new Date().getFullYear().toString(),
+        };
+
+    // Render placeholders in subject and body
+    const personalizedSubject = renderPlaceholders(campaign.subject, context);
+    const personalizedHtml = renderPlaceholders(campaign.htmlBody, context);
+    const personalizedText = campaign.textBody
+      ? renderPlaceholders(campaign.textBody, context)
+      : undefined;
+
     const result = await sendSingleEmail({
       organizationId: campaign.organizationId,
       to: recipient.email,
-      subject: campaign.subject,
-      htmlBody: campaign.htmlBody,
-      textBody: campaign.textBody ?? undefined,
+      subject: personalizedSubject,
+      htmlBody: personalizedHtml,
+      textBody: personalizedText,
       classification: campaign.classification,
-      familyId: recipient.familyId,
+      familyId: recipient.familyId || undefined,
       campaignId,
     });
 

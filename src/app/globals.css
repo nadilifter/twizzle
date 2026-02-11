@@ -178,6 +178,26 @@
   z-index: 9999;
 }
 
+/* Subject-line Tiptap editor: single-line, input-like */
+.subject-line-editor .ProseMirror {
+  outline: none;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.subject-line-editor .ProseMirror p {
+  margin: 0;
+  display: inline;
+}
+/* Placeholder text for empty subject editor */
+.subject-line-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground, #a1a1aa);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
 @theme inline {
   @keyframes shine {
   0% {

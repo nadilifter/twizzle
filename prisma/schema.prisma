@@ -1937,13 +1937,18 @@ model EmailCampaign {
   textBody       String?             @db.Text
   classification EmailClassification @default(GENERAL)
 
-  // Targeting - reuse AnnouncementScope enum
+  // Targeting - legacy field kept for backward compatibility
   targetScope     AnnouncementScope @default(ALL)
+  // New expanded targeting
+  targetType      EmailTargetType   @default(ALL_MEMBERS)
   targetProgramId String?
   targetEventId   String?
 
   // Additional targeting options
-  targetMembershipStatus String? // "ACTIVE", "EXPIRED", or null for all
+  targetMembershipStatus   String?   // "ACTIVE", "EXPIRED", or null for all
+  targetProgramInstanceId  String?   // For PROGRAM_SPECIFIC_INSTANCE
+  targetMembershipGroupIds String[]  // For MEMBERSHIP_HOLDERS (array of group IDs)
+  targetFamilyIds          String[]  // For SPECIFIC_USERS (hand-picked families)
 
   // Status
   status EmailCampaignStatus @default(DRAFT)
@@ -1976,6 +1981,17 @@ model EmailCampaign {
   @@index([organizationId])
   @@index([status])
   @@index([createdAt])
+}
+
+enum EmailTargetType {
+  ALL_USERS
+  ALL_MEMBERS
+  ALL_PROGRAM_REGISTRANTS
+  PROGRAM_ANY_INSTANCE
+  PROGRAM_SPECIFIC_INSTANCE
+  MEMBERSHIP_HOLDERS
+  SPECIFIC_USERS
+  ALL_FAMILIES
 }
 
 enum EmailCampaignStatus {
