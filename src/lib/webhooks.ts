@@ -34,7 +34,7 @@ export const WEBHOOK_ENDPOINTS = {
   adyen: () => `${getWebhookBaseUrl()}/api/webhooks/adyen`,
   
   /** Twilio SMS/messaging webhook endpoint */
-  twilio: () => `${getWebhookBaseUrl()}/api/webhooks/twilio`,
+  twilio: () => `${getWebhookBaseUrl()}/api/twilio/webhook`,
   
   /** Stripe payment webhook endpoint */
   stripe: () => `${getWebhookBaseUrl()}/api/webhooks/stripe`,
@@ -43,7 +43,7 @@ export const WEBHOOK_ENDPOINTS = {
   sesBounce: () => `${getWebhookBaseUrl()}/api/webhooks/ses-bounce`,
   
   /** Twilio status callback endpoint */
-  twilioStatus: () => `${getWebhookBaseUrl()}/api/webhooks/twilio/status`,
+  twilioStatus: () => `${getWebhookBaseUrl()}/api/twilio/webhook`,
 } as const;
 
 /**

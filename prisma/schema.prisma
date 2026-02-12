@@ -79,9 +79,10 @@ model Organization {
   scheduleTemplates ScheduleTemplate[]
 
   // SMS
-  smsMessages  SmsMessage[]
-  smsCampaigns SmsCampaign[]
-  smsUsage     SmsUsage[]
+  smsMessages      SmsMessage[]
+  smsCampaigns     SmsCampaign[]
+  smsUsage         SmsUsage[]
+  smsConversations SmsConversation[]
 
   // Email
   emailMessages  EmailMessage[]
@@ -315,6 +316,7 @@ model Family {
   enrollments           Enrollment[] // Enrollments paid/managed by this family
   recurringCharges      RecurringCharge[]
   smsMessages           SmsMessage[]
+  smsConversations      SmsConversation[]
   emailMessages         EmailMessage[]
   instanceRegistrations InstanceRegistration[] // Per-instance program registrations
   waiverSignatures      WaiverSignature[]
@@ -1697,6 +1699,7 @@ model SmsMessage {
   familyId       String? // Recipient family (if outbound)
   staffProfileId String? // Recipient staff (if outbound)
   campaignId     String? // Part of a campaign
+  conversationId String? // Part of a conversation thread
 
   // Message details
   to       String // E.164 format phone number
@@ -1730,13 +1733,15 @@ model SmsMessage {
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family       Family?      @relation(fields: [familyId], references: [id], onDelete: SetNull)
-  campaign     SmsCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family       Family?         @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  campaign     SmsCampaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  conversation SmsConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([familyId])
   @@index([campaignId])
+  @@index([conversationId, createdAt])
   @@index([twilioSid])
   @@index([twilioStatus])
   @@index([createdAt])
@@ -1772,10 +1777,16 @@ model SmsCampaign {
   body           String            @db.Text
   classification SmsClassification @default(GENERAL)
 
-  // Targeting
-  targetScope     AnnouncementScope @default(ALL) // Reuse existing enum
-  targetProgramId String?
-  targetEventId   String?
+  // Targeting - legacy field kept for backward compatibility
+  targetScope     AnnouncementScope @default(ALL)
+  // Expanded targeting (matching EmailCampaign)
+  targetType               SmsTargetType @default(ALL_MEMBERS)
+  targetProgramId          String?
+  targetEventId            String?
+  targetMembershipStatus   String?   // "ACTIVE", "EXPIRED", or null for all
+  targetProgramInstanceId  String?   // For PROGRAM_SPECIFIC_INSTANCE
+  targetMembershipGroupIds String[]  // For MEMBERSHIP_HOLDERS (array of group IDs)
+  targetFamilyIds          String[]  // For SPECIFIC_USERS (hand-picked families)
 
   // Status
   status SmsCampaignStatus @default(DRAFT)
@@ -1806,6 +1817,17 @@ model SmsCampaign {
   @@index([createdAt])
 }
 
+enum SmsTargetType {
+  ALL_USERS
+  ALL_MEMBERS
+  ALL_PROGRAM_REGISTRANTS
+  PROGRAM_ANY_INSTANCE
+  PROGRAM_SPECIFIC_INSTANCE
+  MEMBERSHIP_HOLDERS
+  SPECIFIC_USERS
+  ALL_FAMILIES
+}
+
 enum SmsCampaignStatus {
   DRAFT
   SCHEDULED
@@ -1813,6 +1835,39 @@ enum SmsCampaignStatus {
   COMPLETED
   FAILED
   CANCELLED
+}
+
+model SmsConversation {
+  id             String @id @default(cuid())
+  organizationId String
+  familyId       String
+  phoneNumber    String // Family's phone number (E.164)
+
+  // Status
+  status SmsConversationStatus @default(OPEN)
+
+  // Tracking
+  lastMessageAt   DateTime?
+  lastMessageBody String?   @db.Text
+  unreadCount     Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  family       Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  messages     SmsMessage[]
+
+  @@unique([organizationId, familyId])
+  @@index([organizationId, lastMessageAt])
+  @@index([organizationId, status])
+}
+
+enum SmsConversationStatus {
+  OPEN
+  CLOSED
+  ARCHIVED
 }
 
 model SmsUsage {

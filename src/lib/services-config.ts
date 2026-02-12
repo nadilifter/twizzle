@@ -100,7 +100,7 @@ export function getTwilioConfig(): TwilioConfig {
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
     phoneNumber: process.env.TWILIO_PHONE_NUMBER,
     environment: mode,
-    webhookUrl: `${webhookUrl}/api/webhooks/twilio`,
+    webhookUrl: `${webhookUrl}/api/twilio/webhook`,
   };
 }
 
@@ -146,7 +146,7 @@ export function getWebhookBaseUrl(): string {
  */
 export const WEBHOOK_ENDPOINTS = {
   adyen: () => `${getWebhookBaseUrl()}/api/webhooks/adyen`,
-  twilio: () => `${getWebhookBaseUrl()}/api/webhooks/twilio`,
+  twilio: () => `${getWebhookBaseUrl()}/api/twilio/webhook`,
   stripe: () => `${getWebhookBaseUrl()}/api/webhooks/stripe`,
   sesBounce: () => `${getWebhookBaseUrl()}/api/webhooks/ses-bounce`,
 } as const;

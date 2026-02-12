@@ -226,9 +226,9 @@ AWS Certificate Manager (ACM) will be used for SSL certificates. Certificates ar
 
 | Environment | Webhook URL |
 |-------------|------------|
-| Production | `https://admin.uplifterinc.com/api/webhooks/twilio` |
-| Staging | `https://admin.upliftergymnastics.com/api/webhooks/twilio` |
-| Development | `https://admin.uplifterdev.com/api/webhooks/twilio` |
+| Production | `https://admin.uplifterinc.com/api/twilio/webhook` |
+| Staging | `https://admin.upliftergymnastics.com/api/twilio/webhook` |
+| Development | `https://admin.uplifterdev.com/api/twilio/webhook` |
 
 ---
 

@@ -765,7 +765,11 @@ export async function handleStatusCallback(params: {
 }
 
 /**
- * Handle inbound SMS (opt-out processing)
+ * Handle inbound SMS
+ *
+ * Processes all inbound messages:
+ * 1. Handles opt-out/opt-in keywords
+ * 2. Routes ALL messages to conversations (including opt-out messages)
  */
 export async function handleInboundSms(params: {
   From: string;
@@ -784,8 +788,8 @@ export async function handleInboundSms(params: {
   const isOptOut = optOutKeywords.includes(bodyUpper);
   const isOptIn = optInKeywords.includes(bodyUpper);
 
+  // Process opt-out/opt-in
   if (isOptOut || isOptIn) {
-    // Find families with this phone number
     const families = await db.family.findMany({
       where: { phone: normalizedFrom },
     });
@@ -798,22 +802,15 @@ export async function handleInboundSms(params: {
           smsOptOutAt: isOptOut ? new Date() : null,
         },
       });
-
-      // Record the inbound message
-      await db.smsMessage.create({
-        data: {
-          organizationId: family.organizationId,
-          familyId: family.id,
-          to: To,
-          from: normalizedFrom,
-          body: Body,
-          twilioSid: MessageSid,
-          twilioStatus: "DELIVERED",
-          direction: "INBOUND",
-          classification: "GENERAL",
-          deliveredAt: new Date(),
-        },
-      });
     }
   }
+
+  // Route ALL inbound messages to conversations
+  const { routeInboundMessage } = await import("@/lib/sms-conversation-service");
+  await routeInboundMessage({
+    from: From,
+    to: To,
+    body: Body,
+    twilioSid: MessageSid,
+  });
 }

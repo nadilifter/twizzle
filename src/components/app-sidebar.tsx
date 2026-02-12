@@ -203,6 +203,14 @@ const data = {
           url: "/dashboard/communication/email",
         },
         {
+          title: "SMS Campaigns",
+          url: "/dashboard/communication/sms",
+        },
+        {
+          title: "SMS Conversations",
+          url: "/dashboard/communication/chat",
+        },
+        {
           title: "Notifications",
           url: "/dashboard/communication/notifications",
         },

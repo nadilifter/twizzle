@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { createCampaign, checkUsageLimits } from "@/lib/sms-service";
-import { isTwilioConfigured } from "@/lib/twilio";
+import {
+  createSmsCampaign,
+  getExpandedSmsCampaignRecipients,
+} from "@/lib/sms-campaign-service";
+import { checkUsageLimits } from "@/lib/sms-service";
+import { isTwilioConfigured, calculateSegments } from "@/lib/twilio";
+import type { SmsTargetType } from "@prisma/client";
 
 const createCampaignSchema = z.object({
   name: z.string().min(1, "Campaign name is required"),
@@ -12,9 +17,25 @@ const createCampaignSchema = z.object({
     .enum(["GENERAL", "REMINDER", "ALERT", "BILLING", "EVENT", "NEWS"])
     .optional()
     .default("GENERAL"),
-  targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "FAMILY"]).default("ALL"),
+  // Expanded targeting
+  targetType: z
+    .enum([
+      "ALL_USERS",
+      "ALL_MEMBERS",
+      "ALL_PROGRAM_REGISTRANTS",
+      "PROGRAM_ANY_INSTANCE",
+      "PROGRAM_SPECIFIC_INSTANCE",
+      "MEMBERSHIP_HOLDERS",
+      "SPECIFIC_USERS",
+      "ALL_FAMILIES",
+    ])
+    .default("ALL_MEMBERS"),
   targetProgramId: z.string().optional(),
   targetEventId: z.string().optional(),
+  targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
+  targetProgramInstanceId: z.string().optional(),
+  targetMembershipGroupIds: z.array(z.string()).optional(),
+  targetFamilyIds: z.array(z.string()).optional(),
   scheduledAt: z.string().datetime().optional(),
   sendImmediately: z.boolean().optional().default(false),
 });
@@ -74,6 +95,9 @@ export async function GET(request: NextRequest) {
       db.smsCampaign.count({ where }),
     ]);
 
+    // Get usage limits
+    const limits = await checkUsageLimits(session.user.organizationId);
+
     return NextResponse.json({
       campaigns,
       pagination: {
@@ -83,6 +107,12 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit),
       },
       configured: isTwilioConfigured(),
+      usage: {
+        used: limits.used,
+        included: limits.included,
+        remaining: limits.remaining,
+        overageRate: limits.overageRate,
+      },
     });
   } catch (error) {
     console.error("Error fetching SMS campaigns:", error);
@@ -112,35 +142,65 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createCampaignSchema.parse(body);
 
-    // Validate targeting
-    if (validatedData.targetScope === "PROGRAM" && !validatedData.targetProgramId) {
+    // Validate targeting requirements
+    if (
+      (validatedData.targetType === "PROGRAM_ANY_INSTANCE" ||
+        validatedData.targetType === "PROGRAM_SPECIFIC_INSTANCE") &&
+      !validatedData.targetProgramId
+    ) {
       return NextResponse.json(
         { error: "Program ID is required for program-targeted campaigns" },
         { status: 400 }
       );
     }
 
-    if (validatedData.targetScope === "EVENT" && !validatedData.targetEventId) {
+    if (
+      validatedData.targetType === "PROGRAM_SPECIFIC_INSTANCE" &&
+      !validatedData.targetProgramInstanceId
+    ) {
       return NextResponse.json(
-        { error: "Event ID is required for event-targeted campaigns" },
+        { error: "Program instance ID is required for instance-specific campaigns" },
         { status: 400 }
       );
     }
 
-    const result = await createCampaign({
+    if (
+      validatedData.targetType === "MEMBERSHIP_HOLDERS" &&
+      (!validatedData.targetMembershipGroupIds || validatedData.targetMembershipGroupIds.length === 0)
+    ) {
+      return NextResponse.json(
+        { error: "At least one membership group is required for membership-targeted campaigns" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      validatedData.targetType === "SPECIFIC_USERS" &&
+      (!validatedData.targetFamilyIds || validatedData.targetFamilyIds.length === 0)
+    ) {
+      return NextResponse.json(
+        { error: "At least one family must be selected for user-specific campaigns" },
+        { status: 400 }
+      );
+    }
+
+    const result = await createSmsCampaign({
       organizationId: session.user.organizationId,
       name: validatedData.name,
       body: validatedData.body,
       classification: validatedData.classification,
-      targetScope: validatedData.targetScope,
+      targetType: validatedData.targetType as SmsTargetType,
       targetProgramId: validatedData.targetProgramId,
       targetEventId: validatedData.targetEventId,
+      targetMembershipStatus: validatedData.targetMembershipStatus,
+      targetProgramInstanceId: validatedData.targetProgramInstanceId,
+      targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
+      targetFamilyIds: validatedData.targetFamilyIds,
       createdById: session.user.id,
       scheduledAt: validatedData.scheduledAt
         ? new Date(validatedData.scheduledAt)
-        : validatedData.sendImmediately
-        ? undefined
         : undefined,
+      sendImmediately: validatedData.sendImmediately,
     });
 
     if (!result.success) {
