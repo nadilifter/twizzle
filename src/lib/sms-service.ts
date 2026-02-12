@@ -790,8 +790,15 @@ export async function handleInboundSms(params: {
 
   // Process opt-out/opt-in
   if (isOptOut || isOptIn) {
+    // Build phone variants for flexible matching (phone may be stored without country code)
+    const digitsOnly = normalizedFrom.replace(/\D/g, "");
+    const withoutCountryCode = digitsOnly.startsWith("1") && digitsOnly.length === 11
+      ? digitsOnly.substring(1)
+      : digitsOnly;
+    const phoneVariants = [normalizedFrom, digitsOnly, withoutCountryCode];
+
     const families = await db.family.findMany({
-      where: { phone: normalizedFrom },
+      where: { phone: { in: phoneVariants } },
     });
 
     for (const family of families) {

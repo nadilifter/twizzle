@@ -406,9 +406,21 @@ export async function routeInboundMessage(params: {
   const { from, to, body, twilioSid } = params;
   const normalizedFrom = normalizePhoneNumber(from);
 
-  // Find families with this phone number
+  // Build phone variants for flexible matching
+  // Family phone may be stored as "8188086543", "(818) 808-6543", "+18188086543", etc.
+  const digitsOnly = normalizedFrom.replace(/\D/g, ""); // e.g. "18188086543"
+  const withoutCountryCode = digitsOnly.startsWith("1") && digitsOnly.length === 11
+    ? digitsOnly.substring(1) // e.g. "8188086543"
+    : digitsOnly;
+  const phoneVariants = [
+    normalizedFrom,        // +18188086543
+    digitsOnly,            // 18188086543
+    withoutCountryCode,    // 8188086543
+  ];
+
+  // Find families with this phone number (match any stored format)
   const families = await db.family.findMany({
-    where: { phone: normalizedFrom },
+    where: { phone: { in: phoneVariants } },
     select: {
       id: true,
       organizationId: true,
@@ -420,7 +432,7 @@ export async function routeInboundMessage(params: {
     // No matching family -- try to find by recent outbound messages
     const recentOutbound = await db.smsMessage.findFirst({
       where: {
-        to: normalizedFrom,
+        to: { in: phoneVariants },
         direction: "OUTBOUND",
       },
       orderBy: { createdAt: "desc" },
@@ -431,11 +443,17 @@ export async function routeInboundMessage(params: {
     });
 
     if (recentOutbound?.familyId) {
-      // Create a message record even though we can't thread it perfectly
+      // Get or create conversation so the message is properly threaded
+      const conversationId = await getOrCreateConversation(
+        recentOutbound.organizationId,
+        recentOutbound.familyId
+      );
+
       await db.smsMessage.create({
         data: {
           organizationId: recentOutbound.organizationId,
           familyId: recentOutbound.familyId,
+          conversationId,
           to,
           from: normalizedFrom,
           body,
@@ -444,6 +462,17 @@ export async function routeInboundMessage(params: {
           direction: "INBOUND",
           classification: "GENERAL",
           deliveredAt: new Date(),
+        },
+      });
+
+      // Update conversation
+      await db.smsConversation.update({
+        where: { id: conversationId },
+        data: {
+          lastMessageAt: new Date(),
+          lastMessageBody: body,
+          unreadCount: { increment: 1 },
+          status: "OPEN",
         },
       });
     }
