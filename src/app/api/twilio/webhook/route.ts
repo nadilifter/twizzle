@@ -13,12 +13,47 @@ import { handleStatusCallback, handleInboundSms } from "@/lib/sms-service";
 // POST /api/twilio/webhook - Handle Twilio callbacks
 export async function POST(request: NextRequest) {
   try {
-    // Get the raw body for signature validation
-    const formData = await request.formData();
+    // Parse the request body - Twilio typically sends application/x-www-form-urlencoded
+    // but Messaging Services may send different content types
     const params: Record<string, string> = {};
+    const contentType = request.headers.get("content-type") || "";
 
-    formData.forEach((value, key) => {
-      params[key] = value.toString();
+    if (contentType.includes("application/json")) {
+      // JSON body (some Twilio products/Messaging Services)
+      const json = await request.json();
+      for (const [key, value] of Object.entries(json)) {
+        if (typeof value === "string") {
+          params[key] = value;
+        } else if (value !== null && value !== undefined) {
+          params[key] = String(value);
+        }
+      }
+    } else if (
+      contentType.includes("application/x-www-form-urlencoded") ||
+      contentType.includes("multipart/form-data")
+    ) {
+      // Standard Twilio form-encoded webhooks
+      const formData = await request.formData();
+      formData.forEach((value, key) => {
+        params[key] = value.toString();
+      });
+    } else {
+      // Fallback: try to read as text and parse as URL-encoded
+      const text = await request.text();
+      if (text) {
+        const searchParams = new URLSearchParams(text);
+        searchParams.forEach((value, key) => {
+          params[key] = value;
+        });
+      }
+    }
+
+    console.log("[Twilio Webhook] Received:", {
+      contentType,
+      keys: Object.keys(params),
+      messageSid: params.MessageSid || params.SmsSid,
+      from: params.From,
+      messageStatus: params.MessageStatus,
     });
 
     // Validate Twilio signature in production
@@ -80,10 +115,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    console.warn("Unhandled webhook payload:", params);
+    console.warn("[Twilio Webhook] Unhandled payload:", JSON.stringify(params));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error processing Twilio webhook:", error);
+    console.error("[Twilio Webhook] Error processing:", error);
     // Return 200 to prevent Twilio from retrying
     return NextResponse.json({ error: "Processing error" }, { status: 200 });
   }
