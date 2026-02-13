@@ -44,6 +44,8 @@ export interface SESConfig {
   fromEmail: string;
   endpoint?: string;  // For MailHog in local dev
   mode: 'sandbox' | 'production';
+  /** SES Configuration Set name for event tracking (bounces, complaints, deliveries) */
+  configurationSetName?: string;
 }
 
 /**
@@ -122,6 +124,7 @@ export function getSESConfig(): SESConfig {
     fromEmail,
     endpoint: currentEnv === 'local' ? (process.env.SES_ENDPOINT || 'http://localhost:1025') : undefined,
     mode: currentEnv === 'production' ? 'production' : 'sandbox',
+    configurationSetName: process.env.AWS_SES_CONFIGURATION_SET || undefined,
   };
 }
 

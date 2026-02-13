@@ -180,6 +180,12 @@ async function sendEmailViaSES(
     });
   }
 
+  if (config.configurationSetName) {
+    logger.info('[EMAIL] Using SES Configuration Set', {
+      configurationSetName: config.configurationSetName,
+    });
+  }
+
   try {
     const command = new SendEmailCommand({
       Source: fromAddress,
@@ -207,6 +213,10 @@ async function sendEmailViaSES(
           }),
         },
       },
+      // Route events through SES Configuration Set for bounce/complaint handling
+      ...(config.configurationSetName && {
+        ConfigurationSetName: config.configurationSetName,
+      }),
     });
 
     const response = await client.send(command);
