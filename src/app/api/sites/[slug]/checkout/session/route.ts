@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createPaymentSession } from "@/lib/adyen";
+import { calculateAge, isAgeEligible } from "@/lib/age-utils";
+import { subDays } from "date-fns";
 
 interface CartItem {
   referenceId: string;
@@ -37,6 +39,18 @@ export async function POST(
       discountCode?: string 
     };
     const subdomain = params.slug;
+
+    // Validate registration items have quantity of 1
+    const registrationTypes = ["program", "event", "membership"];
+    const invalidItems = items.filter(
+      (item) => registrationTypes.includes(item.type) && item.quantity !== 1
+    );
+    if (invalidItems.length > 0) {
+      return NextResponse.json(
+        { error: "Registration items must have a quantity of 1" },
+        { status: 400 }
+      );
+    }
 
     // 1. Get Organization
     const config = await db.websiteConfig.findUnique({
@@ -165,6 +179,192 @@ export async function POST(
               { error: "Medical information is required for all athletes. Please complete the medical information forms before proceeding to payment." },
               { status: 400 }
             );
+          }
+        }
+      }
+    }
+
+    // 2c. Server-side membership restriction validation
+    const membershipItems = items.filter((item: CartItem) => item.type === "membership");
+    if (membershipItems.length > 0) {
+      const now = new Date();
+
+      for (const item of membershipItems) {
+        const instanceId = item.details?.membershipInstanceId || item.referenceId;
+        const athleteId = item.athleteId || item.details?.athleteId;
+        const athleteLabel = item.athleteName || athleteId || "unknown";
+
+        // Fetch instance with group and restrictions
+        const instance = await db.membershipInstance.findUnique({
+          where: { id: instanceId },
+          include: {
+            group: {
+              include: {
+                levelRequirements: true,
+                waiverRequirements: true,
+              },
+            },
+            _count: { select: { athleteMemberships: true } },
+          },
+        });
+
+        if (!instance) {
+          return NextResponse.json(
+            { error: `Membership instance not found for "${item.name}".` },
+            { status: 400 }
+          );
+        }
+
+        // Verify instance belongs to this organization
+        if (instance.group.organizationId !== organizationId) {
+          return NextResponse.json(
+            { error: `Membership "${item.name}" does not belong to this organization.` },
+            { status: 400 }
+          );
+        }
+
+        // Check instance is ACTIVE
+        if (instance.status !== "ACTIVE") {
+          return NextResponse.json(
+            { error: `Membership "${item.name}" is not currently available for purchase (status: ${instance.status}).` },
+            { status: 400 }
+          );
+        }
+
+        // Check purchase window
+        const purchaseStart = instance.purchaseStartDate
+          ?? (instance.group.purchaseWindowDays != null
+            ? subDays(instance.startDate, instance.group.purchaseWindowDays)
+            : new Date(0));
+        const purchaseEnd = instance.purchaseEndDate ?? instance.endDate;
+
+        if (now < purchaseStart || now > purchaseEnd) {
+          return NextResponse.json(
+            { error: `Membership "${item.name}" is not within its purchase window.` },
+            { status: 400 }
+          );
+        }
+
+        // Check capacity
+        if (instance.group.hasCapacityRestriction) {
+          const effectiveCapacity = instance.capacity ?? instance.group.capacity;
+          if (effectiveCapacity != null && instance._count.athleteMemberships >= effectiveCapacity) {
+            return NextResponse.json(
+              { error: `Membership "${item.name}" has reached its capacity limit.` },
+              { status: 400 }
+            );
+          }
+        }
+
+        // Check duplicate purchase
+        if (athleteId) {
+          const existing = await db.athleteMembership.findFirst({
+            where: {
+              athleteId,
+              membershipInstanceId: instanceId,
+              status: { in: ["ACTIVE"] },
+            },
+          });
+          if (existing) {
+            return NextResponse.json(
+              { error: `Athlete "${athleteLabel}" already has an active membership for "${item.name}".` },
+              { status: 400 }
+            );
+          }
+
+          // Fetch athlete for restriction checks
+          const athlete = await db.athlete.findUnique({
+            where: { id: athleteId },
+            select: {
+              id: true,
+              gender: true,
+              birthDate: true,
+              level: true,
+            },
+          });
+
+          if (!athlete) {
+            return NextResponse.json(
+              { error: `Athlete "${athleteLabel}" not found.` },
+              { status: 400 }
+            );
+          }
+
+          // Gender restriction
+          if (instance.group.hasGenderRestriction && instance.group.allowedGenders.length > 0) {
+            if (!athlete.gender || !instance.group.allowedGenders.includes(athlete.gender)) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${item.name}".` },
+                { status: 400 }
+              );
+            }
+          }
+
+          // Age restriction
+          if (instance.group.hasAgeRestriction) {
+            const age = calculateAge(athlete.birthDate);
+            if (!isAgeEligible(age, instance.group.minAge, instance.group.maxAge)) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" does not meet the age requirement for "${item.name}" (ages ${instance.group.minAge ?? 0}-${instance.group.maxAge ?? "any"}).` },
+                { status: 400 }
+              );
+            }
+          }
+
+          // Level restriction
+          if (instance.group.hasLevelRestriction && instance.group.levelRequirements.length > 0) {
+            const allowedLevelIds = instance.group.levelRequirements.map((lr) => lr.levelId);
+            if (!athlete.level || !allowedLevelIds.some((lid) => athlete.level === lid)) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" does not meet the level requirement for "${item.name}".` },
+                { status: 400 }
+              );
+            }
+          }
+
+          // Waiver requirement check
+          if (instance.group.hasWaiverRestriction && instance.group.waiverRequirements.length > 0) {
+            const checkFamily = await db.family.findFirst({
+              where: { email: userDetails.email, organizationId },
+              select: { id: true },
+            });
+
+            if (checkFamily) {
+              const requiredWaiverIds = instance.group.waiverRequirements.map((wr) => wr.waiverId);
+              const acceptances = await db.waiverAcceptance.findMany({
+                where: {
+                  familyId: checkFamily.id,
+                  waiverId: { in: requiredWaiverIds },
+                  athleteId: athleteId || null,
+                },
+                select: { waiverId: true },
+              });
+
+              const signedIds = new Set(acceptances.map((a) => a.waiverId));
+              const unsigned = requiredWaiverIds.filter((id) => !signedIds.has(id));
+
+              if (unsigned.length > 0) {
+                return NextResponse.json(
+                  { error: `Required waivers have not been signed for athlete "${athleteLabel}" for membership "${item.name}". Please sign all waivers before proceeding to payment.` },
+                  { status: 400 }
+                );
+              }
+            }
+          }
+
+          // Medical requirement check
+          if (instance.group.hasMedicalRequirement) {
+            const medicalInfo = await db.athleteMedicalInfo.findUnique({
+              where: { athleteId },
+              select: { athleteId: true },
+            });
+
+            if (!medicalInfo) {
+              return NextResponse.json(
+                { error: `Medical information is required for athlete "${athleteLabel}" for membership "${item.name}". Please complete the medical information form before proceeding to payment.` },
+                { status: 400 }
+              );
+            }
           }
         }
       }
@@ -341,13 +541,13 @@ export async function POST(
     }
 
     // 5. Create Invoice with metadata for post-payment processing
-    const membershipItems = items.filter((item: CartItem) => item.type === "membership");
+    const membershipInvoiceItems = items.filter((item: CartItem) => item.type === "membership");
     
     // Build metadata for webhook processing
     const invoiceMetadata = {
-      membershipPurchases: membershipItems.map(item => ({
+      membershipPurchases: membershipInvoiceItems.map(item => ({
         membershipInstanceId: item.details?.membershipInstanceId || item.referenceId,
-        athleteId: item.details?.athleteId,
+        athleteId: item.athleteId || item.details?.athleteId,
         quantity: item.quantity,
       })),
       programRegistrations: programItems.map(item => ({
@@ -378,9 +578,9 @@ export async function POST(
             quantity: item.quantity,
             unitPrice: item.price,
             total: Number(item.price) * item.quantity,
-            programId: item.type === 'program' ? item.details?.programId : undefined,
-            // Note: For membership items, we store the membershipInstanceId in the description
-            // or a separate field could be added to LineItem model
+            programId: item.type === 'program' ? (item.details?.programId || undefined) : undefined,
+            membershipInstanceId: item.type === 'membership' ? (item.details?.membershipInstanceId || item.referenceId) : undefined,
+            athleteId: item.athleteId || item.details?.athleteId || undefined,
         }))
     });
 
@@ -403,7 +603,7 @@ export async function POST(
         sessionData: session.sessionData,
         invoiceId: invoice.id,
         // Return info about required memberships for frontend validation
-        hasMembershipPurchases: membershipItems.length > 0,
+        hasMembershipPurchases: membershipInvoiceItems.length > 0,
         hasProgramRegistrations: programItems.length > 0,
     });
 

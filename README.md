@@ -185,6 +185,9 @@ pnpm install
 # Start local services (PostgreSQL, Redis, MinIO, MailHog)
 docker compose up -d db redis minio mailhog
 
+# For the lazy developer: 
+docker compose up -d db redis minio mailhog && pnpm dev
+
 # Run database migrations
 pnpm db:push
 

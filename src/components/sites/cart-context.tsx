@@ -18,6 +18,12 @@ export type CartItem = {
 
 export type CartItemsByAthlete = Map<string, { athleteName: string; items: CartItem[] }>
 
+const REGISTRATION_TYPES: CartItem["type"][] = ["program", "event", "membership"]
+
+export function isRegistrationType(type: CartItem["type"]): boolean {
+  return REGISTRATION_TYPES.includes(type)
+}
+
 interface CartContextType {
   items: CartItem[]
   isOpen: boolean
@@ -61,21 +67,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, isInitialized])
 
   const addItem = (item: Omit<CartItem, "id">) => {
+    const registration = isRegistrationType(item.type)
+    const normalizedItem = registration ? { ...item, quantity: 1 } : item
+
     setItems((prev) => {
       // Check if item already exists with same referenceId, athleteId, and details
       const existingItemIndex = prev.findIndex(
-        (i) => i.referenceId === item.referenceId && i.athleteId === item.athleteId && JSON.stringify(i.details) === JSON.stringify(item.details)
+        (i) => i.referenceId === normalizedItem.referenceId && i.athleteId === normalizedItem.athleteId && JSON.stringify(i.details) === JSON.stringify(normalizedItem.details)
       )
 
       if (existingItemIndex > -1) {
+        if (registration) {
+          toast.info("This is already in your cart")
+          return prev
+        }
+        // Only increment quantity for products
         const newItems = [...prev]
-        newItems[existingItemIndex].quantity += item.quantity
+        newItems[existingItemIndex].quantity += normalizedItem.quantity
         toast.success("Item quantity updated in cart")
         return newItems
       }
 
       toast.success("Item added to cart")
-      return [...prev, { ...item, id: Math.random().toString(36).substring(2, 9) }]
+      return [...prev, { ...normalizedItem, id: Math.random().toString(36).substring(2, 9) }]
     })
     setIsOpen(true)
   }

@@ -85,10 +85,12 @@ interface Program {
   capacity?: number | null;
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
+  hasGenderRestriction?: boolean;
   minAge?: number | null;
   maxAge?: number | null;
   hasLevelRestriction?: boolean;
   hasMembershipRestriction?: boolean;
+  allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
   _count?: { instances?: number; enrollments?: number };
 }
 

@@ -27,12 +27,15 @@ const createProgramSchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   // Restriction flags
+  hasGenderRestriction: z.boolean().default(false),
   hasLevelRestriction: z.boolean().default(false),
   hasCapacityRestriction: z.boolean().default(false),
   hasAgeRestriction: z.boolean().default(false),
   hasMembershipRestriction: z.boolean().default(false),
   hasWaiverRestriction: z.boolean().default(false),
   hasMedicalRequirement: z.boolean().default(false),
+  // Gender restriction values
+  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).default([]),
   // Related data for creation
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),

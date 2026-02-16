@@ -15,7 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { useCart, CartItem } from "@/components/sites/cart-context"
+import { useCart, CartItem, isRegistrationType } from "@/components/sites/cart-context"
 import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
 
 export function CartSheet() {
@@ -102,27 +102,31 @@ export function CartSheet() {
                               </p>
                             )}
                             <div className="flex items-center gap-2 mt-2">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="text-sm w-4 text-center">{item.quantity}</span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
+                              {!isRegistrationType(item.type) && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="text-sm w-4 text-center">{item.quantity}</span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 ml-2 text-destructive hover:text-destructive"
+                                className={`h-6 w-6 text-destructive hover:text-destructive${!isRegistrationType(item.type) ? " ml-2" : ""}`}
                                 onClick={() => handleRemoveClick(item)}
                               >
                                 <Trash2 className="h-3 w-3" />
@@ -133,7 +137,7 @@ export function CartSheet() {
                             <span className="font-medium text-sm">
                               ${(item.price * item.quantity).toFixed(2)}
                             </span>
-                            {item.quantity > 1 && (
+                            {!isRegistrationType(item.type) && item.quantity > 1 && (
                               <span className="text-xs text-muted-foreground">
                                 ${item.price.toFixed(2)} each
                               </span>

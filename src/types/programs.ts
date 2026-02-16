@@ -86,12 +86,16 @@ export interface Program {
   maxAge: number | null;
   
   // Restriction flags
+  hasGenderRestriction: boolean;
   hasLevelRestriction: boolean;
   hasCapacityRestriction: boolean;
   hasAgeRestriction: boolean;
   hasMembershipRestriction: boolean;
   hasWaiverRestriction: boolean;
   hasMedicalRequirement: boolean;
+  
+  // Gender restriction values
+  allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
 }
 
 // Program Instance - individual occurrences of a program

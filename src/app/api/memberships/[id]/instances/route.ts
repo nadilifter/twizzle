@@ -6,10 +6,14 @@ import { z } from "zod";
 const createInstanceSchema = z.object({
   name: z.string().min(1, "Name is required"),
   price: z.number().min(0),
-  billingInterval: z.enum(["MONTHLY", "YEARLY", "SESSION"]),
+  billingInterval: z.enum(["ONE_TIME", "MONTHLY", "YEARLY", "SESSION"]),
   startDate: z.string().transform((str) => new Date(str)),
   endDate: z.string().transform((str) => new Date(str)),
   autoRenewDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
+  purchaseStartDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
+  purchaseEndDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
+  capacity: z.number().int().min(0).optional(),
+  status: z.enum(["DRAFT", "ACTIVE"]).default("DRAFT"),
 });
 
 // GET /api/memberships/[id]/instances
@@ -24,8 +28,9 @@ export async function GET(
     }
 
     const scopedDb = getScopedDb(session.user.organizationId);
+    const { searchParams } = new URL(request.url);
+    const statusFilter = searchParams.get("status");
     
-    // Verify group exists
     const group = await scopedDb.membershipGroup.findUnique({
       where: { id: params.id },
     });
@@ -35,7 +40,10 @@ export async function GET(
     }
 
     const instances = await scopedDb.membershipInstance.findMany({
-      where: { membershipGroupId: params.id },
+      where: {
+        membershipGroupId: params.id,
+        ...(statusFilter ? { status: statusFilter as "DRAFT" | "ACTIVE" | "EXPIRED" | "CANCELLED" | "ARCHIVED" } : {}),
+      },
       orderBy: { startDate: 'desc' },
       include: {
         _count: {
@@ -74,7 +82,6 @@ export async function POST(
     const validatedData = createInstanceSchema.parse(body);
     const scopedDb = getScopedDb(session.user.organizationId);
 
-    // Verify group exists
     const group = await scopedDb.membershipGroup.findUnique({
       where: { id: params.id },
     });
@@ -83,10 +90,35 @@ export async function POST(
       return NextResponse.json({ error: "Membership Group not found" }, { status: 404 });
     }
 
+    // For non-recurring groups, prevent creating additional instances
+    if (!group.isRecurring) {
+      const existingCount = await scopedDb.membershipInstance.count({
+        where: { membershipGroupId: params.id },
+      });
+      if (existingCount > 0) {
+        return NextResponse.json(
+          { error: "Non-recurring membership groups can only have one instance" },
+          { status: 400 }
+        );
+      }
+    }
+
     const instance = await scopedDb.membershipInstance.create({
       data: {
         membershipGroupId: params.id,
-        ...validatedData,
+        name: validatedData.name,
+        price: validatedData.price,
+        billingInterval: validatedData.billingInterval,
+        startDate: validatedData.startDate,
+        endDate: validatedData.endDate,
+        autoRenewDate: validatedData.autoRenewDate,
+        purchaseStartDate: validatedData.purchaseStartDate,
+        purchaseEndDate: validatedData.purchaseEndDate,
+        capacity: validatedData.capacity,
+        status: validatedData.status,
+      },
+      include: {
+        _count: { select: { athleteMemberships: true } },
       },
     });
 

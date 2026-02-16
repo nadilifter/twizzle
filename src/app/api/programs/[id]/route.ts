@@ -27,12 +27,15 @@ const updateProgramSchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   // Restriction flags
+  hasGenderRestriction: z.boolean().optional(),
   hasLevelRestriction: z.boolean().optional(),
   hasCapacityRestriction: z.boolean().optional(),
   hasAgeRestriction: z.boolean().optional(),
   hasMembershipRestriction: z.boolean().optional(),
   hasWaiverRestriction: z.boolean().optional(),
   hasMedicalRequirement: z.boolean().optional(),
+  // Gender restriction values
+  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional(),
   // Related data for updates
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
