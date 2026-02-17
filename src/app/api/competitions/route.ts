@@ -15,6 +15,8 @@ const competitionInclude = {
         },
       },
       individualEntry: true,
+      sportEvent: true,
+      ageCategory: true,
     },
     orderBy: { displayOrder: "asc" as const },
   },
@@ -105,11 +107,16 @@ const createCompetitionSchema = z.object({
 
   // Results configuration per category
   categoryResults: z.array(z.object({
+    // Legacy template refs
     combinationEntryId: z.string().nullable().optional(),
     individualEntryId: z.string().nullable().optional(),
-    resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]),
+    // Sport-specific refs
+    sportEventId: z.string().nullable().optional(),
+    ageCategoryId: z.string().nullable().optional(),
+    // Result config (can be auto-derived from sportEvent if sport-specific)
+    resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional(),
     sortDirection: z.enum(["ASC", "DESC"]).default("ASC"),
-    precision: z.number().int().min(0).max(6).default(3),
+    precision: z.number().int().min(0).max(6).optional(),
     seedMarkRequired: z.boolean().default(false),
     submissionMode: z.enum(["NONE", "VERIFIED_RESULT", "MANUAL_ENTRY"]).default("NONE"),
     qualifyingMark: z.number().nullable().optional(),
@@ -198,18 +205,38 @@ export async function POST(request: NextRequest) {
 
         // Create competition categories
         categories: {
-          create: data.categoryResults.map((cat, index) => ({
-            combinationEntryId: cat.combinationEntryId || null,
-            individualEntryId: cat.individualEntryId || null,
-            resultType: cat.resultType,
-            sortDirection: cat.sortDirection,
-            precision: cat.precision,
-            seedMarkRequired: cat.seedMarkRequired,
-            submissionMode: cat.submissionMode,
-            qualifyingMark: cat.qualifyingMark ?? null,
-            isTeamEvent: cat.isTeamEvent,
-            teamSize: cat.teamSize ?? null,
-            displayOrder: cat.displayOrder || index,
+          create: await Promise.all(data.categoryResults.map(async (cat, index) => {
+            let resultType = cat.resultType
+            let sortDirection = cat.sortDirection
+            let precision = cat.precision
+
+            // Auto-derive result config from sport event if using sport-specific refs
+            if (cat.sportEventId && !resultType) {
+              const sportEvent = await db.sportEvent.findUnique({
+                where: { id: cat.sportEventId },
+              })
+              if (sportEvent) {
+                resultType = sportEvent.resultType
+                sortDirection = sportEvent.sortDirection
+                precision = precision ?? sportEvent.defaultPrecision
+              }
+            }
+
+            return {
+              combinationEntryId: cat.combinationEntryId || null,
+              individualEntryId: cat.individualEntryId || null,
+              sportEventId: cat.sportEventId || null,
+              ageCategoryId: cat.ageCategoryId || null,
+              resultType: resultType || "TIME",
+              sortDirection,
+              precision: precision ?? 3,
+              seedMarkRequired: cat.seedMarkRequired,
+              submissionMode: cat.submissionMode,
+              qualifyingMark: cat.qualifyingMark ?? null,
+              isTeamEvent: cat.isTeamEvent,
+              teamSize: cat.teamSize ?? null,
+              displayOrder: cat.displayOrder || index,
+            }
           })),
         },
       },

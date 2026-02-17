@@ -51,6 +51,8 @@ export async function GET(
             template: { select: { id: true, name: true, type: true } },
           },
         },
+        sportEvent: true,
+        ageCategory: true,
         _count: {
           select: { entries: true, results: true, teams: true },
         },

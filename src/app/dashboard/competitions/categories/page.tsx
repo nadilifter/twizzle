@@ -475,10 +475,29 @@ function CustomTemplateCard({
 // Main Page
 // ============================================
 
+interface SportSpecificData {
+  sport: { id: string; name: string; slug: string }
+  events: Array<{
+    id: string; code: string; name: string; eventGroup: string; eventType: string;
+    resultType: string; sortDirection: string; defaultPrecision: number; isActive: boolean;
+  }>
+  ageCategories: Array<{
+    id: string; code: string; name: string; minAge: number; maxAge: number | null; isActive: boolean;
+  }>
+  eligibility: Array<{ sportEventId: string; ageCategoryId: string }>
+}
+
+const EVENT_GROUP_LABELS: Record<string, string> = {
+  sprints: "Sprints", hurdles: "Hurdles", middle_distance: "Middle Distance",
+  distance: "Distance", relays: "Relays", jumps: "Jumps", throws: "Throws",
+  combined: "Combined Events", racewalk: "Race Walk", road: "Road",
+}
+
 export default function CategoriesPage() {
   const [orgSports, setOrgSports] = React.useState<OrgSport[]>([])
   const [presets, setPresets] = React.useState<Template[]>([])
   const [custom, setCustom] = React.useState<Template[]>([])
+  const [sportSpecific, setSportSpecific] = React.useState<Record<string, SportSpecificData>>({})
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
   const [togglingPresetId, setTogglingPresetId] = React.useState<string | null>(null)
@@ -513,6 +532,7 @@ export default function CategoriesPage() {
         const data = await categoriesRes.json()
         setPresets(data.presets || [])
         setCustom(data.custom || [])
+        setSportSpecific(data.sportSpecific || {})
       }
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -894,6 +914,96 @@ export default function CategoriesPage() {
           Add Category
         </Button>
       </div>
+
+      {/* Sport-Specific Events Section */}
+      {Object.keys(sportSpecific).length > 0 && (
+        <div className="space-y-4">
+          {Object.entries(sportSpecific).map(([sportId, data]) => {
+            const groupedEvents = data.events.reduce<Record<string, typeof data.events>>((groups, evt) => {
+              if (!groups[evt.eventGroup]) groups[evt.eventGroup] = []
+              groups[evt.eventGroup].push(evt)
+              return groups
+            }, {})
+            const eligSet = new Set(
+              data.eligibility.map((e) => `${e.sportEventId}:${e.ageCategoryId}`)
+            )
+            const enabledCount = data.eligibility.length
+
+            return (
+              <Card key={sportId}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{data.sport.name} Events</CardTitle>
+                      <CardDescription>
+                        {data.events.length} events across {data.ageCategories.length} age categories ({enabledCount} eligible combinations)
+                      </CardDescription>
+                    </div>
+                    <Badge variant="secondary">Sport-Specific</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 pr-4 font-medium min-w-[180px]">Event</th>
+                          <th className="text-center py-2 px-2 font-medium w-[70px]">Type</th>
+                          {data.ageCategories.map((cat) => (
+                            <th key={cat.id} className="text-center py-2 px-1 font-medium min-w-[55px]">
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs">{cat.code}</span>
+                                <span className="text-[10px] text-muted-foreground font-normal">
+                                  {cat.minAge}-{cat.maxAge ?? "∞"}
+                                </span>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(groupedEvents).map(([group, events]) => (
+                          <React.Fragment key={group}>
+                            <tr>
+                              <td
+                                colSpan={2 + data.ageCategories.length}
+                                className="py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30"
+                              >
+                                {EVENT_GROUP_LABELS[group] || group}
+                              </td>
+                            </tr>
+                            {events.map((evt) => (
+                              <tr key={evt.id} className="border-b border-border/50">
+                                <td className="py-1.5 pr-4">
+                                  <span className="font-medium">{evt.name}</span>
+                                </td>
+                                <td className="py-1.5 px-2 text-center">
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                    {evt.resultType}
+                                  </Badge>
+                                </td>
+                                {data.ageCategories.map((cat) => (
+                                  <td key={cat.id} className="py-1.5 px-1 text-center">
+                                    {eligSet.has(`${evt.id}:${cat.id}`) ? (
+                                      <span className="text-green-600 dark:text-green-400 text-xs">&#10003;</span>
+                                    ) : (
+                                      <span className="text-muted-foreground/30 text-xs">&mdash;</span>
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       {/* Sport Presets Section */}
       <div className="space-y-4">

@@ -52,6 +52,22 @@ interface CompetitionCategory {
     name: string
     template: { id: string; name: string }
   } | null
+  sportEvent: {
+    id: string
+    code: string
+    name: string
+    eventGroup: string
+    eventType: string
+    resultType: string
+    sortDirection: string
+  } | null
+  ageCategory: {
+    id: string
+    code: string
+    name: string
+    minAge: number
+    maxAge: number | null
+  } | null
   _count: { entries: number; results: number; teams: number }
 }
 
@@ -119,6 +135,12 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 }
 
 function getCategoryLabel(cat: CompetitionCategory): string {
+  if (cat.sportEvent && cat.ageCategory) {
+    return `${cat.sportEvent.name} - ${cat.ageCategory.code}`
+  }
+  if (cat.sportEvent) {
+    return cat.sportEvent.name
+  }
   if (cat.combinationEntry) {
     return cat.combinationEntry.name || `${cat.combinationEntry.rowValue.name} - ${cat.combinationEntry.colValue.name}`
   }

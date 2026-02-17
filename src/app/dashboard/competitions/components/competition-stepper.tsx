@@ -90,6 +90,8 @@ type SubMode = "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY"
 interface CategoryResultConfig {
   combinationEntryId: string | null
   individualEntryId: string | null
+  sportEventId: string | null
+  ageCategoryId: string | null
   label: string
   resultType: ResultType
   sortDirection: SortDir
@@ -103,10 +105,14 @@ interface CategoryResultConfig {
 
 interface FetchedCategoryEntry {
   id: string
-  type: "combination" | "individual"
+  type: "combination" | "individual" | "sport-specific"
   label: string
   defaultResultType: ResultType | null
   defaultSortDirection: SortDir | null
+  defaultPrecision?: number
+  sportEventId?: string
+  ageCategoryId?: string
+  eventType?: string
 }
 
 interface CompetitionFormData {
@@ -328,7 +334,34 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
       const data = await res.json()
       const entries: FetchedCategoryEntry[] = []
 
-      // Process preset templates
+      // Process sport-specific structured data first
+      if (data.sportSpecific) {
+        for (const [, sportData] of Object.entries(data.sportSpecific) as [string, any][]) {
+          const { events, ageCategories, eligibility } = sportData
+          const eligSet = new Set(
+            eligibility.map((e: any) => `${e.sportEventId}:${e.ageCategoryId}`)
+          )
+          for (const evt of events) {
+            for (const ageCat of ageCategories) {
+              const key = `${evt.id}:${ageCat.id}`
+              if (!eligSet.has(key)) continue
+              entries.push({
+                id: `${evt.id}:${ageCat.id}`,
+                type: "sport-specific",
+                label: `${evt.name} - ${ageCat.code}`,
+                defaultResultType: evt.resultType,
+                defaultSortDirection: evt.sortDirection,
+                defaultPrecision: evt.defaultPrecision,
+                sportEventId: evt.id,
+                ageCategoryId: ageCat.id,
+                eventType: evt.eventType,
+              })
+            }
+          }
+        }
+      }
+
+      // Process legacy preset templates
       for (const tmpl of [...(data.presets || []), ...(data.custom || [])]) {
         if (tmpl.isDisabledByOrg) continue
         if (!tmpl.isActive) continue
@@ -369,15 +402,17 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
           categoryResults: entries.map((e) => ({
             combinationEntryId: e.type === "combination" ? e.id : null,
             individualEntryId: e.type === "individual" ? e.id : null,
+            sportEventId: e.sportEventId || null,
+            ageCategoryId: e.ageCategoryId || null,
             label: e.label,
             resultType: e.defaultResultType || "SCORE",
             sortDirection: e.defaultSortDirection || (e.defaultResultType === "TIME" ? "ASC" : "DESC"),
-            precision: e.defaultResultType === "SCORE" ? 3 : e.defaultResultType === "TIME" ? 3 : 2,
+            precision: e.defaultPrecision ?? (e.defaultResultType === "SCORE" ? 3 : e.defaultResultType === "TIME" ? 3 : 2),
             seedMarkRequired: false,
             submissionMode: "NONE" as SubMode,
             qualifyingMark: null,
-            isTeamEvent: false,
-            teamSize: null,
+            isTeamEvent: e.eventType === "relay",
+            teamSize: e.eventType === "relay" ? 4 : null,
           })),
         }
       })
@@ -542,6 +577,8 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
         categoryResults: formData.categoryResults.map((c, i) => ({
           combinationEntryId: c.combinationEntryId,
           individualEntryId: c.individualEntryId,
+          sportEventId: c.sportEventId,
+          ageCategoryId: c.ageCategoryId,
           resultType: c.resultType,
           sortDirection: c.sortDirection,
           precision: c.precision,

@@ -281,11 +281,10 @@ async function main() {
   const sportsData = [
     { id: "sport-athletics", name: "Athletics", slug: "athletics", description: "Track and field athletics including running, jumping, and throwing disciplines", displayOrder: 0 },
     { id: "sport-gymnastics", name: "Gymnastics", slug: "gymnastics", description: "Artistic and rhythmic gymnastics with apparatus events and floor exercises", displayOrder: 1 },
-    { id: "sport-track-and-field", name: "Track & Field", slug: "track-and-field", description: "Competitive track and field events including sprints, distance, hurdles, and field events", displayOrder: 2 },
-    { id: "sport-swimming", name: "Swimming", slug: "swimming", description: "Competitive and recreational swimming across all strokes and distances", displayOrder: 3 },
-    { id: "sport-skiing", name: "Skiing", slug: "skiing", description: "Alpine and cross-country skiing disciplines", displayOrder: 4 },
-    { id: "sport-diving", name: "Diving", slug: "diving", description: "Springboard and platform diving competitions", displayOrder: 5 },
-    { id: "sport-basketball", name: "Basketball", slug: "basketball", description: "Team basketball programs and competitions", displayOrder: 6 },
+    { id: "sport-swimming", name: "Swimming", slug: "swimming", description: "Competitive and recreational swimming across all strokes and distances", displayOrder: 2 },
+    { id: "sport-skiing", name: "Skiing", slug: "skiing", description: "Alpine and cross-country skiing disciplines", displayOrder: 3 },
+    { id: "sport-diving", name: "Diving", slug: "diving", description: "Springboard and platform diving competitions", displayOrder: 4 },
+    { id: "sport-basketball", name: "Basketball", slug: "basketball", description: "Team basketball programs and competitions", displayOrder: 5 },
   ];
 
   const sports: Record<string, { id: string; slug: string }> = {};
@@ -399,74 +398,132 @@ async function main() {
   }
   console.log("  ✓ Created Gymnastics: Age Group x Apparatus template");
 
-  // --- Track & Field: Age Group x Discipline (COMBINATION) ---
-  const tfTemplate = await prisma.competitionCategoryTemplate.upsert({
-    where: { id: "cat-tmpl-tf-age-discipline" },
-    update: {},
-    create: {
-      id: "cat-tmpl-tf-age-discipline",
-      sportId: sports["track-and-field"].id,
-      name: "Age Group x Discipline",
-      description: "Standard track & field categories organized by age group and discipline",
-      type: "COMBINATION",
-      isActive: true,
-      displayOrder: 0,
-      rowAxisLabel: "Age Group",
-      columnAxisLabel: "Discipline",
-      restrictionAxis: "ROW",
-    },
-  });
+  // --- Athletics: Sport-Specific Events & Age Categories ---
+  console.log("\n🏃 Creating Athletics sport-specific data...");
+  const athleticsSportId = sports["athletics"].id;
 
-  const tfRowData = [
-    { id: "cav-tf-u8",  name: "Under 8",  axis: "ROW" as const, displayOrder: 0, minAge: 0,  maxAge: 7  },
-    { id: "cav-tf-u10", name: "Under 10", axis: "ROW" as const, displayOrder: 1, minAge: 8,  maxAge: 9  },
-    { id: "cav-tf-u12", name: "Under 12", axis: "ROW" as const, displayOrder: 2, minAge: 10, maxAge: 11 },
-    { id: "cav-tf-u14", name: "Under 14", axis: "ROW" as const, displayOrder: 3, minAge: 12, maxAge: 13 },
-  ];
-  const tfColData = [
-    { id: "cav-tf-100m",     name: "100m",      axis: "COLUMN" as const, displayOrder: 0, resultType: "TIME" as const, sortDirection: "ASC" as const },
-    { id: "cav-tf-200m",     name: "200m",      axis: "COLUMN" as const, displayOrder: 1, resultType: "TIME" as const, sortDirection: "ASC" as const },
-    { id: "cav-tf-longjump", name: "Long Jump", axis: "COLUMN" as const, displayOrder: 2, resultType: "DISTANCE" as const, sortDirection: "DESC" as const },
-    { id: "cav-tf-shotput",  name: "Shot Put",  axis: "COLUMN" as const, displayOrder: 3, resultType: "DISTANCE" as const, sortDirection: "DESC" as const },
-    { id: "cav-tf-hurdles",  name: "Hurdles",   axis: "COLUMN" as const, displayOrder: 4, resultType: "TIME" as const, sortDirection: "ASC" as const },
+  const athleticsEventsData = [
+    { id: "athl-evt-100M",     code: "100M",     name: "100m",               eventGroup: "sprints",          eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 0 },
+    { id: "athl-evt-200M",     code: "200M",     name: "200m",               eventGroup: "sprints",          eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 1 },
+    { id: "athl-evt-400M",     code: "400M",     name: "400m",               eventGroup: "sprints",          eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 2 },
+    { id: "athl-evt-100H",     code: "100H",     name: "100m Hurdles",       eventGroup: "hurdles",          eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 3 },
+    { id: "athl-evt-110H",     code: "110H",     name: "110m Hurdles",       eventGroup: "hurdles",          eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 4 },
+    { id: "athl-evt-400H",     code: "400H",     name: "400m Hurdles",       eventGroup: "hurdles",          eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 5 },
+    { id: "athl-evt-800M",     code: "800M",     name: "800m",               eventGroup: "middle_distance",  eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 6 },
+    { id: "athl-evt-1500M",    code: "1500M",    name: "1500m",              eventGroup: "middle_distance",  eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 7 },
+    { id: "athl-evt-3000M",    code: "3000M",    name: "3000m",              eventGroup: "distance",         eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 8 },
+    { id: "athl-evt-STEEPLE",  code: "STEEPLE",  name: "3000m Steeplechase", eventGroup: "distance",         eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 9 },
+    { id: "athl-evt-5000M",    code: "5000M",    name: "5000m",              eventGroup: "distance",         eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 10 },
+    { id: "athl-evt-10000M",   code: "10000M",   name: "10000m",             eventGroup: "distance",         eventType: "track",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 11 },
+    { id: "athl-evt-4X100",    code: "4X100",    name: "4x100 Relay",        eventGroup: "relays",           eventType: "relay",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 12 },
+    { id: "athl-evt-4X400",    code: "4X400",    name: "4x400 Relay",        eventGroup: "relays",           eventType: "relay",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 13 },
+    { id: "athl-evt-4X400MX",  code: "4X400MX",  name: "4x400 Mixed Relay",  eventGroup: "relays",           eventType: "relay",    resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 14 },
+    { id: "athl-evt-HJ",       code: "HJ",       name: "High Jump",          eventGroup: "jumps",            eventType: "field",    resultType: "HEIGHT" as const,   sortDirection: "DESC" as const, defaultPrecision: 2, displayOrder: 15 },
+    { id: "athl-evt-LJ",       code: "LJ",       name: "Long Jump",          eventGroup: "jumps",            eventType: "field",    resultType: "DISTANCE" as const, sortDirection: "DESC" as const, defaultPrecision: 2, displayOrder: 16 },
+    { id: "athl-evt-TJ",       code: "TJ",       name: "Triple Jump",        eventGroup: "jumps",            eventType: "field",    resultType: "DISTANCE" as const, sortDirection: "DESC" as const, defaultPrecision: 2, displayOrder: 17 },
+    { id: "athl-evt-PV",       code: "PV",       name: "Pole Vault",         eventGroup: "jumps",            eventType: "field",    resultType: "HEIGHT" as const,   sortDirection: "DESC" as const, defaultPrecision: 2, displayOrder: 18 },
+    { id: "athl-evt-SP",       code: "SP",       name: "Shot Put",           eventGroup: "throws",           eventType: "field",    resultType: "DISTANCE" as const, sortDirection: "DESC" as const, defaultPrecision: 2, displayOrder: 19 },
+    { id: "athl-evt-DT",       code: "DT",       name: "Discus",             eventGroup: "throws",           eventType: "field",    resultType: "DISTANCE" as const, sortDirection: "DESC" as const, defaultPrecision: 2, displayOrder: 20 },
+    { id: "athl-evt-HT",       code: "HT",       name: "Hammer Throw",       eventGroup: "throws",           eventType: "field",    resultType: "DISTANCE" as const, sortDirection: "DESC" as const, defaultPrecision: 2, displayOrder: 21 },
+    { id: "athl-evt-JT",       code: "JT",       name: "Javelin",            eventGroup: "throws",           eventType: "field",    resultType: "DISTANCE" as const, sortDirection: "DESC" as const, defaultPrecision: 2, displayOrder: 22 },
+    { id: "athl-evt-HEPT",     code: "HEPT",     name: "Heptathlon",         eventGroup: "combined",         eventType: "combined", resultType: "SCORE" as const,    sortDirection: "DESC" as const, defaultPrecision: 0, displayOrder: 23 },
+    { id: "athl-evt-DECA",     code: "DECA",     name: "Decathlon",          eventGroup: "combined",         eventType: "combined", resultType: "SCORE" as const,    sortDirection: "DESC" as const, defaultPrecision: 0, displayOrder: 24 },
+    { id: "athl-evt-RW5K",     code: "RW5K",     name: "5000m Race Walk",    eventGroup: "racewalk",         eventType: "racewalk", resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 25 },
+    { id: "athl-evt-RW10K",    code: "RW10K",    name: "10000m Race Walk",   eventGroup: "racewalk",         eventType: "racewalk", resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 26 },
+    { id: "athl-evt-RW20K",    code: "RW20K",    name: "20km Race Walk",     eventGroup: "racewalk",         eventType: "racewalk", resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 27 },
+    { id: "athl-evt-RW35K",    code: "RW35K",    name: "35km Race Walk",     eventGroup: "racewalk",         eventType: "racewalk", resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 28 },
+    { id: "athl-evt-ROAD5K",   code: "ROAD5K",   name: "5km Road",           eventGroup: "road",             eventType: "road",     resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 29 },
+    { id: "athl-evt-ROAD10K",  code: "ROAD10K",  name: "10km Road",          eventGroup: "road",             eventType: "road",     resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 30 },
+    { id: "athl-evt-HALF",     code: "HALF",     name: "Half Marathon",      eventGroup: "road",             eventType: "road",     resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 31 },
+    { id: "athl-evt-MAR",      code: "MAR",      name: "Marathon",           eventGroup: "road",             eventType: "road",     resultType: "TIME" as const,     sortDirection: "ASC" as const,  defaultPrecision: 3, displayOrder: 32 },
   ];
 
-  for (const row of tfRowData) {
-    await prisma.categoryAxisValue.upsert({
-      where: { id: row.id },
+  for (const evt of athleticsEventsData) {
+    await prisma.sportEvent.upsert({
+      where: { id: evt.id },
       update: {},
-      create: { ...row, templateId: tfTemplate.id },
+      create: { ...evt, sportId: athleticsSportId },
     });
   }
-  for (const col of tfColData) {
-    await prisma.categoryAxisValue.upsert({
-      where: { id: col.id },
+  console.log(`  ✓ Created ${athleticsEventsData.length} athletics events`);
+
+  const athleticsAgeCatsData = [
+    { id: "athl-age-U10",  code: "U10",  name: "Under 10", minAge: 8,  maxAge: 9,    displayOrder: 0 },
+    { id: "athl-age-U12",  code: "U12",  name: "Under 12", minAge: 10, maxAge: 11,   displayOrder: 1 },
+    { id: "athl-age-U14",  code: "U14",  name: "Under 14", minAge: 12, maxAge: 13,   displayOrder: 2 },
+    { id: "athl-age-U16",  code: "U16",  name: "Under 16", minAge: 14, maxAge: 15,   displayOrder: 3 },
+    { id: "athl-age-U18",  code: "U18",  name: "Under 18", minAge: 16, maxAge: 17,   displayOrder: 4 },
+    { id: "athl-age-U20",  code: "U20",  name: "Under 20", minAge: 18, maxAge: 19,   displayOrder: 5 },
+    { id: "athl-age-SEN",  code: "SEN",  name: "Senior",   minAge: 20, maxAge: 34,   displayOrder: 6 },
+    { id: "athl-age-MAS",  code: "MAS",  name: "Masters",  minAge: 35, maxAge: null,  displayOrder: 7 },
+  ];
+
+  for (const cat of athleticsAgeCatsData) {
+    await prisma.sportAgeCategory.upsert({
+      where: { id: cat.id },
       update: {},
-      create: { ...col, templateId: tfTemplate.id },
+      create: { ...cat, sportId: athleticsSportId },
     });
   }
+  console.log(`  ✓ Created ${athleticsAgeCatsData.length} athletics age categories`);
 
-  // Disable Under 8 - Hurdles and Under 8 - Shot Put
-  const tfDisabled = new Set(["cav-tf-u8:cav-tf-hurdles", "cav-tf-u8:cav-tf-shotput"]);
-  for (const row of tfRowData) {
-    for (const col of tfColData) {
-      const comboId = `combo-tf-${row.id}-${col.id}`;
-      const key = `${row.id}:${col.id}`;
-      await prisma.categoryCombinationEntry.upsert({
-        where: { id: comboId },
+  // Eligibility matrix: which event+age combos are allowed
+  const athleticsEligibility: Record<string, string[]> = {
+    "100M":    ["U10","U12","U14","U16","U18","U20","SEN","MAS"],
+    "200M":    ["U10","U12","U14","U16","U18","U20","SEN","MAS"],
+    "400M":    ["U12","U14","U16","U18","U20","SEN","MAS"],
+    "100H":    ["U14","U16","U18","U20","SEN","MAS"],
+    "110H":    ["U16","U18","U20","SEN","MAS"],
+    "400H":    ["U16","U18","U20","SEN","MAS"],
+    "800M":    ["U10","U12","U14","U16","U18","U20","SEN","MAS"],
+    "1500M":   ["U10","U12","U14","U16","U18","U20","SEN","MAS"],
+    "3000M":   ["U12","U14","U16","U18","U20","SEN","MAS"],
+    "STEEPLE": ["U16","U18","U20","SEN","MAS"],
+    "5000M":   ["U16","U18","U20","SEN","MAS"],
+    "10000M":  ["U18","U20","SEN","MAS"],
+    "4X100":   ["U10","U12","U14","U16","U18","U20","SEN","MAS"],
+    "4X400":   ["U14","U16","U18","U20","SEN","MAS"],
+    "4X400MX": ["U18","U20","SEN","MAS"],
+    "HJ":      ["U10","U12","U14","U16","U18","U20","SEN","MAS"],
+    "LJ":      ["U10","U12","U14","U16","U18","U20","SEN","MAS"],
+    "TJ":      ["U14","U16","U18","U20","SEN","MAS"],
+    "PV":      ["U14","U16","U18","U20","SEN","MAS"],
+    "SP":      ["U10","U12","U14","U16","U18","U20","SEN","MAS"],
+    "DT":      ["U12","U14","U16","U18","U20","SEN","MAS"],
+    "JT":      ["U12","U14","U16","U18","U20","SEN","MAS"],
+    "HT":      ["U14","U16","U18","U20","SEN","MAS"],
+    "HEPT":    ["U14","U16","U18","U20","SEN","MAS"],
+    "DECA":    ["U16","U18","U20","SEN","MAS"],
+    "RW5K":    ["U14","U16","U18","U20","SEN","MAS"],
+    "RW10K":   ["U16","U18","U20","SEN","MAS"],
+    "RW20K":   ["U20","SEN","MAS"],
+    "RW35K":   ["SEN","MAS"],
+    "ROAD5K":  ["U12","U14","U16","U18","U20","SEN","MAS"],
+    "ROAD10K": ["U14","U16","U18","U20","SEN","MAS"],
+    "HALF":    ["U20","SEN","MAS"],
+    "MAR":     ["SEN","MAS"],
+  };
+
+  let eligibilityCount = 0;
+  for (const [eventCode, ageCodes] of Object.entries(athleticsEligibility)) {
+    const eventId = `athl-evt-${eventCode}`;
+    for (const ageCode of ageCodes) {
+      const ageCatId = `athl-age-${ageCode}`;
+      const eligId = `athl-elig-${eventCode}-${ageCode}`;
+      await prisma.sportEventEligibility.upsert({
+        where: { id: eligId },
         update: {},
         create: {
-          id: comboId,
-          templateId: tfTemplate.id,
-          rowValueId: row.id,
-          colValueId: col.id,
-          isActive: !tfDisabled.has(key),
-          name: `${row.name} - ${col.name}`,
+          id: eligId,
+          sportEventId: eventId,
+          ageCategoryId: ageCatId,
+          isEnabled: true,
         },
       });
+      eligibilityCount++;
     }
   }
-  console.log("  ✓ Created Track & Field: Age Group x Discipline template");
+  console.log(`  ✓ Created ${eligibilityCount} athletics eligibility entries`);
 
   // --- Swimming: Open Events (INDIVIDUAL) ---
   const swimTemplate = await prisma.competitionCategoryTemplate.upsert({
@@ -4600,15 +4657,15 @@ See you at Metro Sports!
   }
   console.log("  ✓ Created Sunrise Gymnastics 'Spring Invitational 2026' (REGISTRATION_OPEN)");
 
-  // --- Metro Sports: Regional Track Meet (COMPLETED) ---
+  // --- Metro Sports: Regional Athletics Meet (COMPLETED) ---
   const tfCompetition = await prisma.competition.upsert({
     where: { id: `${ORG2_ID}-comp-regional-track` },
     update: {},
     create: {
       id: `${ORG2_ID}-comp-regional-track`,
       organizationId: ORG2_ID,
-      name: "Regional Track Meet 2026",
-      competitionType: "TRACK_AND_FIELD",
+      name: "Regional Athletics Meet 2026",
+      competitionType: "ATHLETICS",
       status: "COMPLETED",
       facilityId: `${ORG2_ID}-facility-main`,
       country: "US",
@@ -4624,12 +4681,13 @@ See you at Metro Sports!
     },
   });
 
-  // Competition categories: 100m (U10), Long Jump (U12), 4x100m Relay (U10, team)
+  // Competition categories using sport-specific refs: 100m (U10), Long Jump (U12), 4x100 Relay (U10, team)
   const tfCompCats = [
     {
       id: `${ORG2_ID}-compcat-100m-u10`,
       competitionId: tfCompetition.id,
-      combinationEntryId: "combo-tf-cav-tf-u10-cav-tf-100m",
+      sportEventId: "athl-evt-100M",
+      ageCategoryId: "athl-age-U10",
       resultType: "TIME" as const,
       sortDirection: "ASC" as const,
       precision: 3,
@@ -4641,7 +4699,8 @@ See you at Metro Sports!
     {
       id: `${ORG2_ID}-compcat-longjump-u12`,
       competitionId: tfCompetition.id,
-      combinationEntryId: "combo-tf-cav-tf-u12-cav-tf-longjump",
+      sportEventId: "athl-evt-LJ",
+      ageCategoryId: "athl-age-U12",
       resultType: "DISTANCE" as const,
       sortDirection: "DESC" as const,
       precision: 2,
@@ -4652,7 +4711,8 @@ See you at Metro Sports!
     {
       id: `${ORG2_ID}-compcat-4x100-relay`,
       competitionId: tfCompetition.id,
-      combinationEntryId: "combo-tf-cav-tf-u10-cav-tf-100m",
+      sportEventId: "athl-evt-4X100",
+      ageCategoryId: "athl-age-U10",
       resultType: "TIME" as const,
       sortDirection: "ASC" as const,
       precision: 3,
@@ -4800,7 +4860,7 @@ See you at Metro Sports!
       create: result,
     });
   }
-  console.log("  ✓ Created Metro Sports 'Regional Track Meet 2026' (COMPLETED)");
+  console.log("  ✓ Created Metro Sports 'Regional Athletics Meet 2026' (COMPLETED)");
 
   // ============================================
   // COMPLETE
@@ -4811,7 +4871,8 @@ See you at Metro Sports!
   console.log("\nCreated data summary:");
   console.log("  • 5 organizations (Sunrise Gymnastics, Metro Sports, Demo Gym, Uplifter, Discover Circus)");
   console.log("  • 4 subscription plans");
-  console.log("  • 7 sports with organization associations");
+  console.log("  • 6 sports with organization associations");
+  console.log("  • 32 athletics events, 8 age categories, ~210 eligibility entries");
   console.log("  • 13 users with permissions");
   console.log("  • 9 families with payment methods");
   console.log("  • 14 athletes with guardian relationships");
@@ -4841,7 +4902,7 @@ See you at Metro Sports!
   console.log("  • Email usage tracking for both organizations");
   console.log("  • 12 notification rules (system + custom for both orgs)");
   console.log("  • 3 waivers with pages (2 Sunrise, 1 Metro) + program requirements");
-  console.log("  • 2 competitions (1 gymnastics REGISTRATION_OPEN, 1 track COMPLETED)");
+  console.log("  • 2 competitions (1 gymnastics REGISTRATION_OPEN, 1 athletics COMPLETED)");
   console.log("  • 6 competition categories with result type/seed mark config");
   console.log("  • 9 competition entries (approved, pending review, pending seed)");
   console.log("  • 5 competition results with placements and personal bests");

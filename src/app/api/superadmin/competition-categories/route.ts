@@ -81,7 +81,14 @@ export async function GET(request: NextRequest) {
       orderBy: { displayOrder: "asc" },
     })
 
-    return NextResponse.json(templates)
+    // Check if the sport has sport-specific structured data
+    let hasSportSpecificData = false
+    if (sportId) {
+      const eventCount = await db.sportEvent.count({ where: { sportId } })
+      hasSportSpecificData = eventCount > 0
+    }
+
+    return NextResponse.json({ templates, hasSportSpecificData })
   } catch (error) {
     console.error("Error fetching competition category templates:", error)
     return NextResponse.json(

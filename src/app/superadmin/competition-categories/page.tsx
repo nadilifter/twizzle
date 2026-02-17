@@ -11,7 +11,13 @@ import {
   Grid3x3,
   List,
   X,
+  Timer,
+  Ruler,
+  ArrowUpDown,
+  Trophy,
+  CheckCircle2,
 } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -145,6 +151,57 @@ interface TemplateFormData {
   individualEntries: IndividualEntry[]
 }
 
+// Sport-specific types
+interface SportEventData {
+  id: string
+  code: string
+  name: string
+  eventGroup: string
+  eventType: string
+  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
+  sortDirection: "ASC" | "DESC"
+  defaultPrecision: number
+  isActive: boolean
+  displayOrder: number
+  eligibility: Array<{
+    id: string
+    sportEventId: string
+    ageCategoryId: string
+    isEnabled: boolean
+    ageCategory: { id: string; code: string; name: string }
+  }>
+}
+
+interface AgeCategoryData {
+  id: string
+  code: string
+  name: string
+  minAge: number
+  maxAge: number | null
+  isActive: boolean
+  displayOrder: number
+}
+
+const EVENT_GROUP_LABELS: Record<string, string> = {
+  sprints: "Sprints",
+  hurdles: "Hurdles",
+  middle_distance: "Middle Distance",
+  distance: "Distance",
+  relays: "Relays",
+  jumps: "Jumps",
+  throws: "Throws",
+  combined: "Combined Events",
+  racewalk: "Race Walk",
+  road: "Road",
+}
+
+const RESULT_TYPE_ICON: Record<string, React.ReactNode> = {
+  TIME: <Timer className="h-3 w-3" />,
+  DISTANCE: <Ruler className="h-3 w-3" />,
+  HEIGHT: <ArrowUpDown className="h-3 w-3" />,
+  SCORE: <Trophy className="h-3 w-3" />,
+}
+
 const initialFormData: TemplateFormData = {
   name: "",
   description: "",
@@ -170,6 +227,12 @@ export default function SuperadminCompetitionCategoriesPage() {
   const [loading, setLoading] = React.useState(true)
   const [loadingTemplates, setLoadingTemplates] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
+
+  // Sport-specific structured data state
+  const [hasSportSpecificData, setHasSportSpecificData] = React.useState(false)
+  const [sportEvents, setSportEvents] = React.useState<SportEventData[]>([])
+  const [ageCategories, setAgeCategories] = React.useState<AgeCategoryData[]>([])
+  const [savingEligibility, setSavingEligibility] = React.useState(false)
 
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editingTemplate, setEditingTemplate] = React.useState<Template | null>(null)
@@ -200,7 +263,7 @@ export default function SuperadminCompetitionCategoriesPage() {
     fetchSports()
   }, [])
 
-  // Fetch templates when sport is selected
+  // Fetch templates and sport-specific data when sport is selected
   const fetchTemplates = React.useCallback(async (sportId: string) => {
     if (!sportId) return
     setLoadingTemplates(true)
@@ -208,7 +271,21 @@ export default function SuperadminCompetitionCategoriesPage() {
       const response = await fetch(`/api/superadmin/competition-categories?sportId=${sportId}`)
       if (!response.ok) throw new Error("Failed to fetch templates")
       const data = await response.json()
-      setTemplates(data)
+      setTemplates(data.templates || data)
+      setHasSportSpecificData(data.hasSportSpecificData || false)
+
+      // If sport has structured data, also fetch events & age categories
+      if (data.hasSportSpecificData) {
+        const eventsRes = await fetch(`/api/superadmin/sports/${sportId}/events`)
+        if (eventsRes.ok) {
+          const eventsData = await eventsRes.json()
+          setSportEvents(eventsData.events || [])
+          setAgeCategories(eventsData.ageCategories || [])
+        }
+      } else {
+        setSportEvents([])
+        setAgeCategories([])
+      }
     } catch (error) {
       toast.error("Failed to load templates")
     } finally {
@@ -221,8 +298,70 @@ export default function SuperadminCompetitionCategoriesPage() {
       fetchTemplates(selectedSportId)
     } else {
       setTemplates([])
+      setSportEvents([])
+      setAgeCategories([])
+      setHasSportSpecificData(false)
     }
   }, [selectedSportId, fetchTemplates])
+
+  // Toggle eligibility for sport-specific events
+  const handleToggleEligibility = React.useCallback(async (
+    sportEventId: string,
+    ageCategoryId: string,
+    currentlyEnabled: boolean
+  ) => {
+    setSavingEligibility(true)
+    try {
+      const response = await fetch(`/api/superadmin/sports/${selectedSportId}/eligibility`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          updates: [{ sportEventId, ageCategoryId, isEnabled: !currentlyEnabled }],
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to update eligibility")
+
+      // Update local state
+      setSportEvents((prev) =>
+        prev.map((evt) => {
+          if (evt.id !== sportEventId) return evt
+          const existingElig = evt.eligibility.find(
+            (e) => e.ageCategoryId === ageCategoryId
+          )
+          if (existingElig) {
+            return {
+              ...evt,
+              eligibility: evt.eligibility.map((e) =>
+                e.ageCategoryId === ageCategoryId
+                  ? { ...e, isEnabled: !currentlyEnabled }
+                  : e
+              ),
+            }
+          }
+          const ageCat = ageCategories.find((c) => c.id === ageCategoryId)
+          return {
+            ...evt,
+            eligibility: [
+              ...evt.eligibility,
+              {
+                id: `new-${sportEventId}-${ageCategoryId}`,
+                sportEventId,
+                ageCategoryId,
+                isEnabled: true,
+                ageCategory: ageCat
+                  ? { id: ageCat.id, code: ageCat.code, name: ageCat.name }
+                  : { id: ageCategoryId, code: "", name: "" },
+              },
+            ],
+          }
+        })
+      )
+    } catch (error) {
+      toast.error("Failed to update eligibility")
+    } finally {
+      setSavingEligibility(false)
+    }
+  }, [selectedSportId, ageCategories])
 
   // Handlers
   const handleOpenCreate = () => {
@@ -612,7 +751,7 @@ export default function SuperadminCompetitionCategoriesPage() {
             </SelectContent>
           </Select>
         </div>
-        {selectedSportId && (
+        {selectedSportId && !hasSportSpecificData && (
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Add Template
@@ -632,7 +771,152 @@ export default function SuperadminCompetitionCategoriesPage() {
         </Card>
       )}
 
-      {selectedSportId && (
+      {/* Sport-Specific Structured View (Events + Age Categories + Eligibility) */}
+      {selectedSportId && hasSportSpecificData && (
+        <>
+          {loadingTemplates ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {/* Stats Row */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Events</CardTitle>
+                    <Layers className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{sportEvents.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {sportEvents.filter((e) => e.isActive).length} active
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Age Categories</CardTitle>
+                    <Grid3x3 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{ageCategories.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {ageCategories.filter((c) => c.isActive).length} active
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Eligible Combos</CardTitle>
+                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {sportEvents.reduce((sum, evt) => sum + evt.eligibility.filter((e) => e.isEnabled).length, 0)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      of {sportEvents.length * ageCategories.length} possible
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Eligibility Grid */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Event / Age Category Eligibility</CardTitle>
+                  <CardDescription>
+                    Toggle which event and age category combinations are available for competitions.
+                    Result types are derived automatically from the event definition.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[200px] sticky left-0 bg-background z-10">Event</TableHead>
+                          <TableHead className="text-center w-[80px]">Type</TableHead>
+                          {ageCategories.map((cat) => (
+                            <TableHead key={cat.id} className="min-w-[70px] px-0">
+                              <div className="flex flex-col items-center justify-center gap-0.5 w-full">
+                                <span className="font-medium">{cat.code}</span>
+                                <span className="text-[10px] font-normal text-muted-foreground">
+                                  {cat.minAge}-{cat.maxAge ?? "∞"}
+                                </span>
+                              </div>
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(
+                          sportEvents.reduce<Record<string, SportEventData[]>>((groups, evt) => {
+                            if (!groups[evt.eventGroup]) groups[evt.eventGroup] = []
+                            groups[evt.eventGroup].push(evt)
+                            return groups
+                          }, {})
+                        ).map(([group, events]) => (
+                          <React.Fragment key={group}>
+                            <TableRow className="bg-muted/50">
+                              <TableCell
+                                colSpan={2 + ageCategories.length}
+                                className="font-semibold text-xs uppercase tracking-wider py-2"
+                              >
+                                {EVENT_GROUP_LABELS[group] || group}
+                              </TableCell>
+                            </TableRow>
+                            {events.map((evt) => (
+                              <TableRow key={evt.id} className={cn(!evt.isActive && "opacity-50")}>
+                                <TableCell className="sticky left-0 bg-background z-10">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-sm">{evt.name}</span>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      {evt.code}
+                                    </Badge>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge variant="secondary" className="text-[10px] gap-1">
+                                    {RESULT_TYPE_ICON[evt.resultType]}
+                                    {evt.resultType}
+                                  </Badge>
+                                </TableCell>
+                                {ageCategories.map((cat) => {
+                                  const elig = evt.eligibility.find(
+                                    (e) => e.ageCategoryId === cat.id
+                                  )
+                                  const isEnabled = elig?.isEnabled ?? false
+                                  return (
+                                    <TableCell key={cat.id} className="px-0">
+                                      <div className="flex items-center justify-center w-full">
+                                        <Checkbox
+                                          checked={isEnabled}
+                                          disabled={savingEligibility}
+                                          onCheckedChange={() =>
+                                            handleToggleEligibility(evt.id, cat.id, isEnabled)
+                                          }
+                                        />
+                                      </div>
+                                    </TableCell>
+                                  )
+                                })}
+                              </TableRow>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </>
+      )}
+
+      {selectedSportId && !hasSportSpecificData && (
         <>
           {/* Stats */}
           <div className="grid gap-4 md:grid-cols-3">

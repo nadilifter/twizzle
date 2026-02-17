@@ -111,7 +111,41 @@ export async function GET() {
       orderBy: { displayOrder: "asc" },
     })
 
-    return NextResponse.json({ presets: presetsWithStatus, custom })
+    // Fetch sport-specific events for the org's sports (new structured system)
+    const sportSpecific: Record<string, {
+      sport: { id: string; name: string; slug: string };
+      events: Awaited<ReturnType<typeof db.sportEvent.findMany>>;
+      ageCategories: Awaited<ReturnType<typeof db.sportAgeCategory.findMany>>;
+      eligibility: Awaited<ReturnType<typeof db.sportEventEligibility.findMany>>;
+    }> = {}
+
+    for (const sportId of sportIds) {
+      const events = await db.sportEvent.findMany({
+        where: { sportId, isActive: true },
+        orderBy: { displayOrder: "asc" },
+      })
+      if (events.length > 0) {
+        const sport = await db.sport.findUnique({
+          where: { id: sportId },
+          select: { id: true, name: true, slug: true },
+        })
+        const ageCategories = await db.sportAgeCategory.findMany({
+          where: { sportId, isActive: true },
+          orderBy: { displayOrder: "asc" },
+        })
+        const eligibility = await db.sportEventEligibility.findMany({
+          where: {
+            sportEvent: { sportId },
+            isEnabled: true,
+          },
+        })
+        if (sport) {
+          sportSpecific[sportId] = { sport, events, ageCategories, eligibility }
+        }
+      }
+    }
+
+    return NextResponse.json({ presets: presetsWithStatus, custom, sportSpecific })
   } catch (error) {
     console.error("Error fetching competition categories:", error)
     return NextResponse.json(
