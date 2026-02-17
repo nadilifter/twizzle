@@ -1,0 +1,24 @@
+# Only run schema drift check if prisma/schema.prisma is staged
+if git diff --cached --name-only | grep -q "prisma/schema.prisma"; then
+  echo "prisma/schema.prisma changed — checking for schema drift..."
+
+  # Allow opting out (e.g. for WIP commits)
+  if [ "${SKIP_SCHEMA_CHECK:-}" = "1" ]; then
+    echo "SKIP_SCHEMA_CHECK=1, skipping drift check."
+    exit 0
+  fi
+
+  # Check if any new migration file is also staged
+  STAGED_MIGRATIONS=$(git diff --cached --name-only | grep "prisma/migrations/" || true)
+  if [ -z "$STAGED_MIGRATIONS" ]; then
+    echo ""
+    echo "ERROR: prisma/schema.prisma was modified but no migration files are staged."
+    echo ""
+    echo "Did you forget to run 'pnpm db:migrate'?"
+    echo ""
+    echo "If this is intentional, commit with: SKIP_SCHEMA_CHECK=1 git commit ..."
+    exit 1
+  fi
+
+  echo "Migration files detected alongside schema change. Good to go."
+fi

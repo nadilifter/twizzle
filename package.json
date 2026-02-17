@@ -13,9 +13,11 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
+    "db:check": "bash scripts/check-schema-drift.sh",
     "secrets:decrypt": "./scripts/secrets-decrypt.sh",
     "secrets:encrypt": "./scripts/secrets-encrypt.sh",
-    "secrets:edit": "./scripts/secrets-edit.sh"
+    "secrets:edit": "./scripts/secrets-edit.sh",
+    "prepare": "husky"
   },
   "dependencies": {
     "@adyen/adyen-web": "^6.29.0",
@@ -110,6 +112,7 @@
     "@types/uuid": "^11.0.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",
+    "husky": "^9.1.7",
     "postcss": "^8",
     "prisma": "^6.3.0",
     "tailwindcss": "^3.4.1",

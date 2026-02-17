@@ -397,6 +397,23 @@ All sensitive values should be stored in AWS Secrets Manager:
 | `AWS_REGION` | Target region |
 | `ECR_REPOSITORY` | ECR repository URI |
 
+### Required CI Steps
+
+The following checks should run on every pull request and push to `main`:
+
+1. **Schema drift check** (`pnpm db:check`) — Ensures every change to `prisma/schema.prisma` has a corresponding migration file. This uses `prisma migrate diff` under the hood. Must pass before merge.
+2. **Prisma validate** (`npx prisma validate`) — Confirms the schema file itself is syntactically valid.
+3. **Lint** (`pnpm lint`) — Standard Next.js linting.
+4. **Build** (`pnpm build`) — Ensures the application compiles (also runs `prisma generate`).
+
+### Local Developer Safeguards
+
+A Husky pre-commit hook is installed (`.husky/pre-commit`) that blocks commits where `prisma/schema.prisma` is modified without an accompanying migration file. Developers can bypass this for WIP commits with `SKIP_SCHEMA_CHECK=1 git commit ...`.
+
+### Database Migrations in Deploy Pipeline
+
+Each deployment environment must run `prisma migrate deploy` before starting the application. This applies any pending migration files against the target database. The production Dockerfile copies `prisma/` into the final image for this purpose.
+
 ### Decisions Needed
 
 - [ ] **Deployment Strategy**:

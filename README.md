@@ -152,6 +152,50 @@ APP_ENVIRONMENT=production
   * `migrations/` - Database migrations
   * `seed.ts` - Database seeding
 
+### Scripts and Tooling
+
+* `scripts/` - Developer utility scripts
+  * `check-schema-drift.sh` - Detects schema/migration drift (see below)
+  * `deploy-staging.sh` - Staging deployment helper
+  * `secrets-decrypt.sh` / `secrets-encrypt.sh` / `secrets-edit.sh` - Secrets management
+* `.husky/` - Git hooks
+  * `pre-commit` - Blocks commits that modify `schema.prisma` without a corresponding migration
+
+---
+
+## Schema Management
+
+We use [Prisma Migrate](https://www.prisma.io/docs/orm/prisma-migrate) for all database schema changes. Every change to `prisma/schema.prisma` **must** have a corresponding migration under `prisma/migrations/`.
+
+### Workflow
+
+1. Edit `prisma/schema.prisma`
+2. Run `pnpm db:migrate` to generate and apply the migration
+3. Commit both `schema.prisma` and the new migration directory together
+
+### Drift Detection
+
+Schema drift (changes in `schema.prisma` that have no matching migration) has caused staging deployment failures in the past. Two safeguards are now in place:
+
+**Pre-commit hook** — If `prisma/schema.prisma` is staged for commit but no files under `prisma/migrations/` are also staged, the commit is blocked. Bypass for WIP commits with:
+
+```bash
+SKIP_SCHEMA_CHECK=1 git commit -m "wip: ..."
+```
+
+**Manual check** — Run at any time to compare the schema file against the full migration history:
+
+```bash
+pnpm db:check
+```
+
+This uses `prisma migrate diff` under the hood and exits non-zero if there is un-migrated SQL, printing exactly what is missing.
+
+### Common Pitfalls
+
+* **PostgreSQL enum values**: Adding a new value to a Prisma enum and referencing it in a `DEFAULT` clause in the same migration will fail. PostgreSQL requires `ALTER TYPE ... ADD VALUE` to be committed before the new value can be used. Split the `ADD VALUE` into its own prior migration.
+* **`db:push` is for local experimentation only**: It syncs the schema without creating migration files and should never be used as part of the deploy pipeline. The dev Docker container and all deployed environments use `prisma migrate dev` / `prisma migrate deploy`.
+
 ---
 
 ## Multi-Tenant and White-Label Assumptions
@@ -189,7 +233,7 @@ docker compose up -d db redis minio mailhog
 docker compose up -d db redis minio mailhog && pnpm dev
 
 # Run database migrations
-pnpm db:push
+pnpm db:migrate
 
 # Seed the database (optional)
 pnpm db:seed
@@ -211,11 +255,12 @@ pnpm dev
 pnpm build
 
 # Database commands
-pnpm db:push      # Push schema changes
-pnpm db:migrate   # Run migrations
+pnpm db:migrate   # Run migrations (use this, not db:push)
+pnpm db:check     # Detect schema drift (schema.prisma vs migrations)
 pnpm db:studio    # Open Prisma Studio
 pnpm db:seed      # Seed database
 pnpm db:reset     # Reset database
+pnpm db:push      # Push schema directly (local experimentation only)
 ```
 
 ### Local Services (docker-compose)

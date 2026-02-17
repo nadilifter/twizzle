@@ -65,6 +65,29 @@ To verify S3 is working:
 4. Check that the image displays correctly
 5. Verify the URL starts with `https://assets.upliftergymnastics.com/`
 
+## Database Migrations
+
+Database schema changes must be applied via Prisma Migrate before the application starts. On each deployment:
+
+```bash
+# Run pending migrations against the staging database
+pnpm prisma migrate deploy
+```
+
+This is separate from `prisma db push` (which the dev container previously used). `migrate deploy` applies only committed migration files and is safe for shared environments. It should be run as a pre-start step in the deployment script or container entrypoint.
+
+### Verifying Migration Status
+
+To check whether schema and migrations are in sync before deploying:
+
+```bash
+pnpm db:check
+```
+
+If this exits non-zero, there are schema changes without a matching migration — do **not** deploy until that is resolved.
+
+---
+
 ## Troubleshooting
 
 ### Upload fails with "Access Denied"

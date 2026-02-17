@@ -22,7 +22,7 @@ COPY . .
 EXPOSE 3000
 
 # Create entrypoint script in /usr/local/bin (outside volume mount)
-RUN printf '#!/bin/sh\nset -e\necho "Waiting for database..."\nsleep 2\necho "Pushing database schema..."\ncd /app && pnpm prisma db push --skip-generate\necho "Starting development server..."\nexec pnpm dev\n' > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+RUN printf '#!/bin/sh\nset -e\necho "Waiting for database..."\nsleep 2\necho "Applying database migrations..."\ncd /app && pnpm prisma migrate dev --skip-generate --skip-seed\necho "Starting development server..."\nexec pnpm dev\n' > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
 # Start development server with migrations
 CMD ["/usr/local/bin/entrypoint.sh"]
