@@ -261,7 +261,7 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   React.useEffect(() => {
     const fetchFacilities = async () => {
       try {
-        const response = await fetch("/api/facilities")
+        const response = await fetch("/api/organization/facilities")
         if (response.ok) {
           const data = await response.json()
           setFacilities(Array.isArray(data) ? data : data.facilities || [])
