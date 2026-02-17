@@ -1,8 +1,9 @@
 -- CreateEnum
 CREATE TYPE "MembershipInstanceStatus" AS ENUM ('DRAFT', 'ACTIVE', 'EXPIRED', 'CANCELLED', 'ARCHIVED');
 
--- AlterEnum
-ALTER TYPE "BillingInterval" ADD VALUE 'ONE_TIME';
+-- NOTE: ALTER TYPE "BillingInterval" ADD VALUE 'ONE_TIME' moved to prior migration
+-- (20260215235959_add_billing_interval_one_time) because PostgreSQL requires new
+-- enum values to be committed before they can be used in DEFAULT clauses.
 
 -- AlterTable: MembershipGroup - add new fields
 ALTER TABLE "MembershipGroup" ADD COLUMN "isRecurring" BOOLEAN NOT NULL DEFAULT false;
