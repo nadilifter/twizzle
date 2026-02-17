@@ -3525,6 +3525,14 @@ enum CompetitionStatus {
   CANCELLED
 }
 
+enum CompetitionPricingMode {
+  FREE            // No charge
+  PER_COMPETITION // Flat fee to participate at all
+  PER_EVENT       // Flat price per event entered
+  TIERED          // Price tiers based on number of events
+  PER_CATEGORY    // Specific price per event/age combination
+}
+
 enum EntryStatus {
   PENDING_SEED
   PENDING_REVIEW
@@ -3709,6 +3717,10 @@ model Competition {
   waiverRequirementIds     String[] // Array of Waiver IDs
   hasMedicalRequirement    Boolean @default(false)
 
+  // Pricing
+  pricingMode CompetitionPricingMode @default(FREE)
+  entryFee    Decimal?               @db.Decimal(10, 2) // Used for PER_COMPETITION and PER_EVENT modes
+
   // Publishing
   publishStatus       String? // LIVE, DRAFT, SCHEDULED
   scheduledGoLiveDate DateTime?
@@ -3721,10 +3733,11 @@ model Competition {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
 
-  categories CompetitionCategory[]
-  entries    CompetitionEntry[]
-  results    CompetitionResult[]
-  teams      CompetitionTeam[]
+  categories   CompetitionCategory[]
+  entries      CompetitionEntry[]
+  results      CompetitionResult[]
+  teams        CompetitionTeam[]
+  pricingTiers CompetitionPricingTier[]
 
   @@index([organizationId])
   @@index([status])
@@ -3757,6 +3770,9 @@ model CompetitionCategory {
   isTeamEvent Boolean @default(false)
   teamSize    Int?    // Number of athletes per team
 
+  // Pricing (used when competition.pricingMode is PER_CATEGORY)
+  price Decimal? @db.Decimal(10, 2)
+
   isActive     Boolean @default(true)
   displayOrder Int     @default(0)
 
@@ -3777,6 +3793,21 @@ model CompetitionCategory {
   @@index([competitionId])
   @@index([sportEventId])
   @@index([ageCategoryId])
+}
+
+// Pricing tiers for TIERED pricing mode (discounts for multiple events)
+model CompetitionPricingTier {
+  id            String @id @default(cuid())
+  competitionId String
+
+  minEvents     Int              // Minimum events to qualify for this tier
+  maxEvents     Int?             // Maximum events (null = unlimited)
+  pricePerEvent Decimal          @db.Decimal(10, 2)
+  displayOrder  Int              @default(0)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId])
 }
 
 // An athlete's entry into a competition category

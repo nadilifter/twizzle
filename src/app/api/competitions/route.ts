@@ -20,6 +20,9 @@ const competitionInclude = {
     },
     orderBy: { displayOrder: "asc" as const },
   },
+  pricingTiers: {
+    orderBy: { displayOrder: "asc" as const },
+  },
   _count: {
     select: {
       entries: true,
@@ -125,6 +128,16 @@ const createCompetitionSchema = z.object({
     displayOrder: z.number().int().default(0),
   })).optional().default([]),
 
+  // Pricing
+  pricingMode: z.enum(["FREE", "PER_COMPETITION", "PER_EVENT", "TIERED", "PER_CATEGORY"]).default("FREE"),
+  entryFee: z.number().min(0).nullable().optional(),
+  pricingTiers: z.array(z.object({
+    minEvents: z.number().int().min(1),
+    maxEvents: z.number().int().min(1).nullable().optional(),
+    pricePerEvent: z.number().min(0),
+  })).optional().default([]),
+  categoryPrices: z.record(z.string(), z.number().min(0)).optional().default({}),
+
   // Publishing
   publishStatus: z.enum(["LIVE", "DRAFT", "SCHEDULED"]).default("DRAFT"),
   scheduledGoLiveDate: z.string().or(z.date()).nullable().optional(),
@@ -198,10 +211,28 @@ export async function POST(request: NextRequest) {
         waiverRequirementIds: data.waiverRequirementIds,
         hasMedicalRequirement: data.hasMedicalRequirement,
 
+        // Pricing
+        pricingMode: data.pricingMode,
+        entryFee: data.pricingMode === "PER_COMPETITION" || data.pricingMode === "PER_EVENT"
+          ? data.entryFee ?? null
+          : null,
+
         // Publishing
         publishStatus: data.publishStatus,
         scheduledGoLiveDate: data.scheduledGoLiveDate ? new Date(data.scheduledGoLiveDate) : null,
         scheduledGoLiveTime: data.scheduledGoLiveTime || null,
+
+        // Pricing tiers (for TIERED mode)
+        pricingTiers: data.pricingMode === "TIERED" && data.pricingTiers.length > 0
+          ? {
+              create: data.pricingTiers.map((tier, i) => ({
+                minEvents: tier.minEvents,
+                maxEvents: tier.maxEvents ?? null,
+                pricePerEvent: tier.pricePerEvent,
+                displayOrder: i,
+              })),
+            }
+          : undefined,
 
         // Create competition categories
         categories: {
@@ -222,6 +253,14 @@ export async function POST(request: NextRequest) {
               }
             }
 
+            // Look up per-category price if PER_CATEGORY pricing
+            const catKey = cat.sportEventId && cat.ageCategoryId
+              ? `${cat.sportEventId}:${cat.ageCategoryId}`
+              : cat.combinationEntryId || cat.individualEntryId || ""
+            const categoryPrice = data.pricingMode === "PER_CATEGORY" && data.categoryPrices[catKey] !== undefined
+              ? data.categoryPrices[catKey]
+              : null
+
             return {
               combinationEntryId: cat.combinationEntryId || null,
               individualEntryId: cat.individualEntryId || null,
@@ -236,6 +275,7 @@ export async function POST(request: NextRequest) {
               isTeamEvent: cat.isTeamEvent,
               teamSize: cat.teamSize ?? null,
               displayOrder: cat.displayOrder || index,
+              price: categoryPrice,
             }
           })),
         },

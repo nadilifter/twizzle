@@ -4677,9 +4677,25 @@ See you at Metro Sports!
       startTime: "08:00",
       endTime: "17:00",
       categoryMode: "SPECIFIC",
+      pricingMode: "TIERED",
       publishStatus: "LIVE",
     },
   });
+
+  // Pricing tiers for tiered mode
+  const tfPricingTiers = [
+    { id: `${ORG2_ID}-tier-1`, competitionId: tfCompetition.id, minEvents: 1, maxEvents: 2, pricePerEvent: 25.00, displayOrder: 0 },
+    { id: `${ORG2_ID}-tier-2`, competitionId: tfCompetition.id, minEvents: 3, maxEvents: 5, pricePerEvent: 20.00, displayOrder: 1 },
+    { id: `${ORG2_ID}-tier-3`, competitionId: tfCompetition.id, minEvents: 6, maxEvents: null, pricePerEvent: 15.00, displayOrder: 2 },
+  ];
+  for (const tier of tfPricingTiers) {
+    await prisma.competitionPricingTier.upsert({
+      where: { id: tier.id },
+      update: {},
+      create: tier,
+    });
+  }
+  console.log(`  ✓ Created ${tfPricingTiers.length} pricing tiers for Regional Athletics Meet`);
 
   // Competition categories using sport-specific refs: 100m (U10), Long Jump (U12), 4x100 Relay (U10, team)
   const tfCompCats = [

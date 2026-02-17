@@ -37,6 +37,9 @@ import {
   Tag,
   BarChart3,
   Settings,
+  DollarSign,
+  Plus,
+  Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useFeatures } from "@/components/feature-context"
@@ -182,7 +185,11 @@ interface CompetitionFormData {
   // Step 4: Results
   categoryResults: CategoryResultConfig[]
 
-  // Step 5: Pricing (placeholder)
+  // Step 5: Pricing
+  pricingMode: "FREE" | "PER_COMPETITION" | "PER_EVENT" | "TIERED" | "PER_CATEGORY"
+  entryFee: number | null
+  pricingTiers: Array<{ minEvents: number; maxEvents: number | null; pricePerEvent: number }>
+  categoryPrices: Record<string, number>
 
   // Step 6: Confirmation
   publishStatus: PublishStatus
@@ -273,6 +280,12 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
 
     // Step 4: Results
     categoryResults: [],
+
+    // Step 5: Pricing
+    pricingMode: "FREE",
+    entryFee: null,
+    pricingTiers: [{ minEvents: 1, maxEvents: 3, pricePerEvent: 20 }, { minEvents: 4, maxEvents: null, pricePerEvent: 15 }],
+    categoryPrices: {},
 
     // Step 6: Confirmation
     publishStatus: "DRAFT",
@@ -650,6 +663,10 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
           displayOrder: i,
           // collectResults is used by the UI; backend stores the category regardless
         })),
+        pricingMode: formData.pricingMode,
+        entryFee: formData.entryFee,
+        pricingTiers: formData.pricingMode === "TIERED" ? formData.pricingTiers : [],
+        categoryPrices: formData.pricingMode === "PER_CATEGORY" ? formData.categoryPrices : {},
         publishStatus: formData.publishStatus,
         scheduledGoLiveDate: formData.scheduledGoLiveDate?.toISOString(),
         scheduledGoLiveTime: formData.scheduledGoLiveTime,
@@ -1749,18 +1766,341 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                 Pricing
               </CardTitle>
               <CardDescription>
-                Set registration fees and pricing options for this competition
+                Set registration fees for this competition
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <CreditCard className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="font-medium text-muted-foreground mb-1">Pricing Configuration Coming Soon</p>
-                <p className="text-sm text-muted-foreground">
-                  This section will allow you to configure registration fees, early-bird pricing,
-                  group rates, and payment options.
-                </p>
-              </div>
+            <CardContent className="space-y-6">
+              {/* Pricing Mode Selector */}
+              <RadioGroup
+                value={formData.pricingMode}
+                onValueChange={(value: typeof formData.pricingMode) =>
+                  setFormData((prev) => ({ ...prev, pricingMode: value }))
+                }
+                className="space-y-3"
+              >
+                {/* Free */}
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.pricingMode === "FREE"
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="FREE" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Free</span>
+                    <p className="text-sm text-muted-foreground">
+                      No registration fee
+                    </p>
+                  </div>
+                </label>
+
+                {/* Per Competition */}
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.pricingMode === "PER_COMPETITION"
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="PER_COMPETITION" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Flat Fee</span>
+                    <p className="text-sm text-muted-foreground">
+                      One price to participate in the competition, regardless of how many events entered
+                    </p>
+                  </div>
+                </label>
+
+                {/* Per Event */}
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.pricingMode === "PER_EVENT"
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="PER_EVENT" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Per Event</span>
+                    <p className="text-sm text-muted-foreground">
+                      A flat price for each event entered
+                    </p>
+                  </div>
+                </label>
+
+                {/* Tiered */}
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.pricingMode === "TIERED"
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="TIERED" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Tiered</span>
+                    <p className="text-sm text-muted-foreground">
+                      Discounts for entering multiple events (e.g., 1-3 events at $20/ea, 4+ at $15/ea)
+                    </p>
+                  </div>
+                </label>
+
+                {/* Per Category */}
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.pricingMode === "PER_CATEGORY"
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="PER_CATEGORY" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Per Category</span>
+                    <p className="text-sm text-muted-foreground">
+                      Set a specific price for each event / age group combination
+                    </p>
+                  </div>
+                </label>
+              </RadioGroup>
+
+              {/* Flat Fee / Per Event input */}
+              {(formData.pricingMode === "PER_COMPETITION" || formData.pricingMode === "PER_EVENT") && (
+                <div className="rounded-lg border p-4 space-y-3">
+                  <Label className="text-sm font-medium">
+                    {formData.pricingMode === "PER_COMPETITION" ? "Competition Entry Fee" : "Price Per Event"}
+                  </Label>
+                  <div className="relative max-w-[200px]">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.entryFee ?? ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          entryFee: e.target.value ? parseFloat(e.target.value) : null,
+                        }))
+                      }
+                      className="pl-9"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.pricingMode === "PER_COMPETITION"
+                      ? "This fee is charged once per athlete to enter the competition."
+                      : "This fee is charged for each event the athlete registers for."}
+                  </p>
+                </div>
+              )}
+
+              {/* Tiered pricing editor */}
+              {formData.pricingMode === "TIERED" && (
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Pricing Tiers</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const lastTier = formData.pricingTiers[formData.pricingTiers.length - 1]
+                        const nextMin = lastTier ? (lastTier.maxEvents ? lastTier.maxEvents + 1 : lastTier.minEvents + 1) : 1
+                        setFormData((prev) => ({
+                          ...prev,
+                          pricingTiers: [
+                            ...prev.pricingTiers,
+                            { minEvents: nextMin, maxEvents: null, pricePerEvent: 0 },
+                          ],
+                        }))
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Tier
+                    </Button>
+                  </div>
+
+                  {formData.pricingTiers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No tiers configured. Add at least one pricing tier.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {formData.pricingTiers.map((tier, index) => (
+                        <div key={index} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3">
+                          <div className="flex items-center gap-2 flex-1">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Min Events</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={tier.minEvents}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    pricingTiers: prev.pricingTiers.map((t, i) =>
+                                      i === index ? { ...t, minEvents: parseInt(e.target.value) || 1 } : t
+                                    ),
+                                  }))
+                                }
+                                className="h-8 w-20 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Max Events</Label>
+                              <Input
+                                type="number"
+                                min={tier.minEvents}
+                                placeholder="∞"
+                                value={tier.maxEvents ?? ""}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    pricingTiers: prev.pricingTiers.map((t, i) =>
+                                      i === index
+                                        ? { ...t, maxEvents: e.target.value ? parseInt(e.target.value) : null }
+                                        : t
+                                    ),
+                                  }))
+                                }
+                                className="h-8 w-20 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Price / Event</Label>
+                              <div className="relative">
+                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={tier.pricePerEvent}
+                                  onChange={(e) =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      pricingTiers: prev.pricingTiers.map((t, i) =>
+                                        i === index
+                                          ? { ...t, pricePerEvent: parseFloat(e.target.value) || 0 }
+                                          : t
+                                      ),
+                                    }))
+                                  }
+                                  className="h-8 w-24 pl-6 text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                pricingTiers: prev.pricingTiers.filter((_, i) => i !== index),
+                              }))
+                            }
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Athletes are charged the per-event price from the tier matching their total number of events.
+                    Leave "Max Events" empty for unlimited.
+                  </p>
+                </div>
+              )}
+
+              {/* Per Category pricing */}
+              {formData.pricingMode === "PER_CATEGORY" && (
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Category Prices</Label>
+                    {formData.categoryResults.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground">Set all to:</Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            placeholder="0.00"
+                            className="h-7 w-24 pl-6 text-xs"
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value)
+                              if (isNaN(val)) return
+                              const prices: Record<string, number> = {}
+                              for (const cat of formData.categoryResults) {
+                                const key = cat.sportEventId && cat.ageCategoryId
+                                  ? `${cat.sportEventId}:${cat.ageCategoryId}`
+                                  : ""
+                                if (key) prices[key] = val
+                              }
+                              setFormData((prev) => ({ ...prev, categoryPrices: prices }))
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {formData.categoryResults.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No categories selected. Go back to the Categories step to select events.
+                    </p>
+                  ) : (
+                    <div className="rounded-lg border divide-y max-h-[400px] overflow-y-auto">
+                      {formData.categoryResults.map((cat, index) => {
+                        const key = cat.sportEventId && cat.ageCategoryId
+                          ? `${cat.sportEventId}:${cat.ageCategoryId}`
+                          : `cat-${index}`
+                        return (
+                          <div key={key} className="flex items-center gap-3 px-3 py-2">
+                            <span className="text-sm flex-1">{cat.label}</span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                              {cat.resultType}
+                            </Badge>
+                            <div className="relative shrink-0">
+                              <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                placeholder="0.00"
+                                value={formData.categoryPrices[key] ?? ""}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    categoryPrices: {
+                                      ...prev.categoryPrices,
+                                      [key]: e.target.value ? parseFloat(e.target.value) : 0,
+                                    },
+                                  }))
+                                }
+                                className="h-7 w-24 pl-6 text-xs"
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Set a specific registration price for each event / age group combination.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1894,15 +2234,39 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                 )}
               </div>
 
-              {/* Advanced Options Placeholder */}
-              <div className="rounded-lg border border-dashed p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Settings className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium text-muted-foreground">Advanced Options</span>
+              {/* Pricing Summary */}
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">Pricing</span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Additional configuration options will be available here in a future update.
-                </p>
+                {formData.pricingMode === "FREE" && (
+                  <p className="text-sm text-muted-foreground">Free — no registration fee</p>
+                )}
+                {formData.pricingMode === "PER_COMPETITION" && (
+                  <p className="text-sm text-muted-foreground">
+                    Flat fee: ${formData.entryFee?.toFixed(2) ?? "0.00"} per athlete
+                  </p>
+                )}
+                {formData.pricingMode === "PER_EVENT" && (
+                  <p className="text-sm text-muted-foreground">
+                    ${formData.entryFee?.toFixed(2) ?? "0.00"} per event entered
+                  </p>
+                )}
+                {formData.pricingMode === "TIERED" && (
+                  <div className="space-y-1">
+                    {formData.pricingTiers.map((t, i) => (
+                      <p key={i} className="text-sm text-muted-foreground">
+                        {t.minEvents}–{t.maxEvents ?? "∞"} events: ${t.pricePerEvent.toFixed(2)}/event
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {formData.pricingMode === "PER_CATEGORY" && (
+                  <p className="text-sm text-muted-foreground">
+                    Per-category pricing — {Object.keys(formData.categoryPrices).length} categories configured
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
