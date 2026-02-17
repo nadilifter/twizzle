@@ -60,6 +60,12 @@ import { toast } from "sonner"
 import { api } from "@/lib/api-client"
 import type { Skill, Level } from "@/types/evaluations"
 
+interface OrgSport {
+  id: string
+  name: string
+  slug: string
+}
+
 const DEFAULT_CATEGORIES = ["Floor", "Bars", "Beam", "Vault", "Trampoline", "General"]
 
 interface SkillFormData {
@@ -131,7 +137,10 @@ export default function SkillsPage() {
     }
   }, [search, selectedCategory, levelFilter])
 
-  // Fetch levels
+  // Organization sports context
+  const [orgSports, setOrgSports] = useState<OrgSport[]>([])
+
+  // Fetch levels and org sports
   useEffect(() => {
     async function loadLevels() {
       try {
@@ -141,7 +150,18 @@ export default function SkillsPage() {
         console.error("Error fetching levels:", error)
       }
     }
+    async function loadOrgSports() {
+      try {
+        const response = await fetch("/api/organization/sports")
+        if (response.ok) {
+          setOrgSports(await response.json())
+        }
+      } catch (error) {
+        console.error("Error fetching org sports:", error)
+      }
+    }
     loadLevels()
+    loadOrgSports()
   }, [])
 
   useEffect(() => {
@@ -289,6 +309,16 @@ export default function SkillsPage() {
           <p className="text-muted-foreground">
             Library of skills, drills, and progressions.
           </p>
+          {orgSports.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-xs text-muted-foreground">Sports:</span>
+              {orgSports.map((sport) => (
+                <Badge key={sport.id} variant="secondary" className="text-xs">
+                  {sport.name}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
         <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <SheetTrigger asChild>

@@ -20,7 +20,8 @@ import {
   MessageSquare,
   Mail,
   HardDrive,
-  Tag
+  Tag,
+  Trophy,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -50,8 +51,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { getBaseDomainSuffix } from "@/lib/client-domains"
+
+interface Sport {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  icon: string | null
+}
 
 interface SubscriptionPlan {
   id: string
@@ -96,6 +106,8 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [plans, setPlans] = React.useState<SubscriptionPlan[]>([])
   const [plansLoading, setPlansLoading] = React.useState(true)
+  const [sports, setSports] = React.useState<Sport[]>([])
+  const [sportsLoading, setSportsLoading] = React.useState(true)
   
   // Subdomain availability check
   const [subdomainStatus, setSubdomainStatus] = React.useState<"idle" | "checking" | "available" | "taken">("idle")
@@ -127,6 +139,9 @@ export default function SignupPage() {
     primaryColor: "#000000",
     secondaryColor: "#ffffff",
     
+    // Sports (optional)
+    sportIds: [] as string[],
+
     // Plan
     planId: "",
   })
@@ -166,6 +181,23 @@ export default function SignupPage() {
       }
     }
     fetchPlans()
+  }, [])
+
+  // Fetch sports on mount
+  React.useEffect(() => {
+    async function fetchSports() {
+      try {
+        const response = await fetch("/api/sports")
+        if (!response.ok) throw new Error("Failed to fetch sports")
+        const data = await response.json()
+        setSports(data)
+      } catch (error) {
+        console.error("Failed to load sports:", error)
+      } finally {
+        setSportsLoading(false)
+      }
+    }
+    fetchSports()
   }, [])
 
   // Check subdomain availability
@@ -571,7 +603,66 @@ export default function SignupPage() {
             </CardContent>
           </Card>
 
-          {/* Section 3: Your Website */}
+          {/* Section 3: Sports (Optional) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                <CardTitle>Sports Offered</CardTitle>
+                <Badge variant="secondary" className="ml-2">Optional</Badge>
+              </div>
+              <CardDescription>
+                Select the sports your organization offers. You can update this later in your dashboard.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sportsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : sports.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No sports available yet.</p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {sports.map((sport) => {
+                    const isSelected = formData.sportIds.includes(sport.id)
+                    return (
+                      <label
+                        key={sport.id}
+                        className={cn(
+                          "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "hover:bg-muted/50"
+                        )}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              sportIds: checked
+                                ? [...prev.sportIds, sport.id]
+                                : prev.sportIds.filter(id => id !== sport.id),
+                            }))
+                          }}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 space-y-0.5">
+                          <span className="font-medium text-sm">{sport.name}</span>
+                          {sport.description && (
+                            <p className="text-xs text-muted-foreground">{sport.description}</p>
+                          )}
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Section 4: Your Website */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">

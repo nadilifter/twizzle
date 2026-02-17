@@ -53,6 +53,9 @@ const signupSchema = z.object({
   // Plan
   planId: z.string().min(1, "Please select a plan"),
   
+  // Sports (optional)
+  sportIds: z.array(z.string()).optional(),
+
   // Adyen (optional - for paid plans)
   adyenShopperReference: z.string().optional(),
 }).refine(
@@ -231,6 +234,20 @@ export async function POST(request: NextRequest) {
           status: "ACTIVE",
         },
       })
+
+      // 7. Associate selected sports (if any)
+      if (validatedData.sportIds && validatedData.sportIds.length > 0) {
+        await Promise.all(
+          validatedData.sportIds.map((sportId) =>
+            tx.organizationSport.create({
+              data: {
+                organizationId: organization.id,
+                sportId,
+              },
+            })
+          )
+        )
+      }
 
       return { organization, user }
     })

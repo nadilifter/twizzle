@@ -13,6 +13,7 @@ import {
   Package,
   ShieldCheck, 
   Timer,
+  Trophy,
   Users,
   ExternalLink,
   UserPlus,
@@ -153,6 +154,11 @@ const navItems = [
     title: "Plans",
     url: "/superadmin/plans",
     icon: Package,
+  },
+  {
+    title: "Sports",
+    url: "/superadmin/sports",
+    icon: Trophy,
   },
   {
     title: "Domains",

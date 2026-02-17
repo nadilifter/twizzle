@@ -275,6 +275,57 @@ async function main() {
   console.log("  ✓ Created subscriptions for all organizations");
 
   // ============================================
+  // SPORTS
+  // ============================================
+  console.log("\n🏅 Creating sports...");
+  const sportsData = [
+    { id: "sport-athletics", name: "Athletics", slug: "athletics", description: "Track and field athletics including running, jumping, and throwing disciplines", displayOrder: 0 },
+    { id: "sport-gymnastics", name: "Gymnastics", slug: "gymnastics", description: "Artistic and rhythmic gymnastics with apparatus events and floor exercises", displayOrder: 1 },
+    { id: "sport-track-and-field", name: "Track & Field", slug: "track-and-field", description: "Competitive track and field events including sprints, distance, hurdles, and field events", displayOrder: 2 },
+    { id: "sport-swimming", name: "Swimming", slug: "swimming", description: "Competitive and recreational swimming across all strokes and distances", displayOrder: 3 },
+    { id: "sport-skiing", name: "Skiing", slug: "skiing", description: "Alpine and cross-country skiing disciplines", displayOrder: 4 },
+    { id: "sport-diving", name: "Diving", slug: "diving", description: "Springboard and platform diving competitions", displayOrder: 5 },
+    { id: "sport-basketball", name: "Basketball", slug: "basketball", description: "Team basketball programs and competitions", displayOrder: 6 },
+  ];
+
+  const sports: Record<string, { id: string; slug: string }> = {};
+  for (const sport of sportsData) {
+    const result = await prisma.sport.upsert({
+      where: { slug: sport.slug },
+      update: {},
+      create: sport,
+    });
+    sports[sport.slug] = { id: result.id, slug: result.slug };
+  }
+  console.log(`  ✓ Created ${sportsData.length} sports`);
+
+  // Organization-Sport associations
+  console.log("\n🔗 Associating sports with organizations...");
+  const orgSportAssociations = [
+    { organizationId: ORG1_ID, sportId: sports["gymnastics"].id },
+    { organizationId: ORG2_ID, sportId: sports["basketball"].id },
+    { organizationId: ORG2_ID, sportId: sports["swimming"].id },
+    { organizationId: ORG2_ID, sportId: sports["athletics"].id },
+    { organizationId: ORG_DEMO_ID, sportId: sports["gymnastics"].id },
+    { organizationId: ORG_DISCOVER_CIRCUS_ID, sportId: sports["gymnastics"].id },
+    { organizationId: ORG_DISCOVER_CIRCUS_ID, sportId: sports["athletics"].id },
+  ];
+
+  for (const assoc of orgSportAssociations) {
+    await prisma.organizationSport.upsert({
+      where: {
+        organizationId_sportId: {
+          organizationId: assoc.organizationId,
+          sportId: assoc.sportId,
+        },
+      },
+      update: {},
+      create: assoc,
+    });
+  }
+  console.log("  ✓ Associated sports with organizations");
+
+  // ============================================
   // USERS
   // ============================================
   console.log("\n👤 Creating users...");
@@ -4251,6 +4302,7 @@ See you at Metro Sports!
   console.log("\nCreated data summary:");
   console.log("  • 5 organizations (Sunrise Gymnastics, Metro Sports, Demo Gym, Uplifter, Discover Circus)");
   console.log("  • 4 subscription plans");
+  console.log("  • 7 sports with organization associations");
   console.log("  • 13 users with permissions");
   console.log("  • 9 families with payment methods");
   console.log("  • 14 athletes with guardian relationships");

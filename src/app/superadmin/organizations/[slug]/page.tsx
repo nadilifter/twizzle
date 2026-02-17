@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle } from "lucide-react"
+import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle, Trophy } from "lucide-react"
 import { SubscriptionManager } from "./subscription-manager"
 import { FeatureOverrides } from "./feature-overrides"
 import { getSubdomainUrl } from "@/lib/env-domains"
@@ -87,6 +87,14 @@ export default async function OrganizationDetailPage({ params }: Props) {
         }
       },
       websiteConfig: true,
+      sports: {
+        include: {
+          sport: {
+            select: { id: true, name: true, slug: true },
+          },
+        },
+        orderBy: { sport: { displayOrder: "asc" } },
+      },
       organizationPaymentMethods: {
         where: { isActive: true },
         orderBy: [
@@ -255,6 +263,23 @@ export default async function OrganizationDetailPage({ params }: Props) {
                 <p className="text-sm text-muted-foreground">Last Updated</p>
                 <p className="font-medium">{organization.updatedAt.toLocaleDateString()}</p>
               </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Trophy className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Sports</p>
+              </div>
+              {organization.sports.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No sports selected</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {organization.sports.map((os) => (
+                    <Badge key={os.sport.id} variant="secondary">
+                      {os.sport.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

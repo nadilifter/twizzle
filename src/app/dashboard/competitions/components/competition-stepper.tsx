@@ -49,6 +49,17 @@ import { format } from "date-fns"
 
 type CompetitionType = "GYMNASTICS" | "TRACK_AND_FIELD"
 
+interface OrgSport {
+  id: string
+  name: string
+  slug: string
+}
+
+const SPORT_SLUG_TO_COMPETITION_TYPE: Record<string, CompetitionType> = {
+  gymnastics: "GYMNASTICS",
+  "track-and-field": "TRACK_AND_FIELD",
+}
+
 type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED"
 
 interface Level {
@@ -154,6 +165,9 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   const [waivers, setWaivers] = React.useState<Array<{ id: string; title: string; status: string }>>([])
   const [loadingWaivers, setLoadingWaivers] = React.useState(true)
 
+  // Organization sports state
+  const [orgSports, setOrgSports] = React.useState<OrgSport[]>([])
+
   // Form state
   const [formData, setFormData] = React.useState<CompetitionFormData>({
     // Step 1: General
@@ -251,6 +265,31 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
       }
     }
     fetchWaivers()
+  }, [])
+
+  // Fetch organization sports
+  React.useEffect(() => {
+    const fetchOrgSports = async () => {
+      try {
+        const response = await fetch("/api/organization/sports")
+        if (response.ok) {
+          const data: OrgSport[] = await response.json()
+          setOrgSports(data)
+
+          // If org has exactly one sport with a matching competition type, auto-select it
+          const competitionTypes = data
+            .map((s) => SPORT_SLUG_TO_COMPETITION_TYPE[s.slug])
+            .filter(Boolean) as CompetitionType[]
+          const uniqueTypes = [...new Set(competitionTypes)]
+          if (uniqueTypes.length === 1) {
+            setFormData((prev) => ({ ...prev, competitionType: uniqueTypes[0] }))
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch org sports:", error)
+      }
+    }
+    fetchOrgSports()
   }, [])
 
   // Handle facility selection to auto-fill address
@@ -436,56 +475,74 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
               </div>
 
               {/* Competition Type */}
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Competition Type *</Label>
-                <RadioGroup
-                  value={formData.competitionType || ""}
-                  onValueChange={(value: CompetitionType) =>
-                    setFormData(prev => ({ ...prev, competitionType: value }))
-                  }
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                >
-                  <label
-                    className={cn(
-                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                      formData.competitionType === "GYMNASTICS"
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <RadioGroupItem value="GYMNASTICS" className="mt-1" />
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Trophy className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Gymnastics</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Gymnastics competitions with apparatus events and scoring
-                      </p>
-                    </div>
-                  </label>
+              {(() => {
+                // Determine which competition types to show based on org's sports
+                const allTypes: { value: CompetitionType; label: string; description: string }[] = [
+                  { value: "GYMNASTICS", label: "Gymnastics", description: "Gymnastics competitions with apparatus events and scoring" },
+                  { value: "TRACK_AND_FIELD", label: "Track & Field", description: "Track & field meets with running, jumping, and throwing events" },
+                ]
 
-                  <label
-                    className={cn(
-                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                      formData.competitionType === "TRACK_AND_FIELD"
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <RadioGroupItem value="TRACK_AND_FIELD" className="mt-1" />
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
+                const orgCompetitionTypes = orgSports.length > 0
+                  ? orgSports
+                      .map((s) => SPORT_SLUG_TO_COMPETITION_TYPE[s.slug])
+                      .filter(Boolean) as CompetitionType[]
+                  : []
+
+                const uniqueOrgTypes = [...new Set(orgCompetitionTypes)]
+                const availableTypes = uniqueOrgTypes.length > 0
+                  ? allTypes.filter((t) => uniqueOrgTypes.includes(t.value))
+                  : allTypes
+
+                // If only one type available, it's already auto-selected, just show info
+                if (availableTypes.length === 1 && formData.competitionType === availableTypes[0].value) {
+                  return (
+                    <div className="space-y-2">
+                      <Label className="text-base font-medium">Competition Type</Label>
+                      <div className="flex items-center gap-2 rounded-lg border p-4 bg-muted/30">
                         <Trophy className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Track & Field</span>
+                        <span className="font-medium">{availableTypes[0].label}</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">Auto-selected</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Track & field meets with running, jumping, and throwing events
-                      </p>
                     </div>
-                  </label>
-                </RadioGroup>
-              </div>
+                  )
+                }
+
+                return (
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium">Competition Type *</Label>
+                    <RadioGroup
+                      value={formData.competitionType || ""}
+                      onValueChange={(value: CompetitionType) =>
+                        setFormData(prev => ({ ...prev, competitionType: value }))
+                      }
+                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
+                      {availableTypes.map((type) => (
+                        <label
+                          key={type.value}
+                          className={cn(
+                            "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                            formData.competitionType === type.value
+                              ? "border-primary bg-primary/5"
+                              : "hover:bg-muted/50"
+                          )}
+                        >
+                          <RadioGroupItem value={type.value} className="mt-1" />
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Trophy className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">{type.label}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {type.description}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                )
+              })()}
 
               {/* Location */}
               <div className="space-y-4">

@@ -117,6 +117,9 @@ model Organization {
 
   // Feature Overrides (superadmin per-org overrides)
   featureOverride OrganizationFeatureOverride?
+
+  // Sports
+  sports OrganizationSport[]
 }
 
 model OrganizationMember {
@@ -3365,4 +3368,35 @@ model WaiverAcceptance {
   @@index([waiverId])
   @@index([familyId])
   @@index([athleteId])
+}
+
+// ============================================
+// SPORTS
+// ============================================
+
+model Sport {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String   @unique
+  description  String?
+  icon         String?
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organizations OrganizationSport[]
+}
+
+model OrganizationSport {
+  id             String   @id @default(cuid())
+  organizationId String
+  sportId        String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sport        Sport        @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, sportId])
+  @@index([sportId])
 }

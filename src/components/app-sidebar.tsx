@@ -249,6 +249,10 @@ const data = {
       url: "/dashboard/organization",
       items: [
         {
+          title: "Overview",
+          url: "/dashboard/organization/overview",
+        },
+        {
           title: "Facilities",
           url: "/dashboard/organization/facilities",
         },
