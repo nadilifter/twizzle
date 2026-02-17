@@ -47,17 +47,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { format } from "date-fns"
 
-type CompetitionType = "GYMNASTICS" | "TRACK_AND_FIELD"
-
 interface OrgSport {
   id: string
   name: string
   slug: string
 }
 
-const SPORT_SLUG_TO_COMPETITION_TYPE: Record<string, CompetitionType> = {
-  gymnastics: "GYMNASTICS",
-  "track-and-field": "TRACK_AND_FIELD",
+/** Convert a sport slug like "track-and-field" to a competition type string like "TRACK_AND_FIELD" */
+function sportSlugToCompetitionType(slug: string): string {
+  return slug.toUpperCase().replace(/-/g, "_")
 }
 
 type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED"
@@ -114,7 +112,7 @@ interface FetchedCategoryEntry {
 interface CompetitionFormData {
   // Step 1: General
   name: string
-  competitionType: CompetitionType | null
+  competitionType: string | null
   facilityId: string | null
   country: string
   stateProvince: string
@@ -158,10 +156,6 @@ interface CompetitionStepperProps {
   competitionId?: string | null
 }
 
-const COMPETITION_TYPE_LABELS: Record<CompetitionType, string> = {
-  GYMNASTICS: "Gymnastics",
-  TRACK_AND_FIELD: "Track & Field",
-}
 
 const { useStepper } = defineStepper(
   { id: "general", title: "General" },
@@ -310,13 +304,12 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
           const data: OrgSport[] = await response.json()
           setOrgSports(data)
 
-          // If org has exactly one sport with a matching competition type, auto-select it
-          const competitionTypes = data
-            .map((s) => SPORT_SLUG_TO_COMPETITION_TYPE[s.slug])
-            .filter(Boolean) as CompetitionType[]
-          const uniqueTypes = [...new Set(competitionTypes)]
-          if (uniqueTypes.length === 1) {
-            setFormData((prev) => ({ ...prev, competitionType: uniqueTypes[0] }))
+          // If org has exactly one sport, auto-select it as the competition type
+          if (data.length === 1) {
+            setFormData((prev) => ({
+              ...prev,
+              competitionType: sportSlugToCompetitionType(data[0].slug),
+            }))
           }
         }
       } catch (error) {
@@ -640,24 +633,13 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
 
               {/* Competition Type */}
               {(() => {
-                // Determine which competition types to show based on org's sports
-                const allTypes: { value: CompetitionType; label: string; description: string }[] = [
-                  { value: "GYMNASTICS", label: "Gymnastics", description: "Gymnastics competitions with apparatus events and scoring" },
-                  { value: "TRACK_AND_FIELD", label: "Track & Field", description: "Track & field meets with running, jumping, and throwing events" },
-                ]
+                // Build available types from the organization's selected sports
+                const availableTypes = orgSports.map((sport) => ({
+                  value: sportSlugToCompetitionType(sport.slug),
+                  label: sport.name,
+                }))
 
-                const orgCompetitionTypes = orgSports.length > 0
-                  ? orgSports
-                      .map((s) => SPORT_SLUG_TO_COMPETITION_TYPE[s.slug])
-                      .filter(Boolean) as CompetitionType[]
-                  : []
-
-                const uniqueOrgTypes = [...new Set(orgCompetitionTypes)]
-                const availableTypes = uniqueOrgTypes.length > 0
-                  ? allTypes.filter((t) => uniqueOrgTypes.includes(t.value))
-                  : allTypes
-
-                // If only one type available, it's already auto-selected, just show info
+                // If only one type available and it's already auto-selected, just show info
                 if (availableTypes.length === 1 && formData.competitionType === availableTypes[0].value) {
                   return (
                     <div className="space-y-2">
@@ -671,12 +653,24 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                   )
                 }
 
+                if (availableTypes.length === 0) {
+                  return (
+                    <div className="space-y-2">
+                      <Label className="text-base font-medium">Competition Type *</Label>
+                      <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                        No sports configured. Please add sports in your{" "}
+                        <a href="/dashboard/organization/overview" className="underline text-primary">organization settings</a>.
+                      </div>
+                    </div>
+                  )
+                }
+
                 return (
                   <div className="space-y-4">
                     <Label className="text-base font-medium">Competition Type *</Label>
                     <RadioGroup
                       value={formData.competitionType || ""}
-                      onValueChange={(value: CompetitionType) =>
+                      onValueChange={(value: string) =>
                         setFormData(prev => ({ ...prev, competitionType: value }))
                       }
                       className="grid grid-cols-1 md:grid-cols-2 gap-4"
@@ -697,9 +691,6 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                               <Trophy className="h-4 w-4 text-muted-foreground" />
                               <span className="font-medium">{type.label}</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {type.description}
-                            </p>
                           </div>
                         </label>
                       ))}
