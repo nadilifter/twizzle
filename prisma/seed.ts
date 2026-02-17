@@ -326,6 +326,185 @@ async function main() {
   console.log("  ✓ Associated sports with organizations");
 
   // ============================================
+  // COMPETITION CATEGORY TEMPLATES
+  // ============================================
+  console.log("\n🏷️  Creating competition category templates...");
+
+  // --- Gymnastics: Age Group x Apparatus (COMBINATION) ---
+  const gymTemplate = await prisma.competitionCategoryTemplate.upsert({
+    where: { id: "cat-tmpl-gymnastics-age-apparatus" },
+    update: {},
+    create: {
+      id: "cat-tmpl-gymnastics-age-apparatus",
+      sportId: sports["gymnastics"].id,
+      name: "Age Group x Apparatus",
+      description: "Standard gymnastics competition categories organized by age group and apparatus",
+      type: "COMBINATION",
+      isActive: true,
+      displayOrder: 0,
+      rowAxisLabel: "Age Group",
+      columnAxisLabel: "Apparatus",
+      restrictionAxis: "ROW",
+    },
+  });
+
+  const gymRowData = [
+    { id: "cav-gym-u8",   name: "Under 8",  axis: "ROW" as const, displayOrder: 0, minAge: 0,  maxAge: 7  },
+    { id: "cav-gym-u10",  name: "Under 10", axis: "ROW" as const, displayOrder: 1, minAge: 8,  maxAge: 9  },
+    { id: "cav-gym-u12",  name: "Under 12", axis: "ROW" as const, displayOrder: 2, minAge: 10, maxAge: 11 },
+    { id: "cav-gym-u14",  name: "Under 14", axis: "ROW" as const, displayOrder: 3, minAge: 12, maxAge: 13 },
+    { id: "cav-gym-open", name: "Open",      axis: "ROW" as const, displayOrder: 4, minAge: 14, maxAge: null },
+  ];
+  const gymColData = [
+    { id: "cav-gym-floor", name: "Floor", axis: "COLUMN" as const, displayOrder: 0 },
+    { id: "cav-gym-vault", name: "Vault", axis: "COLUMN" as const, displayOrder: 1 },
+    { id: "cav-gym-bars",  name: "Bars",  axis: "COLUMN" as const, displayOrder: 2 },
+    { id: "cav-gym-beam",  name: "Beam",  axis: "COLUMN" as const, displayOrder: 3 },
+  ];
+
+  for (const row of gymRowData) {
+    await prisma.categoryAxisValue.upsert({
+      where: { id: row.id },
+      update: {},
+      create: { ...row, templateId: gymTemplate.id },
+    });
+  }
+  for (const col of gymColData) {
+    await prisma.categoryAxisValue.upsert({
+      where: { id: col.id },
+      update: {},
+      create: { ...col, templateId: gymTemplate.id },
+    });
+  }
+
+  // Generate combination entries (disable Under 8 - Bars as an example)
+  const gymDisabled = new Set(["cav-gym-u8:cav-gym-bars"]);
+  for (const row of gymRowData) {
+    for (const col of gymColData) {
+      const comboId = `combo-gym-${row.id}-${col.id}`;
+      const key = `${row.id}:${col.id}`;
+      await prisma.categoryCombinationEntry.upsert({
+        where: { id: comboId },
+        update: {},
+        create: {
+          id: comboId,
+          templateId: gymTemplate.id,
+          rowValueId: row.id,
+          colValueId: col.id,
+          isActive: !gymDisabled.has(key),
+          name: `${row.name} - ${col.name}`,
+        },
+      });
+    }
+  }
+  console.log("  ✓ Created Gymnastics: Age Group x Apparatus template");
+
+  // --- Track & Field: Age Group x Discipline (COMBINATION) ---
+  const tfTemplate = await prisma.competitionCategoryTemplate.upsert({
+    where: { id: "cat-tmpl-tf-age-discipline" },
+    update: {},
+    create: {
+      id: "cat-tmpl-tf-age-discipline",
+      sportId: sports["track-and-field"].id,
+      name: "Age Group x Discipline",
+      description: "Standard track & field categories organized by age group and discipline",
+      type: "COMBINATION",
+      isActive: true,
+      displayOrder: 0,
+      rowAxisLabel: "Age Group",
+      columnAxisLabel: "Discipline",
+      restrictionAxis: "ROW",
+    },
+  });
+
+  const tfRowData = [
+    { id: "cav-tf-u8",  name: "Under 8",  axis: "ROW" as const, displayOrder: 0, minAge: 0,  maxAge: 7  },
+    { id: "cav-tf-u10", name: "Under 10", axis: "ROW" as const, displayOrder: 1, minAge: 8,  maxAge: 9  },
+    { id: "cav-tf-u12", name: "Under 12", axis: "ROW" as const, displayOrder: 2, minAge: 10, maxAge: 11 },
+    { id: "cav-tf-u14", name: "Under 14", axis: "ROW" as const, displayOrder: 3, minAge: 12, maxAge: 13 },
+  ];
+  const tfColData = [
+    { id: "cav-tf-100m",     name: "100m",      axis: "COLUMN" as const, displayOrder: 0 },
+    { id: "cav-tf-200m",     name: "200m",      axis: "COLUMN" as const, displayOrder: 1 },
+    { id: "cav-tf-longjump", name: "Long Jump", axis: "COLUMN" as const, displayOrder: 2 },
+    { id: "cav-tf-shotput",  name: "Shot Put",  axis: "COLUMN" as const, displayOrder: 3 },
+    { id: "cav-tf-hurdles",  name: "Hurdles",   axis: "COLUMN" as const, displayOrder: 4 },
+  ];
+
+  for (const row of tfRowData) {
+    await prisma.categoryAxisValue.upsert({
+      where: { id: row.id },
+      update: {},
+      create: { ...row, templateId: tfTemplate.id },
+    });
+  }
+  for (const col of tfColData) {
+    await prisma.categoryAxisValue.upsert({
+      where: { id: col.id },
+      update: {},
+      create: { ...col, templateId: tfTemplate.id },
+    });
+  }
+
+  // Disable Under 8 - Hurdles and Under 8 - Shot Put
+  const tfDisabled = new Set(["cav-tf-u8:cav-tf-hurdles", "cav-tf-u8:cav-tf-shotput"]);
+  for (const row of tfRowData) {
+    for (const col of tfColData) {
+      const comboId = `combo-tf-${row.id}-${col.id}`;
+      const key = `${row.id}:${col.id}`;
+      await prisma.categoryCombinationEntry.upsert({
+        where: { id: comboId },
+        update: {},
+        create: {
+          id: comboId,
+          templateId: tfTemplate.id,
+          rowValueId: row.id,
+          colValueId: col.id,
+          isActive: !tfDisabled.has(key),
+          name: `${row.name} - ${col.name}`,
+        },
+      });
+    }
+  }
+  console.log("  ✓ Created Track & Field: Age Group x Discipline template");
+
+  // --- Swimming: Open Events (INDIVIDUAL) ---
+  const swimTemplate = await prisma.competitionCategoryTemplate.upsert({
+    where: { id: "cat-tmpl-swimming-open-events" },
+    update: {},
+    create: {
+      id: "cat-tmpl-swimming-open-events",
+      sportId: sports["swimming"].id,
+      name: "Open Events",
+      description: "Standard open swimming events with age-based restrictions",
+      type: "INDIVIDUAL",
+      isActive: true,
+      displayOrder: 0,
+    },
+  });
+
+  const swimEntries = [
+    { id: "cie-swim-50free",    name: "50m Freestyle",    displayOrder: 0, hasAgeRestriction: false, minAge: null, maxAge: null },
+    { id: "cie-swim-100back",   name: "100m Backstroke",  displayOrder: 1, hasAgeRestriction: true,  minAge: 8,    maxAge: null },
+    { id: "cie-swim-200medley", name: "200m Medley",      displayOrder: 2, hasAgeRestriction: true,  minAge: 10,   maxAge: null },
+    { id: "cie-swim-4x50relay", name: "4x50m Relay",      displayOrder: 3, hasAgeRestriction: false, minAge: null, maxAge: null },
+  ];
+
+  for (const entry of swimEntries) {
+    await prisma.categoryIndividualEntry.upsert({
+      where: { id: entry.id },
+      update: {},
+      create: {
+        ...entry,
+        templateId: swimTemplate.id,
+        hasGenderRestriction: false,
+        hasCapacityRestriction: false,
+      },
+    });
+  }
+  console.log("  ✓ Created Swimming: Open Events template");
+
+  // ============================================
   // USERS
   // ============================================
   console.log("\n👤 Creating users...");

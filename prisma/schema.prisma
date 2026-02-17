@@ -120,6 +120,12 @@ model Organization {
 
   // Sports
   sports OrganizationSport[]
+
+  // Competition Categories (org-level custom templates)
+  competitionCategoryTemplates CompetitionCategoryTemplate[]
+
+  // Competition Category Preferences (per-org preset overrides)
+  categoryPreferences OrganizationCategoryPreference[]
 }
 
 model OrganizationMember {
@@ -3386,6 +3392,9 @@ model Sport {
   updatedAt    DateTime @updatedAt
 
   organizations OrganizationSport[]
+
+  // Competition category templates for this sport
+  competitionCategoryTemplates CompetitionCategoryTemplate[]
 }
 
 model OrganizationSport {
@@ -3399,4 +3408,124 @@ model OrganizationSport {
 
   @@unique([organizationId, sportId])
   @@index([sportId])
+}
+
+// ============================================
+// COMPETITION CATEGORIES
+// ============================================
+
+enum CategoryTemplateType {
+  COMBINATION // Grid of row x column intersections
+  INDIVIDUAL  // Standalone single entries
+}
+
+enum CategoryAxis {
+  ROW
+  COLUMN
+}
+
+// Unified template for sport-level presets (sportId set) and org-level custom (organizationId set)
+model CompetitionCategoryTemplate {
+  id              String               @id @default(cuid())
+  sportId         String?              // Non-null = sport-level preset (superadmin)
+  organizationId  String?              // Non-null = org-level custom (dashboard)
+  name            String
+  description     String?
+  type            CategoryTemplateType
+  isActive        Boolean              @default(true)
+  displayOrder    Int                  @default(0)
+
+  // COMBINATION specific fields
+  rowAxisLabel    String?              // e.g. "Age Group"
+  columnAxisLabel String?              // e.g. "Discipline"
+  restrictionAxis CategoryAxis?        // Which axis's values carry restrictions
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sport        Sport?        @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  axisValues              CategoryAxisValue[]
+  combinationEntries      CategoryCombinationEntry[]
+  individualEntries       CategoryIndividualEntry[]
+  organizationPreferences OrganizationCategoryPreference[]
+
+  @@index([sportId])
+  @@index([organizationId])
+}
+
+// Row/column values for COMBINATION templates
+model CategoryAxisValue {
+  id           String       @id @default(cuid())
+  templateId   String
+  axis         CategoryAxis // ROW or COLUMN
+  name         String       // e.g. "Under 8", "Cross Country"
+  displayOrder Int          @default(0)
+
+  // Restriction fields (applied when this value's axis matches the template's restrictionAxis)
+  minAge         Int?
+  maxAge         Int?
+  allowedGenders GenderDeclaration[]
+
+  template           CompetitionCategoryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  rowCombinations    CategoryCombinationEntry[]  @relation("CombinationRow")
+  columnCombinations CategoryCombinationEntry[]  @relation("CombinationColumn")
+
+  @@index([templateId])
+}
+
+// Grid intersection for COMBINATION templates (row x column)
+model CategoryCombinationEntry {
+  id         String  @id @default(cuid())
+  templateId String
+  rowValueId String
+  colValueId String
+  isActive   Boolean @default(true) // Can be disabled (e.g. no 3-year-old Long Jump)
+  name       String? // Auto-generated or custom override
+
+  template CompetitionCategoryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  rowValue CategoryAxisValue           @relation("CombinationRow", fields: [rowValueId], references: [id], onDelete: Cascade)
+  colValue CategoryAxisValue           @relation("CombinationColumn", fields: [colValueId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, rowValueId, colValueId])
+  @@index([templateId])
+}
+
+// Standalone entries for INDIVIDUAL templates
+model CategoryIndividualEntry {
+  id           String  @id @default(cuid())
+  templateId   String
+  name         String
+  description  String?
+  displayOrder Int     @default(0)
+
+  // Restriction flags
+  hasGenderRestriction   Boolean @default(false)
+  hasAgeRestriction      Boolean @default(false)
+  hasCapacityRestriction Boolean @default(false)
+
+  // Restriction values
+  allowedGenders GenderDeclaration[]
+  minAge         Int?
+  maxAge         Int?
+  capacity       Int?
+
+  template CompetitionCategoryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+// Per-organization preference overrides for preset templates (e.g. disabling a sport preset)
+model OrganizationCategoryPreference {
+  id             String  @id @default(cuid())
+  organizationId String
+  templateId     String
+  isDisabled     Boolean @default(false)
+
+  organization Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template     CompetitionCategoryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, templateId])
+  @@index([organizationId])
 }

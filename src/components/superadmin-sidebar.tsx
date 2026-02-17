@@ -9,6 +9,7 @@ import {
   DollarSign,
   Eye,
   Globe, 
+  Layers,
   LayoutDashboard, 
   Package,
   ShieldCheck, 
@@ -159,6 +160,11 @@ const navItems = [
     title: "Sports",
     url: "/superadmin/sports",
     icon: Trophy,
+  },
+  {
+    title: "Competition Categories",
+    url: "/superadmin/competition-categories",
+    icon: Layers,
   },
   {
     title: "Domains",

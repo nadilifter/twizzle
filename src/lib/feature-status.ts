@@ -126,6 +126,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "demo",
     description: "Competitions management with categories, results tracking, and large-scale participant registration.",
   },
+  "/dashboard/competitions/categories": {
+    status: "live",
+    description: "Competition category management with sport presets and custom categories",
+    apiRoutes: ["/api/competition-categories"],
+  },
 
   // Events Section
   "/dashboard/events": {
