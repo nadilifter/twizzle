@@ -85,6 +85,32 @@ interface MembershipInstance {
   groupName: string
 }
 
+type ResultType = "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
+type SortDir = "ASC" | "DESC"
+type SubMode = "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY"
+
+interface CategoryResultConfig {
+  combinationEntryId: string | null
+  individualEntryId: string | null
+  label: string
+  resultType: ResultType
+  sortDirection: SortDir
+  precision: number
+  seedMarkRequired: boolean
+  submissionMode: SubMode
+  qualifyingMark: number | null
+  isTeamEvent: boolean
+  teamSize: number | null
+}
+
+interface FetchedCategoryEntry {
+  id: string
+  type: "combination" | "individual"
+  label: string
+  defaultResultType: ResultType | null
+  defaultSortDirection: SortDir | null
+}
+
 interface CompetitionFormData {
   // Step 1: General
   name: string
@@ -117,7 +143,8 @@ interface CompetitionFormData {
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
 
-  // Step 4: Results (placeholder)
+  // Step 4: Results
+  categoryResults: CategoryResultConfig[]
 
   // Step 5: Pricing (placeholder)
 
@@ -168,6 +195,10 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   // Organization sports state
   const [orgSports, setOrgSports] = React.useState<OrgSport[]>([])
 
+  // Fetched category entries for results step
+  const [categoryEntries, setCategoryEntries] = React.useState<FetchedCategoryEntry[]>([])
+  const [loadingCategories, setLoadingCategories] = React.useState(false)
+
   // Form state
   const [formData, setFormData] = React.useState<CompetitionFormData>({
     // Step 1: General
@@ -200,6 +231,9 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
     hasWaiverRestriction: false,
     waiverRequirementIds: [],
     hasMedicalRequirement: false,
+
+    // Step 4: Results
+    categoryResults: [],
 
     // Step 6: Confirmation
     publishStatus: "DRAFT",
@@ -290,6 +324,75 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
       }
     }
     fetchOrgSports()
+  }, [])
+
+  // Fetch competition categories when entering results step
+  const fetchCategoryEntries = React.useCallback(async () => {
+    setLoadingCategories(true)
+    try {
+      const res = await fetch("/api/competition-categories")
+      if (!res.ok) return
+      const data = await res.json()
+      const entries: FetchedCategoryEntry[] = []
+
+      // Process preset templates
+      for (const tmpl of [...(data.presets || []), ...(data.custom || [])]) {
+        if (tmpl.isDisabledByOrg) continue
+        if (!tmpl.isActive) continue
+
+        if (tmpl.type === "COMBINATION") {
+          for (const combo of tmpl.combinationEntries || []) {
+            if (!combo.isActive) continue
+            const row = tmpl.axisValues?.find((v: any) => v.id === combo.rowValueId)
+            const col = tmpl.axisValues?.find((v: any) => v.id === combo.colValueId)
+            entries.push({
+              id: combo.id,
+              type: "combination",
+              label: combo.name || `${row?.name || "?"} - ${col?.name || "?"}`,
+              defaultResultType: col?.resultType || null,
+              defaultSortDirection: col?.sortDirection || null,
+            })
+          }
+        } else {
+          for (const entry of tmpl.individualEntries || []) {
+            entries.push({
+              id: entry.id,
+              type: "individual",
+              label: `${tmpl.name}: ${entry.name}`,
+              defaultResultType: entry.resultType || null,
+              defaultSortDirection: entry.sortDirection || null,
+            })
+          }
+        }
+      }
+
+      setCategoryEntries(entries)
+
+      // Auto-populate categoryResults if empty
+      setFormData((prev) => {
+        if (prev.categoryResults.length > 0) return prev
+        return {
+          ...prev,
+          categoryResults: entries.map((e) => ({
+            combinationEntryId: e.type === "combination" ? e.id : null,
+            individualEntryId: e.type === "individual" ? e.id : null,
+            label: e.label,
+            resultType: e.defaultResultType || "SCORE",
+            sortDirection: e.defaultSortDirection || (e.defaultResultType === "TIME" ? "ASC" : "DESC"),
+            precision: e.defaultResultType === "SCORE" ? 3 : e.defaultResultType === "TIME" ? 3 : 2,
+            seedMarkRequired: false,
+            submissionMode: "NONE" as SubMode,
+            qualifyingMark: null,
+            isTeamEvent: false,
+            teamSize: null,
+          })),
+        }
+      })
+    } catch (error) {
+      console.error("Failed to fetch categories:", error)
+    } finally {
+      setLoadingCategories(false)
+    }
   }, [])
 
   // Handle facility selection to auto-fill address
@@ -397,6 +500,13 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
 
   const handleNext = () => {
     if (validateStep(stepper.state.current.data.id)) {
+      // Fetch categories when entering the results step
+      const nextStepIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id) + 1
+      if (nextStepIndex < stepper.state.all.length && stepper.state.all[nextStepIndex].id === "results") {
+        if (categoryEntries.length === 0) {
+          fetchCategoryEntries()
+        }
+      }
       stepper.navigation.next()
     }
   }
@@ -410,12 +520,66 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
 
     setIsSaving(true)
     try {
-      // Placeholder: API call will go here
+      const payload = {
+        name: formData.name,
+        competitionType: formData.competitionType,
+        facilityId: formData.facilityId,
+        country: formData.country,
+        stateProvince: formData.stateProvince,
+        city: formData.city,
+        streetAddress: formData.streetAddress,
+        startDate: formData.startDate?.toISOString(),
+        endDate: formData.endDate?.toISOString(),
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        categoryMode: formData.categoryMode,
+        selectedCategoryIds: formData.selectedCategoryIds,
+        hasLevelRestriction: formData.hasLevelRestriction,
+        levelRequirementIds: formData.levelRequirementIds,
+        hasCapacityRestriction: formData.hasCapacityRestriction,
+        capacity: formData.capacity,
+        hasAgeRestriction: formData.hasAgeRestriction,
+        minAge: formData.minAge,
+        maxAge: formData.maxAge,
+        hasMembershipRestriction: formData.hasMembershipRestriction,
+        membershipRequirementIds: formData.membershipRequirementIds,
+        hasWaiverRestriction: formData.hasWaiverRestriction,
+        waiverRequirementIds: formData.waiverRequirementIds,
+        hasMedicalRequirement: formData.hasMedicalRequirement,
+        categoryResults: formData.categoryResults.map((c, i) => ({
+          combinationEntryId: c.combinationEntryId,
+          individualEntryId: c.individualEntryId,
+          resultType: c.resultType,
+          sortDirection: c.sortDirection,
+          precision: c.precision,
+          seedMarkRequired: c.seedMarkRequired,
+          submissionMode: c.submissionMode,
+          qualifyingMark: c.qualifyingMark,
+          isTeamEvent: c.isTeamEvent,
+          teamSize: c.teamSize,
+          displayOrder: i,
+        })),
+        publishStatus: formData.publishStatus,
+        scheduledGoLiveDate: formData.scheduledGoLiveDate?.toISOString(),
+        scheduledGoLiveTime: formData.scheduledGoLiveTime,
+      }
+
+      const response = await fetch("/api/competitions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to save competition")
+      }
+
       toast.success(isEditing ? "Competition updated!" : "Competition created!")
       router.push("/dashboard/competitions")
     } catch (error) {
       console.error("Failed to save competition:", error)
-      toast.error("Failed to save competition. Please try again.")
+      toast.error(error instanceof Error ? error.message : "Failed to save competition. Please try again.")
     } finally {
       setIsSaving(false)
     }
@@ -1154,18 +1318,215 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                 Results Configuration
               </CardTitle>
               <CardDescription>
-                Configure how results are tracked and displayed for this competition
+                Configure how results are tracked and displayed for each category. Set the result type, seed mark requirements, and team event settings.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <BarChart3 className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="font-medium text-muted-foreground mb-1">Results Configuration Coming Soon</p>
-                <p className="text-sm text-muted-foreground">
-                  This section will allow you to configure scoring systems, result tracking,
-                  and display options for your competition.
-                </p>
-              </div>
+            <CardContent className="space-y-4">
+              {loadingCategories ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : formData.categoryResults.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center">
+                  <BarChart3 className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="font-medium text-muted-foreground mb-1">No Categories Available</p>
+                  <p className="text-sm text-muted-foreground">
+                    Configure categories first, then return here to set up results.
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={fetchCategoryEntries}>
+                    Load Categories
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {formData.categoryResults.map((cat, index) => (
+                    <div key={index} className="rounded-lg border p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{cat.label}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Result Type</Label>
+                          <Select
+                            value={cat.resultType}
+                            onValueChange={(v: ResultType) =>
+                              setFormData(prev => ({
+                                ...prev,
+                                categoryResults: prev.categoryResults.map((c, i) =>
+                                  i === index ? {
+                                    ...c,
+                                    resultType: v,
+                                    sortDirection: v === "TIME" ? "ASC" as SortDir : "DESC" as SortDir,
+                                    precision: v === "SCORE" ? 3 : v === "TIME" ? 3 : 2,
+                                  } : c
+                                ),
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="TIME">Time (ms)</SelectItem>
+                              <SelectItem value="DISTANCE">Distance</SelectItem>
+                              <SelectItem value="HEIGHT">Height</SelectItem>
+                              <SelectItem value="SCORE">Score</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs">Sort</Label>
+                          <Select
+                            value={cat.sortDirection}
+                            onValueChange={(v: SortDir) =>
+                              setFormData(prev => ({
+                                ...prev,
+                                categoryResults: prev.categoryResults.map((c, i) =>
+                                  i === index ? { ...c, sortDirection: v } : c
+                                ),
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ASC">Lower is better</SelectItem>
+                              <SelectItem value="DESC">Higher is better</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs">Precision</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={6}
+                            value={cat.precision}
+                            onChange={e =>
+                              setFormData(prev => ({
+                                ...prev,
+                                categoryResults: prev.categoryResults.map((c, i) =>
+                                  i === index ? { ...c, precision: parseInt(e.target.value) || 0 } : c
+                                ),
+                              }))
+                            }
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 pt-1">
+                        <label className="flex items-center gap-2 text-xs">
+                          <Switch
+                            className="scale-75"
+                            checked={cat.seedMarkRequired}
+                            onCheckedChange={checked =>
+                              setFormData(prev => ({
+                                ...prev,
+                                categoryResults: prev.categoryResults.map((c, i) =>
+                                  i === index ? {
+                                    ...c,
+                                    seedMarkRequired: checked,
+                                    submissionMode: checked ? "MANUAL_ENTRY" as SubMode : "NONE" as SubMode,
+                                  } : c
+                                ),
+                              }))
+                            }
+                          />
+                          Seed Mark Required
+                        </label>
+
+                        <label className="flex items-center gap-2 text-xs">
+                          <Switch
+                            className="scale-75"
+                            checked={cat.isTeamEvent}
+                            onCheckedChange={checked =>
+                              setFormData(prev => ({
+                                ...prev,
+                                categoryResults: prev.categoryResults.map((c, i) =>
+                                  i === index ? { ...c, isTeamEvent: checked, teamSize: checked ? 4 : null } : c
+                                ),
+                              }))
+                            }
+                          />
+                          Team Event
+                        </label>
+                      </div>
+
+                      {cat.seedMarkRequired && (
+                        <div className="grid grid-cols-2 gap-3 pt-1 border-t">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Submission Mode</Label>
+                            <Select
+                              value={cat.submissionMode}
+                              onValueChange={(v: SubMode) =>
+                                setFormData(prev => ({
+                                  ...prev,
+                                  categoryResults: prev.categoryResults.map((c, i) =>
+                                    i === index ? { ...c, submissionMode: v } : c
+                                  ),
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="MANUAL_ENTRY">Manual Entry (admin reviews)</SelectItem>
+                                <SelectItem value="VERIFIED_RESULT">Verified Result (auto-check)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Qualifying Mark</Label>
+                            <Input
+                              type="number"
+                              step="any"
+                              placeholder={cat.resultType === "TIME" ? "e.g., 12500 (ms)" : "e.g., 9.5"}
+                              value={cat.qualifyingMark ?? ""}
+                              onChange={e =>
+                                setFormData(prev => ({
+                                  ...prev,
+                                  categoryResults: prev.categoryResults.map((c, i) =>
+                                    i === index ? { ...c, qualifyingMark: e.target.value ? parseFloat(e.target.value) : null } : c
+                                  ),
+                                }))
+                              }
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {cat.isTeamEvent && (
+                        <div className="pt-1 border-t">
+                          <div className="space-y-1 max-w-[200px]">
+                            <Label className="text-xs">Team Size</Label>
+                            <Input
+                              type="number"
+                              min={2}
+                              value={cat.teamSize ?? ""}
+                              onChange={e =>
+                                setFormData(prev => ({
+                                  ...prev,
+                                  categoryResults: prev.categoryResults.map((c, i) =>
+                                    i === index ? { ...c, teamSize: e.target.value ? parseInt(e.target.value) : null } : c
+                                  ),
+                                }))
+                              }
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

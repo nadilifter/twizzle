@@ -45,6 +45,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import {
   AlertDialog,
@@ -71,6 +72,8 @@ interface AxisValue {
   minAge?: number | null
   maxAge?: number | null
   allowedGenders?: string[]
+  resultType?: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | null
+  sortDirection?: "ASC" | "DESC" | null
 }
 
 interface CombinationEntry {
@@ -93,6 +96,8 @@ interface IndividualEntry {
   minAge?: number | null
   maxAge?: number | null
   capacity?: number | null
+  resultType?: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | null
+  sortDirection?: "ASC" | "DESC" | null
 }
 
 interface Template {
@@ -281,6 +286,9 @@ function PresetTemplateCard({
               {template.individualEntries.map((entry) => (
                 <div key={entry.id} className="flex items-center gap-2 rounded-lg border p-2">
                   <span className="text-sm font-medium">{entry.name}</span>
+                  {entry.resultType && (
+                    <Badge variant="secondary" className="text-xs">{entry.resultType}</Badge>
+                  )}
                   {entry.hasAgeRestriction && (entry.minAge || entry.maxAge) && (
                     <Badge variant="outline" className="text-xs">
                       {entry.minAge && entry.maxAge
@@ -436,6 +444,9 @@ function CustomTemplateCard({
               {template.individualEntries.map((entry) => (
                 <div key={entry.id} className="flex items-center gap-2 rounded-lg border p-2">
                   <span className="text-sm font-medium">{entry.name}</span>
+                  {entry.resultType && (
+                    <Badge variant="secondary" className="text-xs">{entry.resultType}</Badge>
+                  )}
                   {entry.hasAgeRestriction && (entry.minAge || entry.maxAge) && (
                     <Badge variant="outline" className="text-xs">
                       {entry.minAge && entry.maxAge
@@ -580,6 +591,8 @@ export default function CategoriesPage() {
         minAge: v.minAge,
         maxAge: v.maxAge,
         allowedGenders: v.allowedGenders || [],
+        resultType: v.resultType || null,
+        sortDirection: v.sortDirection || null,
       })),
       disabledCombinations: disabledSet,
       individualEntries: template.individualEntries.map((e) => ({
@@ -594,6 +607,8 @@ export default function CategoriesPage() {
         minAge: e.minAge,
         maxAge: e.maxAge,
         capacity: e.capacity,
+        resultType: e.resultType || null,
+        sortDirection: e.sortDirection || null,
       })),
     })
     setNewRowValue("")
@@ -1138,6 +1153,29 @@ export default function CategoriesPage() {
                       {formCols.map((col) => (
                         <div key={col._index} className="flex items-center gap-2 rounded-lg border p-2">
                           <Badge variant="outline" className="text-xs">{col.name}</Badge>
+                          <Select
+                            value={col.resultType || ""}
+                            onValueChange={(v) => setFormData((prev) => ({
+                              ...prev,
+                              axisValues: prev.axisValues.map((av, i) =>
+                                i === col._index ? {
+                                  ...av,
+                                  resultType: v as AxisValue["resultType"],
+                                  sortDirection: v === "TIME" ? "ASC" : "DESC" as AxisValue["sortDirection"],
+                                } : av
+                              ),
+                            }))}
+                          >
+                            <SelectTrigger className="w-24 h-7 text-xs">
+                              <SelectValue placeholder="Result" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="TIME">Time</SelectItem>
+                              <SelectItem value="DISTANCE">Distance</SelectItem>
+                              <SelectItem value="HEIGHT">Height</SelectItem>
+                              <SelectItem value="SCORE">Score</SelectItem>
+                            </SelectContent>
+                          </Select>
                           {formData.restrictionAxis === "COLUMN" && (
                             <div className="flex items-center gap-2 ml-auto">
                               <Input
@@ -1205,7 +1243,34 @@ export default function CategoriesPage() {
                     {formData.individualEntries.map((entry, index) => (
                       <div key={index} className="flex items-start gap-3 rounded-lg border p-3">
                         <div className="flex-1 space-y-2">
-                          <span className="font-medium text-sm">{entry.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{entry.name}</span>
+                            <Select
+                              value={entry.resultType || ""}
+                              onValueChange={(v) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  individualEntries: prev.individualEntries.map((e, i) =>
+                                    i === index ? {
+                                      ...e,
+                                      resultType: v as IndividualEntry["resultType"],
+                                      sortDirection: v === "TIME" ? "ASC" : "DESC" as IndividualEntry["sortDirection"],
+                                    } : e
+                                  ),
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="w-24 h-7 text-xs">
+                                <SelectValue placeholder="Result" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="TIME">Time</SelectItem>
+                                <SelectItem value="DISTANCE">Distance</SelectItem>
+                                <SelectItem value="HEIGHT">Height</SelectItem>
+                                <SelectItem value="SCORE">Score</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <div className="flex flex-wrap gap-3">
                             <label className="flex items-center gap-1.5 text-xs">
                               <Switch

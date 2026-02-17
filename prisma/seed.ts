@@ -356,10 +356,10 @@ async function main() {
     { id: "cav-gym-open", name: "Open",      axis: "ROW" as const, displayOrder: 4, minAge: 14, maxAge: null },
   ];
   const gymColData = [
-    { id: "cav-gym-floor", name: "Floor", axis: "COLUMN" as const, displayOrder: 0 },
-    { id: "cav-gym-vault", name: "Vault", axis: "COLUMN" as const, displayOrder: 1 },
-    { id: "cav-gym-bars",  name: "Bars",  axis: "COLUMN" as const, displayOrder: 2 },
-    { id: "cav-gym-beam",  name: "Beam",  axis: "COLUMN" as const, displayOrder: 3 },
+    { id: "cav-gym-floor", name: "Floor", axis: "COLUMN" as const, displayOrder: 0, resultType: "SCORE" as const, sortDirection: "DESC" as const },
+    { id: "cav-gym-vault", name: "Vault", axis: "COLUMN" as const, displayOrder: 1, resultType: "SCORE" as const, sortDirection: "DESC" as const },
+    { id: "cav-gym-bars",  name: "Bars",  axis: "COLUMN" as const, displayOrder: 2, resultType: "SCORE" as const, sortDirection: "DESC" as const },
+    { id: "cav-gym-beam",  name: "Beam",  axis: "COLUMN" as const, displayOrder: 3, resultType: "SCORE" as const, sortDirection: "DESC" as const },
   ];
 
   for (const row of gymRowData) {
@@ -424,11 +424,11 @@ async function main() {
     { id: "cav-tf-u14", name: "Under 14", axis: "ROW" as const, displayOrder: 3, minAge: 12, maxAge: 13 },
   ];
   const tfColData = [
-    { id: "cav-tf-100m",     name: "100m",      axis: "COLUMN" as const, displayOrder: 0 },
-    { id: "cav-tf-200m",     name: "200m",      axis: "COLUMN" as const, displayOrder: 1 },
-    { id: "cav-tf-longjump", name: "Long Jump", axis: "COLUMN" as const, displayOrder: 2 },
-    { id: "cav-tf-shotput",  name: "Shot Put",  axis: "COLUMN" as const, displayOrder: 3 },
-    { id: "cav-tf-hurdles",  name: "Hurdles",   axis: "COLUMN" as const, displayOrder: 4 },
+    { id: "cav-tf-100m",     name: "100m",      axis: "COLUMN" as const, displayOrder: 0, resultType: "TIME" as const, sortDirection: "ASC" as const },
+    { id: "cav-tf-200m",     name: "200m",      axis: "COLUMN" as const, displayOrder: 1, resultType: "TIME" as const, sortDirection: "ASC" as const },
+    { id: "cav-tf-longjump", name: "Long Jump", axis: "COLUMN" as const, displayOrder: 2, resultType: "DISTANCE" as const, sortDirection: "DESC" as const },
+    { id: "cav-tf-shotput",  name: "Shot Put",  axis: "COLUMN" as const, displayOrder: 3, resultType: "DISTANCE" as const, sortDirection: "DESC" as const },
+    { id: "cav-tf-hurdles",  name: "Hurdles",   axis: "COLUMN" as const, displayOrder: 4, resultType: "TIME" as const, sortDirection: "ASC" as const },
   ];
 
   for (const row of tfRowData) {
@@ -484,10 +484,10 @@ async function main() {
   });
 
   const swimEntries = [
-    { id: "cie-swim-50free",    name: "50m Freestyle",    displayOrder: 0, hasAgeRestriction: false, minAge: null, maxAge: null },
-    { id: "cie-swim-100back",   name: "100m Backstroke",  displayOrder: 1, hasAgeRestriction: true,  minAge: 8,    maxAge: null },
-    { id: "cie-swim-200medley", name: "200m Medley",      displayOrder: 2, hasAgeRestriction: true,  minAge: 10,   maxAge: null },
-    { id: "cie-swim-4x50relay", name: "4x50m Relay",      displayOrder: 3, hasAgeRestriction: false, minAge: null, maxAge: null },
+    { id: "cie-swim-50free",    name: "50m Freestyle",    displayOrder: 0, hasAgeRestriction: false, minAge: null, maxAge: null, resultType: "TIME" as const, sortDirection: "ASC" as const },
+    { id: "cie-swim-100back",   name: "100m Backstroke",  displayOrder: 1, hasAgeRestriction: true,  minAge: 8,    maxAge: null, resultType: "TIME" as const, sortDirection: "ASC" as const },
+    { id: "cie-swim-200medley", name: "200m Medley",      displayOrder: 2, hasAgeRestriction: true,  minAge: 10,   maxAge: null, resultType: "TIME" as const, sortDirection: "ASC" as const },
+    { id: "cie-swim-4x50relay", name: "4x50m Relay",      displayOrder: 3, hasAgeRestriction: false, minAge: null, maxAge: null, resultType: "TIME" as const, sortDirection: "ASC" as const },
   ];
 
   for (const entry of swimEntries) {
@@ -4473,6 +4473,336 @@ See you at Metro Sports!
   console.log("  ✓ Attached waiver requirements to Bronze Gymnastics and Youth Soccer");
 
   // ============================================
+  // COMPETITIONS (Full examples with entries and results)
+  // ============================================
+  console.log("\n🏆 Creating competitions...");
+
+  // --- Sunrise Gymnastics: Spring Invitational (REGISTRATION_OPEN) ---
+  const gymCompetition = await prisma.competition.upsert({
+    where: { id: `${ORG1_ID}-comp-spring-inv` },
+    update: {},
+    create: {
+      id: `${ORG1_ID}-comp-spring-inv`,
+      organizationId: ORG1_ID,
+      name: "Spring Invitational 2026",
+      competitionType: "GYMNASTICS",
+      status: "REGISTRATION_OPEN",
+      facilityId: `${ORG1_ID}-facility-main`,
+      country: "US",
+      stateProvince: "CA",
+      city: "San Mateo",
+      streetAddress: "100 Gymnastics Way",
+      startDate: daysFromNow(45),
+      endDate: daysFromNow(46),
+      startTime: "08:00",
+      endTime: "18:00",
+      categoryMode: "SPECIFIC",
+      hasAgeRestriction: true,
+      minAge: 6,
+      maxAge: 18,
+      hasMembershipRestriction: true,
+      membershipRequirementIds: [`${ORG1_ID}-mi-2026`],
+      publishStatus: "LIVE",
+    },
+  });
+
+  // Competition categories for gym: Floor (U10), Vault (U10), Bars (U12)
+  const gymCompCats = [
+    {
+      id: `${ORG1_ID}-compcat-floor-u10`,
+      competitionId: gymCompetition.id,
+      combinationEntryId: "combo-gym-cav-gym-u10-cav-gym-floor",
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+      precision: 3,
+      seedMarkRequired: true,
+      submissionMode: "MANUAL_ENTRY" as const,
+      qualifyingMark: 7.0,
+      displayOrder: 0,
+    },
+    {
+      id: `${ORG1_ID}-compcat-vault-u10`,
+      competitionId: gymCompetition.id,
+      combinationEntryId: "combo-gym-cav-gym-u10-cav-gym-vault",
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+      precision: 3,
+      seedMarkRequired: false,
+      submissionMode: "NONE" as const,
+      displayOrder: 1,
+    },
+    {
+      id: `${ORG1_ID}-compcat-bars-u12`,
+      competitionId: gymCompetition.id,
+      combinationEntryId: "combo-gym-cav-gym-u12-cav-gym-bars",
+      resultType: "SCORE" as const,
+      sortDirection: "DESC" as const,
+      precision: 3,
+      seedMarkRequired: true,
+      submissionMode: "MANUAL_ENTRY" as const,
+      qualifyingMark: 6.5,
+      displayOrder: 2,
+    },
+  ];
+
+  for (const cat of gymCompCats) {
+    await prisma.competitionCategory.upsert({
+      where: { id: cat.id },
+      update: {},
+      create: cat,
+    });
+  }
+
+  // Entries for gym competition
+  const gymCompEntries = [
+    {
+      id: `${ORG1_ID}-compentry-1`,
+      competitionId: gymCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-floor-u10`,
+      athleteId: `${ORG1_ID}-ath-1`,
+      status: "APPROVED" as const,
+      seedMark: 8.250,
+      seedMarkSubmittedAt: daysAgo(10),
+      seedMarkStatus: "APPROVED" as const,
+    },
+    {
+      id: `${ORG1_ID}-compentry-2`,
+      competitionId: gymCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-floor-u10`,
+      athleteId: `${ORG1_ID}-ath-2`,
+      status: "PENDING_REVIEW" as const,
+      seedMark: 7.100,
+      seedMarkSubmittedAt: daysAgo(5),
+      seedMarkStatus: "PENDING" as const,
+    },
+    {
+      id: `${ORG1_ID}-compentry-3`,
+      competitionId: gymCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-vault-u10`,
+      athleteId: `${ORG1_ID}-ath-1`,
+      status: "APPROVED" as const,
+    },
+    {
+      id: `${ORG1_ID}-compentry-4`,
+      competitionId: gymCompetition.id,
+      competitionCategoryId: `${ORG1_ID}-compcat-bars-u12`,
+      athleteId: `${ORG1_ID}-ath-3`,
+      status: "PENDING_SEED" as const,
+    },
+  ];
+
+  for (const entry of gymCompEntries) {
+    await prisma.competitionEntry.upsert({
+      where: { id: entry.id },
+      update: {},
+      create: entry,
+    });
+  }
+  console.log("  ✓ Created Sunrise Gymnastics 'Spring Invitational 2026' (REGISTRATION_OPEN)");
+
+  // --- Metro Sports: Regional Track Meet (COMPLETED) ---
+  const tfCompetition = await prisma.competition.upsert({
+    where: { id: `${ORG2_ID}-comp-regional-track` },
+    update: {},
+    create: {
+      id: `${ORG2_ID}-comp-regional-track`,
+      organizationId: ORG2_ID,
+      name: "Regional Track Meet 2026",
+      competitionType: "TRACK_AND_FIELD",
+      status: "COMPLETED",
+      facilityId: `${ORG2_ID}-facility-main`,
+      country: "US",
+      stateProvince: "CA",
+      city: "Oakland",
+      streetAddress: "200 Stadium Drive",
+      startDate: daysAgo(14),
+      endDate: daysAgo(14),
+      startTime: "08:00",
+      endTime: "17:00",
+      categoryMode: "SPECIFIC",
+      publishStatus: "LIVE",
+    },
+  });
+
+  // Competition categories: 100m (U10), Long Jump (U12), 4x100m Relay (U10, team)
+  const tfCompCats = [
+    {
+      id: `${ORG2_ID}-compcat-100m-u10`,
+      competitionId: tfCompetition.id,
+      combinationEntryId: "combo-tf-cav-tf-u10-cav-tf-100m",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      precision: 3,
+      seedMarkRequired: true,
+      submissionMode: "VERIFIED_RESULT" as const,
+      qualifyingMark: 16000,
+      displayOrder: 0,
+    },
+    {
+      id: `${ORG2_ID}-compcat-longjump-u12`,
+      competitionId: tfCompetition.id,
+      combinationEntryId: "combo-tf-cav-tf-u12-cav-tf-longjump",
+      resultType: "DISTANCE" as const,
+      sortDirection: "DESC" as const,
+      precision: 2,
+      seedMarkRequired: false,
+      submissionMode: "NONE" as const,
+      displayOrder: 1,
+    },
+    {
+      id: `${ORG2_ID}-compcat-4x100-relay`,
+      competitionId: tfCompetition.id,
+      combinationEntryId: "combo-tf-cav-tf-u10-cav-tf-100m",
+      resultType: "TIME" as const,
+      sortDirection: "ASC" as const,
+      precision: 3,
+      isTeamEvent: true,
+      teamSize: 4,
+      seedMarkRequired: false,
+      submissionMode: "NONE" as const,
+      displayOrder: 2,
+    },
+  ];
+
+  for (const cat of tfCompCats) {
+    await prisma.competitionCategory.upsert({
+      where: { id: cat.id },
+      update: {},
+      create: cat,
+    });
+  }
+
+  // Team for the relay
+  await prisma.competitionTeam.upsert({
+    where: { id: `${ORG2_ID}-team-relay-1` },
+    update: {},
+    create: {
+      id: `${ORG2_ID}-team-relay-1`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
+      name: "Metro A Team",
+      organizationId: ORG2_ID,
+    },
+  });
+
+  // Entries for track meet
+  const tfCompEntries = [
+    {
+      id: `${ORG2_ID}-compentry-1`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
+      athleteId: `${ORG2_ID}-ath-1`,
+      status: "APPROVED" as const,
+      seedMark: 14500,
+      seedMarkSubmittedAt: daysAgo(30),
+      seedMarkStatus: "APPROVED" as const,
+    },
+    {
+      id: `${ORG2_ID}-compentry-2`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
+      athleteId: `${ORG2_ID}-ath-2`,
+      status: "APPROVED" as const,
+      seedMark: 15200,
+      seedMarkSubmittedAt: daysAgo(28),
+      seedMarkStatus: "APPROVED" as const,
+    },
+    {
+      id: `${ORG2_ID}-compentry-3`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
+      athleteId: `${ORG2_ID}-ath-3`,
+      status: "APPROVED" as const,
+    },
+    {
+      id: `${ORG2_ID}-compentry-4`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
+      athleteId: `${ORG2_ID}-ath-1`,
+      teamId: `${ORG2_ID}-team-relay-1`,
+      status: "APPROVED" as const,
+    },
+    {
+      id: `${ORG2_ID}-compentry-5`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
+      athleteId: `${ORG2_ID}-ath-2`,
+      teamId: `${ORG2_ID}-team-relay-1`,
+      status: "APPROVED" as const,
+    },
+  ];
+
+  for (const entry of tfCompEntries) {
+    await prisma.competitionEntry.upsert({
+      where: { id: entry.id },
+      update: {},
+      create: entry,
+    });
+  }
+
+  // Results for completed track meet
+  const tfResults = [
+    {
+      id: `${ORG2_ID}-result-1`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
+      athleteId: `${ORG2_ID}-ath-1`,
+      value: 13850,
+      displayValue: "13.850s",
+      placement: 1,
+      isPersonalBest: true,
+    },
+    {
+      id: `${ORG2_ID}-result-2`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-100m-u10`,
+      athleteId: `${ORG2_ID}-ath-2`,
+      value: 14300,
+      displayValue: "14.300s",
+      placement: 2,
+      isPersonalBest: true,
+    },
+    {
+      id: `${ORG2_ID}-result-3`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
+      athleteId: `${ORG2_ID}-ath-3`,
+      value: 3750,
+      displayValue: "3.75m",
+      placement: 1,
+      isPersonalBest: false,
+    },
+    {
+      id: `${ORG2_ID}-result-4`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-longjump-u12`,
+      athleteId: `${ORG2_ID}-ath-3`,
+      value: 3500,
+      displayValue: "3.50m",
+      attemptNumber: 2,
+      isBestAttempt: false,
+    },
+    {
+      id: `${ORG2_ID}-result-5`,
+      competitionId: tfCompetition.id,
+      competitionCategoryId: `${ORG2_ID}-compcat-4x100-relay`,
+      teamId: `${ORG2_ID}-team-relay-1`,
+      value: 58200,
+      displayValue: "58.200s",
+      placement: 1,
+    },
+  ];
+
+  for (const result of tfResults) {
+    await prisma.competitionResult.upsert({
+      where: { id: result.id },
+      update: {},
+      create: result,
+    });
+  }
+  console.log("  ✓ Created Metro Sports 'Regional Track Meet 2026' (COMPLETED)");
+
+  // ============================================
   // COMPLETE
   // ============================================
   console.log("\n" + "=".repeat(50));
@@ -4511,6 +4841,11 @@ See you at Metro Sports!
   console.log("  • Email usage tracking for both organizations");
   console.log("  • 12 notification rules (system + custom for both orgs)");
   console.log("  • 3 waivers with pages (2 Sunrise, 1 Metro) + program requirements");
+  console.log("  • 2 competitions (1 gymnastics REGISTRATION_OPEN, 1 track COMPLETED)");
+  console.log("  • 6 competition categories with result type/seed mark config");
+  console.log("  • 9 competition entries (approved, pending review, pending seed)");
+  console.log("  • 5 competition results with placements and personal bests");
+  console.log("  • 1 relay team with team results");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
   console.log("\nTest accounts (password: password123):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");

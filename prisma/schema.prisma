@@ -126,6 +126,10 @@ model Organization {
 
   // Competition Category Preferences (per-org preset overrides)
   categoryPreferences OrganizationCategoryPreference[]
+
+  // Competitions
+  competitions     Competition[]
+  competitionTeams CompetitionTeam[]
 }
 
 model OrganizationMember {
@@ -420,6 +424,10 @@ model Athlete {
   // Waiver signatures & acceptances per athlete
   waiverSignatures  WaiverSignature[]
   waiverAcceptances WaiverAcceptance[]
+
+  // Competition entries & results
+  competitionEntries CompetitionEntry[]
+  competitionResults CompetitionResult[]
 }
 
 model AthleteGuardian {
@@ -2449,6 +2457,7 @@ model Facility {
   shifts           Shift[]
   programs         Program[]
   programInstances ProgramInstance[]
+  competitions     Competition[]
 
   @@index([organizationId])
 }
@@ -3411,6 +3420,53 @@ model OrganizationSport {
 }
 
 // ============================================
+// COMPETITION RESULT ENUMS
+// ============================================
+
+enum ResultType {
+  TIME     // Stored in milliseconds (12345 = 12.345s)
+  DISTANCE // Stored in millimeters (5230 = 5.23m)
+  HEIGHT   // Stored in millimeters (2010 = 2.01m)
+  SCORE    // Stored as decimal points (9.750)
+}
+
+enum SortDirection {
+  ASC  // Lower is better (TIME)
+  DESC // Higher is better (SCORE, DISTANCE, HEIGHT)
+}
+
+enum SubmissionMode {
+  NONE            // No pre-event submission
+  VERIFIED_RESULT // Must have a verified prior result
+  MANUAL_ENTRY    // Self-reported, admin reviews
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CompetitionStatus {
+  DRAFT
+  PUBLISHED
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum EntryStatus {
+  PENDING_SEED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  SCRATCHED
+}
+
+// ============================================
 // COMPETITION CATEGORIES
 // ============================================
 
@@ -3468,6 +3524,10 @@ model CategoryAxisValue {
   maxAge         Int?
   allowedGenders GenderDeclaration[]
 
+  // Result configuration (typically set on the discipline/event axis, not the age group axis)
+  resultType    ResultType?
+  sortDirection SortDirection?
+
   template           CompetitionCategoryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   rowCombinations    CategoryCombinationEntry[]  @relation("CombinationRow")
   columnCombinations CategoryCombinationEntry[]  @relation("CombinationColumn")
@@ -3487,6 +3547,9 @@ model CategoryCombinationEntry {
   template CompetitionCategoryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   rowValue CategoryAxisValue           @relation("CombinationRow", fields: [rowValueId], references: [id], onDelete: Cascade)
   colValue CategoryAxisValue           @relation("CombinationColumn", fields: [colValueId], references: [id], onDelete: Cascade)
+
+  // Competition categories that reference this combination entry
+  competitionCategories CompetitionCategory[]
 
   @@unique([templateId, rowValueId, colValueId])
   @@index([templateId])
@@ -3511,7 +3574,14 @@ model CategoryIndividualEntry {
   maxAge         Int?
   capacity       Int?
 
+  // Result configuration
+  resultType    ResultType?
+  sortDirection SortDirection?
+
   template CompetitionCategoryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  // Competition categories that reference this entry
+  competitionCategories CompetitionCategory[]
 
   @@index([templateId])
 }
@@ -3528,4 +3598,206 @@ model OrganizationCategoryPreference {
 
   @@unique([organizationId, templateId])
   @@index([organizationId])
+}
+
+// ============================================
+// COMPETITIONS
+// ============================================
+
+model Competition {
+  id             String            @id @default(cuid())
+  organizationId String
+  name           String
+  competitionType String           // e.g. "GYMNASTICS", "TRACK_AND_FIELD"
+  status         CompetitionStatus @default(DRAFT)
+
+  // Location
+  facilityId    String?
+  country       String?
+  stateProvince String?
+  city          String?
+  streetAddress String?
+
+  // Dates & Times
+  startDate DateTime
+  endDate   DateTime
+  startTime String
+  endTime   String
+
+  // Category mode
+  categoryMode String @default("ALL") // ALL or SPECIFIC
+
+  // Restrictions
+  hasLevelRestriction      Boolean @default(false)
+  levelRequirementIds      String[] // Array of Level IDs
+  hasCapacityRestriction   Boolean @default(false)
+  capacity                 Int?
+  hasAgeRestriction        Boolean @default(false)
+  minAge                   Int?
+  maxAge                   Int?
+  hasMembershipRestriction Boolean @default(false)
+  membershipRequirementIds String[] // Array of MembershipInstance IDs
+  hasWaiverRestriction     Boolean @default(false)
+  waiverRequirementIds     String[] // Array of Waiver IDs
+  hasMedicalRequirement    Boolean @default(false)
+
+  // Publishing
+  publishStatus       String? // LIVE, DRAFT, SCHEDULED
+  scheduledGoLiveDate DateTime?
+  scheduledGoLiveTime String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+
+  categories CompetitionCategory[]
+  entries    CompetitionEntry[]
+  results    CompetitionResult[]
+  teams      CompetitionTeam[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+// Links a competition to a specific category entry with result and seed mark configuration
+model CompetitionCategory {
+  id            String @id @default(cuid())
+  competitionId String
+
+  // Reference to template category entry (one of these will be set)
+  combinationEntryId String? // For COMBINATION templates
+  individualEntryId  String? // For INDIVIDUAL templates
+
+  // Result configuration
+  resultType    ResultType
+  sortDirection SortDirection @default(ASC)
+  precision     Int           @default(3) // Decimal places for display
+
+  // Seed mark configuration
+  seedMarkRequired Boolean        @default(false)
+  submissionMode   SubmissionMode @default(NONE)
+  qualifyingMark   Decimal?       @db.Decimal(12, 3)
+
+  // Team configuration
+  isTeamEvent Boolean @default(false)
+  teamSize    Int?    // Number of athletes per team
+
+  isActive     Boolean @default(true)
+  displayOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  competition      Competition               @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  combinationEntry CategoryCombinationEntry? @relation(fields: [combinationEntryId], references: [id], onDelete: SetNull)
+  individualEntry  CategoryIndividualEntry?  @relation(fields: [individualEntryId], references: [id], onDelete: SetNull)
+
+  entries CompetitionEntry[]
+  results CompetitionResult[]
+  teams   CompetitionTeam[]
+
+  @@index([competitionId])
+}
+
+// An athlete's entry into a competition category
+model CompetitionEntry {
+  id                    String      @id @default(cuid())
+  competitionId         String
+  competitionCategoryId String
+  athleteId             String
+  teamId                String?
+
+  status EntryStatus @default(PENDING_SEED)
+
+  // Seed mark fields
+  seedMark            Decimal?          @db.Decimal(12, 3)
+  seedMarkSubmittedAt DateTime?
+  seedMarkReviewedAt  DateTime?
+  seedMarkReviewedBy  String?
+  seedMarkStatus      SubmissionStatus?
+  seedMarkNotes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  competition Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  category    CompetitionCategory @relation(fields: [competitionCategoryId], references: [id], onDelete: Cascade)
+  athlete     Athlete             @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  team        CompetitionTeam?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([competitionCategoryId, athleteId])
+  @@index([competitionId])
+  @@index([athleteId])
+}
+
+// Team for relay/team events
+model CompetitionTeam {
+  id              String @id @default(cuid())
+  competitionId   String
+  competitionCategoryId String
+  name            String
+  organizationId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  competition  Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  category     CompetitionCategory @relation(fields: [competitionCategoryId], references: [id])
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  entries CompetitionEntry[]
+  results CompetitionResult[]
+
+  @@index([competitionId])
+  @@index([competitionCategoryId])
+}
+
+// Actual competition result
+model CompetitionResult {
+  id                    String  @id @default(cuid())
+  competitionId         String
+  competitionCategoryId String
+  athleteId             String?
+  teamId                String?
+
+  // Result value (universal: ms for TIME, mm for DISTANCE/HEIGHT, raw for SCORE)
+  value        Decimal @db.Decimal(12, 3)
+  displayValue String? // Pre-formatted string for display
+
+  // Placement
+  placement Int?
+
+  // Status flags
+  isPersonalBest Boolean @default(false)
+  isDNF          Boolean @default(false) // Did Not Finish
+  isDNS          Boolean @default(false) // Did Not Start
+  isDQ           Boolean @default(false) // Disqualified
+
+  // For field events with multiple attempts
+  attemptNumber Int?
+  isBestAttempt Boolean @default(false)
+
+  notes      String?
+  recordedBy String? // Admin/official user ID
+  recordedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  competition Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  category    CompetitionCategory @relation(fields: [competitionCategoryId], references: [id], onDelete: Cascade)
+  athlete     Athlete?            @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  team        CompetitionTeam?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([competitionId])
+  @@index([competitionCategoryId])
+  @@index([athleteId])
+  @@index([competitionId, competitionCategoryId, placement])
 }

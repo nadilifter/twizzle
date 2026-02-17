@@ -18,6 +18,8 @@ const axisValueSchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional().default([]),
+  resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional().nullable(),
+  sortDirection: z.enum(["ASC", "DESC"]).optional().nullable(),
 })
 
 const individualEntrySchema = z.object({
@@ -32,6 +34,8 @@ const individualEntrySchema = z.object({
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
+  resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional().nullable(),
+  sortDirection: z.enum(["ASC", "DESC"]).optional().nullable(),
 })
 
 const updateTemplateSchema = z.object({
@@ -153,6 +157,8 @@ export async function PATCH(
               minAge: v.minAge,
               maxAge: v.maxAge,
               allowedGenders: v.allowedGenders,
+              resultType: v.resultType || null,
+              sortDirection: v.sortDirection || null,
             },
           })
         } else {
@@ -165,6 +171,8 @@ export async function PATCH(
               minAge: v.minAge,
               maxAge: v.maxAge,
               allowedGenders: v.allowedGenders,
+              resultType: v.resultType || null,
+              sortDirection: v.sortDirection || null,
             },
           })
         }
@@ -228,6 +236,8 @@ export async function PATCH(
               minAge: e.minAge,
               maxAge: e.maxAge,
               capacity: e.capacity,
+              resultType: e.resultType || null,
+              sortDirection: e.sortDirection || null,
             },
           })
         } else {
@@ -244,6 +254,8 @@ export async function PATCH(
               minAge: e.minAge,
               maxAge: e.maxAge,
               capacity: e.capacity,
+              resultType: e.resultType || null,
+              sortDirection: e.sortDirection || null,
             },
           })
         }
@@ -258,7 +270,7 @@ export async function PATCH(
     return NextResponse.json(updated)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.errors?.[0]?.message || "Validation error"
+      const message = error.issues?.[0]?.message || "Validation error"
       return NextResponse.json({ error: message }, { status: 400 })
     }
     console.error("Error updating template:", error)
