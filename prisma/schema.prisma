@@ -2211,6 +2211,12 @@ model WebsiteConfig {
   showCalendar     Boolean @default(true)
   showRegistration Boolean @default(true)
   showContact      Boolean @default(true)
+  showCompetitions Boolean @default(false)
+
+  // Competitions marketing content
+  competitionsHeading     String?
+  competitionsDescription String? @db.Text
+  competitionsCtaText     String?
 
   // Domain
   domain            String? @unique

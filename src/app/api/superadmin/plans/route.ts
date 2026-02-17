@@ -5,6 +5,7 @@ import { z } from "zod"
 
 const featureTogglesSchema = z.object({
   events: z.boolean(),
+  competitions: z.boolean(),
   sms: z.boolean(),
   emailCampaigns: z.boolean(),
   customDomains: z.boolean(),

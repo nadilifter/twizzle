@@ -161,10 +161,6 @@ const data = {
       url: "/dashboard/registrations",
       items: [
         {
-          title: "Advanced",
-          url: "/dashboard/registrations/advanced",
-        },
-        {
           title: "Events",
           url: "/dashboard/events",
         },
@@ -179,6 +175,28 @@ const data = {
         {
           title: "Waivers",
           url: "/dashboard/forms/waivers",
+        },
+      ],
+    },
+    {
+      title: "Competitions",
+      url: "/dashboard/competitions",
+      items: [
+        {
+          title: "Competitions",
+          url: "/dashboard/competitions",
+        },
+        {
+          title: "Categories",
+          url: "/dashboard/competitions/categories",
+        },
+        {
+          title: "Results",
+          url: "/dashboard/competitions/results",
+        },
+        {
+          title: "Marketing Site",
+          url: "/dashboard/competitions/marketing",
         },
       ],
     },

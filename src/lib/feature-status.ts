@@ -121,10 +121,10 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/evaluation-templates", "/api/evaluations"],
   },
 
-  // Registrations Section
-  "/dashboard/registrations/advanced": {
+  // Competitions Section
+  "/dashboard/competitions": {
     status: "demo",
-    description: "Advanced Registrations is in development. Complex event registration with categories and large-scale participant management coming soon.",
+    description: "Competitions management with categories, results tracking, and large-scale participant registration.",
   },
 
   // Events Section

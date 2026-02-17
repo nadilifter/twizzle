@@ -8,7 +8,7 @@
 
 export const FEATURE_KEYS = [
   "events",
-  "advancedRegistrations",
+  "competitions",
   "sms",
   "emailCampaigns",
   "customDomains",
@@ -23,7 +23,7 @@ export type FeatureToggles = Record<FeatureKey, boolean>;
 /** All features disabled - used as base when no plan is set */
 export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   events: false,
-  advancedRegistrations: false,
+  competitions: false,
   sms: false,
   emailCampaigns: false,
   customDomains: false,
@@ -35,7 +35,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
 /** Human-readable labels for each feature */
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
   events: "Events",
-  advancedRegistrations: "Advanced Registrations",
+  competitions: "Competitions",
   sms: "SMS Messaging",
   emailCampaigns: "Email Campaigns",
   customDomains: "Custom Domains",
@@ -47,7 +47,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
 /** Descriptions shown to admins */
 export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   events: "Event management, calendar, and check-in via the Events portal",
-  advancedRegistrations: "Complex event registrations with interconnected logic, categories, and large-scale participant management",
+  competitions: "Competition management with categories, results tracking, and large-scale participant registration",
   sms: "SMS campaigns, conversations, and messaging via Twilio",
   emailCampaigns: "Email campaign creation and delivery",
   customDomains: "Custom domain configuration for your marketing site",
@@ -79,13 +79,8 @@ export const FEATURE_SIDEBAR_MAP: Record<
     ],
     accessPoints: ["Events Portal"],
   },
-  advancedRegistrations: {
-    subItems: [
-      {
-        section: "Registrations",
-        items: ["Advanced"],
-      },
-    ],
+  competitions: {
+    sectionTitle: "Competitions",
   },
   sms: {
     subItems: [
@@ -138,7 +133,7 @@ export const FEATURE_SIDEBAR_MAP: Record<
  */
 export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   events: ["/api/events"],
-  advancedRegistrations: [],
+  competitions: ["/api/competitions"],
   sms: ["/api/sms"],
   emailCampaigns: ["/api/email/campaigns"],
   customDomains: [], // Handled inline in website route
@@ -156,16 +151,31 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
  * Validates and normalizes a featureToggles JSON value from the database.
  * Returns a complete FeatureToggles object with defaults for missing keys.
  */
+/** Map of legacy feature key names to their current key */
+const LEGACY_KEY_MAP: Record<string, FeatureKey> = {
+  advancedRegistrations: "competitions",
+};
+
 export function parseFeatureToggles(
   raw: unknown
 ): FeatureToggles {
   const result = { ...DEFAULT_FEATURE_TOGGLES };
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const obj = raw as Record<string, unknown>;
     for (const key of FEATURE_KEYS) {
-      if (key in (raw as Record<string, unknown>)) {
-        const val = (raw as Record<string, unknown>)[key];
+      if (key in obj) {
+        const val = obj[key];
         if (typeof val === "boolean") {
           result[key] = val;
+        }
+      }
+    }
+    // Handle legacy keys for backward compatibility
+    for (const [legacyKey, currentKey] of Object.entries(LEGACY_KEY_MAP)) {
+      if (legacyKey in obj && !(currentKey in obj)) {
+        const val = obj[legacyKey];
+        if (typeof val === "boolean") {
+          result[currentKey] = val;
         }
       }
     }

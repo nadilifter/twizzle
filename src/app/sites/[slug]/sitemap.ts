@@ -69,6 +69,16 @@ export default async function sitemap({
     });
   }
 
+  // Add competitions page if enabled
+  if (config.showCompetitions) {
+    routes.push({ 
+      url: `${baseUrl}/competitions`, 
+      lastModified: now, 
+      changeFrequency: 'weekly', 
+      priority: 0.8 
+    });
+  }
+
   // Add contact page if enabled
   if (config.showContact) {
     routes.push({ 

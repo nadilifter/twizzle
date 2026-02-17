@@ -556,6 +556,19 @@ export default function WebsitePage() {
               onCheckedChange={(c) => updateConfig("showContact", c)} 
             />
           </div>
+          
+          <Separator />
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Show Competitions</Label>
+              <p className="text-sm text-muted-foreground">Display the competitions page for event registration.</p>
+            </div>
+            <Switch 
+              checked={config.showCompetitions === true} 
+              onCheckedChange={(c) => updateConfig("showCompetitions", c)} 
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
