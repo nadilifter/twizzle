@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,15 +41,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
-  Stepper,
+  defineStepper,
+  StepperNav,
   StepperItem,
-  StepperTrigger,
   StepperIndicator,
   StepperSeparator,
   StepperTitle,
-  StepperDescription,
-  StepperNav,
-  StepperContent,
+  getStepStatus,
 } from "@/components/ui/stepper"
 import {
   Tooltip,
@@ -244,6 +242,17 @@ function calculateSegmentsClient(text: string): { segments: number; encoding: st
 }
 
 // ============================================
+// Stepper definition
+// ============================================
+
+const { useStepper: useSmsStepper } = defineStepper(
+  { id: "campaign", title: "Campaign" },
+  { id: "compose", title: "Compose" },
+  { id: "preview", title: "Preview" },
+  { id: "send", title: "Send" },
+)
+
+// ============================================
 // Page Component
 // ============================================
 
@@ -257,7 +266,7 @@ export default function SmsCampaignsPage() {
 
   // Compose dialog state
   const [isComposeOpen, setIsComposeOpen] = useState(false)
-  const [currentStep, setCurrentStep] = useState(1)
+  const smsStepper = useSmsStepper()
   const [isSending, setIsSending] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -400,9 +409,11 @@ export default function SmsCampaignsPage() {
     } catch {} finally { setIsLoadingPreview(false) }
   }, [messageBody, targetType, targetProgramId, targetProgramInstanceId, targetMembershipGroupIds, targetFamilyIds])
 
+  const currentStepId = smsStepper.state.current.data.id
+
   useEffect(() => {
-    if (currentStep === 3) fetchPreview()
-  }, [currentStep, fetchPreview])
+    if (currentStepId === "preview") fetchPreview()
+  }, [currentStepId, fetchPreview])
 
   // ============================================
   // Actions
@@ -412,8 +423,8 @@ export default function SmsCampaignsPage() {
     setCampaignName(""); setMessageBody(""); setClassification("GENERAL")
     setTargetType("ALL_MEMBERS"); setTargetProgramId(""); setTargetProgramInstanceId("")
     setTargetMembershipGroupIds([]); setTargetFamilyIds([]); setScheduledAt("")
-    setRecipientCount(null); setPreviewBody(""); setPreviewSegments(0); setCurrentStep(1)
-  }, [])
+    setRecipientCount(null); setPreviewBody(""); setPreviewSegments(0); smsStepper.navigation.goTo("campaign")
+  }, [smsStepper.navigation])
 
   const handleOpenCompose = useCallback(() => { resetForm(); setIsComposeOpen(true) }, [resetForm])
 
@@ -487,10 +498,10 @@ export default function SmsCampaignsPage() {
     setCampaignName(`${campaign.name} (Copy)`)
     setMessageBody(campaign.body)
     setClassification(campaign.classification)
-    setCurrentStep(1)
+    smsStepper.navigation.goTo("campaign")
     setSelectedCampaign(null)
     setIsComposeOpen(true)
-  }, [])
+  }, [smsStepper.navigation])
 
   const handleSendExisting = useCallback(async (id: string) => {
     try {
@@ -669,52 +680,34 @@ export default function SmsCampaignsPage() {
             <DialogDescription>Follow the steps to compose and send your text message campaign.</DialogDescription>
           </DialogHeader>
 
-          <Stepper value={currentStep} onValueChange={setCurrentStep} className="px-6 pt-4">
+          <div className="flex flex-col gap-4 px-6 pt-4">
             {/* Step Navigation */}
             <StepperNav>
-              <StepperItem step={1}>
-                <StepperTrigger>
-                  <StepperIndicator />
-                  <div className="hidden sm:block text-left">
-                    <StepperTitle>Campaign</StepperTitle>
-                    <StepperDescription>Name & recipients</StepperDescription>
-                  </div>
-                </StepperTrigger>
-                <StepperSeparator />
-              </StepperItem>
-              <StepperItem step={2}>
-                <StepperTrigger>
-                  <StepperIndicator />
-                  <div className="hidden sm:block text-left">
-                    <StepperTitle>Compose</StepperTitle>
-                    <StepperDescription>Message body</StepperDescription>
-                  </div>
-                </StepperTrigger>
-                <StepperSeparator />
-              </StepperItem>
-              <StepperItem step={3}>
-                <StepperTrigger>
-                  <StepperIndicator />
-                  <div className="hidden sm:block text-left">
-                    <StepperTitle>Preview</StepperTitle>
-                    <StepperDescription>Review message</StepperDescription>
-                  </div>
-                </StepperTrigger>
-                <StepperSeparator />
-              </StepperItem>
-              <StepperItem step={4}>
-                <StepperTrigger>
-                  <StepperIndicator />
-                  <div className="hidden sm:block text-left">
-                    <StepperTitle>Send</StepperTitle>
-                    <StepperDescription>Deliver or schedule</StepperDescription>
-                  </div>
-                </StepperTrigger>
-              </StepperItem>
+              {smsStepper.state.all.map((step, index) => {
+                const smsCurrentIndex = smsStepper.state.all.findIndex(s => s.id === smsStepper.state.current.data.id)
+                const status = getStepStatus(index, smsCurrentIndex)
+                return (
+                  <React.Fragment key={step.id}>
+                    <StepperItem status={status}>
+                      <StepperIndicator
+                        status={status}
+                        step={index + 1}
+                        onClick={() => {
+                          if (index < smsCurrentIndex) smsStepper.navigation.goTo(step.id)
+                        }}
+                      />
+                      <StepperTitle status={status} className="hidden sm:block">{step.title}</StepperTitle>
+                    </StepperItem>
+                    {index < smsStepper.state.all.length - 1 && (
+                      <StepperSeparator status={status} />
+                    )}
+                  </React.Fragment>
+                )
+              })}
             </StepperNav>
 
             {/* Step 1: Campaign Name & Recipients */}
-            <StepperContent value={1} className="px-0">
+            {currentStepId === "campaign" && (
               <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 space-y-5 py-2">
                 <div className="grid gap-2">
                   <Label htmlFor="campaign-name">Campaign Name</Label>
@@ -815,10 +808,10 @@ export default function SmsCampaignsPage() {
                   </div>
                 </div>
               </div>
-            </StepperContent>
+            )}
 
-            {/* Step 2: Message Body */}
-            <StepperContent value={2} forceMount className="px-0">
+            {/* Step 2: Message Body (forceMount to preserve textarea state) */}
+            <div className="px-0" style={{ display: currentStepId === "compose" ? undefined : "none" }}>
               <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 space-y-5 py-2">
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between">
@@ -927,10 +920,10 @@ export default function SmsCampaignsPage() {
                   </p>
                 </div>
               </div>
-            </StepperContent>
+            </div>
 
             {/* Step 3: Preview */}
-            <StepperContent value={3} className="px-0">
+            {currentStepId === "preview" && (
               <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 py-2">
                 <div className="space-y-4">
                   {/* Summary */}
@@ -975,10 +968,10 @@ export default function SmsCampaignsPage() {
                   </div>
                 </div>
               </div>
-            </StepperContent>
+            )}
 
             {/* Step 4: Send / Schedule / Draft */}
-            <StepperContent value={4} className="px-0">
+            {currentStepId === "send" && (
               <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 py-2">
                 <div className="space-y-6">
                   <p className="text-sm text-muted-foreground">
@@ -1052,30 +1045,30 @@ export default function SmsCampaignsPage() {
                   </Card>
                 </div>
               </div>
-            </StepperContent>
-          </Stepper>
+            )}
+          </div>
 
           {/* Footer Navigation */}
           <div className="flex items-center justify-between border-t px-6 py-4 mt-auto">
             <Button
               variant="outline"
               onClick={() => {
-                if (currentStep === 1) setIsComposeOpen(false)
-                else setCurrentStep(currentStep - 1)
+                if (smsStepper.state.isFirst) setIsComposeOpen(false)
+                else smsStepper.navigation.prev()
               }}
             >
-              {currentStep === 1 ? (
+              {smsStepper.state.isFirst ? (
                 "Cancel"
               ) : (
                 <><ArrowLeft className="mr-2 h-4 w-4" />Back</>
               )}
             </Button>
-            {currentStep < 4 && (
+            {!smsStepper.state.isLast && (
               <Button
-                onClick={() => setCurrentStep(currentStep + 1)}
+                onClick={() => smsStepper.navigation.next()}
                 disabled={
-                  (currentStep === 1 && !canProceedFromStep1) ||
-                  (currentStep === 2 && !canProceedFromStep2)
+                  (currentStepId === "campaign" && !canProceedFromStep1) ||
+                  (currentStepId === "compose" && !canProceedFromStep2)
                 }
               >
                 Next

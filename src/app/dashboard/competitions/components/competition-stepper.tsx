@@ -11,15 +11,13 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Stepper,
+  defineStepper,
+  StepperNav,
   StepperItem,
   StepperIndicator,
   StepperSeparator,
   StepperTitle,
-  StepperDescription,
-  StepperContent,
-  StepperNav,
-  useStepper,
+  getStepStatus,
 } from "@/components/ui/stepper"
 import {
   ArrowLeft,
@@ -127,7 +125,14 @@ const COMPETITION_TYPE_LABELS: Record<CompetitionType, string> = {
   TRACK_AND_FIELD: "Track & Field",
 }
 
-const TOTAL_STEPS = 6
+const { useStepper } = defineStepper(
+  { id: "general", title: "General" },
+  { id: "categories", title: "Categories" },
+  { id: "restrictions", title: "Restrictions" },
+  { id: "results", title: "Results" },
+  { id: "pricing", title: "Pricing" },
+  { id: "confirmation", title: "Confirmation" },
+)
 
 export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   const router = useRouter()
@@ -189,7 +194,7 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   })
 
   const [isSaving, setIsSaving] = React.useState(false)
-  const [currentStep, setCurrentStep] = React.useState(1)
+  const stepper = useStepper()
 
   // Fetch levels
   React.useEffect(() => {
@@ -288,9 +293,9 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   }, [memberships])
 
   // Step validation
-  const validateStep = (step: number): boolean => {
-    switch (step) {
-      case 1:
+  const validateStep = (stepId: string): boolean => {
+    switch (stepId) {
+      case "general":
         if (!formData.name.trim()) {
           toast.error("Please enter a competition name")
           return false
@@ -312,9 +317,9 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
           return false
         }
         return true
-      case 2:
+      case "categories":
         return true
-      case 3:
+      case "restrictions":
         if (formData.hasAgeRestriction && !formData.minAge && !formData.maxAge) {
           toast.error("Please set at least a minimum or maximum age")
           return false
@@ -336,11 +341,11 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
           return false
         }
         return true
-      case 4:
+      case "results":
         return true
-      case 5:
+      case "pricing":
         return true
-      case 6:
+      case "confirmation":
         if (formData.publishStatus === "SCHEDULED" && !formData.scheduledGoLiveDate) {
           toast.error("Please select a scheduled go-live date")
           return false
@@ -352,17 +357,17 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   }
 
   const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS))
+    if (validateStep(stepper.state.current.data.id)) {
+      stepper.navigation.next()
     }
   }
 
   const handlePrev = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1))
+    stepper.navigation.prev()
   }
 
   const handleSubmit = async () => {
-    if (!validateStep(currentStep)) return
+    if (!validateStep(stepper.state.current.data.id)) return
 
     setIsSaving(true)
     try {
@@ -377,108 +382,37 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
     }
   }
 
+  const currentIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id)
+
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <Stepper value={currentStep} onValueChange={setCurrentStep}>
+      <div className="flex flex-col gap-4">
         {/* Step Navigation */}
-        <StepperNav className="mb-8">
-          <StepperItem step={1} completed={currentStep > 1}>
-            <button
-              type="button"
-              onClick={() => setCurrentStep(1)}
-              className="flex items-center gap-3"
-            >
-              <StepperIndicator />
-              <div className="hidden sm:block text-left">
-                <StepperTitle>General</StepperTitle>
-                <StepperDescription>Basic information</StepperDescription>
-              </div>
-            </button>
-            <StepperSeparator className="hidden sm:block" />
-          </StepperItem>
-
-          <StepperItem step={2} completed={currentStep > 2}>
-            <button
-              type="button"
-              onClick={() => currentStep > 1 && setCurrentStep(2)}
-              className="flex items-center gap-3"
-              disabled={currentStep < 2}
-            >
-              <StepperIndicator />
-              <div className="hidden sm:block text-left">
-                <StepperTitle>Categories</StepperTitle>
-                <StepperDescription>Event categories</StepperDescription>
-              </div>
-            </button>
-            <StepperSeparator className="hidden sm:block" />
-          </StepperItem>
-
-          <StepperItem step={3} completed={currentStep > 3}>
-            <button
-              type="button"
-              onClick={() => currentStep > 2 && setCurrentStep(3)}
-              className="flex items-center gap-3"
-              disabled={currentStep < 3}
-            >
-              <StepperIndicator />
-              <div className="hidden sm:block text-left">
-                <StepperTitle>Restrictions</StepperTitle>
-                <StepperDescription>Requirements & limits</StepperDescription>
-              </div>
-            </button>
-            <StepperSeparator className="hidden sm:block" />
-          </StepperItem>
-
-          <StepperItem step={4} completed={currentStep > 4}>
-            <button
-              type="button"
-              onClick={() => currentStep > 3 && setCurrentStep(4)}
-              className="flex items-center gap-3"
-              disabled={currentStep < 4}
-            >
-              <StepperIndicator />
-              <div className="hidden sm:block text-left">
-                <StepperTitle>Results</StepperTitle>
-                <StepperDescription>Results config</StepperDescription>
-              </div>
-            </button>
-            <StepperSeparator className="hidden sm:block" />
-          </StepperItem>
-
-          <StepperItem step={5} completed={currentStep > 5}>
-            <button
-              type="button"
-              onClick={() => currentStep > 4 && setCurrentStep(5)}
-              className="flex items-center gap-3"
-              disabled={currentStep < 5}
-            >
-              <StepperIndicator />
-              <div className="hidden sm:block text-left">
-                <StepperTitle>Pricing</StepperTitle>
-                <StepperDescription>Fees & pricing</StepperDescription>
-              </div>
-            </button>
-            <StepperSeparator className="hidden sm:block" />
-          </StepperItem>
-
-          <StepperItem step={6} completed={currentStep > 6}>
-            <button
-              type="button"
-              onClick={() => currentStep > 5 && setCurrentStep(6)}
-              className="flex items-center gap-3"
-              disabled={currentStep < 6}
-            >
-              <StepperIndicator />
-              <div className="hidden sm:block text-left">
-                <StepperTitle>Confirmation</StepperTitle>
-                <StepperDescription>Review & publish</StepperDescription>
-              </div>
-            </button>
-          </StepperItem>
+        <StepperNav className="mb-4">
+          {stepper.state.all.map((step, index) => {
+            const status = getStepStatus(index, currentIndex)
+            return (
+              <React.Fragment key={step.id}>
+                <StepperItem status={status}>
+                  <StepperIndicator
+                    status={status}
+                    step={index + 1}
+                    onClick={() => {
+                      if (index < currentIndex) stepper.navigation.goTo(step.id)
+                    }}
+                  />
+                  <StepperTitle status={status} className="hidden sm:block">{step.title}</StepperTitle>
+                </StepperItem>
+                {index < stepper.state.all.length - 1 && (
+                  <StepperSeparator status={status} className="hidden sm:block" />
+                )}
+              </React.Fragment>
+            )
+          })}
         </StepperNav>
 
         {/* Step 1: General */}
-        <StepperContent value={1}>
+        {stepper.state.current.data.id === "general" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -729,10 +663,10 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
               </div>
             </CardContent>
           </Card>
-        </StepperContent>
+        )}
 
         {/* Step 2: Categories */}
-        <StepperContent value={2}>
+        {stepper.state.current.data.id === "categories" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -804,10 +738,10 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
               )}
             </CardContent>
           </Card>
-        </StepperContent>
+        )}
 
         {/* Step 3: Restrictions */}
-        <StepperContent value={3}>
+        {stepper.state.current.data.id === "restrictions" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1152,10 +1086,10 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
               </div>
             </CardContent>
           </Card>
-        </StepperContent>
+        )}
 
         {/* Step 4: Results */}
-        <StepperContent value={4}>
+        {stepper.state.current.data.id === "results" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1177,10 +1111,10 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
               </div>
             </CardContent>
           </Card>
-        </StepperContent>
+        )}
 
         {/* Step 5: Pricing */}
-        <StepperContent value={5}>
+        {stepper.state.current.data.id === "pricing" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1202,10 +1136,10 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
               </div>
             </CardContent>
           </Card>
-        </StepperContent>
+        )}
 
         {/* Step 6: Confirmation */}
-        <StepperContent value={6}>
+        {stepper.state.current.data.id === "confirmation" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1345,7 +1279,7 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
               </div>
             </CardContent>
           </Card>
-        </StepperContent>
+        )}
 
         {/* Navigation Buttons */}
         <div className="flex items-center justify-between mt-6">
@@ -1358,7 +1292,7 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
           </Button>
 
           <div className="flex items-center gap-2">
-            {currentStep > 1 && (
+            {!stepper.state.isFirst && (
               <Button
                 type="button"
                 variant="outline"
@@ -1369,7 +1303,7 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
               </Button>
             )}
 
-            {currentStep < TOTAL_STEPS ? (
+            {!stepper.state.isLast ? (
               <Button type="button" onClick={handleNext}>
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
@@ -1395,7 +1329,7 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
             )}
           </div>
         </div>
-      </Stepper>
+      </div>
     </div>
   )
 }
