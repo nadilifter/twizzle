@@ -6,7 +6,7 @@ import { toast } from "sonner"
 export type CartItem = {
   id: string // Unique ID for the cart item instance
   referenceId: string // ID of the actual product (programId, eventId, membershipInstanceId, etc.)
-  type: "program" | "event" | "item" | "membership"
+  type: "program" | "event" | "item" | "membership" | "competition"
   name: string
   description?: string
   price: number
@@ -18,7 +18,7 @@ export type CartItem = {
 
 export type CartItemsByAthlete = Map<string, { athleteName: string; items: CartItem[] }>
 
-const REGISTRATION_TYPES: CartItem["type"][] = ["program", "event", "membership"]
+const REGISTRATION_TYPES: CartItem["type"][] = ["program", "event", "membership", "competition"]
 
 export function isRegistrationType(type: CartItem["type"]): boolean {
   return REGISTRATION_TYPES.includes(type)

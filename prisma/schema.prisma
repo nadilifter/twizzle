@@ -1139,15 +1139,19 @@ model LineItem {
   athleteId              String? // Which athlete?
   discountId             String? // Applied discount
   membershipInstanceId   String? // What membership instance?
+  competitionId          String? // What competition is this for?
+  competitionCategoryId  String? // What competition category?
   createdAt   DateTime @default(now())
 
   // Relations
-  invoice            Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  program            Program?            @relation(fields: [programId], references: [id])
-  event              Event?              @relation(fields: [eventId], references: [id])
-  athlete            Athlete?            @relation(fields: [athleteId], references: [id])
-  discount           Discount?           @relation(fields: [discountId], references: [id])
-  membershipInstance MembershipInstance? @relation(fields: [membershipInstanceId], references: [id])
+  invoice               Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  program               Program?             @relation(fields: [programId], references: [id])
+  event                 Event?               @relation(fields: [eventId], references: [id])
+  athlete               Athlete?             @relation(fields: [athleteId], references: [id])
+  discount              Discount?            @relation(fields: [discountId], references: [id])
+  membershipInstance    MembershipInstance?  @relation(fields: [membershipInstanceId], references: [id])
+  competition           Competition?         @relation(fields: [competitionId], references: [id])
+  competitionCategory   CompetitionCategory? @relation(fields: [competitionCategoryId], references: [id])
 }
 
 model Payment {
@@ -3738,6 +3742,7 @@ model Competition {
   results      CompetitionResult[]
   teams        CompetitionTeam[]
   pricingTiers CompetitionPricingTier[]
+  lineItems    LineItem[]
 
   @@index([organizationId])
   @@index([status])
@@ -3786,9 +3791,10 @@ model CompetitionCategory {
   sportEvent       SportEvent?               @relation(fields: [sportEventId], references: [id], onDelete: SetNull)
   ageCategory      SportAgeCategory?         @relation(fields: [ageCategoryId], references: [id], onDelete: SetNull)
 
-  entries CompetitionEntry[]
-  results CompetitionResult[]
-  teams   CompetitionTeam[]
+  entries   CompetitionEntry[]
+  results   CompetitionResult[]
+  teams     CompetitionTeam[]
+  lineItems LineItem[]
 
   @@index([competitionId])
   @@index([sportEventId])

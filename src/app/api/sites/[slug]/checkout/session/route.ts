@@ -6,7 +6,7 @@ import { subDays } from "date-fns";
 
 interface CartItem {
   referenceId: string;
-  type: "program" | "membership" | "item" | "event";
+  type: "program" | "membership" | "item" | "event" | "competition";
   name: string;
   description?: string;
   price: number;
@@ -20,6 +20,11 @@ interface CartItem {
     level?: string;
     interval?: string;
     requiredMemberships?: string[];
+    competitionId?: string;
+    competitionName?: string;
+    categoryIds?: string[];
+    pricingMode?: string;
+    entryFee?: number | null;
   };
 }
 
@@ -41,7 +46,7 @@ export async function POST(
     const subdomain = params.slug;
 
     // Validate registration items have quantity of 1
-    const registrationTypes = ["program", "event", "membership"];
+    const registrationTypes = ["program", "event", "membership", "competition"];
     const invalidItems = items.filter(
       (item) => registrationTypes.includes(item.type) && item.quantity !== 1
     );
@@ -370,10 +375,192 @@ export async function POST(
       }
     }
 
-    // 3. Calculate Totals (Verify prices from DB ideally, but using cart for now for speed)
-    // In production, fetch items from DB to verify prices
+    // 2d. Server-side competition validation and price re-calculation
+    const competitionItems = items.filter((item: CartItem) => item.type === "competition");
+    const competitionServerPrices = new Map<number, number>(); // map cart index -> server price
+
+    if (competitionItems.length > 0) {
+      for (const item of competitionItems) {
+        const compId = item.details?.competitionId || item.referenceId;
+        const athleteId = item.athleteId || item.details?.athleteId;
+        const athleteLabel = item.athleteName || athleteId || "unknown";
+        const categoryIds: string[] = item.details?.categoryIds || [];
+
+        if (!compId || !athleteId || categoryIds.length === 0) {
+          return NextResponse.json(
+            { error: `Invalid competition registration for "${item.name}".` },
+            { status: 400 }
+          );
+        }
+
+        const competition = await db.competition.findUnique({
+          where: { id: compId },
+          include: {
+            categories: {
+              where: { id: { in: categoryIds }, isActive: true },
+              include: {
+                ageCategory: { select: { minAge: true, maxAge: true } },
+              },
+            },
+            pricingTiers: { orderBy: { minEvents: "asc" } },
+          },
+        });
+
+        if (!competition || competition.organizationId !== organizationId) {
+          return NextResponse.json(
+            { error: `Competition not found for "${item.name}".` },
+            { status: 400 }
+          );
+        }
+
+        if (competition.status !== "REGISTRATION_OPEN") {
+          return NextResponse.json(
+            { error: `Competition "${competition.name}" is not open for registration.` },
+            { status: 400 }
+          );
+        }
+
+        // Verify all requested categories exist and are active
+        if (competition.categories.length !== categoryIds.length) {
+          return NextResponse.json(
+            { error: `One or more selected events are no longer available for "${competition.name}".` },
+            { status: 400 }
+          );
+        }
+
+        // Fetch athlete for eligibility checks
+        const athlete = await db.athlete.findUnique({
+          where: { id: athleteId },
+          select: {
+            id: true,
+            birthDate: true,
+            gender: true,
+            level: true,
+            memberships: {
+              where: { status: "ACTIVE" },
+              select: { membershipInstanceId: true },
+            },
+          },
+        });
+
+        if (!athlete) {
+          return NextResponse.json(
+            { error: `Athlete "${athleteLabel}" not found.` },
+            { status: 400 }
+          );
+        }
+
+        const age = calculateAge(athlete.birthDate);
+
+        // Competition-level eligibility
+        if (competition.hasAgeRestriction) {
+          if (!isAgeEligible(age, competition.minAge, competition.maxAge)) {
+            return NextResponse.json(
+              { error: `Athlete "${athleteLabel}" does not meet the age requirement for "${competition.name}".` },
+              { status: 400 }
+            );
+          }
+        }
+
+        if (competition.hasLevelRestriction && competition.levelRequirementIds.length > 0) {
+          if (!athlete.level || !competition.levelRequirementIds.includes(athlete.level)) {
+            return NextResponse.json(
+              { error: `Athlete "${athleteLabel}" does not meet the level requirement for "${competition.name}".` },
+              { status: 400 }
+            );
+          }
+        }
+
+        if (competition.hasMembershipRestriction && competition.membershipRequirementIds.length > 0) {
+          const activeMembershipIds = athlete.memberships.map((m) => m.membershipInstanceId);
+          const hasRequired = competition.membershipRequirementIds.some((id) =>
+            activeMembershipIds.includes(id)
+          );
+          if (!hasRequired) {
+            return NextResponse.json(
+              { error: `Athlete "${athleteLabel}" does not have the required membership for "${competition.name}".` },
+              { status: 400 }
+            );
+          }
+        }
+
+        // Category-level age eligibility
+        for (const cat of competition.categories) {
+          if (cat.ageCategory) {
+            if (!isAgeEligible(age, cat.ageCategory.minAge, cat.ageCategory.maxAge)) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" is not eligible for one of the selected events in "${competition.name}".` },
+                { status: 400 }
+              );
+            }
+          }
+        }
+
+        // Check duplicate entries
+        const existingEntries = await db.competitionEntry.findMany({
+          where: {
+            competitionId: compId,
+            athleteId,
+            competitionCategoryId: { in: categoryIds },
+            status: { notIn: ["WITHDRAWN", "REJECTED"] },
+          },
+          select: { competitionCategoryId: true },
+        });
+
+        if (existingEntries.length > 0) {
+          return NextResponse.json(
+            { error: `Athlete "${athleteLabel}" is already registered for one or more selected events in "${competition.name}".` },
+            { status: 400 }
+          );
+        }
+
+        // Re-calculate price server-side
+        const eventCount = categoryIds.length;
+        let serverPrice = 0;
+
+        switch (competition.pricingMode) {
+          case "FREE":
+            serverPrice = 0;
+            break;
+          case "PER_COMPETITION":
+            serverPrice = competition.entryFee ? Number(competition.entryFee) : 0;
+            break;
+          case "PER_EVENT":
+            serverPrice = (competition.entryFee ? Number(competition.entryFee) : 0) * eventCount;
+            break;
+          case "TIERED": {
+            const tiers = competition.pricingTiers;
+            let applicableTier = tiers[0];
+            for (const tier of tiers) {
+              if (eventCount >= tier.minEvents && (tier.maxEvents === null || eventCount <= tier.maxEvents)) {
+                applicableTier = tier;
+              }
+            }
+            serverPrice = applicableTier ? Number(applicableTier.pricePerEvent) * eventCount : 0;
+            break;
+          }
+          case "PER_CATEGORY": {
+            for (const cat of competition.categories) {
+              if (cat.price) serverPrice += Number(cat.price);
+            }
+            break;
+          }
+        }
+
+        // Store server-calculated price for this item (use original index in items array)
+        const itemIndex = items.indexOf(item);
+        competitionServerPrices.set(itemIndex, serverPrice);
+      }
+    }
+
+    // 3. Calculate Totals - use server-verified prices for competitions
     const subtotal = items.reduce(
-      (sum: number, item: CartItem) => sum + Number(item.price) * item.quantity,
+      (sum: number, item: CartItem, index: number) => {
+        if (item.type === "competition" && competitionServerPrices.has(index)) {
+          return sum + competitionServerPrices.get(index)!;
+        }
+        return sum + Number(item.price) * item.quantity;
+      },
       0
     );
     const taxRate = 0.13;
@@ -554,6 +741,11 @@ export async function POST(
         programId: item.details?.programId,
         requiredMemberships: item.details?.requiredMemberships || [],
       })),
+      competitionRegistrations: competitionItems.map(item => ({
+        competitionId: item.details?.competitionId || item.referenceId,
+        athleteId: item.athleteId || item.details?.athleteId,
+        categoryIds: item.details?.categoryIds || [],
+      })),
     };
     
     const invoice = await db.invoice.create({
@@ -572,16 +764,24 @@ export async function POST(
 
     // 6. Create Line Items with appropriate metadata
     await db.lineItem.createMany({
-        data: items.map((item: CartItem) => ({
-            invoiceId: invoice.id,
-            description: item.name,
-            quantity: item.quantity,
-            unitPrice: item.price,
-            total: Number(item.price) * item.quantity,
-            programId: item.type === 'program' ? (item.details?.programId || undefined) : undefined,
-            membershipInstanceId: item.type === 'membership' ? (item.details?.membershipInstanceId || item.referenceId) : undefined,
-            athleteId: item.athleteId || item.details?.athleteId || undefined,
-        }))
+        data: items.map((item: CartItem, index: number) => {
+            const isCompetition = item.type === "competition";
+            const serverPrice = isCompetition && competitionServerPrices.has(index)
+              ? competitionServerPrices.get(index)!
+              : Number(item.price) * item.quantity;
+
+            return {
+              invoiceId: invoice.id,
+              description: item.name,
+              quantity: item.quantity,
+              unitPrice: isCompetition ? serverPrice : item.price,
+              total: serverPrice,
+              programId: item.type === 'program' ? (item.details?.programId || undefined) : undefined,
+              membershipInstanceId: item.type === 'membership' ? (item.details?.membershipInstanceId || item.referenceId) : undefined,
+              competitionId: isCompetition ? (item.details?.competitionId || item.referenceId) : undefined,
+              athleteId: item.athleteId || item.details?.athleteId || undefined,
+            };
+        })
     });
 
     // 7. Create Adyen Session
@@ -602,9 +802,9 @@ export async function POST(
         sessionId: session.id,
         sessionData: session.sessionData,
         invoiceId: invoice.id,
-        // Return info about required memberships for frontend validation
         hasMembershipPurchases: membershipInvoiceItems.length > 0,
         hasProgramRegistrations: programItems.length > 0,
+        hasCompetitionRegistrations: competitionItems.length > 0,
     });
 
   } catch (error) {
