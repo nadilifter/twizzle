@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb, db } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 
 const createEventSchema = z.object({
@@ -49,6 +50,9 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const featureBlocked = await checkFeatureGate(session.user.organizationId, "events");
+    if (featureBlocked) return featureBlocked;
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
@@ -155,6 +159,9 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const featureBlockedPost = await checkFeatureGate(session.user.organizationId, "events");
+    if (featureBlockedPost) return featureBlockedPost;
 
     const permissions = session.user.permissions || [];
     if (

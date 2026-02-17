@@ -69,6 +69,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 
+import { FEATURE_KEYS, FEATURE_LABELS, DEFAULT_FEATURE_TOGGLES, parseFeatureToggles, type FeatureToggles, type FeatureKey } from "@/lib/feature-toggles"
+
 interface SubscriptionPlan {
   id: string
   name: string
@@ -93,6 +95,7 @@ interface SubscriptionPlan {
   // Membership Limits
   maxMembershipTypes: number | null
   features: string[]
+  featureToggles: FeatureToggles
   isPopular: boolean
   displayOrder: number
   isActive: boolean
@@ -195,6 +198,7 @@ export default function PlansPage() {
     // Membership Limits
     maxMembershipTypes: "",
     features: "",
+    featureToggles: { ...DEFAULT_FEATURE_TOGGLES } as FeatureToggles,
     isPopular: false,
     isActive: true,
     isPublic: true,
@@ -239,6 +243,7 @@ export default function PlansPage() {
       maxStorageMB: "",
       maxMembershipTypes: "",
       features: "",
+      featureToggles: { ...DEFAULT_FEATURE_TOGGLES },
       isPopular: false,
       isActive: true,
       isPublic: true,
@@ -267,6 +272,7 @@ export default function PlansPage() {
       maxStorageMB: plan.maxStorageMB?.toString() || "",
       maxMembershipTypes: plan.maxMembershipTypes?.toString() || "",
       features: plan.features.join("\n"),
+      featureToggles: parseFeatureToggles(plan.featureToggles),
       isPopular: plan.isPopular,
       isActive: plan.isActive,
       isPublic: plan.isPublic,
@@ -296,6 +302,7 @@ export default function PlansPage() {
         maxStorageMB: formData.maxStorageMB ? parseInt(formData.maxStorageMB) : null,
         maxMembershipTypes: formData.maxMembershipTypes ? parseInt(formData.maxMembershipTypes) : null,
         features: formData.features.split("\n").map(f => f.trim()).filter(Boolean),
+        featureToggles: formData.featureToggles,
         isPopular: formData.isPopular,
         // Auto-assign display order for new plans (add to end)
         ...(editingPlan ? {} : { displayOrder: plans.length }),
@@ -576,6 +583,24 @@ export default function PlansPage() {
                 <Separator />
 
                 <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Modules</p>
+                  <div className="flex flex-wrap gap-1">
+                    {FEATURE_KEYS.map((key) => {
+                      const enabled = parseFeatureToggles(plan.featureToggles)[key]
+                      return (
+                        <Badge
+                          key={key}
+                          variant={enabled ? "default" : "outline"}
+                          className={`text-xs ${!enabled ? "opacity-40" : ""}`}
+                        >
+                          {FEATURE_LABELS[key]}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   {plan.features.slice(0, 4).map((feature, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm">
                       <Check className="h-4 w-4 text-green-500" />
@@ -825,6 +850,33 @@ export default function PlansPage() {
               <Separator />
 
               <div className="space-y-2">
+                <h4 className="font-medium">Module Access</h4>
+                <p className="text-sm text-muted-foreground">Toggle which modules organizations on this plan can access</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {FEATURE_KEYS.map((key) => (
+                  <div key={key} className="flex items-center justify-between rounded-lg border p-3">
+                    <Label htmlFor={`toggle-${key}`} className="cursor-pointer">
+                      {FEATURE_LABELS[key]}
+                    </Label>
+                    <Switch
+                      id={`toggle-${key}`}
+                      checked={formData.featureToggles[key]}
+                      onCheckedChange={(checked) =>
+                        setFormData({
+                          ...formData,
+                          featureToggles: { ...formData.featureToggles, [key]: checked },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
                 <Label htmlFor="features">Features (one per line)</Label>
                 <Textarea
                   id="features"
@@ -833,6 +885,7 @@ export default function PlansPage() {
                   placeholder="Full Club Management Suite&#10;Unlimited Athletes&#10;Priority Support"
                   rows={5}
                 />
+                <p className="text-xs text-muted-foreground">Display-only feature list shown on pricing pages</p>
               </div>
 
               <Separator />

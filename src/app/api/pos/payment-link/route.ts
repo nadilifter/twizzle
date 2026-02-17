@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { createPaymentLink, getPaymentLink } from "@/lib/adyen";
 import { z } from "zod";
 
@@ -21,6 +22,9 @@ export async function POST(request: NextRequest) {
     if (!session.user.organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
+
+    const posBlocked = await checkFeatureGate(session.user.organizationId, "pointOfSale");
+    if (posBlocked) return posBlocked;
 
     const body = await request.json();
     const validatedData = createPaymentLinkSchema.parse(body);

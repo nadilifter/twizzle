@@ -63,6 +63,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
+import { useFeatures } from "@/components/feature-context"
 import { PERMISSION_GROUPS, ROLE_PERMISSIONS } from "@/lib/permissions"
 
 // --- Roles ---
@@ -109,7 +110,17 @@ interface User {
   lastActive: string
 }
 
+/**
+ * Maps permission group categories to their required feature toggle keys.
+ * Groups not listed here are always shown.
+ */
+const PERMISSION_CATEGORY_FEATURE_MAP: Record<string, import("@/lib/feature-toggles").FeatureKey> = {
+  Training: "training",
+  Events: "events",
+}
+
 export default function UsersPage() {
+  const { isFeatureEnabled } = useFeatures()
   const [users, setUsers] = React.useState<User[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -575,7 +586,10 @@ export default function UsersPage() {
 
                   <div className="space-y-4">
                     <Label className="text-base">Granular Permissions</Label>
-                    {PERMISSION_GROUPS.map((group) => (
+                    {PERMISSION_GROUPS.filter((group) => {
+                      const requiredFeature = PERMISSION_CATEGORY_FEATURE_MAP[group.category]
+                      return !requiredFeature || isFeatureEnabled(requiredFeature)
+                    }).map((group) => (
                       <div key={group.category} className="space-y-3">
                         <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{group.category}</h4>
                         <div className="grid grid-cols-1 gap-2">

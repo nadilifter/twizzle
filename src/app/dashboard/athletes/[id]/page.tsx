@@ -19,6 +19,7 @@ import { useAthlete } from "@/hooks/use-athletes"
 import { useAthleteMedicalInfo } from "@/hooks/use-medical"
 import { MedicalDisplay, MedicalAlertBadge } from "@/components/medical/medical-display"
 import { MedicalForm } from "@/components/medical/medical-form"
+import { useFeatures } from "@/components/feature-context"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -52,6 +53,8 @@ export default function AthleteProfilePage() {
   const params = useParams()
   const router = useRouter()
   const athleteId = typeof params.id === "string" ? params.id : null
+  const { isFeatureEnabled } = useFeatures()
+  const trainingEnabled = isFeatureEnabled("training")
   
   const { athlete, isLoading, error, fetchAthlete } = useAthlete(athleteId)
   const { 
@@ -236,7 +239,7 @@ export default function AthleteProfilePage() {
           </TabsTrigger>
           <TabsTrigger value="enrollments">Programs</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
+          {trainingEnabled && <TabsTrigger value="evaluations">Evaluations</TabsTrigger>}
           <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
 
@@ -430,7 +433,7 @@ export default function AthleteProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="evaluations" className="space-y-4">
+        {trainingEnabled && <TabsContent value="evaluations" className="space-y-4">
           <div className="flex justify-end">
             <Dialog>
               <DialogTrigger asChild>
@@ -554,7 +557,7 @@ export default function AthleteProfilePage() {
               </div>
             )}
           </div>
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="billing" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">

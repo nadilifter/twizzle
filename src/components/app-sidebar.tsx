@@ -38,6 +38,8 @@ import {
 import { getFeatureStatus } from "@/lib/feature-status"
 import { cn } from "@/lib/utils"
 import { getOrganizationWebsiteSubdomain } from "@/app/actions/organization"
+import { useFeatures } from "@/components/feature-context"
+import { FEATURE_SIDEBAR_MAP, FEATURE_KEYS, type FeatureKey, type FeatureToggles } from "@/lib/feature-toggles"
 
 // Helper to construct subdomain URLs for the access point system
 function getAccessPointUrl(subdomain: string, organizationId?: string): string {
@@ -248,6 +250,10 @@ const data = {
           title: "Website",
           url: "/dashboard/organization/website",
         },
+        {
+          title: "Features",
+          url: "/dashboard/organization/features",
+        },
       ],
     },
     {
@@ -373,10 +379,77 @@ const data = {
   ],
 }
 
+/**
+ * Filter nav items based on feature toggles.
+ * Removes entire sections or individual sub-items depending on the mapping.
+ */
+function filterNavByFeatures(
+  navMain: typeof data.navMain,
+  features: FeatureToggles
+) {
+  // Collect sections and sub-items to remove
+  const sectionsToRemove = new Set<string>()
+  const subItemsToRemove = new Map<string, Set<string>>()
+
+  for (const key of FEATURE_KEYS) {
+    if (features[key]) continue // Feature enabled, don't filter
+    const mapping = FEATURE_SIDEBAR_MAP[key]
+    if (!mapping) continue
+    if (mapping.sectionTitle) {
+      sectionsToRemove.add(mapping.sectionTitle)
+    }
+    if (mapping.subItems) {
+      for (const { section, items } of mapping.subItems) {
+        if (!subItemsToRemove.has(section)) {
+          subItemsToRemove.set(section, new Set())
+        }
+        for (const item of items) {
+          subItemsToRemove.get(section)!.add(item)
+        }
+      }
+    }
+  }
+
+  return navMain
+    .filter((section) => !sectionsToRemove.has(section.title))
+    .map((section) => {
+      const itemsToRemove = subItemsToRemove.get(section.title)
+      if (!itemsToRemove || itemsToRemove.size === 0) return section
+      return {
+        ...section,
+        items: section.items?.filter(
+          (item) => !itemsToRemove.has(item.title)
+        ),
+      }
+    })
+    .filter((section) => !section.items || section.items.length > 0)
+}
+
+/**
+ * Filter access point links based on feature toggles.
+ */
+function filterAccessPointsByFeatures(
+  accessPoints: typeof data.navSecondaryAccessPoints,
+  features: FeatureToggles
+) {
+  const titlesToRemove = new Set<string>()
+  for (const key of FEATURE_KEYS) {
+    if (features[key]) continue
+    const mapping = FEATURE_SIDEBAR_MAP[key]
+    if (mapping?.accessPoints) {
+      for (const title of mapping.accessPoints) {
+        titlesToRemove.add(title)
+      }
+    }
+  }
+  return accessPoints.filter((item) => !titlesToRemove.has(item.title))
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { isMobile } = useSidebar()
   const { data: session, status } = useSession()
+  const { features } = useFeatures()
 
   // Get user data from session
   const user = session?.user ? {
@@ -386,6 +459,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   } : null
 
   const isLoading = status === "loading"
+
+  // Filter navigation based on feature toggles
+  const filteredNavMain = React.useMemo(
+    () => filterNavByFeatures(data.navMain, features),
+    [features]
+  )
+  const filteredAccessPoints = React.useMemo(
+    () => filterAccessPointsByFeatures(data.navSecondaryAccessPoints, features),
+    [features]
+  )
 
   // Compute navSecondary items with proper subdomain URLs
   // Use useState + useEffect to ensure URLs are computed on the client where window is available
@@ -410,10 +493,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
       }
       
-      // Add access point items (POS, Coach Portal, etc.)
-      const accessPointItems = data.navSecondaryAccessPoints.map(item => ({
+      // Add access point items filtered by feature toggles
+      const accessPointItems = filteredAccessPoints.map(item => ({
         title: item.title,
-        // Pass organizationId for portals that need it (like POS)
         url: getAccessPointUrl(item.subdomain, organizationId || undefined),
         icon: item.icon,
       }))
@@ -428,7 +510,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
     
     computeNavSecondary()
-  }, [session?.user?.organizationId])
+  }, [session?.user?.organizationId, filteredAccessPoints])
 
   return (
     <Sidebar {...props}>
@@ -438,7 +520,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {data.navMain.map((item) => (
+            {filteredNavMain.map((item) => (
               <Collapsible
                 key={item.title}
                 asChild

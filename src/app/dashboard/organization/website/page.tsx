@@ -14,8 +14,11 @@ import { Loader2, AlertCircle, Check, Globe, Palette, Image, Eye, LayoutGrid } f
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { getBaseDomainSuffix, getBaseDomainFromHostname } from "@/lib/client-domains";
+import { useFeatures } from "@/components/feature-context";
 
 export default function WebsitePage() {
+  const { isFeatureEnabled } = useFeatures();
+  const customDomainsEnabled = isFeatureEnabled("customDomains");
   const [config, setConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -266,6 +269,7 @@ export default function WebsitePage() {
               </div>
             </div>
             
+            {customDomainsEnabled && (
             <div className="flex items-start space-x-2 mt-4">
               <RadioGroupItem value="custom" id="custom" className="mt-1" />
               <div className="grid gap-2 flex-1">
@@ -303,6 +307,7 @@ export default function WebsitePage() {
                 )}
               </div>
             </div>
+            )}
           </RadioGroup>
         </CardContent>
       </Card>

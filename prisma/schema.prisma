@@ -114,6 +114,9 @@ model Organization {
 
   // Program Instances
   programInstances ProgramInstance[]
+
+  // Feature Overrides (superadmin per-org overrides)
+  featureOverride OrganizationFeatureOverride?
 }
 
 model OrganizationMember {
@@ -2584,7 +2587,10 @@ model SubscriptionPlan {
   maxMembershipTypes Int? // Max membership groups (null = unlimited)
 
   // Features (stored as JSON for flexibility)
-  features Json // Array of feature strings
+  features Json // Array of feature strings (display text for pricing pages)
+
+  // Feature Toggles (structured boolean flags controlling access to modules)
+  featureToggles Json @default("{}") // { events: true, sms: false, ... }
 
   // Display
   isPopular    Boolean @default(false)
@@ -2639,6 +2645,17 @@ model OrganizationSubscription {
   // Relations
   organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan         SubscriptionPlan @relation(fields: [planId], references: [id])
+}
+
+model OrganizationFeatureOverride {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  featureToggles Json // Partial set of feature keys to override from plan defaults
+  updatedBy      String? // Super admin user ID who set the override
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 enum SubscriptionStatus {

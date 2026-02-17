@@ -28,6 +28,7 @@ import {
   Award,
   ExternalLink,
 } from "lucide-react";
+import { useFeatures } from "@/components/feature-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -133,6 +134,8 @@ export default function InstanceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const instanceId = params.instanceId as string;
+  const { isFeatureEnabled } = useFeatures();
+  const trainingEnabled = isFeatureEnabled("training");
 
   const [instance, setInstance] = useState<ProgramInstance | null>(null);
   const [loading, setLoading] = useState(true);
@@ -475,10 +478,12 @@ export default function InstanceDetailPage() {
             <UserCheck className="h-4 w-4" />
             Attendance
           </TabsTrigger>
-          <TabsTrigger value="evaluations" className="flex items-center gap-2">
-            <Star className="h-4 w-4" />
-            Evaluations
-          </TabsTrigger>
+          {trainingEnabled && (
+            <TabsTrigger value="evaluations" className="flex items-center gap-2">
+              <Star className="h-4 w-4" />
+              Evaluations
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Registrations Tab */}
@@ -678,7 +683,7 @@ export default function InstanceDetailPage() {
         </TabsContent>
 
         {/* Evaluations Tab */}
-        <TabsContent value="evaluations" className="mt-4">
+        {trainingEnabled && <TabsContent value="evaluations" className="mt-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -787,7 +792,7 @@ export default function InstanceDetailPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
 
       {/* Cancel Session Dialog */}

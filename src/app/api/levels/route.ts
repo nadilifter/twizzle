@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 
 const createLevelSchema = z.object({
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
     if (!organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
+
+    const trainingBlocked = await checkFeatureGate(organizationId, "training");
+    if (trainingBlocked) return trainingBlocked;
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";

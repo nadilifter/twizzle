@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import {
   createEmailCampaign,
@@ -55,6 +56,9 @@ export async function GET(request: NextRequest) {
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const emailBlocked = await checkFeatureGate(session.user.organizationId, "emailCampaigns");
+    if (emailBlocked) return emailBlocked;
 
     // Check permission
     if (
@@ -137,6 +141,9 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const emailBlockedPost = await checkFeatureGate(session.user.organizationId, "emailCampaigns");
+    if (emailBlockedPost) return emailBlockedPost;
 
     // Check permission
     if (

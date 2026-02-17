@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 
 const createSkillSchema = z.object({
@@ -22,6 +23,9 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const trainingBlocked = await checkFeatureGate(session.user.organizationId, "training");
+    if (trainingBlocked) return trainingBlocked;
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
@@ -110,6 +114,9 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const trainingBlockedPost = await checkFeatureGate(session.user.organizationId, "training");
+    if (trainingBlockedPost) return trainingBlockedPost;
 
     if (
       !session.user.permissions.includes("*") &&

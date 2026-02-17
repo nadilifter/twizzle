@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useFeatures } from "@/components/feature-context"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -74,6 +75,8 @@ const statusColors = {
 }
 
 export default function AnnouncementsPage() {
+  const { isFeatureEnabled } = useFeatures()
+  const eventsEnabled = isFeatureEnabled("events")
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -294,7 +297,7 @@ export default function AnnouncementsPage() {
                       <SelectItem value="ALL">All Members</SelectItem>
                       <SelectItem value="FAMILY">Families</SelectItem>
                       <SelectItem value="PROGRAM">Program</SelectItem>
-                      <SelectItem value="EVENT">Event</SelectItem>
+                      {eventsEnabled && <SelectItem value="EVENT">Event</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>

@@ -51,11 +51,14 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { useMemberships } from "@/hooks/use-memberships"
 import { useMembershipGroup } from "@/hooks/use-membership-group"
+import { useFeatures } from "@/components/feature-context"
 import { toast } from "sonner"
 import type { MembershipGroup, MembershipInstance, BillingInterval, MembershipInstanceStatus } from "@/types/memberships"
 
 export default function MembershipsPage() {
   const { memberships, isLoading, error, createMembershipGroup, deleteMembershipGroup } = useMemberships()
+  const { isFeatureEnabled } = useFeatures()
+  const trainingEnabled = isFeatureEnabled("training")
   
   const [isCreateGroupOpen, setIsCreateGroupOpen] = React.useState(false)
   const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null)
@@ -284,6 +287,8 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
     deleteInstance,
     publishInstance,
   } = useMembershipGroup()
+  const { isFeatureEnabled } = useFeatures()
+  const trainingEnabled = isFeatureEnabled("training")
   const [isCreatingInstance, setIsCreatingInstance] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<"instances" | "restrictions">("instances")
 
@@ -612,31 +617,35 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
             />
           </div>
 
-          <Separator />
+          {trainingEnabled && (
+            <>
+              <Separator />
 
-          {/* Level Restriction */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Level Restriction</Label>
-              <Switch
-                checked={group.hasLevelRestriction}
-                onCheckedChange={(val) => handleUpdateRestrictions({ hasLevelRestriction: val })}
-                disabled={isUpdating}
-              />
-            </div>
-            {group.hasLevelRestriction && group.levelRequirements && (
-              <div className="pl-2 space-y-2">
-                {group.levelRequirements.map((lr) => (
-                  <div key={lr.id} className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded">
-                    <span className="text-sm">{lr.level?.name}</span>
+              {/* Level Restriction */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Level Restriction</Label>
+                  <Switch
+                    checked={group.hasLevelRestriction}
+                    onCheckedChange={(val) => handleUpdateRestrictions({ hasLevelRestriction: val })}
+                    disabled={isUpdating}
+                  />
+                </div>
+                {group.hasLevelRestriction && group.levelRequirements && (
+                  <div className="pl-2 space-y-2">
+                    {group.levelRequirements.map((lr) => (
+                      <div key={lr.id} className="flex items-center justify-between bg-muted/50 px-3 py-2 rounded">
+                        <span className="text-sm">{lr.level?.name}</span>
+                      </div>
+                    ))}
+                    {group.levelRequirements.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No levels configured. Add them via the restrictions API.</p>
+                    )}
                   </div>
-                ))}
-                {group.levelRequirements.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No levels configured. Add them via the restrictions API.</p>
                 )}
               </div>
-            )}
-          </div>
+            </>
+          )}
 
           <Separator />
 

@@ -3,6 +3,16 @@ import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
 
+const featureTogglesSchema = z.object({
+  events: z.boolean(),
+  sms: z.boolean(),
+  emailCampaigns: z.boolean(),
+  customDomains: z.boolean(),
+  qboIntegration: z.boolean(),
+  training: z.boolean(),
+  pointOfSale: z.boolean(),
+}).optional()
+
 const updatePlanSchema = z.object({
   name: z.string().min(1).optional(),
   slug: z.string().regex(/^[a-z0-9-]+$/).optional(),
@@ -26,6 +36,7 @@ const updatePlanSchema = z.object({
   // Membership Limits
   maxMembershipTypes: z.number().int().positive().optional().nullable(),
   features: z.array(z.string()).optional(),
+  featureToggles: featureTogglesSchema,
   isPopular: z.boolean().optional(),
   displayOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),

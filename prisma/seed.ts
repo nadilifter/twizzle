@@ -74,6 +74,10 @@ async function main() {
       emailOverageRate: null,
       maxStorageMB: 500, // 500 MB
       maxMembershipTypes: 2,
+      featureToggles: {
+        events: false, sms: false, emailCampaigns: false,
+        customDomains: false, qboIntegration: false, training: false, pointOfSale: false,
+      },
     },
     create: {
       name: "Free", slug: "free", description: "Perfect for getting started",
@@ -84,6 +88,10 @@ async function main() {
       maxStorageMB: 500, // 500 MB
       maxMembershipTypes: 2,
       features: ["Basic scheduling", "Up to 25 athletes", "Email support", "500 MB storage"],
+      featureToggles: {
+        events: false, sms: false, emailCampaigns: false,
+        customDomains: false, qboIntegration: false, training: false, pointOfSale: false,
+      },
       isPopular: false, displayOrder: 0, isActive: true, isPublic: true,
     },
   });
@@ -94,6 +102,10 @@ async function main() {
       emailOverageRate: 0.005, // $0.005 per email over limit
       maxStorageMB: 2000, // 2 GB
       maxMembershipTypes: 5,
+      featureToggles: {
+        events: true, sms: true, emailCampaigns: true,
+        customDomains: false, qboIntegration: false, training: false, pointOfSale: true,
+      },
     },
     create: {
       name: "Starter", slug: "starter", description: "For growing organizations",
@@ -104,6 +116,10 @@ async function main() {
       maxStorageMB: 2000, // 2 GB
       maxMembershipTypes: 5,
       features: ["Advanced scheduling", "Up to 100 athletes", "Priority email support", "Basic reporting", "500 email campaigns/month", "2 GB storage"],
+      featureToggles: {
+        events: true, sms: true, emailCampaigns: true,
+        customDomains: false, qboIntegration: false, training: false, pointOfSale: true,
+      },
       isPopular: false, displayOrder: 1, isActive: true, isPublic: true,
     },
   });
@@ -114,6 +130,10 @@ async function main() {
       emailOverageRate: 0.003, // $0.003 per email over limit
       maxStorageMB: 10000, // 10 GB
       maxMembershipTypes: 15,
+      featureToggles: {
+        events: true, sms: true, emailCampaigns: true,
+        customDomains: true, qboIntegration: false, training: true, pointOfSale: true,
+      },
     },
     create: {
       name: "Gold", slug: "gold", description: "Most popular for established clubs",
@@ -124,6 +144,10 @@ async function main() {
       maxStorageMB: 10000, // 10 GB
       maxMembershipTypes: 15,
       features: ["Unlimited events", "Up to 500 athletes", "Phone support", "Advanced reporting", "Custom branding", "2,500 email campaigns/month", "10 GB storage"],
+      featureToggles: {
+        events: true, sms: true, emailCampaigns: true,
+        customDomains: true, qboIntegration: false, training: true, pointOfSale: true,
+      },
       isPopular: true, displayOrder: 2, isActive: true, isPublic: true,
     },
   });
@@ -134,6 +158,10 @@ async function main() {
       emailOverageRate: 0.002, // $0.002 per email over limit
       maxStorageMB: null, // Unlimited
       maxMembershipTypes: null, // Unlimited
+      featureToggles: {
+        events: true, sms: true, emailCampaigns: true,
+        customDomains: true, qboIntegration: true, training: true, pointOfSale: true,
+      },
     },
     create: {
       name: "Platinum", slug: "platinum", description: "Enterprise-grade solution",
@@ -144,6 +172,10 @@ async function main() {
       maxStorageMB: null, // Unlimited
       maxMembershipTypes: null, // Unlimited
       features: ["Unlimited everything", "Dedicated support", "Custom integrations", "White-label options", "SLA guarantee", "10,000 email campaigns/month", "Unlimited storage"],
+      featureToggles: {
+        events: true, sms: true, emailCampaigns: true,
+        customDomains: true, qboIntegration: true, training: true, pointOfSale: true,
+      },
       isPopular: false, displayOrder: 3, isActive: true, isPublic: true,
     },
   });

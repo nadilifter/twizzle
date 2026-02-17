@@ -3,6 +3,16 @@ import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
 
+const featureTogglesSchema = z.object({
+  events: z.boolean(),
+  sms: z.boolean(),
+  emailCampaigns: z.boolean(),
+  customDomains: z.boolean(),
+  qboIntegration: z.boolean(),
+  training: z.boolean(),
+  pointOfSale: z.boolean(),
+}).optional()
+
 const createPlanSchema = z.object({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required").regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
@@ -26,6 +36,7 @@ const createPlanSchema = z.object({
   // Membership Limits
   maxMembershipTypes: z.number().int().positive().optional().nullable(),
   features: z.array(z.string()),
+  featureToggles: featureTogglesSchema,
   isPopular: z.boolean().optional(),
   displayOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
@@ -102,6 +113,7 @@ export async function POST(request: NextRequest) {
         maxStorageMB: validatedData.maxStorageMB,
         maxMembershipTypes: validatedData.maxMembershipTypes,
         features: validatedData.features,
+        featureToggles: validatedData.featureToggles ?? {},
         isPopular: validatedData.isPopular ?? false,
         displayOrder: validatedData.displayOrder ?? 0,
         isActive: validatedData.isActive ?? true,

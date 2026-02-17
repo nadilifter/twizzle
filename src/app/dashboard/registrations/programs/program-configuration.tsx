@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
+import { useFeatures } from "@/components/feature-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -87,6 +88,8 @@ const ROLE_LABELS: Record<ProgramStaffRole, string> = {
 
 export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
   const { updateProgram, fetchPrograms } = usePrograms()
+  const { isFeatureEnabled } = useFeatures()
+  const trainingEnabled = isFeatureEnabled("training")
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
 
@@ -837,7 +840,8 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
           {/* REQUIREMENTS TAB                              */}
           {/* ============================================= */}
           <TabsContent value="requirements" className="mt-0 space-y-6 max-w-2xl">
-            {/* Level Restriction */}
+            {/* Level Restriction - only shown when Training feature is enabled */}
+            {trainingEnabled && (
             <div className="rounded-lg border p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -908,6 +912,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                 </div>
               )}
             </div>
+            )}
 
             {/* Capacity Restriction */}
             <div className="rounded-lg border p-4 space-y-4">

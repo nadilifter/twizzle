@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 
 const cartItemSchema = z.object({
@@ -32,6 +33,9 @@ export async function POST(request: NextRequest) {
     if (!session.user.organizationId) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
+
+    const posBlocked = await checkFeatureGate(session.user.organizationId, "pointOfSale");
+    if (posBlocked) return posBlocked;
 
     const body = await request.json();
     const validatedData = checkoutSchema.parse(body);

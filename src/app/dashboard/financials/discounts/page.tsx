@@ -57,6 +57,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { MoreHorizontal, Plus, Search, Calendar as CalendarIcon, Wand2, Loader2 } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useFeatures } from "@/components/feature-context"
 import { toast } from "sonner"
 
 function formatDateString(dateStr: string): string {
@@ -82,6 +83,8 @@ type Discount = {
 }
 
 export default function DiscountsPage() {
+  const { isFeatureEnabled } = useFeatures()
+  const eventsEnabled = isFeatureEnabled("events")
   const [discounts, setDiscounts] = React.useState<Discount[]>([])
   const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -505,7 +508,7 @@ export default function DiscountsPage() {
                     <SelectContent>
                       <SelectItem value="ALL">All Products</SelectItem>
                       <SelectItem value="MEMBERSHIP">Membership</SelectItem>
-                      <SelectItem value="EVENTS">Events</SelectItem>
+                      {eventsEnabled && <SelectItem value="EVENTS">Events</SelectItem>}
                       <SelectItem value="MERCHANDISE">Merchandise</SelectItem>
                     </SelectContent>
                   </Select>

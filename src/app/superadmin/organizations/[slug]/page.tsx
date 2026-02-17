@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle } from "lucide-react"
 import { SubscriptionManager } from "./subscription-manager"
+import { FeatureOverrides } from "./feature-overrides"
 import { getSubdomainUrl } from "@/lib/env-domains"
 
 function getMarketingSiteUrl(slug: string, websiteConfig: { domain?: string | null; subdomain?: string | null } | null): string {
@@ -221,6 +222,12 @@ export default async function OrganizationDetailPage({ params }: Props) {
             monthlyPrice: organization.subscription.plan.monthlyPrice.toString(),
           }
         } : null}
+      />
+
+      {/* Feature Overrides */}
+      <FeatureOverrides
+        organizationId={organization.id}
+        organizationName={organization.name}
       />
 
       {/* Organization Details */}

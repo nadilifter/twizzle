@@ -45,6 +45,7 @@ import {
   Heart,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useFeatures } from "@/components/feature-context"
 import { useStaff } from "@/hooks/use-staff"
 import { useMemberships } from "@/hooks/use-memberships"
 import type { ProgramStaffRole } from "@/types/staff"
@@ -143,6 +144,8 @@ const ROLE_LABELS: Record<ProgramStaffRole, string> = {
 export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const router = useRouter()
   const isEditing = !!program
+  const { isFeatureEnabled } = useFeatures()
+  const trainingEnabled = isFeatureEnabled("training")
   
   // Hooks for data
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
@@ -958,71 +961,73 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Level Restriction */}
-              <div className="rounded-lg border p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base font-medium">Level Restriction</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Require athletes to be at one of the selected levels
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.hasLevelRestriction}
-                    onCheckedChange={checked => setFormData(prev => ({
-                      ...prev,
-                      hasLevelRestriction: checked,
-                      levelRequirementIds: checked ? prev.levelRequirementIds : [],
-                    }))}
-                  />
-                </div>
-                
-                {formData.hasLevelRestriction && (
-                  <div className="pt-2 border-t">
-                    {loadingLevels ? (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading levels...
-                      </div>
-                    ) : levels.length === 0 ? (
+              {/* Level Restriction - only shown when Training feature is enabled */}
+              {trainingEnabled && (
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Level Restriction</Label>
                       <p className="text-sm text-muted-foreground">
-                        No levels configured. <a href="/dashboard/training/levels" className="text-primary underline">Create levels</a> first.
+                        Require athletes to be at one of the selected levels
                       </p>
-                    ) : (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {levels.map(level => (
-                          <label
-                            key={level.id}
-                            className={cn(
-                              "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                              formData.levelRequirementIds.includes(level.id)
-                                ? "border-primary bg-primary/5"
-                                : "hover:bg-muted/50"
-                            )}
-                          >
-                            <Checkbox
-                              checked={formData.levelRequirementIds.includes(level.id)}
-                              onCheckedChange={checked => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  levelRequirementIds: checked
-                                    ? [...prev.levelRequirementIds, level.id]
-                                    : prev.levelRequirementIds.filter(id => id !== level.id),
-                                }))
-                              }}
-                            />
-                            <div
-                              className="w-3 h-3 rounded-full shrink-0"
-                              style={{ backgroundColor: level.color || "#64748b" }}
-                            />
-                            <span className="text-sm font-medium">{level.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                    </div>
+                    <Switch
+                      checked={formData.hasLevelRestriction}
+                      onCheckedChange={checked => setFormData(prev => ({
+                        ...prev,
+                        hasLevelRestriction: checked,
+                        levelRequirementIds: checked ? prev.levelRequirementIds : [],
+                      }))}
+                    />
                   </div>
-                )}
-              </div>
+                  
+                  {formData.hasLevelRestriction && (
+                    <div className="pt-2 border-t">
+                      {loadingLevels ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading levels...
+                        </div>
+                      ) : levels.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No levels configured. <a href="/dashboard/training/levels" className="text-primary underline">Create levels</a> first.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {levels.map(level => (
+                            <label
+                              key={level.id}
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                                formData.levelRequirementIds.includes(level.id)
+                                  ? "border-primary bg-primary/5"
+                                  : "hover:bg-muted/50"
+                              )}
+                            >
+                              <Checkbox
+                                checked={formData.levelRequirementIds.includes(level.id)}
+                                onCheckedChange={checked => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    levelRequirementIds: checked
+                                      ? [...prev.levelRequirementIds, level.id]
+                                      : prev.levelRequirementIds.filter(id => id !== level.id),
+                                  }))
+                                }}
+                              />
+                              <div
+                                className="w-3 h-3 rounded-full shrink-0"
+                                style={{ backgroundColor: level.color || "#64748b" }}
+                              />
+                              <span className="text-sm font-medium">{level.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Capacity Restriction */}
               <div className="rounded-lg border p-4 space-y-4">

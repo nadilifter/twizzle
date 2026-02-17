@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import { sendSingleSms, checkUsageLimits, getUsageStats } from "@/lib/sms-service";
 import { isTwilioConfigured } from "@/lib/twilio";
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
+    if (smsBlocked) return smsBlocked;
 
     // Check permission
     if (
@@ -134,6 +138,9 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const smsBlockedPost = await checkFeatureGate(session.user.organizationId, "sms");
+    if (smsBlockedPost) return smsBlockedPost;
 
     // Check permission
     if (
