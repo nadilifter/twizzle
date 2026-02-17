@@ -92,8 +92,8 @@ export default async function AdminDashboardPage() {
                 <span className="text-muted-foreground ml-2">Hidden from My Organization section in admin sidebar.</span>
               </li>
               <li>
-                <span className="font-medium">Events Section</span> (/dashboard/events, /dashboard/events/calendar) - 
-                <span className="text-muted-foreground ml-2">Hidden from admin sidebar. Calendar and Upcoming events.</span>
+                <span className="font-medium">Events</span> (/dashboard/events) - 
+                <span className="text-muted-foreground ml-2">Now visible under Registrations section. Gated by the Events feature toggle.</span>
               </li>
             </ul>
           </CardContent>

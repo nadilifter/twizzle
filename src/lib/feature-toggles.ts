@@ -8,6 +8,7 @@
 
 export const FEATURE_KEYS = [
   "events",
+  "advancedRegistrations",
   "sms",
   "emailCampaigns",
   "customDomains",
@@ -22,6 +23,7 @@ export type FeatureToggles = Record<FeatureKey, boolean>;
 /** All features disabled - used as base when no plan is set */
 export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   events: false,
+  advancedRegistrations: false,
   sms: false,
   emailCampaigns: false,
   customDomains: false,
@@ -33,6 +35,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
 /** Human-readable labels for each feature */
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
   events: "Events",
+  advancedRegistrations: "Advanced Registrations",
   sms: "SMS Messaging",
   emailCampaigns: "Email Campaigns",
   customDomains: "Custom Domains",
@@ -44,6 +47,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
 /** Descriptions shown to admins */
 export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   events: "Event management, calendar, and check-in via the Events portal",
+  advancedRegistrations: "Complex event registrations with interconnected logic, categories, and large-scale participant management",
   sms: "SMS campaigns, conversations, and messaging via Twilio",
   emailCampaigns: "Email campaign creation and delivery",
   customDomains: "Custom domain configuration for your marketing site",
@@ -67,7 +71,21 @@ export const FEATURE_SIDEBAR_MAP: Record<
   }
 > = {
   events: {
+    subItems: [
+      {
+        section: "Registrations",
+        items: ["Events"],
+      },
+    ],
     accessPoints: ["Events Portal"],
+  },
+  advancedRegistrations: {
+    subItems: [
+      {
+        section: "Registrations",
+        items: ["Advanced"],
+      },
+    ],
   },
   sms: {
     subItems: [
@@ -120,6 +138,7 @@ export const FEATURE_SIDEBAR_MAP: Record<
  */
 export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   events: ["/api/events"],
+  advancedRegistrations: [],
   sms: ["/api/sms"],
   emailCampaigns: ["/api/email/campaigns"],
   customDomains: [], // Handled inline in website route

@@ -4,6 +4,12 @@ import { getScopedDb, db } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 
+const staffAssignmentSchema = z.object({
+  staffProfileId: z.string().min(1),
+  role: z.enum(["LEAD", "ASSISTANT", "VOLUNTEER", "OBSERVER"]).default("ASSISTANT"),
+  notes: z.string().optional(),
+});
+
 const createEventSchema = z.object({
   title: z.string().min(1, "Title is required"),
   date: z.string().min(1, "Date is required"),
@@ -14,6 +20,7 @@ const createEventSchema = z.object({
   meetingLink: z.string().optional(),
   timezone: z.string().optional(),
   capacity: z.number().int().positive().optional(),
+  facilityId: z.string().optional().nullable(),
   location: z.object({
     lat: z.number().optional(),
     lng: z.number().optional(),
@@ -28,13 +35,11 @@ const createEventSchema = z.object({
   programId: z.string().optional().nullable(),
   coachId: z.string().optional().nullable(),
   requiredMembershipInstanceIds: z.array(z.string()).optional(),
+  staffAssignments: z.array(staffAssignmentSchema).optional(),
 }).refine((data) => {
-  // Combine date and startTime to check if it's in the future
-  // Assuming date is YYYY-MM-DD and startTime is HH:MM
   const dateTimeString = `${data.date}T${data.startTime}`;
   const eventDate = new Date(dateTimeString);
   const now = new Date();
-  // Reset seconds/milliseconds for fair comparison
   now.setSeconds(0, 0);
   
   return eventDate >= now;
@@ -105,6 +110,14 @@ export async function GET(request: NextRequest) {
               avatar: true,
             },
           },
+          facility: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              stateProvince: true,
+            },
+          },
           _count: {
             select: {
               attendances: true,
@@ -120,7 +133,21 @@ export async function GET(request: NextRequest) {
                 }
               }
             }
-          }
+          },
+          staffAssignments: {
+            include: {
+              staffProfile: {
+                include: {
+                  user: {
+                    select: {
+                      name: true,
+                      avatar: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: { date: "asc" },
         take: limit,
@@ -216,6 +243,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Coach not found" }, { status: 404 });
       }
     }
+
+    // Verify facility if provided
+    if (validatedData.facilityId) {
+      const facility = await db.facility.findFirst({
+        where: {
+          id: validatedData.facilityId,
+          organizationId: session.user.organizationId,
+        },
+      });
+      if (!facility) {
+        return NextResponse.json({ error: "Facility not found" }, { status: 404 });
+      }
+    }
     
     const data: any = {
         title: validatedData.title,
@@ -229,6 +269,7 @@ export async function POST(request: NextRequest) {
         details: validatedData.details,
         programId: validatedData.programId,
         coachId: validatedData.coachId,
+        facilityId: validatedData.facilityId || null,
         timezone: validatedData.timezone,
         capacity: validatedData.capacity,
         organizationId: session.user.organizationId,
@@ -239,8 +280,16 @@ export async function POST(request: NextRequest) {
             connect: validatedData.requiredMembershipInstanceIds.map(id => ({ id }))
         };
     }
-    
-    console.log("Creating event with data:", JSON.stringify(data, null, 2));
+
+    if (validatedData.staffAssignments && validatedData.staffAssignments.length > 0) {
+        data.staffAssignments = {
+            create: validatedData.staffAssignments.map(sa => ({
+                staffProfileId: sa.staffProfileId,
+                role: sa.role,
+                notes: sa.notes,
+            })),
+        };
+    }
 
     const event = await db.event.create({
       data,
@@ -258,6 +307,14 @@ export async function POST(request: NextRequest) {
               avatar: true,
             },
         },
+        facility: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              stateProvince: true,
+            },
+        },
         requiredMemberships: {
             select: {
               id: true,
@@ -268,7 +325,21 @@ export async function POST(request: NextRequest) {
                 }
               }
             }
-        }
+        },
+        staffAssignments: {
+            include: {
+              staffProfile: {
+                include: {
+                  user: {
+                    select: {
+                      name: true,
+                      avatar: true,
+                    },
+                  },
+                },
+              },
+            },
+        },
       },
     });
 

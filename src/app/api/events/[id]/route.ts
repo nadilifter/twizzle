@@ -44,7 +44,12 @@ export async function GET(
         organizationId: session.user.organizationId,
       },
       include: {
-        program: true,
+        program: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         coach: {
           select: {
             id: true,
@@ -53,38 +58,62 @@ export async function GET(
             avatar: true,
           },
         },
+        facility: {
+          select: {
+            id: true,
+            name: true,
+            street: true,
+            city: true,
+            stateProvince: true,
+          },
+        },
+        staffAssignments: {
+          include: {
+            staffProfile: {
+              include: {
+                user: {
+                  select: {
+                    name: true,
+                    avatar: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            role: "asc",
+          },
+        },
+        requiredMemberships: {
+          select: {
+            id: true,
+            name: true,
+            group: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
         attendances: {
           include: {
             athlete: {
               select: {
                 id: true,
                 name: true,
-                level: true,
-                family: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
+                firstName: true,
+                lastName: true,
+                avatar: true,
               },
             },
           },
+          orderBy: {
+            createdAt: "desc",
+          },
         },
-        lineItems: {
-          include: {
-            invoice: {
-              select: {
-                id: true,
-                reference: true,
-                status: true,
-                family: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
+        _count: {
+          select: {
+            attendances: true,
           },
         },
       },
@@ -94,12 +123,9 @@ export async function GET(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // Transform participants from attendances
-    const participants = event.attendances.map((a) => a.athlete.name);
-
     return NextResponse.json({
       ...event,
-      participants,
+      attendanceCount: event._count.attendances,
     });
   } catch (error) {
     console.error("Error fetching event:", error);

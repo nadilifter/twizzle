@@ -161,6 +161,14 @@ const data = {
       url: "/dashboard/registrations",
       items: [
         {
+          title: "Advanced",
+          url: "/dashboard/registrations/advanced",
+        },
+        {
+          title: "Events",
+          url: "/dashboard/events",
+        },
+        {
           title: "Programs",
           url: "/dashboard/registrations/programs",
         },
