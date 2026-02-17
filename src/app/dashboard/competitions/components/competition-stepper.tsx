@@ -101,18 +101,50 @@ interface CategoryResultConfig {
   qualifyingMark: number | null
   isTeamEvent: boolean
   teamSize: number | null
+  collectResults: boolean
 }
 
-interface FetchedCategoryEntry {
+interface SportEventEntry {
   id: string
-  type: "combination" | "individual" | "sport-specific"
-  label: string
-  defaultResultType: ResultType | null
-  defaultSortDirection: SortDir | null
-  defaultPrecision?: number
-  sportEventId?: string
-  ageCategoryId?: string
-  eventType?: string
+  code: string
+  name: string
+  eventGroup: string
+  eventType: string
+  resultType: ResultType
+  sortDirection: SortDir
+  defaultPrecision: number
+  isActive: boolean
+  displayOrder: number
+  eligibility?: Array<{
+    id: string
+    sportEventId: string
+    ageCategoryId: string
+    isEnabled: boolean
+    ageCategory: { id: string; code: string; name: string }
+  }>
+}
+
+interface SportAgeCategoryEntry {
+  id: string
+  code: string
+  name: string
+  minAge: number
+  maxAge: number | null
+  isActive: boolean
+  displayOrder: number
+}
+
+const EVENT_GROUP_LABELS: Record<string, string> = {
+  sprints: "Sprints",
+  hurdles: "Hurdles",
+  middle_distance: "Middle Distance",
+  distance: "Distance",
+  relays: "Relays",
+  jumps: "Jumps",
+  throws: "Throws",
+  combined: "Combined Events",
+  racewalk: "Race Walk",
+  road: "Road",
 }
 
 interface CompetitionFormData {
@@ -195,9 +227,16 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   // Organization sports state
   const [orgSports, setOrgSports] = React.useState<OrgSport[]>([])
 
-  // Fetched category entries for results step
-  const [categoryEntries, setCategoryEntries] = React.useState<FetchedCategoryEntry[]>([])
-  const [loadingCategories, setLoadingCategories] = React.useState(false)
+  // Sport-specific structured data for categories step
+  const [sportEvents, setSportEvents] = React.useState<SportEventEntry[]>([])
+  const [sportAgeCategories, setSportAgeCategories] = React.useState<SportAgeCategoryEntry[]>([])
+  const [eligibilitySet, setEligibilitySet] = React.useState<Set<string>>(new Set())
+  const [loadingSportData, setLoadingSportData] = React.useState(false)
+  const [hasSportSpecificData, setHasSportSpecificData] = React.useState(false)
+
+  // selectedCombos: Set of "eventId:ageCategoryId" keys the user picked
+  const [selectedCombos, setSelectedCombos] = React.useState<Set<string>>(new Set())
+
 
   // Form state
   const [formData, setFormData] = React.useState<CompetitionFormData>({
@@ -325,103 +364,76 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
     fetchOrgSports()
   }, [])
 
-  // Fetch competition categories when entering results step
-  const fetchCategoryEntries = React.useCallback(async () => {
-    setLoadingCategories(true)
-    try {
-      const res = await fetch("/api/competition-categories")
-      if (!res.ok) return
-      const data = await res.json()
-      const entries: FetchedCategoryEntry[] = []
+  // Fetch sport-specific structured data for the categories step
+  const fetchSportData = React.useCallback(async () => {
+    if (!formData.competitionType || orgSports.length === 0) return
 
-      // Process sport-specific structured data first
-      if (data.sportSpecific) {
-        for (const [, sportData] of Object.entries(data.sportSpecific) as [string, any][]) {
-          const { events, ageCategories, eligibility } = sportData
-          const eligSet = new Set(
-            eligibility.map((e: any) => `${e.sportEventId}:${e.ageCategoryId}`)
-          )
-          for (const evt of events) {
-            for (const ageCat of ageCategories) {
-              const key = `${evt.id}:${ageCat.id}`
-              if (!eligSet.has(key)) continue
-              entries.push({
-                id: `${evt.id}:${ageCat.id}`,
-                type: "sport-specific",
-                label: `${evt.name} - ${ageCat.code}`,
-                defaultResultType: evt.resultType,
-                defaultSortDirection: evt.sortDirection,
-                defaultPrecision: evt.defaultPrecision,
-                sportEventId: evt.id,
-                ageCategoryId: ageCat.id,
-                eventType: evt.eventType,
+    // Find the sport matching this competition type
+    const matchingSport = orgSports.find(
+      (s) => sportSlugToCompetitionType(s.slug) === formData.competitionType
+    )
+    if (!matchingSport) {
+      setHasSportSpecificData(false)
+      return
+    }
+
+    setLoadingSportData(true)
+    try {
+      const res = await fetch(`/api/sports/${matchingSport.id}/events`)
+      if (!res.ok) {
+        setHasSportSpecificData(false)
+        return
+      }
+      const data = await res.json()
+      const events: SportEventEntry[] = data.events || []
+
+      if (events.length === 0) {
+        setHasSportSpecificData(false)
+        return
+      }
+
+      setSportEvents(events)
+      setHasSportSpecificData(true)
+
+      // Extract age categories from eligibility data
+      const ageCatMap = new Map<string, SportAgeCategoryEntry>()
+      const eligKeys = new Set<string>()
+      for (const evt of events) {
+        for (const elig of evt.eligibility || []) {
+          if (elig.isEnabled !== false) {
+            eligKeys.add(`${evt.id}:${elig.ageCategory.id}`)
+            if (!ageCatMap.has(elig.ageCategory.id)) {
+              ageCatMap.set(elig.ageCategory.id, {
+                id: elig.ageCategory.id,
+                code: elig.ageCategory.code,
+                name: elig.ageCategory.name,
+                minAge: 0,
+                maxAge: null,
+                isActive: true,
+                displayOrder: 0,
               })
             }
           }
         }
       }
+      setEligibilitySet(eligKeys)
 
-      // Process legacy preset templates
-      for (const tmpl of [...(data.presets || []), ...(data.custom || [])]) {
-        if (tmpl.isDisabledByOrg) continue
-        if (!tmpl.isActive) continue
-
-        if (tmpl.type === "COMBINATION") {
-          for (const combo of tmpl.combinationEntries || []) {
-            if (!combo.isActive) continue
-            const row = tmpl.axisValues?.find((v: any) => v.id === combo.rowValueId)
-            const col = tmpl.axisValues?.find((v: any) => v.id === combo.colValueId)
-            entries.push({
-              id: combo.id,
-              type: "combination",
-              label: combo.name || `${row?.name || "?"} - ${col?.name || "?"}`,
-              defaultResultType: col?.resultType || null,
-              defaultSortDirection: col?.sortDirection || null,
-            })
-          }
-        } else {
-          for (const entry of tmpl.individualEntries || []) {
-            entries.push({
-              id: entry.id,
-              type: "individual",
-              label: `${tmpl.name}: ${entry.name}`,
-              defaultResultType: entry.resultType || null,
-              defaultSortDirection: entry.sortDirection || null,
-            })
-          }
-        }
+      // Also fetch age categories with full data
+      const ageCatRes = await fetch(`/api/sports/${matchingSport.id}/age-categories`)
+      if (ageCatRes.ok) {
+        const ageCatData = await ageCatRes.json()
+        setSportAgeCategories(ageCatData.ageCategories || [])
+      } else {
+        setSportAgeCategories(Array.from(ageCatMap.values()))
       }
-
-      setCategoryEntries(entries)
-
-      // Auto-populate categoryResults if empty
-      setFormData((prev) => {
-        if (prev.categoryResults.length > 0) return prev
-        return {
-          ...prev,
-          categoryResults: entries.map((e) => ({
-            combinationEntryId: e.type === "combination" ? e.id : null,
-            individualEntryId: e.type === "individual" ? e.id : null,
-            sportEventId: e.sportEventId || null,
-            ageCategoryId: e.ageCategoryId || null,
-            label: e.label,
-            resultType: e.defaultResultType || "SCORE",
-            sortDirection: e.defaultSortDirection || (e.defaultResultType === "TIME" ? "ASC" : "DESC"),
-            precision: e.defaultPrecision ?? (e.defaultResultType === "SCORE" ? 3 : e.defaultResultType === "TIME" ? 3 : 2),
-            seedMarkRequired: false,
-            submissionMode: "NONE" as SubMode,
-            qualifyingMark: null,
-            isTeamEvent: e.eventType === "relay",
-            teamSize: e.eventType === "relay" ? 4 : null,
-          })),
-        }
-      })
     } catch (error) {
-      console.error("Failed to fetch categories:", error)
+      console.error("Failed to fetch sport data:", error)
+      setHasSportSpecificData(false)
     } finally {
-      setLoadingCategories(false)
+      setLoadingSportData(false)
     }
-  }, [])
+  }, [formData.competitionType, orgSports])
+
 
   // Handle facility selection to auto-fill address
   const handleFacilityChange = (facilityId: string) => {
@@ -528,13 +540,61 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
 
   const handleNext = () => {
     if (validateStep(stepper.state.current.data.id)) {
-      // Fetch categories when entering the results step
-      const nextStepIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id) + 1
-      if (nextStepIndex < stepper.state.all.length && stepper.state.all[nextStepIndex].id === "results") {
-        if (categoryEntries.length === 0) {
-          fetchCategoryEntries()
-        }
+      const currentStepId = stepper.state.current.data.id
+      const nextStepIndex = stepper.state.all.findIndex(s => s.id === currentStepId) + 1
+      const nextStepId = nextStepIndex < stepper.state.all.length ? stepper.state.all[nextStepIndex].id : null
+
+      // Fetch sport-specific data when entering the categories step
+      if (nextStepId === "categories" && sportEvents.length === 0) {
+        fetchSportData()
       }
+
+      // Build categoryResults from selection when leaving the categories step
+      if (currentStepId === "categories" && hasSportSpecificData) {
+        const combos = formData.categoryMode === "ALL" ? eligibilitySet : selectedCombos
+        const comboKeys = Array.from(combos)
+        const results: CategoryResultConfig[] = []
+        for (const key of comboKeys) {
+          const [eventId, ageCatId] = key.split(":")
+          const evt = sportEvents.find((e) => e.id === eventId)
+          const ageCat = sportAgeCategories.find((c) => c.id === ageCatId)
+          if (!evt || !ageCat) continue
+
+          const existing = formData.categoryResults.find(
+            (c) => c.sportEventId === eventId && c.ageCategoryId === ageCatId
+          )
+
+          results.push({
+            combinationEntryId: null,
+            individualEntryId: null,
+            sportEventId: eventId,
+            ageCategoryId: ageCatId,
+            label: `${evt.name} - ${ageCat.code}`,
+            resultType: evt.resultType,
+            sortDirection: evt.sortDirection,
+            precision: evt.defaultPrecision,
+            seedMarkRequired: existing?.seedMarkRequired ?? false,
+            submissionMode: existing?.submissionMode ?? "NONE",
+            qualifyingMark: existing?.qualifyingMark ?? null,
+            isTeamEvent: evt.eventType === "relay",
+            teamSize: evt.eventType === "relay" ? 4 : null,
+            collectResults: existing?.collectResults ?? true,
+          })
+        }
+
+        results.sort((a, b) => {
+          const evtA = sportEvents.find((e) => e.id === a.sportEventId)
+          const evtB = sportEvents.find((e) => e.id === b.sportEventId)
+          const ageCatA = sportAgeCategories.find((c) => c.id === a.ageCategoryId)
+          const ageCatB = sportAgeCategories.find((c) => c.id === b.ageCategoryId)
+          const evtOrder = (evtA?.displayOrder ?? 0) - (evtB?.displayOrder ?? 0)
+          if (evtOrder !== 0) return evtOrder
+          return (ageCatA?.displayOrder ?? 0) - (ageCatB?.displayOrder ?? 0)
+        })
+
+        setFormData((prev) => ({ ...prev, categoryResults: results }))
+      }
+
       stepper.navigation.next()
     }
   }
@@ -588,6 +648,7 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
           isTeamEvent: c.isTeamEvent,
           teamSize: c.teamSize,
           displayOrder: i,
+          // collectResults is used by the UI; backend stores the category regardless
         })),
         publishStatus: formData.publishStatus,
         scheduledGoLiveDate: formData.scheduledGoLiveDate?.toISOString(),
@@ -923,19 +984,24 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                 Categories
               </CardTitle>
               <CardDescription>
-                Choose which categories are available for this competition
+                Choose which event / age group combinations are available for this competition
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Mode selector */}
               <RadioGroup
                 value={formData.categoryMode}
-                onValueChange={(value: "ALL" | "SPECIFIC") =>
+                onValueChange={(value: "ALL" | "SPECIFIC") => {
                   setFormData(prev => ({
                     ...prev,
                     categoryMode: value,
                     selectedCategoryIds: value === "ALL" ? [] : prev.selectedCategoryIds,
                   }))
-                }
+                  if (value === "ALL" && hasSportSpecificData) {
+                    // Select all eligible combos
+                    setSelectedCombos(new Set(eligibilitySet))
+                  }
+                }}
                 className="space-y-4"
               >
                 <label
@@ -948,9 +1014,9 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                 >
                   <RadioGroupItem value="ALL" className="mt-1" />
                   <div className="flex-1 space-y-1">
-                    <span className="font-medium">Use All Categories</span>
+                    <span className="font-medium">Use All Eligible Categories</span>
                     <p className="text-sm text-muted-foreground">
-                      All defined categories will be available for registration
+                      All enabled event/age combinations will be available for registration
                     </p>
                   </div>
                 </label>
@@ -967,13 +1033,157 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                   <div className="flex-1 space-y-1">
                     <span className="font-medium">Pick Specific Categories</span>
                     <p className="text-sm text-muted-foreground">
-                      Only selected categories will be available for registration
+                      Select exactly which event/age combinations to include
                     </p>
                   </div>
                 </label>
               </RadioGroup>
 
-              {formData.categoryMode === "SPECIFIC" && (
+              {/* Sport-specific category picker */}
+              {hasSportSpecificData && formData.categoryMode === "SPECIFIC" && (
+                <>
+                  {loadingSportData ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          {selectedCombos.size} of {eligibilitySet.size} categories selected
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedCombos(new Set(eligibilitySet))}
+                          >
+                            Select All
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedCombos(new Set())}
+                          >
+                            Clear All
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-lg border">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="text-left py-2.5 px-3 font-medium min-w-[180px] sticky left-0 bg-muted/50 z-10">Event</th>
+                              {sportAgeCategories.map((cat) => (
+                                <th key={cat.id} className="text-center py-2.5 px-1 font-medium min-w-[60px]">
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-xs font-semibold">{cat.code}</span>
+                                    <span className="text-[10px] font-normal text-muted-foreground">
+                                      {cat.minAge}-{cat.maxAge ?? "∞"}
+                                    </span>
+                                  </div>
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              const grouped = sportEvents.reduce<Record<string, SportEventEntry[]>>((acc, evt) => {
+                                if (!acc[evt.eventGroup]) acc[evt.eventGroup] = []
+                                acc[evt.eventGroup].push(evt)
+                                return acc
+                              }, {})
+
+                              return Object.entries(grouped).map(([group, events]) => (
+                                <React.Fragment key={group}>
+                                  {/* Group header with select all for this group */}
+                                  <tr className="bg-muted/30">
+                                    <td
+                                      colSpan={1 + sportAgeCategories.length}
+                                      className="py-1.5 px-3"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                          {EVENT_GROUP_LABELS[group] || group}
+                                        </span>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-5 text-[10px] px-2"
+                                          onClick={() => {
+                                            const groupKeys = events.flatMap((evt) =>
+                                              sportAgeCategories
+                                                .filter((cat) => eligibilitySet.has(`${evt.id}:${cat.id}`))
+                                                .map((cat) => `${evt.id}:${cat.id}`)
+                                            )
+                                            const allSelected = groupKeys.every((k) => selectedCombos.has(k))
+                                            setSelectedCombos((prev) => {
+                                              const next = new Set(prev)
+                                              for (const k of groupKeys) {
+                                                if (allSelected) next.delete(k)
+                                                else next.add(k)
+                                              }
+                                              return next
+                                            })
+                                          }}
+                                        >
+                                          Toggle group
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  {events.map((evt) => (
+                                    <tr key={evt.id} className="border-b border-border/40 hover:bg-muted/20">
+                                      <td className="py-1.5 px-3 sticky left-0 bg-background z-10">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-sm">{evt.name}</span>
+                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                                            {evt.resultType}
+                                          </Badge>
+                                        </div>
+                                      </td>
+                                      {sportAgeCategories.map((cat) => {
+                                        const key = `${evt.id}:${cat.id}`
+                                        const eligible = eligibilitySet.has(key)
+                                        const selected = selectedCombos.has(key)
+                                        return (
+                                          <td key={cat.id} className="py-1.5 px-1">
+                                            <div className="flex items-center justify-center">
+                                              {eligible ? (
+                                                <Checkbox
+                                                  checked={selected}
+                                                  onCheckedChange={(checked) => {
+                                                    setSelectedCombos((prev) => {
+                                                      const next = new Set(prev)
+                                                      if (checked) next.add(key)
+                                                      else next.delete(key)
+                                                      return next
+                                                    })
+                                                  }}
+                                                />
+                                              ) : (
+                                                <span className="text-muted-foreground/20 text-xs">&mdash;</span>
+                                              )}
+                                            </div>
+                                          </td>
+                                        )
+                                      })}
+                                    </tr>
+                                  ))}
+                                </React.Fragment>
+                              ))
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Non-sport-specific fallback */}
+              {!hasSportSpecificData && formData.categoryMode === "SPECIFIC" && (
                 <div className="rounded-lg border border-dashed p-6 text-center">
                   <Info className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
                   <p className="text-sm text-muted-foreground">
@@ -1346,214 +1556,185 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
                 Results Configuration
               </CardTitle>
               <CardDescription>
-                Configure how results are tracked and displayed for each category. Set the result type, seed mark requirements, and team event settings.
+                Choose which events require seed marks during registration, and which events will have results recorded.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {loadingCategories ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : formData.categoryResults.length === 0 ? (
+            <CardContent className="space-y-6">
+              {formData.categoryResults.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center">
                   <BarChart3 className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="font-medium text-muted-foreground mb-1">No Categories Available</p>
+                  <p className="font-medium text-muted-foreground mb-1">No Categories Selected</p>
                   <p className="text-sm text-muted-foreground">
-                    Configure categories first, then return here to set up results.
+                    Go back to the Categories step and select events to configure.
                   </p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={fetchCategoryEntries}>
-                    Load Categories
-                  </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {formData.categoryResults.map((cat, index) => (
-                    <div key={index} className="rounded-lg border p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{cat.label}</span>
+                <>
+                  {/* Seed Marks Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold">Seed Marks (Registration)</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Which events should collect a qualifying result during registration?
+                        </p>
                       </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Result Type</Label>
-                          <Select
-                            value={cat.resultType}
-                            onValueChange={(v: ResultType) =>
-                              setFormData(prev => ({
-                                ...prev,
-                                categoryResults: prev.categoryResults.map((c, i) =>
-                                  i === index ? {
-                                    ...c,
-                                    resultType: v,
-                                    sortDirection: v === "TIME" ? "ASC" as SortDir : "DESC" as SortDir,
-                                    precision: v === "SCORE" ? 3 : v === "TIME" ? 3 : 2,
-                                  } : c
-                                ),
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="TIME">Time (ms)</SelectItem>
-                              <SelectItem value="DISTANCE">Distance</SelectItem>
-                              <SelectItem value="HEIGHT">Height</SelectItem>
-                              <SelectItem value="SCORE">Score</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label className="text-xs">Sort</Label>
-                          <Select
-                            value={cat.sortDirection}
-                            onValueChange={(v: SortDir) =>
-                              setFormData(prev => ({
-                                ...prev,
-                                categoryResults: prev.categoryResults.map((c, i) =>
-                                  i === index ? { ...c, sortDirection: v } : c
-                                ),
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ASC">Lower is better</SelectItem>
-                              <SelectItem value="DESC">Higher is better</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label className="text-xs">Precision</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={6}
-                            value={cat.precision}
-                            onChange={e =>
-                              setFormData(prev => ({
-                                ...prev,
-                                categoryResults: prev.categoryResults.map((c, i) =>
-                                  i === index ? { ...c, precision: parseInt(e.target.value) || 0 } : c
-                                ),
-                              }))
-                            }
-                            className="h-8 text-xs"
-                          />
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              categoryResults: prev.categoryResults.map((c) => ({
+                                ...c,
+                                seedMarkRequired: true,
+                                submissionMode: "MANUAL_ENTRY" as SubMode,
+                              })),
+                            }))
+                          }
+                        >
+                          All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              categoryResults: prev.categoryResults.map((c) => ({
+                                ...c,
+                                seedMarkRequired: false,
+                                submissionMode: "NONE" as SubMode,
+                              })),
+                            }))
+                          }
+                        >
+                          None
+                        </Button>
                       </div>
-
-                      <div className="flex flex-wrap items-center gap-4 pt-1">
-                        <label className="flex items-center gap-2 text-xs">
-                          <Switch
-                            className="scale-75"
-                            checked={cat.seedMarkRequired}
-                            onCheckedChange={checked =>
-                              setFormData(prev => ({
-                                ...prev,
-                                categoryResults: prev.categoryResults.map((c, i) =>
-                                  i === index ? {
-                                    ...c,
-                                    seedMarkRequired: checked,
-                                    submissionMode: checked ? "MANUAL_ENTRY" as SubMode : "NONE" as SubMode,
-                                  } : c
-                                ),
-                              }))
-                            }
-                          />
-                          Seed Mark Required
-                        </label>
-
-                        <label className="flex items-center gap-2 text-xs">
-                          <Switch
-                            className="scale-75"
-                            checked={cat.isTeamEvent}
-                            onCheckedChange={checked =>
-                              setFormData(prev => ({
-                                ...prev,
-                                categoryResults: prev.categoryResults.map((c, i) =>
-                                  i === index ? { ...c, isTeamEvent: checked, teamSize: checked ? 4 : null } : c
-                                ),
-                              }))
-                            }
-                          />
-                          Team Event
-                        </label>
-                      </div>
-
-                      {cat.seedMarkRequired && (
-                        <div className="grid grid-cols-2 gap-3 pt-1 border-t">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Submission Mode</Label>
-                            <Select
-                              value={cat.submissionMode}
-                              onValueChange={(v: SubMode) =>
-                                setFormData(prev => ({
-                                  ...prev,
-                                  categoryResults: prev.categoryResults.map((c, i) =>
-                                    i === index ? { ...c, submissionMode: v } : c
-                                  ),
-                                }))
-                              }
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="MANUAL_ENTRY">Manual Entry (admin reviews)</SelectItem>
-                                <SelectItem value="VERIFIED_RESULT">Verified Result (auto-check)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Qualifying Mark</Label>
-                            <Input
-                              type="number"
-                              step="any"
-                              placeholder={cat.resultType === "TIME" ? "e.g., 12500 (ms)" : "e.g., 9.5"}
-                              value={cat.qualifyingMark ?? ""}
-                              onChange={e =>
-                                setFormData(prev => ({
-                                  ...prev,
-                                  categoryResults: prev.categoryResults.map((c, i) =>
-                                    i === index ? { ...c, qualifyingMark: e.target.value ? parseFloat(e.target.value) : null } : c
-                                  ),
-                                }))
-                              }
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {cat.isTeamEvent && (
-                        <div className="pt-1 border-t">
-                          <div className="space-y-1 max-w-[200px]">
-                            <Label className="text-xs">Team Size</Label>
-                            <Input
-                              type="number"
-                              min={2}
-                              value={cat.teamSize ?? ""}
-                              onChange={e =>
-                                setFormData(prev => ({
-                                  ...prev,
-                                  categoryResults: prev.categoryResults.map((c, i) =>
-                                    i === index ? { ...c, teamSize: e.target.value ? parseInt(e.target.value) : null } : c
-                                  ),
-                                }))
-                              }
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  ))}
-                </div>
+
+                    <div className="rounded-lg border divide-y max-h-[300px] overflow-y-auto">
+                      {formData.categoryResults.map((cat, index) => (
+                        <label
+                          key={`seed-${index}`}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors hover:bg-muted/30",
+                            cat.seedMarkRequired && "bg-primary/5"
+                          )}
+                        >
+                          <Checkbox
+                            checked={cat.seedMarkRequired}
+                            onCheckedChange={(checked) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                categoryResults: prev.categoryResults.map((c, i) =>
+                                  i === index
+                                    ? {
+                                        ...c,
+                                        seedMarkRequired: !!checked,
+                                        submissionMode: checked ? "MANUAL_ENTRY" as SubMode : "NONE" as SubMode,
+                                      }
+                                    : c
+                                ),
+                              }))
+                            }
+                          />
+                          <span className="text-sm flex-1">{cat.label}</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                            {cat.resultType}
+                          </Badge>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Record Results Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold">Record Results (Post-Competition)</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Which events will have results recorded after the competition?
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              categoryResults: prev.categoryResults.map((c) => ({
+                                ...c,
+                                collectResults: true,
+                              })),
+                            }))
+                          }
+                        >
+                          All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              categoryResults: prev.categoryResults.map((c) => ({
+                                ...c,
+                                collectResults: false,
+                              })),
+                            }))
+                          }
+                        >
+                          None
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border divide-y max-h-[300px] overflow-y-auto">
+                      {formData.categoryResults.map((cat, index) => (
+                        <label
+                          key={`result-${index}`}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors hover:bg-muted/30",
+                            cat.collectResults && "bg-primary/5"
+                          )}
+                        >
+                          <Checkbox
+                            checked={cat.collectResults}
+                            onCheckedChange={(checked) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                categoryResults: prev.categoryResults.map((c, i) =>
+                                  i === index ? { ...c, collectResults: !!checked } : c
+                                ),
+                              }))
+                            }
+                          />
+                          <span className="text-sm flex-1">{cat.label}</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                            {cat.resultType}
+                          </Badge>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground">
+                    <p>
+                      <strong>{formData.categoryResults.filter((c) => c.seedMarkRequired).length}</strong> events will collect seed marks during registration.
+                      {" "}
+                      <strong>{formData.categoryResults.filter((c) => c.collectResults).length}</strong> events will record results.
+                    </p>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
