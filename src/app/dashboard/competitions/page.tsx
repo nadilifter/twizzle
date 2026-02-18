@@ -24,10 +24,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import {
-  Plus, Search, CalendarDays, Clock, MapPin, Trophy, Loader2, AlertCircle, Users, Trash2, Radio,
+  Plus, Search, CalendarDays, Clock, MapPin, Trophy, Loader2, AlertCircle, Users, Trash2, Radio, Settings,
 } from "lucide-react"
 import { format, formatDistanceToNow, isPast, isFuture } from "date-fns"
 import { toast } from "sonner"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { CompetitionConfiguration } from "./competition-configuration"
 
 const COMPETITION_TYPE_LABELS: Record<string, string> = {
   GYMNASTICS: "Gymnastics",
@@ -91,6 +93,8 @@ export default function CompetitionsPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [searchTerm, setSearchTerm] = React.useState("")
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const [isEditOpen, setIsEditOpen] = React.useState(false)
+  const [selectedCompetition, setSelectedCompetition] = React.useState<Competition | null>(null)
 
   const fetchCompetitions = React.useCallback(async () => {
     try {
@@ -133,6 +137,11 @@ export default function CompetitionsPage() {
     } finally {
       setDeletingId(null)
     }
+  }
+
+  const handleEditCompetition = (competition: Competition) => {
+    setSelectedCompetition(competition)
+    setIsEditOpen(true)
   }
 
   const filtered = React.useMemo(() => {
@@ -189,6 +198,35 @@ export default function CompetitionsPage() {
           <p>{error}</p>
         </div>
       )}
+
+      <Sheet
+        open={isEditOpen}
+        onOpenChange={(open) => {
+          setIsEditOpen(open)
+          if (!open) {
+            setSelectedCompetition(null)
+          }
+        }}
+      >
+        <SheetContent className="sm:max-w-2xl p-0">
+          {selectedCompetition ? (
+            <CompetitionConfiguration
+              competitionId={selectedCompetition.id}
+              onClose={() => {
+                setIsEditOpen(false)
+                setSelectedCompetition(null)
+              }}
+              onUpdated={async () => {
+                await fetchCompetitions()
+              }}
+            />
+          ) : (
+            <div className="p-6">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {!isLoading && !error && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -316,6 +354,15 @@ export default function CompetitionsPage() {
                     <Link href={`/dashboard/competitions/${competition.id}`}>
                       View Details
                     </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleEditCompetition(competition)}
+                    title="Edit competition"
+                  >
+                    <Settings className="h-4 w-4" />
                   </Button>
                   {isDraft && (
                     <AlertDialog>

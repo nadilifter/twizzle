@@ -199,6 +199,9 @@ interface CompetitionFormData {
 
 interface CompetitionStepperProps {
   competitionId?: string | null
+  embedded?: boolean
+  onSaved?: (competition: any) => void
+  onCancel?: () => void
 }
 
 
@@ -211,7 +214,7 @@ const { useStepper } = defineStepper(
   { id: "confirmation", title: "Confirmation" },
 )
 
-export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
+export function CompetitionStepper({ competitionId, embedded = false, onSaved, onCancel }: CompetitionStepperProps) {
   const router = useRouter()
   const isEditing = !!competitionId
   const { isFeatureEnabled } = useFeatures()
@@ -805,8 +808,13 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
         throw new Error(data.error || "Failed to save competition")
       }
 
+      const savedCompetition = await response.json()
       toast.success(isEditing ? "Competition updated!" : "Competition created!")
-      router.push("/dashboard/competitions")
+      if (onSaved) {
+        onSaved(savedCompetition)
+      } else {
+        router.push("/dashboard/competitions")
+      }
     } catch (error) {
       console.error("Failed to save competition:", error)
       toast.error(error instanceof Error ? error.message : "Failed to save competition. Please try again.")
@@ -2407,9 +2415,15 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/dashboard/competitions")}
+            onClick={() => {
+              if (onCancel) {
+                onCancel()
+                return
+              }
+              router.push("/dashboard/competitions")
+            }}
           >
-            Cancel
+            {embedded ? "Close" : "Cancel"}
           </Button>
 
           <div className="flex items-center gap-2">
