@@ -36,22 +36,54 @@ const COMPETITION_TYPE_LABELS: Record<string, string> = {
   TRACK_AND_FIELD: "Track & Field",
 }
 
-const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+const PUBLISH_STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  LIVE: "default",
+  DRAFT: "secondary",
+  SCHEDULED: "outline",
+  CLOSED: "outline",
+  COMPLETED: "outline",
+}
+
+const PUBLISH_STATUS_LABELS: Record<string, string> = {
+  LIVE: "Live",
+  DRAFT: "Draft",
+  SCHEDULED: "Scheduled",
+  CLOSED: "Closed",
+  COMPLETED: "Completed",
+}
+
+const FALLBACK_STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   REGISTRATION_OPEN: "default",
   PUBLISHED: "default",
   DRAFT: "secondary",
+  REGISTRATION_CLOSED: "outline",
   IN_PROGRESS: "default",
   COMPLETED: "outline",
   CANCELLED: "destructive",
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  REGISTRATION_OPEN: "Open",
-  PUBLISHED: "Published",
+const FALLBACK_STATUS_LABELS: Record<string, string> = {
+  REGISTRATION_OPEN: "Live",
+  PUBLISHED: "Live",
   DRAFT: "Draft",
+  REGISTRATION_CLOSED: "Closed",
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
+}
+
+function getStatusLabel(competition: Competition): string {
+  if (competition.publishStatus && PUBLISH_STATUS_LABELS[competition.publishStatus]) {
+    return PUBLISH_STATUS_LABELS[competition.publishStatus]
+  }
+  return FALLBACK_STATUS_LABELS[competition.status] || competition.status
+}
+
+function getStatusVariant(competition: Competition): "default" | "secondary" | "outline" | "destructive" {
+  if (competition.publishStatus && PUBLISH_STATUS_VARIANTS[competition.publishStatus]) {
+    return PUBLISH_STATUS_VARIANTS[competition.publishStatus]
+  }
+  return FALLBACK_STATUS_VARIANTS[competition.status] || "secondary"
 }
 
 function formatPrice(price: number | string | null | undefined): string {
@@ -236,10 +268,9 @@ export default function CompetitionsPage() {
               : [competition.city, competition.stateProvince].filter(Boolean).join(", ")
             const entryCount = competition._count?.entries ?? 0
             const categoryCount = competition.categories?.length ?? 0
-            const isDraft = competition.status === "DRAFT"
+            const isDraft = competition.publishStatus === "DRAFT" || (!competition.publishStatus && competition.status === "DRAFT")
 
-            // Registration timing info
-            const isOpen = competition.status === "REGISTRATION_OPEN"
+            const isOpen = competition.publishStatus === "LIVE" || (!competition.publishStatus && competition.status === "REGISTRATION_OPEN")
             const startDate = new Date(competition.startDate)
             const hasScheduledGoLive = competition.publishStatus === "SCHEDULED" && competition.scheduledGoLiveDate
             const scheduledDate = hasScheduledGoLive ? new Date(competition.scheduledGoLiveDate!) : null
@@ -253,10 +284,10 @@ export default function CompetitionsPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <Badge
-                        variant={STATUS_VARIANTS[competition.status] || "secondary"}
+                        variant={getStatusVariant(competition)}
                         className="text-[10px]"
                       >
-                        {STATUS_LABELS[competition.status] || competition.status}
+                        {getStatusLabel(competition)}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground">
                         {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}

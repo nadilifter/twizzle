@@ -19,7 +19,6 @@ export default async function CompetitionsPage({ params }: { params: { slug: str
   const competitions = await db.competition.findMany({
     where: {
       organizationId: config.organizationId,
-      status: "REGISTRATION_OPEN",
       publishStatus: "LIVE",
     },
     include: {

@@ -162,6 +162,11 @@ const navItems = [
     icon: Trophy,
   },
   {
+    title: "Competitions",
+    url: "/superadmin/competitions",
+    icon: Trophy,
+  },
+  {
     title: "Competition Categories",
     url: "/superadmin/competition-categories",
     icon: Layers,

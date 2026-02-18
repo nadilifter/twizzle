@@ -44,7 +44,6 @@ export default async function CompetitionDetailPage({
   if (
     !competition ||
     competition.organizationId !== config.organizationId ||
-    competition.status !== "REGISTRATION_OPEN" ||
     competition.publishStatus !== "LIVE"
   ) {
     return notFound()

@@ -113,7 +113,7 @@ const updateCompetitionSchema = z.object({
   waiverRequirementIds: z.array(z.string()).optional(),
   hasMedicalRequirement: z.boolean().optional(),
 
-  publishStatus: z.string().optional(),
+  publishStatus: z.enum(["DRAFT", "LIVE", "SCHEDULED", "CLOSED", "COMPLETED"]).optional(),
   scheduledGoLiveDate: z.string().or(z.date()).nullable().optional(),
   scheduledGoLiveTime: z.string().optional(),
 })
@@ -178,7 +178,28 @@ export async function PATCH(
     if (data.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = data.hasWaiverRestriction
     if (data.waiverRequirementIds !== undefined) updateData.waiverRequirementIds = data.waiverRequirementIds
     if (data.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = data.hasMedicalRequirement
-    if (data.publishStatus !== undefined) updateData.publishStatus = data.publishStatus
+    if (data.publishStatus !== undefined) {
+      const currentPublishStatus = existing.publishStatus
+      if (currentPublishStatus === "LIVE" && data.publishStatus === "DRAFT") {
+        return NextResponse.json(
+          { error: "Cannot move a live competition back to draft" },
+          { status: 400 }
+        )
+      }
+
+      updateData.publishStatus = data.publishStatus
+
+      const statusMap: Record<string, string> = {
+        DRAFT: "DRAFT",
+        LIVE: "REGISTRATION_OPEN",
+        SCHEDULED: "DRAFT",
+        CLOSED: "REGISTRATION_CLOSED",
+        COMPLETED: "COMPLETED",
+      }
+      if (statusMap[data.publishStatus]) {
+        updateData.status = statusMap[data.publishStatus]
+      }
+    }
     if (data.scheduledGoLiveDate !== undefined) updateData.scheduledGoLiveDate = data.scheduledGoLiveDate ? new Date(data.scheduledGoLiveDate) : null
     if (data.scheduledGoLiveTime !== undefined) updateData.scheduledGoLiveTime = data.scheduledGoLiveTime
 

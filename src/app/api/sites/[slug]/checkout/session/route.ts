@@ -414,7 +414,7 @@ export async function POST(
           );
         }
 
-        if (competition.status !== "REGISTRATION_OPEN") {
+        if (competition.publishStatus !== "LIVE") {
           return NextResponse.json(
             { error: `Competition "${competition.name}" is not open for registration.` },
             { status: 400 }

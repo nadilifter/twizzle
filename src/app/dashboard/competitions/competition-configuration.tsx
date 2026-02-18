@@ -55,7 +55,7 @@ function sportSlugToCompetitionType(slug: string): string {
   return slug.toUpperCase().replace(/-/g, "_")
 }
 
-type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED"
+type PublishStatus = "LIVE" | "DRAFT" | "SCHEDULED" | "CLOSED" | "COMPLETED"
 
 interface Level {
   id: string
@@ -203,6 +203,7 @@ export function CompetitionConfiguration({
   const [activeTab, setActiveTab] = useState("general")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [initialPublishStatus, setInitialPublishStatus] = useState<PublishStatus>("DRAFT")
 
   // Data states
   const [levels, setLevels] = useState<Level[]>([])
@@ -332,6 +333,9 @@ export function CompetitionConfiguration({
           }
         }
 
+        const loadedPublishStatus: PublishStatus = compData.publishStatus || "DRAFT"
+        setInitialPublishStatus(loadedPublishStatus)
+
         setFormData({
           name: compData.name || "",
           competitionType: compData.competitionType || null,
@@ -363,7 +367,7 @@ export function CompetitionConfiguration({
           entryFee: compData.entryFee != null ? (typeof compData.entryFee === "string" ? parseFloat(compData.entryFee) : compData.entryFee) : null,
           pricingTiers,
           categoryPrices,
-          publishStatus: compData.publishStatus || "DRAFT",
+          publishStatus: loadedPublishStatus,
           scheduledGoLiveDate: compData.scheduledGoLiveDate ? new Date(compData.scheduledGoLiveDate) : null,
           scheduledGoLiveTime: compData.scheduledGoLiveTime || "09:00",
         })
@@ -980,45 +984,118 @@ export function CompetitionConfiguration({
 
           {/* PUBLISHING TAB */}
           <TabsContent value="publishing" className="mt-0 space-y-6 max-w-2xl">
-            <RadioGroup 
-                value={formData.publishStatus}
-                onValueChange={(val: any) => setFormData(prev => ({ ...prev, publishStatus: val }))}
-                className="space-y-3"
-            >
-                <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "DRAFT" && "border-primary")}>
-                    <RadioGroupItem value="DRAFT" />
-                    <div>
-                        <div className="font-medium">Draft</div>
-                        <div className="text-xs text-muted-foreground">Hidden from public</div>
-                    </div>
-                </label>
-                <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "LIVE" && "border-primary")}>
-                    <RadioGroupItem value="LIVE" />
-                    <div>
-                        <div className="font-medium">Live</div>
-                        <div className="text-xs text-muted-foreground">Visible and open</div>
-                    </div>
-                </label>
-                <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "SCHEDULED" && "border-primary")}>
-                    <RadioGroupItem value="SCHEDULED" />
-                    <div>
-                        <div className="font-medium">Scheduled</div>
-                        <div className="text-xs text-muted-foreground">Go live at specific time</div>
-                    </div>
-                </label>
-            </RadioGroup>
+            {initialPublishStatus === "LIVE" ? (
+              <>
+                <p className="text-sm text-muted-foreground">This competition is currently live. You can close registration or mark it as completed.</p>
+                <RadioGroup 
+                    value={formData.publishStatus}
+                    onValueChange={(val: any) => setFormData(prev => ({ ...prev, publishStatus: val }))}
+                    className="space-y-3"
+                >
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "LIVE" && "border-primary")}>
+                        <RadioGroupItem value="LIVE" />
+                        <div>
+                            <div className="font-medium">Live</div>
+                            <div className="text-xs text-muted-foreground">Visible and open for registration</div>
+                        </div>
+                    </label>
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "CLOSED" && "border-primary")}>
+                        <RadioGroupItem value="CLOSED" />
+                        <div>
+                            <div className="font-medium">Closed</div>
+                            <div className="text-xs text-muted-foreground">Registration closed, competition still visible</div>
+                        </div>
+                    </label>
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "COMPLETED" && "border-primary")}>
+                        <RadioGroupItem value="COMPLETED" />
+                        <div>
+                            <div className="font-medium">Completed</div>
+                            <div className="text-xs text-muted-foreground">Competition is finished</div>
+                        </div>
+                    </label>
+                </RadioGroup>
+              </>
+            ) : (initialPublishStatus === "CLOSED" || initialPublishStatus === "COMPLETED") ? (
+              <>
+                <p className="text-sm text-muted-foreground">This competition has been {initialPublishStatus === "CLOSED" ? "closed" : "completed"}. You can change its final status below.</p>
+                <RadioGroup 
+                    value={formData.publishStatus}
+                    onValueChange={(val: any) => setFormData(prev => ({ ...prev, publishStatus: val }))}
+                    className="space-y-3"
+                >
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "CLOSED" && "border-primary")}>
+                        <RadioGroupItem value="CLOSED" />
+                        <div>
+                            <div className="font-medium">Closed</div>
+                            <div className="text-xs text-muted-foreground">Registration closed, competition still visible</div>
+                        </div>
+                    </label>
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "COMPLETED" && "border-primary")}>
+                        <RadioGroupItem value="COMPLETED" />
+                        <div>
+                            <div className="font-medium">Completed</div>
+                            <div className="text-xs text-muted-foreground">Competition is finished</div>
+                        </div>
+                    </label>
+                </RadioGroup>
+              </>
+            ) : (
+              <>
+                <RadioGroup 
+                    value={formData.publishStatus}
+                    onValueChange={(val: any) => setFormData(prev => ({ ...prev, publishStatus: val }))}
+                    className="space-y-3"
+                >
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "DRAFT" && "border-primary")}>
+                        <RadioGroupItem value="DRAFT" />
+                        <div>
+                            <div className="font-medium">Draft</div>
+                            <div className="text-xs text-muted-foreground">Hidden from public</div>
+                        </div>
+                    </label>
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "LIVE" && "border-primary")}>
+                        <RadioGroupItem value="LIVE" />
+                        <div>
+                            <div className="font-medium">Live</div>
+                            <div className="text-xs text-muted-foreground">Visible and open for registration</div>
+                        </div>
+                    </label>
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "SCHEDULED" && "border-primary")}>
+                        <RadioGroupItem value="SCHEDULED" />
+                        <div>
+                            <div className="font-medium">Scheduled</div>
+                            <div className="text-xs text-muted-foreground">Go live at specific time</div>
+                        </div>
+                    </label>
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "CLOSED" && "border-primary")}>
+                        <RadioGroupItem value="CLOSED" />
+                        <div>
+                            <div className="font-medium">Closed</div>
+                            <div className="text-xs text-muted-foreground">Registration closed, competition still visible</div>
+                        </div>
+                    </label>
+                    <label className={cn("flex items-center gap-3 border p-4 rounded-lg cursor-pointer", formData.publishStatus === "COMPLETED" && "border-primary")}>
+                        <RadioGroupItem value="COMPLETED" />
+                        <div>
+                            <div className="font-medium">Completed</div>
+                            <div className="text-xs text-muted-foreground">Competition is finished</div>
+                        </div>
+                    </label>
+                </RadioGroup>
 
-            {formData.publishStatus === "SCHEDULED" && (
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Date</Label>
-                        <Input type="date" value={formData.scheduledGoLiveDate ? format(formData.scheduledGoLiveDate, "yyyy-MM-dd") : ""} onChange={e => setFormData(prev => ({ ...prev, scheduledGoLiveDate: new Date(e.target.value) }))} />
+                {formData.publishStatus === "SCHEDULED" && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Date</Label>
+                            <Input type="date" value={formData.scheduledGoLiveDate ? format(formData.scheduledGoLiveDate, "yyyy-MM-dd") : ""} onChange={e => setFormData(prev => ({ ...prev, scheduledGoLiveDate: new Date(e.target.value) }))} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Time</Label>
+                            <Input type="time" value={formData.scheduledGoLiveTime} onChange={e => setFormData(prev => ({ ...prev, scheduledGoLiveTime: e.target.value }))} />
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label>Time</Label>
-                        <Input type="time" value={formData.scheduledGoLiveTime} onChange={e => setFormData(prev => ({ ...prev, scheduledGoLiveTime: e.target.value }))} />
-                    </div>
-                </div>
+                )}
+              </>
             )}
 
             <div className="pt-2 flex justify-end">
