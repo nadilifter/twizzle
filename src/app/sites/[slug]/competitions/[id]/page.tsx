@@ -87,6 +87,7 @@ export default async function CompetitionDetailPage({
     hasWaiverRestriction: competition.hasWaiverRestriction,
     waiverRequirementIds: competition.waiverRequirementIds,
     hasMedicalRequirement: competition.hasMedicalRequirement,
+    organizationId: competition.organizationId,
     categories: competition.categories.map((cat) => ({
       id: cat.id,
       sportEvent: cat.sportEvent

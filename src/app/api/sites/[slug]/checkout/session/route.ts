@@ -477,8 +477,71 @@ export async function POST(
             activeMembershipIds.includes(id)
           );
           if (!hasRequired) {
+            // Check if a membership purchase is in the cart for this athlete
+            const membershipItems = items.filter((i: CartItem) => i.type === "membership");
+            const membershipInCart = membershipItems.some((m: CartItem) => {
+              const mInstanceId = m.details?.membershipInstanceId || m.referenceId;
+              const mAthleteId = m.athleteId || m.details?.athleteId;
+              return (
+                competition.membershipRequirementIds.includes(mInstanceId) &&
+                mAthleteId === athleteId
+              );
+            });
+            if (!membershipInCart) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" does not have the required membership for "${competition.name}".` },
+                { status: 400 }
+              );
+            }
+          }
+        }
+
+        // Waiver verification for competition
+        if (competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0) {
+          const checkFamily = await db.family.findFirst({
+            where: { email: userDetails.email, organizationId },
+            select: { id: true },
+          });
+
+          if (!checkFamily) {
             return NextResponse.json(
-              { error: `Athlete "${athleteLabel}" does not have the required membership for "${competition.name}".` },
+              { error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.` },
+              { status: 400 }
+            );
+          }
+
+          const acceptances = await db.waiverAcceptance.findMany({
+            where: {
+              familyId: checkFamily.id,
+              waiverId: { in: competition.waiverRequirementIds },
+              athleteId: athleteId || null,
+            },
+            select: { waiverId: true },
+          });
+
+          const signedIds = new Set(acceptances.map((a) => a.waiverId));
+          const unsignedWaivers = competition.waiverRequirementIds.filter(
+            (id) => !signedIds.has(id)
+          );
+
+          if (unsignedWaivers.length > 0) {
+            return NextResponse.json(
+              { error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.` },
+              { status: 400 }
+            );
+          }
+        }
+
+        // Medical info verification for competition
+        if (competition.hasMedicalRequirement) {
+          const medicalInfo = await db.athleteMedicalInfo.findUnique({
+            where: { athleteId },
+            select: { id: true },
+          });
+
+          if (!medicalInfo) {
+            return NextResponse.json(
+              { error: `Medical information is required for athlete ${athleteLabel} for "${competition.name}". Please complete the medical form before proceeding.` },
               { status: 400 }
             );
           }

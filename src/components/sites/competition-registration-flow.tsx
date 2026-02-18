@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSession, signIn } from "next-auth/react"
 import { toast } from "sonner"
 import { calculateAge, isAgeEligible } from "@/lib/age-utils"
@@ -15,7 +15,7 @@ import {
   getStepStatus,
 } from "@/components/ui/stepper"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -27,6 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad"
+import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
+import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
 import {
   User,
   Calendar,
@@ -39,6 +42,10 @@ import {
   Trophy,
   Check,
   Tag,
+  Shield,
+  CreditCard,
+  FileText,
+  Heart,
 } from "lucide-react"
 
 // ---------- Types ----------
@@ -100,8 +107,22 @@ interface CompetitionData {
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
+  organizationId: string
   categories: CompetitionCategory[]
   pricingTiers: PricingTier[]
+}
+
+interface WaiverToSign {
+  waiverId: string
+  waiverTitle: string
+  isSigned: boolean
+}
+
+interface WaiverPage {
+  id: string
+  pageNumber: number
+  title: string | null
+  content: string
 }
 
 interface AthleteOption {
@@ -111,6 +132,23 @@ interface AthleteOption {
   name: string
   birthDate: string | null
   gender: string | null
+}
+
+interface AvailableMembership {
+  id: string
+  name: string
+  price: number
+  billingInterval: string
+  groupId: string
+  groupName: string
+}
+
+interface EligibilityResult {
+  eligible: boolean
+  reasons: string[]
+  eligibleCategoryIds: string[]
+  requiresMembershipPurchase: boolean
+  availableMemberships: AvailableMembership[]
 }
 
 interface CompetitionRegistrationFlowProps {
@@ -124,6 +162,8 @@ interface CompetitionRegistrationFlowProps {
 const { useStepper } = defineStepper(
   { id: "athlete", title: "Select Athlete" },
   { id: "categories", title: "Select Events" },
+  { id: "waivers", title: "Sign Waivers" },
+  { id: "medical", title: "Medical Info" },
   { id: "review", title: "Review & Add to Cart" }
 )
 
@@ -178,14 +218,63 @@ export function CompetitionRegistrationFlow({
 
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null)
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(false)
-  const [eligibilityResult, setEligibilityResult] = useState<{
-    eligible: boolean
-    reasons: string[]
-    eligibleCategoryIds: string[]
-  } | null>(null)
+  const [eligibilityResult, setEligibilityResult] = useState<EligibilityResult | null>(null)
+
+  const [selectedMembership, setSelectedMembership] = useState<AvailableMembership | null>(null)
 
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set())
   const [isAddingToCart, setIsAddingToCart] = useState(false)
+
+  // Waiver state
+  const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([])
+  const [currentWaiverIndex, setCurrentWaiverIndex] = useState(0)
+  const [currentWaiverPages, setCurrentWaiverPages] = useState<WaiverPage[]>([])
+  const [currentPageIndex, setCurrentPageIndex] = useState(0)
+  const [isLoadingWaiver, setIsLoadingWaiver] = useState(false)
+  const [isSigningWaiver, setIsSigningWaiver] = useState(false)
+  const [signatureEmpty, setSignatureEmpty] = useState(true)
+  const [signAllMode, setSignAllMode] = useState(false)
+  const [familyId, setFamilyId] = useState<string | null>(null)
+  const [isCheckingWaivers, setIsCheckingWaivers] = useState(false)
+  const signaturePadRef = useRef<SignaturePadRef>(null)
+
+  // Medical state
+  const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null)
+  const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([])
+  const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false)
+  const [needsMedical, setNeedsMedical] = useState(false)
+
+  // Determine which steps are visible based on competition settings
+  const needsWaivers = competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0
+  const needsMedicalStep = competition.hasMedicalRequirement
+
+  // Ordered step IDs with conditional inclusion
+  const visibleStepIds = useMemo(() => {
+    const ids = ["athlete", "categories"]
+    if (needsWaivers) ids.push("waivers")
+    if (needsMedicalStep) ids.push("medical")
+    ids.push("review")
+    return ids
+  }, [needsWaivers, needsMedicalStep])
+
+  // Navigation helpers that skip invisible steps
+  const getNextStepId = useCallback(
+    (currentId: string): string | null => {
+      const idx = visibleStepIds.indexOf(currentId)
+      if (idx === -1 || idx >= visibleStepIds.length - 1) return null
+      return visibleStepIds[idx + 1]
+    },
+    [visibleStepIds]
+  )
+
+  const getPreviousStepId = useCallback(
+    (currentId: string): string | null => {
+      const idx = visibleStepIds.indexOf(currentId)
+      if (idx <= 0) return null
+      return visibleStepIds[idx - 1]
+    },
+    [visibleStepIds]
+  )
 
   // Fetch athletes on mount (if signed in)
   useEffect(() => {
@@ -267,6 +356,7 @@ export function CompetitionRegistrationFlow({
   const handleSelectAthlete = async (athlete: AthleteOption) => {
     setSelectedAthlete(athlete)
     setEligibilityResult(null)
+    setSelectedMembership(null)
     setSelectedCategoryIds(new Set())
     setIsCheckingEligibility(true)
 
@@ -284,10 +374,15 @@ export function CompetitionRegistrationFlow({
         throw new Error("Failed to check eligibility")
       }
 
-      const result = await response.json()
+      const result: EligibilityResult = await response.json()
       setEligibilityResult(result)
 
       if (result.eligible) {
+        // Auto-select membership if only one option
+        if (result.requiresMembershipPurchase && result.availableMemberships.length === 1) {
+          setSelectedMembership(result.availableMemberships[0])
+        }
+
         toast.success(
           `${athlete.firstName} is eligible! ${result.eligibleCategoryIds.length} event${result.eligibleCategoryIds.length !== 1 ? "s" : ""} available.`
         )
@@ -388,12 +483,268 @@ export function CompetitionRegistrationFlow({
     })
   }, [])
 
+  // ---------- Waiver helpers ----------
+
+  const loadWaiverContent = useCallback(
+    async (waiverId: string) => {
+      setIsLoadingWaiver(true)
+      try {
+        const response = await fetch(
+          `/api/public/waivers/${waiverId}?organizationId=${competition.organizationId}`
+        )
+        if (response.ok) {
+          const data = await response.json()
+          setCurrentWaiverPages(data.pages || [])
+          setCurrentPageIndex(0)
+        }
+      } catch (error) {
+        console.error("Failed to load waiver:", error)
+      } finally {
+        setIsLoadingWaiver(false)
+      }
+    },
+    [competition.organizationId]
+  )
+
+  const handleEnterWaiversStep = useCallback(async () => {
+    if (!selectedAthlete || !session?.user?.email) return
+    setIsCheckingWaivers(true)
+
+    try {
+      const checkResponse = await fetch("/api/public/waivers/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: session.user.email,
+          waiverIds: competition.waiverRequirementIds,
+          organizationId: competition.organizationId,
+          athleteId: selectedAthlete.id,
+        }),
+      })
+
+      if (!checkResponse.ok) throw new Error("Failed to check waiver status")
+
+      const checkData = await checkResponse.json()
+      setFamilyId(checkData.familyId)
+
+      const stillUnsigned: WaiverToSign[] = (checkData.data || []).filter(
+        (w: WaiverToSign) => !w.isSigned
+      )
+
+      if (stillUnsigned.length === 0) {
+        // All waivers already signed -- skip to next step
+        const nextId = getNextStepId("waivers")
+        if (nextId) stepper.navigation.goTo(nextId as any)
+        return
+      }
+
+      setRequiredWaivers(stillUnsigned)
+      setCurrentWaiverIndex(0)
+      setSignAllMode(false)
+      signaturePadRef.current?.clear()
+      setSignatureEmpty(true)
+      await loadWaiverContent(stillUnsigned[0].waiverId)
+    } catch (error) {
+      console.error("Failed to check waivers:", error)
+      toast.error("Failed to check waiver requirements. Please try again.")
+    } finally {
+      setIsCheckingWaivers(false)
+    }
+  }, [
+    selectedAthlete,
+    session?.user?.email,
+    competition.waiverRequirementIds,
+    competition.organizationId,
+    getNextStepId,
+    loadWaiverContent,
+    stepper.navigation,
+  ])
+
+  const handleSignCurrentPage = useCallback(async () => {
+    if (signaturePadRef.current?.isEmpty()) {
+      toast.error("Please provide your signature")
+      return
+    }
+
+    const signatureData = signaturePadRef.current!.toDataURL()
+    setIsSigningWaiver(true)
+
+    try {
+      const currentWaiver = requiredWaivers[currentWaiverIndex]
+
+      const pagesToSign = signAllMode
+        ? currentWaiverPages.map((page) => ({
+            waiverPageId: page.id,
+            signatureData,
+          }))
+        : [
+            {
+              waiverPageId: currentWaiverPages[currentPageIndex].id,
+              signatureData,
+            },
+          ]
+
+      const response = await fetch(
+        `/api/public/waivers/${currentWaiver.waiverId}/sign`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            organizationId: competition.organizationId,
+            familyId,
+            athleteId: selectedAthlete?.id || null,
+            email: session?.user?.email,
+            name: session?.user?.name || "",
+            signatures: pagesToSign,
+          }),
+        }
+      )
+
+      if (!response.ok) throw new Error("Failed to sign waiver")
+
+      const result = await response.json()
+      setFamilyId(result.familyId)
+
+      if (result.allPagesSigned || signAllMode) {
+        toast.success(`"${currentWaiver.waiverTitle}" signed successfully`)
+
+        if (currentWaiverIndex < requiredWaivers.length - 1) {
+          const nextIndex = currentWaiverIndex + 1
+          setCurrentWaiverIndex(nextIndex)
+          setSignAllMode(false)
+          signaturePadRef.current?.clear()
+          setSignatureEmpty(true)
+          await loadWaiverContent(requiredWaivers[nextIndex].waiverId)
+        } else {
+          // All waivers signed -- advance to next step
+          const nextId = getNextStepId("waivers")
+          if (nextId) stepper.navigation.goTo(nextId as any)
+        }
+      } else {
+        // More pages to sign for this waiver
+        setCurrentPageIndex((prev) => prev + 1)
+        signaturePadRef.current?.clear()
+        setSignatureEmpty(true)
+      }
+    } catch (error: any) {
+      console.error("Failed to sign waiver:", error)
+      toast.error(error.message || "Failed to sign waiver")
+    } finally {
+      setIsSigningWaiver(false)
+    }
+  }, [
+    requiredWaivers,
+    currentWaiverIndex,
+    currentWaiverPages,
+    currentPageIndex,
+    signAllMode,
+    competition.organizationId,
+    familyId,
+    selectedAthlete?.id,
+    session?.user?.email,
+    session?.user?.name,
+    getNextStepId,
+    loadWaiverContent,
+    stepper.navigation,
+  ])
+
+  // ---------- Medical helpers ----------
+
+  const handleEnterMedicalStep = useCallback(async () => {
+    if (!selectedAthlete) return
+    setIsLoadingMedicalConfig(true)
+
+    try {
+      // Check if athlete already has medical info
+      const medicalCheckResponse = await fetch(
+        `/api/public/athletes/${selectedAthlete.id}/medical?organizationId=${competition.organizationId}&email=${encodeURIComponent(session?.user?.email || "")}`
+      )
+
+      if (medicalCheckResponse.ok) {
+        const existingMedical = await medicalCheckResponse.json()
+        if (existingMedical && existingMedical.id) {
+          // Already has medical info -- skip this step
+          setNeedsMedical(false)
+          const nextId = getNextStepId("medical")
+          if (nextId) stepper.navigation.goTo(nextId as any)
+          return
+        }
+      }
+
+      // Need to collect medical info -- fetch config
+      const configResponse = await fetch(
+        `/api/public/medical-config?organizationId=${competition.organizationId}`
+      )
+
+      if (configResponse.ok) {
+        const configData = await configResponse.json()
+        setMedicalConfig(configData.config)
+        setMedicalCustomQuestions(configData.customQuestions || [])
+        setNeedsMedical(true)
+      }
+    } catch (error) {
+      console.error("Failed to load medical config:", error)
+      toast.error("Failed to load medical form. Please try again.")
+    } finally {
+      setIsLoadingMedicalConfig(false)
+    }
+  }, [
+    selectedAthlete,
+    competition.organizationId,
+    session?.user?.email,
+    getNextStepId,
+    stepper.navigation,
+  ])
+
+  // ---------- Step transition: categories -> next ----------
+
+  const handleProceedFromCategories = useCallback(async () => {
+    const nextId = getNextStepId("categories")
+    if (!nextId) return
+
+    if (nextId === "waivers") {
+      stepper.navigation.goTo("waivers" as any)
+      // The waiver check happens when the step renders (via useEffect)
+    } else if (nextId === "medical") {
+      stepper.navigation.goTo("medical" as any)
+    } else {
+      stepper.navigation.goTo("review" as any)
+    }
+  }, [getNextStepId, stepper.navigation])
+
+  // Membership price for the review/total
+  const membershipPrice = eligibilityResult?.requiresMembershipPurchase && selectedMembership
+    ? selectedMembership.price
+    : 0
+
+  const combinedTotal = calculatedPrice + membershipPrice
+
   const handleAddToCart = () => {
     if (!selectedAthlete || selectedCategoryIds.size === 0) return
 
     setIsAddingToCart(true)
 
     const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim()
+
+    // Add membership to cart first if required
+    if (eligibilityResult?.requiresMembershipPurchase && selectedMembership) {
+      addItem({
+        referenceId: selectedMembership.id,
+        type: "membership",
+        name: selectedMembership.name,
+        description: `${selectedMembership.groupName} Membership`,
+        price: selectedMembership.price,
+        quantity: 1,
+        athleteId: selectedAthlete.id,
+        athleteName,
+        details: {
+          membershipInstanceId: selectedMembership.id,
+          groupId: selectedMembership.groupId,
+          groupName: selectedMembership.groupName,
+          billingInterval: selectedMembership.billingInterval,
+        },
+      })
+    }
 
     const selectedCats = competition.categories.filter((c) =>
       selectedCategoryIds.has(c.id)
@@ -417,6 +768,7 @@ export function CompetitionRegistrationFlow({
         categoryIds: Array.from(selectedCategoryIds),
         pricingMode: competition.pricingMode,
         entryFee: competition.entryFee,
+        requiredMemberships: selectedMembership ? [selectedMembership.id] : [],
       },
     })
 
@@ -425,6 +777,7 @@ export function CompetitionRegistrationFlow({
     // Reset for another registration
     setSelectedAthlete(null)
     setEligibilityResult(null)
+    setSelectedMembership(null)
     setSelectedCategoryIds(new Set())
     stepper.navigation.goTo("athlete")
   }
@@ -450,13 +803,17 @@ export function CompetitionRegistrationFlow({
 
   // ---------- Stepper rendering ----------
 
-  const steps = stepper.state.all
+  const allSteps = stepper.state.all
   const currentStepId = stepper.state.current.data.id
-  const currentIndex = steps.findIndex((s: { id: string }) => s.id === currentStepId)
+
+  // Only show steps that are relevant to this competition
+  const visibleSteps = allSteps.filter((s: { id: string }) => visibleStepIds.includes(s.id))
+  const currentVisibleIndex = visibleSteps.findIndex((s: { id: string }) => s.id === currentStepId)
 
   const canProceedToCategories =
     selectedAthlete !== null &&
-    eligibilityResult?.eligible === true
+    eligibilityResult?.eligible === true &&
+    (!eligibilityResult?.requiresMembershipPurchase || selectedMembership !== null)
 
   const canProceedToReview = selectedCategoryIds.size > 0
 
@@ -473,8 +830,8 @@ export function CompetitionRegistrationFlow({
     <div className="space-y-8">
       {/* Stepper Navigation */}
       <StepperNav>
-        {steps.map((step: { id: string; title: string }, index: number) => {
-          const status = getStepStatus(index, currentIndex)
+        {visibleSteps.map((step: { id: string; title: string }, index: number) => {
+          const status = getStepStatus(index, currentVisibleIndex)
           return (
             <div key={step.id} className="flex items-center flex-1 last:flex-initial">
               <StepperItem status={status}>
@@ -486,7 +843,7 @@ export function CompetitionRegistrationFlow({
                   {step.title}
                 </StepperTitle>
               </StepperItem>
-              {index < steps.length - 1 && (
+              {index < visibleSteps.length - 1 && (
                 <StepperSeparator
                   status={status}
                   className="mx-2"
@@ -652,11 +1009,58 @@ export function CompetitionRegistrationFlow({
                       onClick={() => {
                         setSelectedAthlete(null)
                         setEligibilityResult(null)
+                        setSelectedMembership(null)
                         setSelectedCategoryIds(new Set())
                       }}
                     >
                       Change
                     </Button>
+                  </div>
+                )}
+
+                {/* Membership purchase banner */}
+                {selectedAthlete && eligibilityResult?.eligible && eligibilityResult.requiresMembershipPurchase && (
+                  <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-300">
+                      <Shield className="h-4 w-4 shrink-0" />
+                      Membership Required
+                    </div>
+                    {eligibilityResult.availableMemberships.length === 1 ? (
+                      <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+                        <CreditCard className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          <strong>{eligibilityResult.availableMemberships[0].name}</strong>{" "}
+                          ({formatPrice(eligibilityResult.availableMemberships[0].price)}) will be
+                          added to your cart.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          Select a membership to continue:
+                        </p>
+                        <Select
+                          value={selectedMembership?.id ?? ""}
+                          onValueChange={(value) => {
+                            const membership = eligibilityResult.availableMemberships.find(
+                              (m) => m.id === value
+                            )
+                            setSelectedMembership(membership ?? null)
+                          }}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-background">
+                            <SelectValue placeholder="Choose a membership" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {eligibilityResult.availableMemberships.map((m) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.name} – {formatPrice(m.price)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -870,9 +1274,9 @@ export function CompetitionRegistrationFlow({
                   <Button
                     className="flex-1 gap-2"
                     disabled={!canProceedToReview}
-                    onClick={() => stepper.navigation.goTo("review")}
+                    onClick={handleProceedFromCategories}
                   >
-                    Review Registration
+                    Continue
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -882,7 +1286,55 @@ export function CompetitionRegistrationFlow({
         </Card>
       )}
 
-      {/* Step 3: Review & Add to Cart */}
+      {/* Step: Sign Waivers */}
+      {currentStepId === "waivers" && (
+        <WaiverStep
+          isCheckingWaivers={isCheckingWaivers}
+          isLoadingWaiver={isLoadingWaiver}
+          isSigningWaiver={isSigningWaiver}
+          requiredWaivers={requiredWaivers}
+          currentWaiverIndex={currentWaiverIndex}
+          currentWaiverPages={currentWaiverPages}
+          currentPageIndex={currentPageIndex}
+          signAllMode={signAllMode}
+          signatureEmpty={signatureEmpty}
+          signaturePadRef={signaturePadRef}
+          selectedAthleteName={selectedAthlete?.firstName || ""}
+          onEnterStep={handleEnterWaiversStep}
+          onSign={handleSignCurrentPage}
+          onSetSignAllMode={setSignAllMode}
+          onSetSignatureEmpty={setSignatureEmpty}
+          onBack={() => {
+            const prevId = getPreviousStepId("waivers")
+            if (prevId) stepper.navigation.goTo(prevId as any)
+          }}
+        />
+      )}
+
+      {/* Step: Medical Info */}
+      {currentStepId === "medical" && (
+        <MedicalStep
+          isLoadingConfig={isLoadingMedicalConfig}
+          needsMedical={needsMedical}
+          medicalConfig={medicalConfig}
+          medicalCustomQuestions={medicalCustomQuestions}
+          organizationId={competition.organizationId}
+          athleteId={selectedAthlete?.id || ""}
+          athleteName={`${selectedAthlete?.firstName || ""} ${selectedAthlete?.lastName || ""}`.trim()}
+          email={session?.user?.email || ""}
+          onEnterStep={handleEnterMedicalStep}
+          onComplete={() => {
+            const nextId = getNextStepId("medical")
+            if (nextId) stepper.navigation.goTo(nextId as any)
+          }}
+          onBack={() => {
+            const prevId = getPreviousStepId("medical")
+            if (prevId) stepper.navigation.goTo(prevId as any)
+          }}
+        />
+      )}
+
+      {/* Step: Review & Add to Cart */}
       {currentStepId === "review" && (
         <Card>
           <CardHeader>
@@ -932,6 +1384,24 @@ export function CompetitionRegistrationFlow({
                 </div>
               </div>
 
+              {/* Membership (if required) */}
+              {eligibilityResult?.requiresMembershipPurchase && selectedMembership && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Required Membership
+                  </h3>
+                  <div className="flex items-center justify-between p-2 rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      <span className="text-sm">{selectedMembership.name}</span>
+                    </div>
+                    <span className="text-sm font-medium">
+                      {formatPrice(selectedMembership.price)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Price Breakdown */}
               <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -948,9 +1418,19 @@ export function CompetitionRegistrationFlow({
                   </span>
                   <span className="font-medium">{formatPrice(calculatedPrice)}</span>
                 </div>
+                {eligibilityResult?.requiresMembershipPurchase && selectedMembership && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {selectedMembership.name} (Membership)
+                    </span>
+                    <span className="font-medium">
+                      {formatPrice(selectedMembership.price)}
+                    </span>
+                  </div>
+                )}
                 <div className="border-t pt-2 flex items-center justify-between">
                   <span className="font-semibold">Total</span>
-                  <span className="text-lg font-bold">{formatPrice(calculatedPrice)}</span>
+                  <span className="text-lg font-bold">{formatPrice(combinedTotal)}</span>
                 </div>
               </div>
 
@@ -958,7 +1438,10 @@ export function CompetitionRegistrationFlow({
               <div className="flex gap-2 pt-2">
                 <Button
                   variant="outline"
-                  onClick={() => stepper.navigation.goTo("categories")}
+                  onClick={() => {
+                    const prevId = getPreviousStepId("review")
+                    if (prevId) stepper.navigation.goTo(prevId as any)
+                  }}
                   className="gap-2"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -982,5 +1465,242 @@ export function CompetitionRegistrationFlow({
         </Card>
       )}
     </div>
+  )
+}
+
+// ---------- Waiver Step Sub-component ----------
+
+function WaiverStep({
+  isCheckingWaivers,
+  isLoadingWaiver,
+  isSigningWaiver,
+  requiredWaivers,
+  currentWaiverIndex,
+  currentWaiverPages,
+  currentPageIndex,
+  signAllMode,
+  signatureEmpty,
+  signaturePadRef,
+  selectedAthleteName,
+  onEnterStep,
+  onSign,
+  onSetSignAllMode,
+  onSetSignatureEmpty,
+  onBack,
+}: {
+  isCheckingWaivers: boolean
+  isLoadingWaiver: boolean
+  isSigningWaiver: boolean
+  requiredWaivers: WaiverToSign[]
+  currentWaiverIndex: number
+  currentWaiverPages: WaiverPage[]
+  currentPageIndex: number
+  signAllMode: boolean
+  signatureEmpty: boolean
+  signaturePadRef: React.RefObject<SignaturePadRef>
+  selectedAthleteName: string
+  onEnterStep: () => void
+  onSign: () => void
+  onSetSignAllMode: (v: boolean) => void
+  onSetSignatureEmpty: (v: boolean) => void
+  onBack: () => void
+}) {
+  // Trigger waiver check when step mounts
+  useEffect(() => {
+    onEnterStep()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (isCheckingWaivers) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Checking waiver requirements...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (requiredWaivers.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Check className="h-8 w-8 text-primary mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">All waivers have been signed.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Waiver Required
+          <span className="text-sm font-normal text-muted-foreground">
+            — for {selectedAthleteName}
+          </span>
+        </CardTitle>
+        <CardDescription>
+          Please review and sign the following waiver
+          {requiredWaivers.length > 1 ? "s" : ""} before proceeding.
+          {requiredWaivers.length > 1 && (
+            <span className="block mt-1">
+              Waiver {currentWaiverIndex + 1} of {requiredWaivers.length}:{" "}
+              <strong>{requiredWaivers[currentWaiverIndex]?.waiverTitle}</strong>
+            </span>
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {isLoadingWaiver ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            {/* Page indicator */}
+            {currentWaiverPages.length > 1 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                Page {currentPageIndex + 1} of {currentWaiverPages.length}
+                {currentWaiverPages[currentPageIndex]?.title && (
+                  <span>: {currentWaiverPages[currentPageIndex].title}</span>
+                )}
+              </div>
+            )}
+
+            {/* Waiver content */}
+            <div className="border rounded-lg p-6 max-h-[400px] overflow-y-auto bg-card">
+              <div
+                className="prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: currentWaiverPages[currentPageIndex]?.content || "",
+                }}
+              />
+            </div>
+
+            {/* Sign all option */}
+            {currentWaiverPages.length > 1 && currentPageIndex === 0 && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={signAllMode}
+                  onChange={(e) => onSetSignAllMode(e.target.checked)}
+                  className="rounded border-border"
+                />
+                <span className="text-sm">
+                  Sign all {currentWaiverPages.length} pages at once with a single
+                  signature
+                </span>
+              </label>
+            )}
+
+            {/* Signature pad */}
+            <div className="space-y-2">
+              <Label>Your Signature</Label>
+              <p className="text-sm text-muted-foreground">
+                By signing below, I acknowledge that I have read and agree to the
+                terms above.
+              </p>
+              <SignaturePad
+                ref={signaturePadRef}
+                height={150}
+                onSignatureChange={(isEmpty) => onSetSignatureEmpty(isEmpty)}
+              />
+            </div>
+          </>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button variant="outline" onClick={onBack}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back
+        </Button>
+        <Button
+          onClick={onSign}
+          disabled={isSigningWaiver || signatureEmpty || isLoadingWaiver}
+        >
+          {isSigningWaiver && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {signAllMode
+            ? "Sign All Pages & Continue"
+            : currentPageIndex < currentWaiverPages.length - 1
+            ? "Sign & Next Page"
+            : currentWaiverIndex < requiredWaivers.length - 1
+            ? "Sign & Next Waiver"
+            : "Sign & Continue"}
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+
+// ---------- Medical Step Sub-component ----------
+
+function MedicalStep({
+  isLoadingConfig,
+  needsMedical,
+  medicalConfig,
+  medicalCustomQuestions,
+  organizationId,
+  athleteId,
+  athleteName,
+  email,
+  onEnterStep,
+  onComplete,
+  onBack,
+}: {
+  isLoadingConfig: boolean
+  needsMedical: boolean
+  medicalConfig: MedicalFormConfig | null
+  medicalCustomQuestions: CustomMedicalQuestion[]
+  organizationId: string
+  athleteId: string
+  athleteName: string
+  email: string
+  onEnterStep: () => void
+  onComplete: () => void
+  onBack: () => void
+}) {
+  // Trigger medical check when step mounts
+  useEffect(() => {
+    onEnterStep()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (isLoadingConfig) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Loading medical form...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!needsMedical || !medicalConfig) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Check className="h-8 w-8 text-primary mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Medical information is up to date.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <CheckoutMedicalForm
+      key={athleteId}
+      athleteId={athleteId}
+      athleteName={athleteName}
+      config={medicalConfig}
+      customQuestions={medicalCustomQuestions}
+      organizationId={organizationId}
+      email={email}
+      onComplete={onComplete}
+      onBack={onBack}
+    />
   )
 }

@@ -109,13 +109,81 @@ export async function POST(
     }
 
     // 3. Check competition-level membership restriction
+    let requiresMembershipPurchase = false;
+    let availableMemberships: Array<{
+      id: string;
+      name: string;
+      price: number;
+      billingInterval: string;
+      groupId: string;
+      groupName: string;
+    }> = [];
+
     if (competition.hasMembershipRestriction && competition.membershipRequirementIds.length > 0) {
       const activeMembershipInstanceIds = athlete.memberships.map((m) => m.membershipInstanceId);
       const hasRequired = competition.membershipRequirementIds.some((id) =>
         activeMembershipInstanceIds.includes(id)
       );
+
       if (!hasRequired) {
-        reasons.push("Athlete does not have the required membership for this competition");
+        // Athlete doesn't have the membership -- check if they can purchase one
+        const now = new Date();
+        const instances = await db.membershipInstance.findMany({
+          where: {
+            id: { in: competition.membershipRequirementIds },
+            status: "ACTIVE",
+          },
+          include: {
+            group: {
+              include: {
+                levelRequirements: { select: { levelId: true } },
+              },
+            },
+          },
+        });
+
+        for (const instance of instances) {
+          const group = instance.group;
+
+          // Check purchase window
+          const purchaseStart = instance.purchaseStartDate
+            ?? (group.purchaseWindowDays != null
+              ? new Date(instance.startDate.getTime() - group.purchaseWindowDays * 86400000)
+              : new Date(0));
+          const purchaseEnd = instance.purchaseEndDate ?? instance.endDate;
+          if (now < purchaseStart || now > purchaseEnd) continue;
+
+          // Check gender restriction
+          if (group.hasGenderRestriction && group.allowedGenders.length > 0) {
+            if (!athlete.gender || !group.allowedGenders.includes(athlete.gender)) continue;
+          }
+
+          // Check age restriction
+          if (group.hasAgeRestriction) {
+            if (!isAgeEligible(age, group.minAge, group.maxAge)) continue;
+          }
+
+          // Check level restriction
+          if (group.hasLevelRestriction && group.levelRequirements.length > 0) {
+            const allowedLevelIds = group.levelRequirements.map((lr) => lr.levelId);
+            if (!athlete.level || !allowedLevelIds.includes(athlete.level)) continue;
+          }
+
+          availableMemberships.push({
+            id: instance.id,
+            name: instance.name,
+            price: Number(instance.price),
+            billingInterval: instance.billingInterval,
+            groupId: group.id,
+            groupName: group.name,
+          });
+        }
+
+        if (availableMemberships.length > 0) {
+          requiresMembershipPurchase = true;
+        } else {
+          reasons.push("Athlete does not have the required membership and is not eligible to purchase one");
+        }
       }
     }
 
@@ -125,6 +193,8 @@ export async function POST(
         eligible: false,
         reasons,
         eligibleCategoryIds: [],
+        requiresMembershipPurchase: false,
+        availableMemberships: [],
       });
     }
 
@@ -132,13 +202,11 @@ export async function POST(
     const eligibleCategoryIds: string[] = [];
 
     for (const category of competition.categories) {
-      // Check age category eligibility
       if (category.ageCategory) {
         if (!isAgeEligible(age, category.ageCategory.minAge, category.ageCategory.maxAge)) {
           continue;
         }
       }
-
       eligibleCategoryIds.push(category.id);
     }
 
@@ -146,6 +214,8 @@ export async function POST(
       eligible: true,
       reasons: [],
       eligibleCategoryIds,
+      requiresMembershipPurchase,
+      availableMemberships,
     });
   } catch (error) {
     console.error("Competition Eligibility Error:", error);
