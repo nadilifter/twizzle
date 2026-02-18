@@ -12,23 +12,107 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { DemoDataBanner } from "@/components/demo-data-banner"
 import {
-  Plus, Search, CalendarDays, Clock, MapPin, Trophy,
+  Plus, Search, CalendarDays, Clock, MapPin, Trophy, Loader2, AlertCircle, Users,
 } from "lucide-react"
+import { format } from "date-fns"
 
 const COMPETITION_TYPE_LABELS: Record<string, string> = {
   GYMNASTICS: "Gymnastics",
   TRACK_AND_FIELD: "Track & Field",
 }
 
+const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  REGISTRATION_OPEN: "default",
+  PUBLISHED: "default",
+  DRAFT: "secondary",
+  IN_PROGRESS: "default",
+  COMPLETED: "outline",
+  CANCELLED: "destructive",
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  REGISTRATION_OPEN: "Open",
+  PUBLISHED: "Published",
+  DRAFT: "Draft",
+  IN_PROGRESS: "In Progress",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+}
+
+function formatPrice(price: number | string | null | undefined): string {
+  if (price === null || price === undefined) return "Free"
+  const numPrice = typeof price === "string" ? parseFloat(price) : price
+  if (numPrice === 0) return "Free"
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(numPrice)
+}
+
+interface Competition {
+  id: string
+  name: string
+  competitionType: string
+  status: string
+  startDate: string
+  endDate: string
+  startTime: string
+  endTime: string
+  city?: string | null
+  stateProvince?: string | null
+  pricingMode: string
+  entryFee?: number | string | null
+  facility?: { id: string; name: string; city?: string | null; stateProvince?: string | null } | null
+  _count?: { entries: number; results: number; teams: number }
+  categories?: any[]
+}
+
 export default function CompetitionsPage() {
+  const [competitions, setCompetitions] = React.useState<Competition[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
   const [searchTerm, setSearchTerm] = React.useState("")
+
+  const fetchCompetitions = React.useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const response = await fetch("/api/competitions")
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to fetch competitions")
+      }
+      const data = await response.json()
+      setCompetitions(data)
+    } catch (err) {
+      console.error("Failed to fetch competitions:", err)
+      setError(err instanceof Error ? err.message : "Failed to fetch competitions")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    fetchCompetitions()
+  }, [fetchCompetitions])
+
+  const filtered = React.useMemo(() => {
+    if (!searchTerm.trim()) return competitions
+    const term = searchTerm.toLowerCase()
+    return competitions.filter(
+      (c) =>
+        c.name.toLowerCase().includes(term) ||
+        c.competitionType.toLowerCase().includes(term) ||
+        c.city?.toLowerCase().includes(term) ||
+        c.facility?.name.toLowerCase().includes(term)
+    )
+  }, [competitions, searchTerm])
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <DemoDataBanner />
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Competitions</h1>
@@ -52,24 +136,133 @@ export default function CompetitionsPage() {
             placeholder="Search competitions..."
             className="pl-8"
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Empty state */}
-        <div className="col-span-full flex flex-col items-center justify-center py-12 border rounded-lg border-dashed">
-          <Trophy className="h-10 w-10 text-muted-foreground mb-3" />
-          <p className="text-muted-foreground mb-4">No competitions yet. Create one to get started.</p>
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/competitions/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Create your first competition
-            </Link>
-          </Button>
+      {isLoading && competitions.length === 0 && (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-center h-64 text-destructive">
+          <AlertCircle className="mr-2 h-6 w-6" />
+          <p>{error}</p>
+        </div>
+      )}
+
+      {!isLoading && !error && (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((competition) => {
+            const location = competition.facility
+              ? `${competition.facility.name}${competition.facility.city ? `, ${competition.facility.city}` : ""}`
+              : [competition.city, competition.stateProvince].filter(Boolean).join(", ")
+            const entryCount = competition._count?.entries ?? 0
+            const categoryCount = competition.categories?.length ?? 0
+
+            return (
+              <Card key={competition.id} className="flex flex-col">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1.5 min-w-0">
+                      <CardTitle className="leading-tight">{competition.name}</CardTitle>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge
+                        variant={STATUS_VARIANTS[competition.status] || "secondary"}
+                        className="text-[10px]"
+                      >
+                        {STATUS_LABELS[competition.status] || competition.status}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground">
+                        {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}
+                      </span>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 pb-3">
+                  <div className="space-y-1.5">
+                    {/* Dates */}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      <span>
+                        {format(new Date(competition.startDate), "MMM d, yyyy")}
+                        {competition.endDate && competition.endDate !== competition.startDate && (
+                          <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Time */}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{competition.startTime} &ndash; {competition.endTime}</span>
+                    </div>
+
+                    {/* Location */}
+                    {location && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span>{location}</span>
+                      </div>
+                    )}
+
+                    {/* Price */}
+                    {competition.pricingMode !== "FREE" && (
+                      <div className="flex items-center gap-1.5 text-xs font-medium">
+                        <span className="text-muted-foreground">$</span>
+                        <span>{formatPrice(competition.entryFee)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tags */}
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {categoryCount > 0 && (
+                      <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded-full">
+                        <Trophy className="h-3 w-3" />
+                        {categoryCount} {categoryCount === 1 ? "category" : "categories"}
+                      </div>
+                    )}
+                    {entryCount > 0 && (
+                      <div className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded-full">
+                        <Users className="h-3 w-3" />
+                        {entryCount} {entryCount === 1 ? "entry" : "entries"}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t pt-3 gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" asChild>
+                    <Link href={`/dashboard/competitions/${competition.id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            )
+          })}
+          {filtered.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center py-12 border rounded-lg border-dashed">
+              <Trophy className="h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground mb-4">
+                {searchTerm ? "No competitions match your search." : "No competitions yet. Create one to get started."}
+              </p>
+              {!searchTerm && (
+                <Button variant="outline" asChild>
+                  <Link href="/dashboard/competitions/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create your first competition
+                  </Link>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

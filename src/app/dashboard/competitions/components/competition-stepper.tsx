@@ -294,7 +294,119 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   })
 
   const [isSaving, setIsSaving] = React.useState(false)
+  const [loadingCompetition, setLoadingCompetition] = React.useState(!!competitionId)
   const stepper = useStepper()
+
+  // Fetch existing competition data when editing
+  React.useEffect(() => {
+    if (!competitionId) return
+    const fetchCompetition = async () => {
+      try {
+        const response = await fetch(`/api/competitions/${competitionId}`)
+        if (!response.ok) {
+          toast.error("Failed to load competition")
+          return
+        }
+        const data = await response.json()
+
+        // Build categoryResults from the API categories
+        const categoryResults: CategoryResultConfig[] = (data.categories || []).map((cat: any) => ({
+          combinationEntryId: cat.combinationEntryId || null,
+          individualEntryId: cat.individualEntryId || null,
+          sportEventId: cat.sportEventId || null,
+          ageCategoryId: cat.ageCategoryId || null,
+          label: [cat.sportEvent?.name, cat.ageCategory?.code].filter(Boolean).join(" - ") || cat.id,
+          resultType: cat.resultType || "TIME",
+          sortDirection: cat.sortDirection || "ASC",
+          precision: cat.precision ?? 3,
+          seedMarkRequired: cat.seedMarkRequired ?? false,
+          submissionMode: cat.submissionMode || "NONE",
+          qualifyingMark: cat.qualifyingMark ?? null,
+          isTeamEvent: cat.isTeamEvent ?? false,
+          teamSize: cat.teamSize ?? null,
+          collectResults: true,
+        }))
+
+        // Rebuild selectedCombos from categories
+        const combos = new Set<string>()
+        for (const cat of data.categories || []) {
+          if (cat.sportEventId && cat.ageCategoryId) {
+            combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`)
+          }
+        }
+        setSelectedCombos(combos)
+
+        // Build pricing tiers
+        const pricingTiers = (data.pricingTiers || []).length > 0
+          ? data.pricingTiers.map((t: any) => ({
+              minEvents: t.minEvents,
+              maxEvents: t.maxEvents ?? null,
+              pricePerEvent: typeof t.pricePerEvent === "string" ? parseFloat(t.pricePerEvent) : t.pricePerEvent,
+            }))
+          : [{ minEvents: 1, maxEvents: 3, pricePerEvent: 20 }, { minEvents: 4, maxEvents: null, pricePerEvent: 15 }]
+
+        // Build per-category prices from categories that have a price
+        const categoryPrices: Record<string, number> = {}
+        for (const cat of data.categories || []) {
+          if (cat.price != null) {
+            const key = cat.sportEventId && cat.ageCategoryId
+              ? `${cat.sportEventId}:${cat.ageCategoryId}`
+              : cat.combinationEntryId || cat.individualEntryId || ""
+            if (key) {
+              categoryPrices[key] = typeof cat.price === "string" ? parseFloat(cat.price) : cat.price
+            }
+          }
+        }
+
+        setFormData({
+          name: data.name || "",
+          competitionType: data.competitionType || null,
+          facilityId: data.facilityId || null,
+          country: data.country || "",
+          stateProvince: data.stateProvince || "",
+          city: data.city || "",
+          streetAddress: data.streetAddress || "",
+          startDate: data.startDate ? new Date(data.startDate) : null,
+          endDate: data.endDate ? new Date(data.endDate) : null,
+          startTime: data.startTime || "09:00",
+          endTime: data.endTime || "17:00",
+
+          categoryMode: data.categoryMode || "ALL",
+          selectedCategoryIds: [],
+
+          hasLevelRestriction: data.hasLevelRestriction ?? false,
+          levelRequirementIds: data.levelRequirementIds || [],
+          hasCapacityRestriction: data.hasCapacityRestriction ?? false,
+          capacity: data.capacity ?? null,
+          hasAgeRestriction: data.hasAgeRestriction ?? false,
+          minAge: data.minAge ?? null,
+          maxAge: data.maxAge ?? null,
+          hasMembershipRestriction: data.hasMembershipRestriction ?? false,
+          membershipRequirementIds: data.membershipRequirementIds || [],
+          hasWaiverRestriction: data.hasWaiverRestriction ?? false,
+          waiverRequirementIds: data.waiverRequirementIds || [],
+          hasMedicalRequirement: data.hasMedicalRequirement ?? false,
+
+          categoryResults,
+
+          pricingMode: data.pricingMode || "FREE",
+          entryFee: data.entryFee != null ? (typeof data.entryFee === "string" ? parseFloat(data.entryFee) : data.entryFee) : null,
+          pricingTiers,
+          categoryPrices,
+
+          publishStatus: data.publishStatus || "DRAFT",
+          scheduledGoLiveDate: data.scheduledGoLiveDate ? new Date(data.scheduledGoLiveDate) : null,
+          scheduledGoLiveTime: data.scheduledGoLiveTime || "09:00",
+        })
+      } catch (error) {
+        console.error("Failed to load competition:", error)
+        toast.error("Failed to load competition data")
+      } finally {
+        setLoadingCompetition(false)
+      }
+    }
+    fetchCompetition()
+  }, [competitionId])
 
   // Fetch levels
   React.useEffect(() => {
@@ -337,12 +449,10 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   React.useEffect(() => {
     const fetchWaivers = async () => {
       try {
-        const response = await fetch("/api/waivers")
+        const response = await fetch("/api/waivers?status=ACTIVE")
         if (response.ok) {
           const data = await response.json()
-          const activeWaivers = (Array.isArray(data) ? data : data.waivers || [])
-            .filter((w: any) => w.status === "ACTIVE")
-          setWaivers(activeWaivers)
+          setWaivers(data.data || [])
         }
       } catch (error) {
         console.error("Failed to fetch waivers:", error)
@@ -617,7 +727,16 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   }
 
   const handleSubmit = async () => {
-    if (!validateStep(stepper.state.current.data.id)) return
+    if (
+      !validateStep("general") ||
+      !validateStep("categories") ||
+      !validateStep("restrictions") ||
+      !validateStep("results") ||
+      !validateStep("pricing") ||
+      !validateStep("confirmation")
+    ) {
+      return
+    }
 
     setIsSaving(true)
     try {
@@ -672,8 +791,11 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
         scheduledGoLiveTime: formData.scheduledGoLiveTime,
       }
 
-      const response = await fetch("/api/competitions", {
-        method: "POST",
+      const url = isEditing ? `/api/competitions/${competitionId}` : "/api/competitions"
+      const method = isEditing ? "PATCH" : "POST"
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
@@ -694,6 +816,14 @@ export function CompetitionStepper({ competitionId }: CompetitionStepperProps) {
   }
 
   const currentIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id)
+
+  if (loadingCompetition) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto">
