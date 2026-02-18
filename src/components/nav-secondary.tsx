@@ -9,10 +9,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
 } from "@/components/ui/sidebar"
 
 export function NavSecondary({
   items,
+  isLoading,
   ...props
 }: {
   items: {
@@ -21,25 +23,34 @@ export function NavSecondary({
     icon: LucideIcon
     external?: boolean
   }[]
+  isLoading?: boolean
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>
         <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
-                <a 
-                  href={item.url}
-                  {...(item.external && { target: "_blank", rel: "noopener noreferrer" })}
-                >
-                  <item.icon />
-                  <span>{item.title}</span>
-                  {item.external && <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />}
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <SidebarMenuItem key={i}>
+                <SidebarMenuSkeleton showIcon />
+              </SidebarMenuItem>
+            ))
+          ) : (
+            items.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild>
+                  <a 
+                    href={item.url}
+                    {...(item.external && { target: "_blank", rel: "noopener noreferrer" })}
+                  >
+                    <item.icon />
+                    <span>{item.title}</span>
+                    {item.external && <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />}
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))
+          )}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { ChevronRight, LifeBuoy, Send, FlaskConical, CalendarCheck, ShoppingCart, UserCheck, Globe } from "lucide-react"
 import { useSession } from "next-auth/react"
@@ -23,6 +24,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
@@ -35,11 +37,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Skeleton } from "@/components/ui/skeleton"
 import { getFeatureStatus } from "@/lib/feature-status"
 import { cn } from "@/lib/utils"
 import { getOrganizationWebsiteSubdomain } from "@/app/actions/organization"
 import { useFeatures } from "@/components/feature-context"
 import { FEATURE_SIDEBAR_MAP, FEATURE_KEYS, type FeatureKey, type FeatureToggles } from "@/lib/feature-toggles"
+import type { LucideIcon } from "lucide-react"
+
+type NavSecondaryItem = { title: string; url: string; icon: LucideIcon; external?: boolean }
+
+// Module-level cache survives component remounts during client-side navigation
+let navSecondaryCache: { key: string; items: NavSecondaryItem[] } | null = null
 
 // Helper to construct subdomain URLs for the access point system
 function getAccessPointUrl(subdomain: string, organizationId?: string): string {
@@ -479,7 +488,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { isMobile } = useSidebar()
   const { data: session, status } = useSession()
-  const { features } = useFeatures()
+  const { features, isLoaded: isFeaturesLoaded } = useFeatures()
 
   // Get user data from session
   const user = session?.user ? {
@@ -502,13 +511,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Compute navSecondary items with proper subdomain URLs
   // Use useState + useEffect to ensure URLs are computed on the client where window is available
-  const [navSecondary, setNavSecondary] = React.useState<{ title: string; url: string; icon: typeof ShoppingCart; external?: boolean }[]>([])
+  const navSecondaryCacheKey = `${session?.user?.organizationId ?? ""}:${filteredAccessPoints.map(a => a.title).join(",")}`
+
+  const [navSecondary, setNavSecondary] = React.useState<NavSecondaryItem[]>(() => {
+    if (navSecondaryCache?.key === navSecondaryCacheKey) return navSecondaryCache.items
+    return []
+  })
+  const [isNavSecondaryLoading, setIsNavSecondaryLoading] = React.useState(() => {
+    return navSecondaryCache?.key !== navSecondaryCacheKey
+  })
   
   React.useEffect(() => {
-    const organizationId = session?.user?.organizationId
+    if (!isFeaturesLoaded) return
+
+    if (navSecondaryCache?.key === navSecondaryCacheKey) {
+      if (navSecondary.length === 0) setNavSecondary(navSecondaryCache.items)
+      setIsNavSecondaryLoading(false)
+      return
+    }
     
+    const organizationId = session?.user?.organizationId
+
     const computeNavSecondary = async () => {
-      const items: { title: string; url: string; icon: typeof ShoppingCart; external?: boolean }[] = []
+      const items: NavSecondaryItem[] = []
       
       // Add marketing site link if organization has a published website
       if (organizationId) {
@@ -536,11 +561,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: item.icon,
       }))
       
-      setNavSecondary([...items, ...accessPointItems, ...staticItems])
+      const result = [...items, ...accessPointItems, ...staticItems]
+      navSecondaryCache = { key: navSecondaryCacheKey, items: result }
+      setNavSecondary(result)
+      setIsNavSecondaryLoading(false)
     }
     
     computeNavSecondary()
-  }, [session?.user?.organizationId, filteredAccessPoints])
+  }, [isFeaturesLoaded, session?.user?.organizationId, filteredAccessPoints, navSecondaryCacheKey])
 
   return (
     <Sidebar {...props}>
@@ -550,48 +578,61 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {filteredNavMain.map((item) => (
-              <Collapsible
-                key={item.title}
-                asChild
-                defaultOpen={isMobile ? pathname.startsWith(item.url) : true}
-                className="group/collapsible"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title}>
-                      <span className="font-medium">{item.title}</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {item.items?.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                            <a href={subItem.url} className="flex items-center justify-between w-full">
-                              <span>{subItem.title}</span>
-                              <FeatureStatusIndicator url={subItem.url} />
-                            </a>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
+            {!isFeaturesLoaded ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <SidebarMenuItem key={i}>
+                  <SidebarMenuSkeleton />
+                  <SidebarMenuSub>
+                    {Array.from({ length: 3 }).map((_, j) => (
+                      <SidebarMenuSkeleton key={j} />
+                    ))}
+                  </SidebarMenuSub>
                 </SidebarMenuItem>
-              </Collapsible>
-            ))}
+              ))
+            ) : (
+              filteredNavMain.map((item) => (
+                <Collapsible
+                  key={item.title}
+                  asChild
+                  defaultOpen={isMobile ? pathname.startsWith(item.url) : true}
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip={item.title}>
+                        <span className="font-medium">{item.title}</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {item.items?.map((subItem) => (
+                          <SidebarMenuSubItem key={subItem.title}>
+                            <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
+                              <Link href={subItem.url} className="flex items-center justify-between w-full">
+                                <span>{subItem.title}</span>
+                                <FeatureStatusIndicator url={subItem.url} />
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              ))
+            )}
           </SidebarMenu>
         </SidebarGroup>
-        <NavSecondary items={navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondary} isLoading={isNavSecondaryLoading} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         {isLoading || !user ? (
           <div className="flex items-center gap-2 px-2 py-2">
-            <div className="h-8 w-8 rounded-lg bg-sidebar-accent animate-pulse" />
+            <Skeleton className="h-8 w-8 rounded-lg" />
             <div className="flex-1 space-y-1.5">
-              <div className="h-4 w-24 rounded bg-sidebar-accent animate-pulse" />
-              <div className="h-3 w-32 rounded bg-sidebar-accent animate-pulse" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-32" />
             </div>
           </div>
         ) : (

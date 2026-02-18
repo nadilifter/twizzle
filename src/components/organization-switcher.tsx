@@ -19,6 +19,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { getUserOrganizations } from "@/app/actions/organization"
 import { getClientSubdomainUrl } from "@/lib/client-domains"
 
@@ -29,25 +30,37 @@ type Organization = {
     logo: string | null
 }
 
+// Module-level cache survives component remounts during client-side navigation
+let orgCache: { userId: string; orgs: Organization[] } | null = null
+
 export function OrganizationSwitcher() {
   const { isMobile } = useSidebar()
   const { data: session, update } = useSession()
-  const [organizations, setOrganizations] = React.useState<Organization[]>([])
+  const [organizations, setOrganizations] = React.useState<Organization[]>(() => {
+    const userId = session?.user?.id
+    if (userId && orgCache?.userId === userId) return orgCache.orgs
+    return []
+  })
   
   React.useEffect(() => {
+    const userId = session?.user?.id
+    if (!userId) return
+    if (orgCache?.userId === userId) {
+      if (organizations.length === 0) setOrganizations(orgCache.orgs)
+      return
+    }
+
     const fetchOrgs = async () => {
         try {
             const orgs = await getUserOrganizations()
+            orgCache = { userId, orgs }
             setOrganizations(orgs)
         } catch (error) {
             console.error("Failed to fetch organizations", error)
         }
     }
-    // Only fetch if authenticated
-    if (session?.user) {
-        fetchOrgs()
-    }
-  }, [session?.user]) // Depend on session.user
+    fetchOrgs()
+  }, [session?.user?.id])
 
   const activeOrg = React.useMemo(() => {
     if (!session?.user?.organizationId) return organizations[0]
@@ -68,13 +81,11 @@ export function OrganizationSwitcher() {
       return (
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <Building2 className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Uplifter</span>
-                <span className="truncate text-xs">Loading...</span>
+            <SidebarMenuButton size="lg" className="pointer-events-none">
+              <Skeleton className="size-8 rounded-lg" />
+              <div className="grid flex-1 gap-1.5">
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

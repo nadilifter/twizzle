@@ -20,17 +20,36 @@ const FeatureContext = React.createContext<FeatureContextValue>({
   isFeatureEnabled: () => false,
 })
 
+// Module-level cache survives component remounts during client-side navigation
+let featureCache: { orgId: string; data: FeatureToggles } | null = null
+
 export function FeatureProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
-  const [features, setFeatures] = React.useState<FeatureToggles>(DEFAULT_FEATURE_TOGGLES)
-  const [isLoaded, setIsLoaded] = React.useState(false)
 
   const organizationId = session?.user?.organizationId
 
+  const [features, setFeatures] = React.useState<FeatureToggles>(() => {
+    if (organizationId && featureCache?.orgId === organizationId) {
+      return featureCache.data
+    }
+    return DEFAULT_FEATURE_TOGGLES
+  })
+  const [isLoaded, setIsLoaded] = React.useState(() => {
+    return !!organizationId && featureCache?.orgId === organizationId
+  })
+
   React.useEffect(() => {
     if (!organizationId) {
-      setFeatures(DEFAULT_FEATURE_TOGGLES)
-      setIsLoaded(false)
+      if (!featureCache) {
+        setFeatures(DEFAULT_FEATURE_TOGGLES)
+        setIsLoaded(false)
+      }
+      return
+    }
+
+    if (featureCache?.orgId === organizationId) {
+      setFeatures(featureCache.data)
+      setIsLoaded(true)
       return
     }
 
@@ -45,6 +64,7 @@ export function FeatureProvider({ children }: { children: React.ReactNode }) {
         }
         const data = await response.json()
         if (!cancelled) {
+          featureCache = { orgId: organizationId, data }
           setFeatures(data)
           setIsLoaded(true)
         }
