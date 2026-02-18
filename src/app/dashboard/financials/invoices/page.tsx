@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { LinkIcon, SendIcon, MoreHorizontalIcon, Search, Loader2 } from "lucide-react"
+import { LinkIcon, SendIcon, MoreHorizontalIcon, Search, Loader2, ExternalLinkIcon } from "lucide-react"
 import { CreateInvoiceSheet } from "@/components/invoices/create-invoice-sheet"
 import { format } from "date-fns"
 import { toast } from "sonner"
@@ -71,6 +71,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = React.useState<Invoice[]>([])
   const [loading, setLoading] = React.useState(true)
   const [search, setSearch] = React.useState("")
+  const [siteSubdomain, setSiteSubdomain] = React.useState<string | null>(null)
   const [stats, setStats] = React.useState<InvoiceStats>({
     outstanding: 0,
     outstandingCount: 0,
@@ -88,6 +89,7 @@ export default function InvoicesPage() {
       
       const data = await response.json()
       setInvoices(data.data)
+      if (data.siteSubdomain) setSiteSubdomain(data.siteSubdomain)
       
       // Calculate stats
       const outstanding = data.data
@@ -134,6 +136,19 @@ export default function InvoicesPage() {
   const handleResendEmail = async (invoice: Invoice) => {
     // In a real implementation, this would trigger an email
     toast.success(`Email sent to ${invoice.family.email}`)
+  }
+
+  const handleViewReceipt = (invoice: Invoice) => {
+    if (!siteSubdomain) {
+      toast.error("No site configured for this organization")
+      return
+    }
+    const host = window.location.host
+    const baseDomain = host.includes("localhost")
+      ? host.replace(/^[^.]+\./, "")
+      : host.replace(/^[^.]+\./, "")
+    const protocol = window.location.protocol
+    window.open(`${protocol}//${siteSubdomain}.${baseDomain}/receipt/${invoice.id}`, "_blank")
   }
 
   return (
@@ -268,6 +283,12 @@ export default function InvoicesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {siteSubdomain && (
+                            <DropdownMenuItem onClick={() => handleViewReceipt(invoice)}>
+                              <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                              View Receipt
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleCopyPaymentLink(invoice)}>
                             <LinkIcon className="mr-2 h-4 w-4" />
                             Copy Payment Link

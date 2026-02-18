@@ -42,7 +42,7 @@ interface SavedBillingAddress {
   isPrimary: boolean
 }
 
-type CheckoutStep = "details" | "waivers" | "medical" | "payment"
+type CheckoutStep = "details" | "waivers" | "medical" | "payment" | "confirmation"
 
 interface WaiverToSign {
   waiverId: string
@@ -87,6 +87,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("new")
   const [isEditingContact, setIsEditingContact] = useState(false)
   const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const [isRedirectingToReceipt, setIsRedirectingToReceipt] = useState(false)
+  const [freeCheckoutInvoiceId, setFreeCheckoutInvoiceId] = useState<string | null>(null)
   const formDataInitialized = useRef(false)
 
   // Persist formData to sessionStorage so it survives page navigations
@@ -672,6 +674,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       }
 
       const data = await response.json()
+
+      if (data.freeCheckout) {
+        setFreeCheckoutInvoiceId(data.invoiceId)
+        setCheckoutStep("confirmation")
+        return
+      }
+
       setPaymentSession({ id: data.sessionId, sessionData: data.sessionData })
       setCheckoutStep("payment")
     } catch (error: any) {
@@ -680,6 +689,23 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const handleCompleteFreeCheckout = async () => {
+    if (!freeCheckoutInvoiceId) return
+    setIsRedirectingToReceipt(true)
+    try {
+      sessionStorage.removeItem(FORM_STORAGE_KEY)
+      sessionStorage.removeItem(CONTACT_STORAGE_KEY)
+      sessionStorage.removeItem(ADDRESS_STORAGE_KEY)
+      sessionStorage.removeItem(EDITING_CONTACT_KEY)
+      sessionStorage.removeItem(EDITING_ADDRESS_KEY)
+    } catch {
+      // ignore
+    }
+    await completeRegistration()
+    clearCart()
+    router.push(`/receipt/${freeCheckoutInvoiceId}`)
   }
 
   const handlePaymentCompleted = async (result: any) => {
@@ -722,7 +748,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     )
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !isRedirectingToReceipt) {
     return (
       <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12 text-center">
         <h1 className="text-3xl font-bold mb-4">Checkout</h1>
@@ -1117,6 +1143,59 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 </CardContent>
               </Card>
           )}
+
+          {/* Confirmation Step for $0 orders */}
+          {checkoutStep === "confirmation" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-500" />
+                  Confirm Your Registration
+                </CardTitle>
+                <CardDescription>
+                  Review your order and complete your registration.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border p-4 space-y-3">
+                  {Array.from(getItemsByAthlete().entries()).map(([athleteId, { athleteName, items: athleteItems }]) => (
+                    <div key={athleteId}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm font-semibold">{athleteName}</span>
+                      </div>
+                      <div className="pl-5 space-y-1">
+                        {athleteItems.map((item) => (
+                          <div key={item.id} className="flex justify-between text-sm">
+                            <span>{item.name}</span>
+                            <span className="text-muted-foreground">${(item.price * item.quantity).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Separator />
+                <div className="flex justify-between font-semibold text-lg">
+                  <span>Total</span>
+                  <span>${total.toFixed(2)}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  No payment is required. Click below to complete your registration.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  onClick={handleCompleteFreeCheckout}
+                  disabled={isRedirectingToReceipt}
+                  className="w-full"
+                >
+                  {isRedirectingToReceipt && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Complete Registration
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
         </div>
 
         {/* Right Column - Order Summary */}
@@ -1242,12 +1321,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 {athleteQueue.length > 0 && (
                   <div className="flex items-center gap-2">
                     <div className={`h-2 w-2 rounded-full ${
-                      checkoutStep === "payment" ? "bg-green-500"
+                      (checkoutStep === "payment" || checkoutStep === "confirmation") ? "bg-green-500"
                       : (checkoutStep === "waivers" || checkoutStep === "medical") ? "bg-primary"
                       : "bg-muted"
                     }`} />
-                    <span className={checkoutStep === "payment" ? "text-green-600" : ""}>
-                      {checkoutStep === "payment"
+                    <span className={(checkoutStep === "payment" || checkoutStep === "confirmation") ? "text-green-600" : ""}>
+                      {(checkoutStep === "payment" || checkoutStep === "confirmation")
                         ? "All requirements complete"
                         : (checkoutStep === "waivers" || checkoutStep === "medical")
                           ? `Athlete requirements (${currentAthleteIndex + 1}/${athleteQueue.length})`
@@ -1256,8 +1335,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${checkoutStep === "payment" ? "bg-primary" : "bg-muted"}`} />
-                  <span>Complete payment</span>
+                  <div className={`h-2 w-2 rounded-full ${
+                    checkoutStep === "confirmation" ? "bg-primary"
+                    : checkoutStep === "payment" ? "bg-primary"
+                    : "bg-muted"
+                  }`} />
+                  <span>{total === 0 ? "Confirm registration" : "Complete payment"}</span>
                 </div>
               </div>
             </CardContent>

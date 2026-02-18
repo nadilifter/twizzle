@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { createPaymentSession } from "@/lib/adyen";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
 import { subDays } from "date-fns";
+import { processInvoiceRegistrations } from "@/lib/invoice-processing";
+import { sendTemplatedEmail } from "@/lib/email";
 
 interface CartItem {
   referenceId: string;
@@ -849,7 +851,45 @@ export async function POST(
         })
     });
 
-    // 7. Create Adyen Session
+    // 7. Handle payment — skip Adyen entirely for $0 orders
+    if (total === 0) {
+      await db.invoice.update({
+        where: { id: invoice.id },
+        data: { status: "PAID" },
+      });
+
+      await processInvoiceRegistrations(invoiceMetadata, family.id, items);
+
+      // Send receipt email (fire-and-forget so it doesn't block the response)
+      const protocol = request.headers.get("x-forwarded-proto") || "http";
+      const host = request.headers.get("host");
+      const receiptUrl = `${protocol}://${host}/receipt/${invoice.id}`;
+      const lineItemsHtml = items
+        .map((item: CartItem) => `<tr><td style="padding: 4px 0;">${item.name}</td><td style="padding: 4px 0; text-align: right;">$${(Number(item.price) * item.quantity).toFixed(2)}</td></tr>`)
+        .join("");
+      const lineItemsText = items
+        .map((item: CartItem) => `${item.name} — $${(Number(item.price) * item.quantity).toFixed(2)}`)
+        .join("\n");
+
+      sendTemplatedEmail("checkout-receipt", [resolvedContact.email], {
+        name: resolvedContact.firstName,
+        reference: invoice.reference,
+        total: `$${total.toFixed(2)}`,
+        lineItemsHtml,
+        lineItemsText,
+        receiptUrl,
+      }).catch((err) => console.error("Failed to send receipt email:", err));
+
+      return NextResponse.json({
+        freeCheckout: true,
+        invoiceId: invoice.id,
+        hasMembershipPurchases: membershipInvoiceItems.length > 0,
+        hasProgramRegistrations: programItems.length > 0,
+        hasCompetitionRegistrations: competitionItems.length > 0,
+      });
+    }
+
+    // Create Adyen Session for non-zero orders
     // We'll use the invoice ID as reference so we can update it later
     const protocol = request.headers.get("x-forwarded-proto") || "http";
     const host = request.headers.get("host");

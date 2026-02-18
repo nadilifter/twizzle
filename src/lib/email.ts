@@ -274,6 +274,7 @@ export type EmailTemplate =
   | 'invitation-existing-user'
   | 'registration-confirmation'
   | 'payment-confirmation'
+  | 'checkout-receipt'
   | 'announcement'
   | 'feedback-roadmap';
 
@@ -495,6 +496,51 @@ function renderTemplate(
         Description: {{description}}
         
         Thank you for your payment!
+      `,
+    },
+    'checkout-receipt': {
+      subject: 'Order Confirmation - {{reference}}',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #16a34a;">Order Confirmed</h1>
+          <p>Hello {{name}},</p>
+          <p>Your registration is complete. Here are your order details:</p>
+          <p><strong>Order Reference:</strong> {{reference}}</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <thead>
+              <tr style="border-bottom: 2px solid #e5e7eb;">
+                <th style="text-align: left; padding: 8px 0;">Item</th>
+                <th style="text-align: right; padding: 8px 0;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>{{lineItemsHtml}}</tbody>
+            <tfoot>
+              <tr style="border-top: 2px solid #e5e7eb;">
+                <td style="padding: 8px 0; font-weight: bold;">Total</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold;">{{total}}</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p>You can view your receipt at any time: <a href="{{receiptUrl}}">View Receipt</a></p>
+          <p>Thank you!</p>
+        </div>
+      `,
+      text: `
+        Order Confirmed
+
+        Hello {{name}},
+
+        Your registration is complete. Here are your order details:
+
+        Order Reference: {{reference}}
+
+        {{lineItemsText}}
+
+        Total: {{total}}
+
+        View your receipt: {{receiptUrl}}
+
+        Thank you!
       `,
     },
     'announcement': {

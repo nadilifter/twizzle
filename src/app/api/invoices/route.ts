@@ -150,11 +150,18 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Fetch site subdomain for receipt URL construction
+    const siteConfig = await db.websiteConfig.findFirst({
+      where: { organizationId: session.user.organizationId },
+      select: { subdomain: true },
+    });
+
     return NextResponse.json({
       data: transformedInvoices,
       total,
       limit,
       offset,
+      siteSubdomain: siteConfig?.subdomain || null,
     });
   } catch (error) {
     console.error("Error fetching invoices:", error);
