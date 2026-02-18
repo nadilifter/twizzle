@@ -181,6 +181,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "demo",
     description: "Organization settings use sample data",
   },
+  "/dashboard/organization/overview": {
+    status: "live",
+    description: "Organization overview with real data",
+    apiRoutes: ["/api/organization/details", "/api/organization/sports", "/api/sports"],
+  },
   "/dashboard/organization/app": {
     status: "demo",
     description: "App configuration uses sample data",
