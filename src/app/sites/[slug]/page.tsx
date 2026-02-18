@@ -235,6 +235,16 @@ export default async function SitePage({ params }: { params: { slug: string } })
               ...program,
               basePrice: program.basePrice ? Number(program.basePrice) : null,
               perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
+              staffAssignments: program.staffAssignments.map(sa => ({
+                id: sa.id,
+                role: sa.role,
+                isPrimary: sa.isPrimary,
+                staffProfile: {
+                  id: sa.staffProfile.id,
+                  title: sa.staffProfile.title,
+                  user: sa.staffProfile.user,
+                },
+              })),
               requiredMemberships: program.requiredMemberships.map(m => ({
                 ...m,
                 price: Number(m.price),
