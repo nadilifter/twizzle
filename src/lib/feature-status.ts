@@ -123,13 +123,19 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
 
   // Competitions Section
   "/dashboard/competitions": {
-    status: "demo",
+    status: "live",
     description: "Competitions management with categories, results tracking, and large-scale participant registration.",
+    apiRoutes: ["/api/competitions", "/api/competitions/[id]", "/api/competitions/[id]/entries", "/api/competitions/[id]/results"],
   },
   "/dashboard/competitions/categories": {
     status: "live",
     description: "Competition category management with sport presets and custom categories",
     apiRoutes: ["/api/competition-categories"],
+  },
+  "/dashboard/competitions/marketing": {
+    status: "live",
+    description: "Marketing site configuration for competitions page visibility and content",
+    apiRoutes: ["/api/organization/website"],
   },
 
   // Events Section
