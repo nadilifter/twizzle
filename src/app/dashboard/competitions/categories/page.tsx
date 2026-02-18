@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  Check,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -983,9 +984,13 @@ export default function CategoriesPage() {
                                   </Badge>
                                 </td>
                                 {data.ageCategories.map((cat) => (
-                                  <td key={cat.id} className="py-1.5 px-1 text-center">
+                                  <td key={cat.id} className="py-1.5 px-1 text-center align-middle">
                                     {eligSet.has(`${evt.id}:${cat.id}`) ? (
-                                      <span className="text-green-600 dark:text-green-400 text-xs">&#10003;</span>
+                                      <div className="flex items-center justify-center">
+                                        <div className="h-5 w-5 rounded-sm bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
+                                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                                        </div>
+                                      </div>
                                     ) : (
                                       <span className="text-muted-foreground/30 text-xs">&mdash;</span>
                                     )}
