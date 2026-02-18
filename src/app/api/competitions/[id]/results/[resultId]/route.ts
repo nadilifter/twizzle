@@ -8,6 +8,8 @@ const updateResultSchema = z.object({
   value: z.number().optional(),
   displayValue: z.string().nullable().optional(),
   placement: z.number().int().min(1).nullable().optional(),
+  heat: z.number().int().min(1).nullable().optional(),
+  isHandTimed: z.boolean().optional(),
   isPersonalBest: z.boolean().optional(),
   isDNF: z.boolean().optional(),
   isDNS: z.boolean().optional(),
@@ -63,6 +65,8 @@ export async function PATCH(
     if (data.value !== undefined) updateData.value = data.value
     if (data.displayValue !== undefined) updateData.displayValue = data.displayValue
     if (data.placement !== undefined) updateData.placement = data.placement
+    if (data.heat !== undefined) updateData.heat = data.heat
+    if (data.isHandTimed !== undefined) updateData.isHandTimed = data.isHandTimed
     if (data.isPersonalBest !== undefined) updateData.isPersonalBest = data.isPersonalBest
     if (data.isDNF !== undefined) updateData.isDNF = data.isDNF
     if (data.isDNS !== undefined) updateData.isDNS = data.isDNS

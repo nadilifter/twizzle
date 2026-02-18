@@ -117,7 +117,7 @@ const createCompetitionSchema = z.object({
     sportEventId: z.string().nullable().optional(),
     ageCategoryId: z.string().nullable().optional(),
     // Result config (can be auto-derived from sportEvent if sport-specific)
-    resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional(),
+    resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE", "PLACEMENT"]).optional(),
     sortDirection: z.enum(["ASC", "DESC"]).default("ASC"),
     precision: z.number().int().min(0).max(6).optional(),
     seedMarkRequired: z.boolean().default(false),

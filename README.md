@@ -301,6 +301,8 @@ To develop locally with the multi-portal architecture, you must update your `/et
 127.0.0.1   pos.uplifterinc.localhost
 127.0.0.1   feedback.uplifterinc.localhost
 127.0.0.1   events.uplifterinc.localhost
+127.0.0.1   competitions.uplifterinc.localhost
+127.0.0.1   results.uplifterinc.localhost
 127.0.0.1   demo-gym.uplifterinc.localhost
 ```
 
@@ -314,6 +316,8 @@ To develop locally with the multi-portal architecture, you must update your `/et
 -   **POS**: `http://pos.uplifterinc.localhost:3000`
 -   **Feedback**: `http://feedback.uplifterinc.localhost:3000`
 -   **Events Portal**: `http://events.uplifterinc.localhost:3000` - Day-of-event operations (QR check-in, athlete search, schedule)
+-   **Competitions Portal**: `http://competitions.uplifterinc.localhost:3000` - Competition browsing and management (planned)
+-   **Results Portal**: `http://results.uplifterinc.localhost:3000` - Competition results and scores (planned)
 -   **Tenant Site 1**: `http://demo-gym.uplifterinc.localhost:3000`
 -   **Tenant Site 2**: `http://londonwestern.uplifterinc.localhost:3000`
 

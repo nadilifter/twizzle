@@ -37,6 +37,8 @@ flowchart TB
             Coach["coach.uplifterinc.com"]
             Events["events.uplifterinc.com"]
             Athletes["athletes.uplifterinc.com"]
+            Competitions["competitions.uplifterinc.com"]
+            Results["results.uplifterinc.com"]
         end
 
         subgraph Public["Public-Facing"]
@@ -53,6 +55,8 @@ flowchart TB
     Router --> Coach
     Router --> Events
     Router --> Athletes
+    Router --> Competitions
+    Router --> Results
     Router --> Sites
     Router --> Feedback
 
@@ -109,6 +113,8 @@ flowchart LR
         pos["pos."]
         events["events."]
         athletes["athletes."]
+        competitions["competitions."]
+        results["results."]
         sites["[slug]."]
         login["login."]
         startup["startup."]
@@ -124,8 +130,12 @@ flowchart LR
     ST --> coach
     ST --> pos
     ST --> events
+    ST --> competitions
+    ST --> results
     
     PA --> athletes
+    PA --> competitions
+    PA --> results
     PA --> sites
     
     PU --> sites
@@ -144,6 +154,8 @@ flowchart LR
 | `pos.` | Point of Sale terminal | Staff at front desk | Live |
 | `coach.` | Coach mobile-friendly portal | Coaches | Demo |
 | `events.` | Event check-in portal | Staff, Volunteers | Hidden |
+| `competitions.` | Competition browsing and management | Staff, Parents, Athletes | Planned |
+| `results.` | Competition results and scores | Staff, Parents, Athletes | Planned |
 | `athletes.` | Parent/Athlete self-service | Parents, Athletes | Live |
 | `[org-slug].` | Public marketing site | Public visitors | Live |
 | `feedback.` | Feature requests & roadmap | All users | Live |

@@ -6,7 +6,14 @@ import { z } from "zod"
 
 const updateEntrySchema = z.object({
   status: z.enum(["PENDING_SEED", "PENDING_REVIEW", "APPROVED", "REJECTED", "WITHDRAWN", "SCRATCHED"]).optional(),
-  seedMark: z.number().nullable().optional(),
+  seedHours: z.number().int().min(0).nullable().optional(),
+  seedMinutes: z.number().int().min(0).max(59).nullable().optional(),
+  seedSeconds: z.number().int().min(0).max(59).nullable().optional(),
+  seedMs: z.number().int().min(0).max(999).nullable().optional(),
+  seedHandTimed: z.boolean().optional(),
+  seedDistance: z.number().nullable().optional(),
+  seedPoints: z.number().nullable().optional(),
+  seedPlacement: z.string().nullable().optional(),
   seedMarkStatus: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
   seedMarkNotes: z.string().nullable().optional(),
 })
@@ -55,11 +62,26 @@ export async function PATCH(
 
     const updateData: Record<string, unknown> = {}
 
-    if (data.seedMark !== undefined) {
-      updateData.seedMark = data.seedMark
-      if (data.seedMark != null) {
-        updateData.seedMarkSubmittedAt = new Date()
-      }
+    const hasSeedFieldUpdate =
+      data.seedHours !== undefined ||
+      data.seedMinutes !== undefined ||
+      data.seedSeconds !== undefined ||
+      data.seedMs !== undefined ||
+      data.seedDistance !== undefined ||
+      data.seedPoints !== undefined ||
+      data.seedPlacement !== undefined
+
+    if (data.seedHours !== undefined) updateData.seedHours = data.seedHours
+    if (data.seedMinutes !== undefined) updateData.seedMinutes = data.seedMinutes
+    if (data.seedSeconds !== undefined) updateData.seedSeconds = data.seedSeconds
+    if (data.seedMs !== undefined) updateData.seedMs = data.seedMs
+    if (data.seedHandTimed !== undefined) updateData.seedHandTimed = data.seedHandTimed
+    if (data.seedDistance !== undefined) updateData.seedDistance = data.seedDistance
+    if (data.seedPoints !== undefined) updateData.seedPoints = data.seedPoints
+    if (data.seedPlacement !== undefined) updateData.seedPlacement = data.seedPlacement
+
+    if (hasSeedFieldUpdate) {
+      updateData.seedMarkSubmittedAt = new Date()
     }
 
     if (data.seedMarkStatus !== undefined) {
@@ -67,7 +89,6 @@ export async function PATCH(
       updateData.seedMarkReviewedAt = new Date()
       updateData.seedMarkReviewedBy = session.user.id
 
-      // Auto-update entry status based on seed mark review
       if (data.seedMarkStatus === "APPROVED") {
         updateData.status = "APPROVED"
       } else if (data.seedMarkStatus === "REJECTED") {

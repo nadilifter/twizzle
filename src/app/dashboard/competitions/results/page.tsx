@@ -3,6 +3,12 @@
 import * as React from "react"
 import { toast } from "sonner"
 import {
+  formatResultValue as sharedFormatResultValue,
+  formatSeedMarkForDisplay,
+  type SeedMarkFields,
+  type ResultType as AthleticsResultType,
+} from "@/lib/athletics-formats"
+import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -75,7 +81,14 @@ interface CompetitionEntry {
   id: string
   athleteId: string
   status: string
-  seedMark: number | null
+  seedHours: number | null
+  seedMinutes: number | null
+  seedSeconds: number | null
+  seedMs: number | null
+  seedHandTimed: boolean
+  seedDistance: number | null
+  seedPoints: number | null
+  seedPlacement: string | null
   seedMarkStatus: string | null
   seedMarkNotes: string | null
   athlete: {
@@ -95,6 +108,8 @@ interface CompetitionResult {
   value: number
   displayValue: string | null
   placement: number | null
+  heat: number | null
+  isHandTimed: boolean
   isPersonalBest: boolean
   isDNF: boolean
   isDNS: boolean
@@ -116,6 +131,7 @@ const RESULT_TYPE_LABELS: Record<string, string> = {
   DISTANCE: "Distance",
   HEIGHT: "Height",
   SCORE: "Score",
+  PLACEMENT: "Placement",
 }
 
 const RESULT_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -123,6 +139,7 @@ const RESULT_TYPE_ICONS: Record<string, React.ReactNode> = {
   DISTANCE: <Ruler className="h-3 w-3" />,
   HEIGHT: <ArrowUpDown className="h-3 w-3" />,
   SCORE: <Trophy className="h-3 w-3" />,
+  PLACEMENT: <Trophy className="h-3 w-3" />,
 }
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -150,22 +167,29 @@ function getCategoryLabel(cat: CompetitionCategory): string {
   return "Unknown"
 }
 
-function formatResultValue(value: number, resultType: string, precision: number): string {
-  if (resultType === "TIME") {
-    const totalMs = Math.round(value)
-    const minutes = Math.floor(totalMs / 60000)
-    const seconds = Math.floor((totalMs % 60000) / 1000)
-    const ms = totalMs % 1000
-    if (minutes > 0) {
-      return `${minutes}:${seconds.toString().padStart(2, "0")}.${ms.toString().padStart(3, "0")}`
-    }
-    return `${seconds}.${ms.toString().padStart(3, "0")}s`
+function formatResultValueLocal(
+  value: number,
+  resultType: string,
+  precision: number,
+  handTimed = false,
+  heat?: number | null,
+): string {
+  return sharedFormatResultValue(value, resultType, precision, handTimed, heat)
+}
+
+function getEntrySeedDisplay(entry: CompetitionEntry): string {
+  const fields: SeedMarkFields = {
+    seedHours: entry.seedHours,
+    seedMinutes: entry.seedMinutes,
+    seedSeconds: entry.seedSeconds,
+    seedMs: entry.seedMs,
+    seedHandTimed: entry.seedHandTimed,
+    seedDistance: entry.seedDistance,
+    seedPoints: entry.seedPoints,
+    seedPlacement: entry.seedPlacement,
   }
-  if (resultType === "DISTANCE" || resultType === "HEIGHT") {
-    const meters = value / 1000
-    return `${meters.toFixed(precision)}m`
-  }
-  return value.toFixed(precision)
+  const resultType = entry.category?.resultType as AthleticsResultType | undefined
+  return formatSeedMarkForDisplay(fields, resultType ?? "TIME")
 }
 
 // ============================================
@@ -434,9 +458,9 @@ export default function ResultsPage() {
                                     <Badge variant={STATUS_VARIANT[entry.status] || "outline"} className="text-xs h-4 px-1">
                                       {entry.status.replace("_", " ")}
                                     </Badge>
-                                    {entry.seedMark != null && (
+                                    {getEntrySeedDisplay(entry) !== "-" && (
                                       <span className="text-xs text-muted-foreground">
-                                        Seed: {formatResultValue(Number(entry.seedMark), selectedCat.resultType, selectedCat.precision)}
+                                        Seed: {getEntrySeedDisplay(entry)}
                                       </span>
                                     )}
                                   </div>
@@ -528,7 +552,7 @@ export default function ResultsPage() {
                                     <span className="text-sm font-mono font-medium">
                                       {result.isDNF || result.isDNS || result.isDQ
                                         ? "—"
-                                        : formatResultValue(Number(result.value), selectedCat.resultType, selectedCat.precision)}
+                                        : formatResultValueLocal(Number(result.value), selectedCat.resultType, selectedCat.precision, result.isHandTimed, result.heat)}
                                     </span>
                                   </div>
                                 ))}

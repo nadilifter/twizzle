@@ -25,7 +25,7 @@ interface CartItem {
     categoryIds?: string[];
     pricingMode?: string;
     entryFee?: number | null;
-    seedMarks?: Record<string, number>;
+    seedMarks?: Record<string, Record<string, unknown>>;
   };
 }
 

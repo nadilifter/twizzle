@@ -17,6 +17,10 @@ const RESERVED_DOMAIN_DATA = [
   { pattern: "feedback", type: ReservedDomainType.EXACT, reason: "System use - feedback portal" },
   { pattern: "events", type: ReservedDomainType.EXACT, reason: "System use - events portal" },
   { pattern: "startup", type: ReservedDomainType.EXACT, reason: "System use - org signup portal" },
+  { pattern: "competition", type: ReservedDomainType.EXACT, reason: "Reserved - prevents confusion with competitions portal" },
+  { pattern: "competitions", type: ReservedDomainType.EXACT, reason: "System use - competitions portal" },
+  { pattern: "result", type: ReservedDomainType.EXACT, reason: "Reserved - prevents confusion with results portal" },
+  { pattern: "results", type: ReservedDomainType.EXACT, reason: "System use - results portal" },
   
   // Infrastructure
   { pattern: "api", type: ReservedDomainType.EXACT, reason: "System use - API endpoint" },
@@ -69,7 +73,7 @@ async function main() {
   for (const rd of RESERVED_DOMAIN_DATA) {
     await prisma.reservedDomain.upsert({
       where: { pattern: rd.pattern },
-      update: {},
+      update: { reason: rd.reason, type: rd.type },
       create: rd,
     })
   }

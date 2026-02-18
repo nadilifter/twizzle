@@ -73,7 +73,7 @@ export async function GET(
 const updateCategorySchema = z.object({
   categories: z.array(z.object({
     id: z.string(),
-    resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE"]).optional(),
+    resultType: z.enum(["TIME", "DISTANCE", "HEIGHT", "SCORE", "PLACEMENT"]).optional(),
     sortDirection: z.enum(["ASC", "DESC"]).optional(),
     precision: z.number().int().min(0).max(6).optional(),
     seedMarkRequired: z.boolean().optional(),

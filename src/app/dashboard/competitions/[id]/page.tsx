@@ -6,6 +6,11 @@ import { useParams } from "next/navigation"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import {
+  formatSeedMarkForDisplay,
+  type SeedMarkFields,
+  type ResultType as AthleticsResultType,
+} from "@/lib/athletics-formats"
+import {
   ArrowLeft,
   CalendarDays,
   Clock,
@@ -73,7 +78,14 @@ interface CompetitionDetail {
 interface CompetitionEntry {
   id: string
   status: string
-  seedMark: number | null
+  seedHours: number | null
+  seedMinutes: number | null
+  seedSeconds: number | null
+  seedMs: number | null
+  seedHandTimed: boolean
+  seedDistance: number | null
+  seedPoints: number | null
+  seedPlacement: string | null
   athlete: {
     id: string
     firstName: string | null
@@ -106,7 +118,7 @@ interface CompetitionResult {
   } | null
   category: {
     id: string
-    resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
+    resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT"
     sortDirection: "ASC" | "DESC"
     precision: number
   }
@@ -474,7 +486,21 @@ export default function CompetitionProfilePage() {
                           <Badge variant="outline">{entry.status}</Badge>
                         </TableCell>
                         <TableCell>{entry.category?.resultType || "-"}</TableCell>
-                        <TableCell>{entry.seedMark ?? "-"}</TableCell>
+                        <TableCell>
+                          {formatSeedMarkForDisplay(
+                            {
+                              seedHours: entry.seedHours,
+                              seedMinutes: entry.seedMinutes,
+                              seedSeconds: entry.seedSeconds,
+                              seedMs: entry.seedMs,
+                              seedHandTimed: entry.seedHandTimed,
+                              seedDistance: entry.seedDistance,
+                              seedPoints: entry.seedPoints,
+                              seedPlacement: entry.seedPlacement,
+                            } as SeedMarkFields,
+                            (entry.category?.resultType ?? "TIME") as AthleticsResultType,
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

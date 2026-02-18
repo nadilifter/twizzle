@@ -75,7 +75,7 @@ interface CompetitionCategory {
   displayOrder: number
   seedMarkRequired: boolean
   submissionMode: "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY"
-  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
+  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT"
   precision: number
   qualifyingMark: number | null
 }
@@ -200,6 +200,28 @@ function getCategoryLabel(cat: CompetitionCategory): string {
   return parts.join(" – ") || `Category ${cat.displayOrder + 1}`
 }
 
+type SeedMarkValue =
+  | { type: "TIME"; hours: string; minutes: string; seconds: string; ms: string; handTimed: boolean }
+  | { type: "DISTANCE" | "HEIGHT"; value: string }
+  | { type: "SCORE"; value: string }
+  | { type: "PLACEMENT"; value: string }
+
+function defaultSeedMark(resultType: CompetitionCategory["resultType"]): SeedMarkValue {
+  switch (resultType) {
+    case "TIME":
+      return { type: "TIME", hours: "", minutes: "", seconds: "", ms: "", handTimed: false }
+    case "DISTANCE":
+    case "HEIGHT":
+      return { type: resultType, value: "" }
+    case "SCORE":
+      return { type: "SCORE", value: "" }
+    case "PLACEMENT":
+      return { type: "PLACEMENT", value: "" }
+    default:
+      return { type: "SCORE", value: "" }
+  }
+}
+
 function getSeedMarkMeta(resultType: CompetitionCategory["resultType"]): {
   label: string
   placeholder: string
@@ -208,13 +230,15 @@ function getSeedMarkMeta(resultType: CompetitionCategory["resultType"]): {
 } {
   switch (resultType) {
     case "TIME":
-      return { label: "Time", placeholder: "e.g. 12.345", unit: "seconds", step: "0.001" }
+      return { label: "Time", placeholder: "", unit: "", step: "1" }
     case "DISTANCE":
-      return { label: "Distance", placeholder: "e.g. 5.23", unit: "meters", step: "0.001" }
+      return { label: "Distance", placeholder: "e.g. 70.88", unit: "m", step: "0.01" }
     case "HEIGHT":
-      return { label: "Height", placeholder: "e.g. 2.01", unit: "meters", step: "0.001" }
+      return { label: "Height", placeholder: "e.g. 2.01", unit: "m", step: "0.01" }
     case "SCORE":
-      return { label: "Score", placeholder: "e.g. 9.750", unit: "points", step: "0.001" }
+      return { label: "Score", placeholder: "e.g. 8000", unit: "pts", step: "1" }
+    case "PLACEMENT":
+      return { label: "Placement", placeholder: "e.g. 1 or 3h5", unit: "", step: "" }
     default:
       return { label: "Mark", placeholder: "Enter value", unit: "", step: "0.001" }
   }
@@ -222,16 +246,65 @@ function getSeedMarkMeta(resultType: CompetitionCategory["resultType"]): {
 
 function formatSeedMarkDisplay(value: number, resultType: CompetitionCategory["resultType"]): string {
   switch (resultType) {
-    case "TIME":
-      return `${value}s`
+    case "TIME": {
+      const totalMs = Math.round(value)
+      const m = Math.floor(totalMs / 60000)
+      const s = Math.floor((totalMs % 60000) / 1000)
+      const cs = Math.floor((totalMs % 1000) / 10)
+      if (m > 0) return `${m}:${s.toString().padStart(2, "0")}.${cs.toString().padStart(2, "0")}`
+      return `${s}.${cs.toString().padStart(2, "0")}`
+    }
     case "DISTANCE":
-      return `${value}m`
     case "HEIGHT":
-      return `${value}m`
+      return `${Number(value).toFixed(2)}m`
     case "SCORE":
       return `${value} pts`
+    case "PLACEMENT":
+      return String(value)
     default:
       return String(value)
+  }
+}
+
+function isSeedMarkValid(mark: SeedMarkValue): boolean {
+  switch (mark.type) {
+    case "TIME": {
+      const hasAnyTimeValue =
+        (mark.seconds !== "" && !isNaN(Number(mark.seconds))) ||
+        (mark.minutes !== "" && !isNaN(Number(mark.minutes))) ||
+        (mark.hours !== "" && !isNaN(Number(mark.hours)))
+      return hasAnyTimeValue
+    }
+    case "DISTANCE":
+    case "HEIGHT":
+    case "SCORE":
+      return mark.value !== "" && !isNaN(Number(mark.value))
+    case "PLACEMENT":
+      return /^\d+$|^\d+h\d+$/.test(mark.value.trim())
+    default:
+      return false
+  }
+}
+
+function seedMarkToApiFields(mark: SeedMarkValue): Record<string, unknown> {
+  switch (mark.type) {
+    case "TIME":
+      return {
+        seedHours: mark.hours !== "" ? Number(mark.hours) : null,
+        seedMinutes: mark.minutes !== "" ? Number(mark.minutes) : null,
+        seedSeconds: mark.seconds !== "" ? Number(mark.seconds) : null,
+        seedMs: mark.ms !== "" ? Number(mark.ms) : null,
+        seedHandTimed: mark.handTimed,
+      }
+    case "DISTANCE":
+    case "HEIGHT":
+      return { seedDistance: mark.value !== "" ? Number(mark.value) : null }
+    case "SCORE":
+      return { seedPoints: mark.value !== "" ? Number(mark.value) : null }
+    case "PLACEMENT":
+      return { seedPlacement: mark.value.trim() || null }
+    default:
+      return {}
   }
 }
 
@@ -269,7 +342,7 @@ export function CompetitionRegistrationFlow({
   const [selectedMembership, setSelectedMembership] = useState<AvailableMembership | null>(null)
 
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set())
-  const [seedMarks, setSeedMarks] = useState<Record<string, string>>({})
+  const [seedMarks, setSeedMarks] = useState<Record<string, SeedMarkValue>>({})
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
   // Waiver state
@@ -776,8 +849,8 @@ export function CompetitionRegistrationFlow({
 
   const canProceedFromSeedMarks = useMemo(() => {
     return categoriesNeedingSeedMark.every((cat) => {
-      const val = seedMarks[cat.id]
-      return val !== undefined && val !== "" && !isNaN(Number(val))
+      const mark = seedMarks[cat.id]
+      return mark !== undefined && isSeedMarkValid(mark)
     })
   }, [categoriesNeedingSeedMark, seedMarks])
 
@@ -822,11 +895,11 @@ export function CompetitionRegistrationFlow({
       .map((c) => getCategoryLabel(c))
       .join(", ")
 
-    // Convert seed marks from string inputs to numeric values
-    const numericSeedMarks: Record<string, number> = {}
-    for (const [catId, val] of Object.entries(seedMarks)) {
-      if (selectedCategoryIds.has(catId) && val !== "" && !isNaN(Number(val))) {
-        numericSeedMarks[catId] = Number(val)
+    // Convert structured seed marks to API-ready objects
+    const structuredSeedMarks: Record<string, Record<string, unknown>> = {}
+    for (const [catId, mark] of Object.entries(seedMarks)) {
+      if (selectedCategoryIds.has(catId) && isSeedMarkValid(mark)) {
+        structuredSeedMarks[catId] = seedMarkToApiFields(mark)
       }
     }
 
@@ -846,7 +919,7 @@ export function CompetitionRegistrationFlow({
         pricingMode: competition.pricingMode,
         entryFee: competition.entryFee,
         requiredMemberships: selectedMembership ? [selectedMembership.id] : [],
-        ...(Object.keys(numericSeedMarks).length > 0 && { seedMarks: numericSeedMarks }),
+        ...(Object.keys(structuredSeedMarks).length > 0 && { seedMarks: structuredSeedMarks }),
       },
     })
 
@@ -1381,31 +1454,133 @@ export function CompetitionRegistrationFlow({
             <div className="space-y-6">
               {categoriesNeedingSeedMark.map((cat) => {
                 const meta = getSeedMarkMeta(cat.resultType)
-                const value = seedMarks[cat.id] ?? ""
+                const mark = seedMarks[cat.id] ?? defaultSeedMark(cat.resultType)
+
+                const updateMark = (updater: (prev: SeedMarkValue) => SeedMarkValue) => {
+                  setSeedMarks((prev) => ({
+                    ...prev,
+                    [cat.id]: updater(prev[cat.id] ?? defaultSeedMark(cat.resultType)),
+                  }))
+                }
 
                 return (
                   <div key={cat.id} className="space-y-2">
-                    <Label htmlFor={`seed-${cat.id}`} className="text-sm font-medium">
+                    <Label className="text-sm font-medium">
                       {getCategoryLabel(cat)}
                     </Label>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 relative">
-                        <Input
-                          id={`seed-${cat.id}`}
-                          type="number"
-                          step={meta.step}
-                          min="0"
-                          placeholder={meta.placeholder}
-                          value={value}
-                          onChange={(e) =>
-                            setSeedMarks((prev) => ({ ...prev, [cat.id]: e.target.value }))
-                          }
-                        />
+
+                    {cat.resultType === "TIME" && mark.type === "TIME" ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="H"
+                              value={mark.hours}
+                              onChange={(e) =>
+                                updateMark((prev) =>
+                                  prev.type === "TIME" ? { ...prev, hours: e.target.value } : prev
+                                )
+                              }
+                              className="text-center"
+                            />
+                          </div>
+                          <span className="text-muted-foreground font-medium">:</span>
+                          <div className="flex-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="59"
+                              placeholder="M"
+                              value={mark.minutes}
+                              onChange={(e) =>
+                                updateMark((prev) =>
+                                  prev.type === "TIME" ? { ...prev, minutes: e.target.value } : prev
+                                )
+                              }
+                              className="text-center"
+                            />
+                          </div>
+                          <span className="text-muted-foreground font-medium">:</span>
+                          <div className="flex-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="59"
+                              placeholder="S"
+                              value={mark.seconds}
+                              onChange={(e) =>
+                                updateMark((prev) =>
+                                  prev.type === "TIME" ? { ...prev, seconds: e.target.value } : prev
+                                )
+                              }
+                              className="text-center"
+                            />
+                          </div>
+                          <span className="text-muted-foreground font-medium">.</span>
+                          <div className="flex-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="999"
+                              placeholder="ms"
+                              value={mark.ms}
+                              onChange={(e) =>
+                                updateMark((prev) =>
+                                  prev.type === "TIME" ? { ...prev, ms: e.target.value } : prev
+                                )
+                              }
+                              className="text-center"
+                            />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                          <Checkbox
+                            checked={mark.handTimed}
+                            onCheckedChange={(checked) =>
+                              updateMark((prev) =>
+                                prev.type === "TIME" ? { ...prev, handTimed: !!checked } : prev
+                              )
+                            }
+                          />
+                          Hand-timed
+                        </label>
                       </div>
-                      <span className="text-sm text-muted-foreground shrink-0 w-16">
-                        {meta.unit}
-                      </span>
-                    </div>
+                    ) : cat.resultType === "PLACEMENT" && mark.type === "PLACEMENT" ? (
+                      <Input
+                        placeholder={meta.placeholder}
+                        value={mark.value}
+                        onChange={(e) =>
+                          updateMark((prev) =>
+                            prev.type === "PLACEMENT" ? { ...prev, value: e.target.value } : prev
+                          )
+                        }
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            step={meta.step}
+                            min="0"
+                            placeholder={meta.placeholder}
+                            value={"value" in mark ? mark.value : ""}
+                            onChange={(e) =>
+                              updateMark((prev) =>
+                                "value" in prev ? { ...prev, value: e.target.value } : prev
+                              )
+                            }
+                          />
+                        </div>
+                        {meta.unit && (
+                          <span className="text-sm text-muted-foreground shrink-0 w-16">
+                            {meta.unit}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {cat.qualifyingMark != null && (
                       <p className="text-xs text-muted-foreground">
                         Qualifying mark: {formatSeedMarkDisplay(cat.qualifyingMark, cat.resultType)}

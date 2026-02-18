@@ -3496,10 +3496,11 @@ model SportEventEligibility {
 // ============================================
 
 enum ResultType {
-  TIME     // Stored in milliseconds (12345 = 12.345s)
-  DISTANCE // Stored in millimeters (5230 = 5.23m)
-  HEIGHT   // Stored in millimeters (2010 = 2.01m)
-  SCORE    // Stored as decimal points (9.750)
+  TIME      // Time-based: stored as h/m/s/ms components
+  DISTANCE  // Field events: stored in metres (Decimal)
+  HEIGHT    // Field events: stored in metres (Decimal)
+  SCORE     // Combined events: stored as points (Decimal)
+  PLACEMENT // Placement: stored as string (e.g. "1" or "3h5")
 }
 
 enum SortDirection {
@@ -3826,8 +3827,15 @@ model CompetitionEntry {
 
   status EntryStatus @default(PENDING_SEED)
 
-  // Seed mark fields
-  seedMark            Decimal?          @db.Decimal(12, 3)
+  // Seed mark fields (structured by result type)
+  seedHours          Int?
+  seedMinutes        Int?
+  seedSeconds        Int?
+  seedMs             Int?
+  seedHandTimed      Boolean           @default(false)
+  seedDistance        Decimal?          @db.Decimal(8, 2)
+  seedPoints         Decimal?          @db.Decimal(10, 3)
+  seedPlacement      String?
   seedMarkSubmittedAt DateTime?
   seedMarkReviewedAt  DateTime?
   seedMarkReviewedBy  String?
@@ -3884,7 +3892,9 @@ model CompetitionResult {
   displayValue String? // Pre-formatted string for display
 
   // Placement
-  placement Int?
+  placement   Int?
+  heat        Int?
+  isHandTimed Boolean @default(false)
 
   // Status flags
   isPersonalBest Boolean @default(false)

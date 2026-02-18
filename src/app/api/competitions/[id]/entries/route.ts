@@ -3,6 +3,12 @@ import { getAuthSession } from "@/lib/auth"
 import { checkFeatureGate } from "@/lib/feature-resolver"
 import { db } from "@/lib/db"
 import { z } from "zod"
+import {
+  hasSeedValue,
+  seedValueForComparison,
+  type SeedMarkFields,
+  type ResultType,
+} from "@/lib/athletics-formats"
 
 /**
  * GET /api/competitions/[id]/entries
@@ -74,7 +80,14 @@ const createEntrySchema = z.object({
   competitionCategoryId: z.string().min(1),
   athleteId: z.string().min(1),
   teamId: z.string().nullable().optional(),
-  seedMark: z.number().nullable().optional(),
+  seedHours: z.number().int().min(0).nullable().optional(),
+  seedMinutes: z.number().int().min(0).max(59).nullable().optional(),
+  seedSeconds: z.number().int().min(0).max(59).nullable().optional(),
+  seedMs: z.number().int().min(0).max(999).nullable().optional(),
+  seedHandTimed: z.boolean().default(false),
+  seedDistance: z.number().nullable().optional(),
+  seedPoints: z.number().nullable().optional(),
+  seedPlacement: z.string().nullable().optional(),
 })
 
 /**
@@ -112,7 +125,6 @@ export async function POST(
     const body = await request.json()
     const data = createEntrySchema.parse(body)
 
-    // Look up the category to determine entry status
     const category = await db.competitionCategory.findFirst({
       where: { id: data.competitionCategoryId, competitionId: id },
     })
@@ -120,23 +132,38 @@ export async function POST(
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
     }
 
-    // Determine initial status based on seed mark requirements
+    const resultType = category.resultType as ResultType
+    const seedFields: SeedMarkFields = {
+      seedHours: data.seedHours ?? null,
+      seedMinutes: data.seedMinutes ?? null,
+      seedSeconds: data.seedSeconds ?? null,
+      seedMs: data.seedMs ?? null,
+      seedHandTimed: data.seedHandTimed,
+      seedDistance: data.seedDistance ?? null,
+      seedPoints: data.seedPoints ?? null,
+      seedPlacement: data.seedPlacement ?? null,
+    }
+    const hasSeed = hasSeedValue(seedFields, resultType)
+
     let entryStatus: "PENDING_SEED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" = "APPROVED"
     let seedMarkStatus: "PENDING" | "APPROVED" | "REJECTED" | null = null
 
     if (category.seedMarkRequired) {
       if (category.submissionMode === "NONE") {
         entryStatus = "APPROVED"
-      } else if (data.seedMark != null) {
+      } else if (hasSeed) {
         if (category.submissionMode === "MANUAL_ENTRY") {
           entryStatus = "PENDING_REVIEW"
           seedMarkStatus = "PENDING"
         } else if (category.submissionMode === "VERIFIED_RESULT") {
-          // Check if the seed mark meets the qualifying threshold
           if (category.qualifyingMark != null) {
-            const qualifies = category.sortDirection === "ASC"
-              ? data.seedMark <= Number(category.qualifyingMark)
-              : data.seedMark >= Number(category.qualifyingMark)
+            const seedNum = seedValueForComparison(seedFields, resultType)
+            const qualMark = Number(category.qualifyingMark)
+            const qualifies =
+              seedNum != null &&
+              (category.sortDirection === "ASC"
+                ? seedNum <= qualMark
+                : seedNum >= qualMark)
             entryStatus = qualifies ? "APPROVED" : "REJECTED"
             seedMarkStatus = qualifies ? "APPROVED" : "REJECTED"
           } else {
@@ -156,8 +183,15 @@ export async function POST(
         athleteId: data.athleteId,
         teamId: data.teamId || null,
         status: entryStatus,
-        seedMark: data.seedMark ?? null,
-        seedMarkSubmittedAt: data.seedMark != null ? new Date() : null,
+        seedHours: data.seedHours ?? null,
+        seedMinutes: data.seedMinutes ?? null,
+        seedSeconds: data.seedSeconds ?? null,
+        seedMs: data.seedMs ?? null,
+        seedHandTimed: data.seedHandTimed,
+        seedDistance: data.seedDistance ?? null,
+        seedPoints: data.seedPoints ?? null,
+        seedPlacement: data.seedPlacement ?? null,
+        seedMarkSubmittedAt: hasSeed ? new Date() : null,
         seedMarkStatus: seedMarkStatus as any,
       },
       include: {

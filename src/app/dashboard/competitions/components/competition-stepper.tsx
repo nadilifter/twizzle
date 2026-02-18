@@ -86,7 +86,7 @@ interface MembershipInstance {
   groupName: string
 }
 
-type ResultType = "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
+type ResultType = "TIME" | "DISTANCE" | "HEIGHT" | "SCORE" | "PLACEMENT"
 type SortDir = "ASC" | "DESC"
 type SubMode = "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY"
 
