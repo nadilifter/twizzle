@@ -13,9 +13,21 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
-  Plus, Search, CalendarDays, Clock, MapPin, Trophy, Loader2, AlertCircle, Users,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Plus, Search, CalendarDays, Clock, MapPin, Trophy, Loader2, AlertCircle, Users, Trash2, Radio,
 } from "lucide-react"
-import { format } from "date-fns"
+import { format, formatDistanceToNow, isPast, isFuture } from "date-fns"
+import { toast } from "sonner"
 
 const COMPETITION_TYPE_LABELS: Record<string, string> = {
   GYMNASTICS: "Gymnastics",
@@ -65,6 +77,9 @@ interface Competition {
   stateProvince?: string | null
   pricingMode: string
   entryFee?: number | string | null
+  publishStatus?: string | null
+  scheduledGoLiveDate?: string | null
+  scheduledGoLiveTime?: string | null
   facility?: { id: string; name: string; city?: string | null; stateProvince?: string | null } | null
   _count?: { entries: number; results: number; teams: number }
   categories?: any[]
@@ -75,6 +90,7 @@ export default function CompetitionsPage() {
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [deletingId, setDeletingId] = React.useState<string | null>(null)
 
   const fetchCompetitions = React.useCallback(async () => {
     try {
@@ -98,6 +114,26 @@ export default function CompetitionsPage() {
   React.useEffect(() => {
     fetchCompetitions()
   }, [fetchCompetitions])
+
+  const handleDelete = async (competition: Competition) => {
+    setDeletingId(competition.id)
+    try {
+      const response = await fetch(`/api/competitions/${competition.id}`, {
+        method: "DELETE",
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to delete competition")
+      }
+      toast.success(`"${competition.name}" deleted`)
+      setCompetitions((prev) => prev.filter((c) => c.id !== competition.id))
+    } catch (err) {
+      console.error("Failed to delete competition:", err)
+      toast.error(err instanceof Error ? err.message : "Failed to delete competition")
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const filtered = React.useMemo(() => {
     if (!searchTerm.trim()) return competitions
@@ -162,6 +198,13 @@ export default function CompetitionsPage() {
               : [competition.city, competition.stateProvince].filter(Boolean).join(", ")
             const entryCount = competition._count?.entries ?? 0
             const categoryCount = competition.categories?.length ?? 0
+            const isDraft = competition.status === "DRAFT"
+
+            // Registration timing info
+            const isOpen = competition.status === "REGISTRATION_OPEN"
+            const startDate = new Date(competition.startDate)
+            const hasScheduledGoLive = competition.publishStatus === "SCHEDULED" && competition.scheduledGoLiveDate
+            const scheduledDate = hasScheduledGoLive ? new Date(competition.scheduledGoLiveDate!) : null
 
             return (
               <Card key={competition.id} className="flex flex-col">
@@ -189,7 +232,7 @@ export default function CompetitionsPage() {
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <CalendarDays className="h-3.5 w-3.5" />
                       <span>
-                        {format(new Date(competition.startDate), "MMM d, yyyy")}
+                        {format(startDate, "MMM d, yyyy")}
                         {competition.endDate && competition.endDate !== competition.startDate && (
                           <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
                         )}
@@ -217,6 +260,39 @@ export default function CompetitionsPage() {
                         <span>{formatPrice(competition.entryFee)}</span>
                       </div>
                     )}
+
+                    {/* Scheduled go-live for non-open competitions */}
+                    {!isOpen && scheduledDate && (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Radio className="h-3.5 w-3.5 text-amber-500" />
+                        {isFuture(scheduledDate) ? (
+                          <span className="text-amber-600 dark:text-amber-400">
+                            Goes live {formatDistanceToNow(scheduledDate, { addSuffix: true })}
+                            {competition.scheduledGoLiveTime && ` at ${competition.scheduledGoLiveTime}`}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Was scheduled for {format(scheduledDate, "MMM d, yyyy")}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Registration closes when event starts — show for open competitions */}
+                    {isOpen && (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Radio className="h-3.5 w-3.5 text-green-500" />
+                        {isFuture(startDate) ? (
+                          <span className="text-green-600 dark:text-green-400">
+                            Registration closes {formatDistanceToNow(startDate, { addSuffix: true })}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Registration closed {format(startDate, "MMM d, yyyy")}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Tags */}
@@ -241,6 +317,41 @@ export default function CompetitionsPage() {
                       View Details
                     </Link>
                   </Button>
+                  {isDraft && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          disabled={deletingId === competition.id}
+                        >
+                          {deletingId === competition.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete competition?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete &ldquo;{competition.name}&rdquo;. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => handleDelete(competition)}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </CardFooter>
               </Card>
             )
