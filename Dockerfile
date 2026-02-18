@@ -46,6 +46,9 @@ COPY --from=builder /app/public ./public
 # Copy prisma schema and migrations for database migrations
 COPY --from=builder /app/prisma ./prisma
 
+# Install prisma CLI globally for running migrations (pinned to project's major version)
+RUN npm install -g prisma@6
+
 # Set the correct permission for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next

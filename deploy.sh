@@ -150,7 +150,7 @@ if [ "$USE_COMPOSE" = "yes" ]; then
         --network uplifter-network \
         -e DATABASE_URL="postgresql://uplifter:${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter" \
         "$IMAGE_NAME:latest" \
-        npx prisma migrate deploy; then
+        prisma migrate deploy; then
         log_error "Database migration failed!"
         log_warn "Attempting rollback to previous image..."
         
@@ -180,7 +180,7 @@ else
     if ! sudo docker run --rm \
         --env-file "$ENV_FILE" \
         "$IMAGE_NAME:latest" \
-        npx prisma migrate deploy; then
+        prisma migrate deploy; then
         log_error "Database migration failed!"
         log_warn "Attempting rollback to previous image..."
         
