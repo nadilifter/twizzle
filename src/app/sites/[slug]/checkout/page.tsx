@@ -706,7 +706,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   // Show loading while checking queue status
   if (isChecking) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12 text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
         <p className="text-muted-foreground">Checking availability...</p>
       </div>
@@ -715,7 +715,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   if (!isAllowed) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12 text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
         <p className="text-muted-foreground">Redirecting to queue...</p>
       </div>
@@ -724,7 +724,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12 text-center">
         <h1 className="text-3xl font-bold mb-4">Checkout</h1>
         <p className="text-muted-foreground mb-8">Your cart is empty.</p>
         <Button asChild>
@@ -735,7 +735,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
       <h1 className="text-3xl font-bold mb-8">Checkout</h1>
       
       <div className="grid gap-8 lg:grid-cols-3">
