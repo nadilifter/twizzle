@@ -110,6 +110,11 @@ export default async function CompetitionDetailPage({
       isTeamEvent: cat.isTeamEvent,
       price: cat.price ? Number(cat.price) : null,
       displayOrder: cat.displayOrder,
+      seedMarkRequired: cat.seedMarkRequired,
+      submissionMode: cat.submissionMode,
+      resultType: cat.resultType,
+      precision: cat.precision,
+      qualifyingMark: cat.qualifyingMark ? Number(cat.qualifyingMark) : null,
     })),
     pricingTiers: competition.pricingTiers.map((t) => ({
       id: t.id,

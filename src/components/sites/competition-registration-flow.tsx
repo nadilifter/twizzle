@@ -46,6 +46,7 @@ import {
   CreditCard,
   FileText,
   Heart,
+  Gauge,
 } from "lucide-react"
 
 // ---------- Types ----------
@@ -72,6 +73,11 @@ interface CompetitionCategory {
   isTeamEvent: boolean
   price: number | null
   displayOrder: number
+  seedMarkRequired: boolean
+  submissionMode: "NONE" | "VERIFIED_RESULT" | "MANUAL_ENTRY"
+  resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
+  precision: number
+  qualifyingMark: number | null
 }
 
 interface PricingTier {
@@ -162,6 +168,7 @@ interface CompetitionRegistrationFlowProps {
 const { useStepper } = defineStepper(
   { id: "athlete", title: "Select Athlete" },
   { id: "categories", title: "Select Events" },
+  { id: "seedMarks", title: "Seed Marks" },
   { id: "waivers", title: "Sign Waivers" },
   { id: "medical", title: "Medical Info" },
   { id: "review", title: "Review & Add to Cart" }
@@ -191,6 +198,45 @@ function getCategoryLabel(cat: CompetitionCategory): string {
   if (cat.sportEvent) parts.push(cat.sportEvent.name)
   if (cat.ageCategory) parts.push(cat.ageCategory.name)
   return parts.join(" – ") || `Category ${cat.displayOrder + 1}`
+}
+
+function getSeedMarkMeta(resultType: CompetitionCategory["resultType"]): {
+  label: string
+  placeholder: string
+  unit: string
+  step: string
+} {
+  switch (resultType) {
+    case "TIME":
+      return { label: "Time", placeholder: "e.g. 12.345", unit: "seconds", step: "0.001" }
+    case "DISTANCE":
+      return { label: "Distance", placeholder: "e.g. 5.23", unit: "meters", step: "0.001" }
+    case "HEIGHT":
+      return { label: "Height", placeholder: "e.g. 2.01", unit: "meters", step: "0.001" }
+    case "SCORE":
+      return { label: "Score", placeholder: "e.g. 9.750", unit: "points", step: "0.001" }
+    default:
+      return { label: "Mark", placeholder: "Enter value", unit: "", step: "0.001" }
+  }
+}
+
+function formatSeedMarkDisplay(value: number, resultType: CompetitionCategory["resultType"]): string {
+  switch (resultType) {
+    case "TIME":
+      return `${value}s`
+    case "DISTANCE":
+      return `${value}m`
+    case "HEIGHT":
+      return `${value}m`
+    case "SCORE":
+      return `${value} pts`
+    default:
+      return String(value)
+  }
+}
+
+function categoryNeedsSeedMark(cat: CompetitionCategory): boolean {
+  return cat.seedMarkRequired && cat.submissionMode !== "NONE"
 }
 
 // ---------- Main Component ----------
@@ -223,6 +269,7 @@ export function CompetitionRegistrationFlow({
   const [selectedMembership, setSelectedMembership] = useState<AvailableMembership | null>(null)
 
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set())
+  const [seedMarks, setSeedMarks] = useState<Record<string, string>>({})
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
   // Waiver state
@@ -248,14 +295,21 @@ export function CompetitionRegistrationFlow({
   const needsWaivers = competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0
   const needsMedicalStep = competition.hasMedicalRequirement
 
+  const needsSeedMarks = useMemo(() => {
+    return competition.categories.some(
+      (cat) => selectedCategoryIds.has(cat.id) && categoryNeedsSeedMark(cat)
+    )
+  }, [competition.categories, selectedCategoryIds])
+
   // Ordered step IDs with conditional inclusion
   const visibleStepIds = useMemo(() => {
     const ids = ["athlete", "categories"]
+    if (needsSeedMarks) ids.push("seedMarks")
     if (needsWaivers) ids.push("waivers")
     if (needsMedicalStep) ids.push("medical")
     ids.push("review")
     return ids
-  }, [needsWaivers, needsMedicalStep])
+  }, [needsSeedMarks, needsWaivers, needsMedicalStep])
 
   // Navigation helpers that skip invisible steps
   const getNextStepId = useCallback(
@@ -358,6 +412,7 @@ export function CompetitionRegistrationFlow({
     setEligibilityResult(null)
     setSelectedMembership(null)
     setSelectedCategoryIds(new Set())
+    setSeedMarks({})
     setIsCheckingEligibility(true)
 
     try {
@@ -701,16 +756,30 @@ export function CompetitionRegistrationFlow({
   const handleProceedFromCategories = useCallback(async () => {
     const nextId = getNextStepId("categories")
     if (!nextId) return
-
-    if (nextId === "waivers") {
-      stepper.navigation.goTo("waivers" as any)
-      // The waiver check happens when the step renders (via useEffect)
-    } else if (nextId === "medical") {
-      stepper.navigation.goTo("medical" as any)
-    } else {
-      stepper.navigation.goTo("review" as any)
-    }
+    stepper.navigation.goTo(nextId as any)
   }, [getNextStepId, stepper.navigation])
+
+  // ---------- Step transition: seedMarks -> next ----------
+
+  const handleProceedFromSeedMarks = useCallback(async () => {
+    const nextId = getNextStepId("seedMarks")
+    if (!nextId) return
+    stepper.navigation.goTo(nextId as any)
+  }, [getNextStepId, stepper.navigation])
+
+  // Categories that require seed mark input from the user
+  const categoriesNeedingSeedMark = useMemo(() => {
+    return competition.categories.filter(
+      (cat) => selectedCategoryIds.has(cat.id) && categoryNeedsSeedMark(cat)
+    )
+  }, [competition.categories, selectedCategoryIds])
+
+  const canProceedFromSeedMarks = useMemo(() => {
+    return categoriesNeedingSeedMark.every((cat) => {
+      const val = seedMarks[cat.id]
+      return val !== undefined && val !== "" && !isNaN(Number(val))
+    })
+  }, [categoriesNeedingSeedMark, seedMarks])
 
   // Membership price for the review/total
   const membershipPrice = eligibilityResult?.requiresMembershipPurchase && selectedMembership
@@ -753,6 +822,14 @@ export function CompetitionRegistrationFlow({
       .map((c) => getCategoryLabel(c))
       .join(", ")
 
+    // Convert seed marks from string inputs to numeric values
+    const numericSeedMarks: Record<string, number> = {}
+    for (const [catId, val] of Object.entries(seedMarks)) {
+      if (selectedCategoryIds.has(catId) && val !== "" && !isNaN(Number(val))) {
+        numericSeedMarks[catId] = Number(val)
+      }
+    }
+
     addItem({
       referenceId: competition.id,
       type: "competition",
@@ -769,6 +846,7 @@ export function CompetitionRegistrationFlow({
         pricingMode: competition.pricingMode,
         entryFee: competition.entryFee,
         requiredMemberships: selectedMembership ? [selectedMembership.id] : [],
+        ...(Object.keys(numericSeedMarks).length > 0 && { seedMarks: numericSeedMarks }),
       },
     })
 
@@ -779,6 +857,7 @@ export function CompetitionRegistrationFlow({
     setEligibilityResult(null)
     setSelectedMembership(null)
     setSelectedCategoryIds(new Set())
+    setSeedMarks({})
     stepper.navigation.goTo("athlete")
   }
 
@@ -1286,6 +1365,83 @@ export function CompetitionRegistrationFlow({
         </Card>
       )}
 
+      {/* Step: Seed Marks */}
+      {currentStepId === "seedMarks" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gauge className="h-5 w-5" />
+              Enter Seed Marks
+            </CardTitle>
+            <CardDescription>
+              Provide qualifying marks for the selected events. These will be reviewed by the competition organizer.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {categoriesNeedingSeedMark.map((cat) => {
+                const meta = getSeedMarkMeta(cat.resultType)
+                const value = seedMarks[cat.id] ?? ""
+
+                return (
+                  <div key={cat.id} className="space-y-2">
+                    <Label htmlFor={`seed-${cat.id}`} className="text-sm font-medium">
+                      {getCategoryLabel(cat)}
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 relative">
+                        <Input
+                          id={`seed-${cat.id}`}
+                          type="number"
+                          step={meta.step}
+                          min="0"
+                          placeholder={meta.placeholder}
+                          value={value}
+                          onChange={(e) =>
+                            setSeedMarks((prev) => ({ ...prev, [cat.id]: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <span className="text-sm text-muted-foreground shrink-0 w-16">
+                        {meta.unit}
+                      </span>
+                    </div>
+                    {cat.qualifyingMark != null && (
+                      <p className="text-xs text-muted-foreground">
+                        Qualifying mark: {formatSeedMarkDisplay(cat.qualifyingMark, cat.resultType)}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Navigation */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const prevId = getPreviousStepId("seedMarks")
+                    if (prevId) stepper.navigation.goTo(prevId as any)
+                  }}
+                  className="gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  className="flex-1 gap-2"
+                  disabled={!canProceedFromSeedMarks}
+                  onClick={handleProceedFromSeedMarks}
+                >
+                  Continue
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Step: Sign Waivers */}
       {currentStepId === "waivers" && (
         <WaiverStep
@@ -1368,19 +1524,31 @@ export function CompetitionRegistrationFlow({
                 <div className="space-y-1.5">
                   {competition.categories
                     .filter((c) => selectedCategoryIds.has(c.id))
-                    .map((cat) => (
-                      <div
-                        key={cat.id}
-                        className="flex items-center justify-between p-2 rounded-lg border bg-card"
-                      >
-                        <span className="text-sm">{getCategoryLabel(cat)}</span>
-                        {competition.pricingMode === "PER_CATEGORY" && cat.price != null && (
-                          <span className="text-sm text-muted-foreground">
-                            {formatPrice(cat.price)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                    .map((cat) => {
+                      const seedVal = seedMarks[cat.id]
+                      const hasSeedMark = categoryNeedsSeedMark(cat) && seedVal && !isNaN(Number(seedVal))
+
+                      return (
+                        <div
+                          key={cat.id}
+                          className="flex items-center justify-between p-2 rounded-lg border bg-card"
+                        >
+                          <div className="min-w-0">
+                            <span className="text-sm">{getCategoryLabel(cat)}</span>
+                            {hasSeedMark && (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                Seed: {formatSeedMarkDisplay(Number(seedVal), cat.resultType)}
+                              </span>
+                            )}
+                          </div>
+                          {competition.pricingMode === "PER_CATEGORY" && cat.price != null && (
+                            <span className="text-sm text-muted-foreground shrink-0">
+                              {formatPrice(cat.price)}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
                 </div>
               </div>
 

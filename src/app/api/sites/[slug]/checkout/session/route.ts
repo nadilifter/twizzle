@@ -25,6 +25,7 @@ interface CartItem {
     categoryIds?: string[];
     pricingMode?: string;
     entryFee?: number | null;
+    seedMarks?: Record<string, number>;
   };
 }
 
@@ -808,6 +809,7 @@ export async function POST(
         competitionId: item.details?.competitionId || item.referenceId,
         athleteId: item.athleteId || item.details?.athleteId,
         categoryIds: item.details?.categoryIds || [],
+        seedMarks: item.details?.seedMarks || {},
       })),
     };
     
