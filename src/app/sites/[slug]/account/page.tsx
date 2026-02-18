@@ -81,7 +81,7 @@ export default function AccountPage() {
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push(`/sites/${slug}`)
+      router.push("/")
     }
   }, [status, slug, router])
 

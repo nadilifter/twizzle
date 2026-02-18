@@ -29,7 +29,7 @@ export default function QueuePage() {
   const searchParams = useSearchParams()
   const slug = params.slug as string
   const programId = searchParams.get("programId")
-  const returnUrl = searchParams.get("returnUrl") || `/sites/${slug}/register`
+  const returnUrl = searchParams.get("returnUrl") || "/register"
 
   const [status, setStatus] = useState<QueueStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -150,7 +150,7 @@ export default function QueuePage() {
         body: JSON.stringify({ sessionToken }),
       })
       localStorage.removeItem(`queue_session_${slug}`)
-      router.push(`/sites/${slug}`)
+      router.push("/")
     } catch (err) {
       console.error("Error leaving queue:", err)
     }
@@ -179,7 +179,7 @@ export default function QueuePage() {
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Button onClick={() => router.push(`/sites/${slug}`)}>
+            <Button onClick={() => router.push("/")}>
               Return to Home
             </Button>
           </CardContent>

@@ -728,7 +728,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         <h1 className="text-3xl font-bold mb-4">Checkout</h1>
         <p className="text-muted-foreground mb-8">Your cart is empty.</p>
         <Button asChild>
-          <Link href={`/sites/${params.slug}/register`}>Browse Programs</Link>
+          <Link href="/register">Browse Programs</Link>
         </Button>
       </div>
     )

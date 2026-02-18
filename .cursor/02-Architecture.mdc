@@ -51,3 +51,16 @@ globs: ["**/*"]
 - **Domain Resolution**: `src/lib/env-domains.ts` provides `getEnvConfig()` for environment detection.
 - **Middleware**: Dynamically routes based on subdomain and environment.
 - **Services**: External services (Adyen, Twilio, SES) switch TEST/LIVE mode per environment.
+
+### Tenant Site URL Construction (CRITICAL)
+
+The middleware in `src/middleware.ts` **internally** rewrites tenant subdomain requests by prepending `/sites/{subdomain}` to the path. This is invisible to the browser. Client-side navigation must NEVER include the `/sites/{slug}` prefix — doing so causes the middleware to double-prefix the path, resulting in a 404.
+
+| Context | URL Pattern | Example |
+|---------|-------------|---------|
+| Client-side navigation (`Link`, `router.push`) | Simple path, no prefix | `<Link href="/checkout">`, `router.push("/register")` |
+| API fetch calls from tenant pages | `/api/sites/{slug}/...` (API routes skip middleware rewriting) | `fetch(\`/api/sites/${params.slug}/checkout/session\`)` |
+| Public API routes | `/api/public/...` | `fetch("/api/public/waivers/check")` |
+| Server components | Use `params.slug` for data fetching only | `db.websiteConfig.findUnique({ where: { subdomain: params.slug } })` |
+
+See `WEBSITE_BUILDER_README.md` for full examples and explanation.

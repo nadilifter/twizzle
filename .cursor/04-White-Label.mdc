@@ -26,6 +26,7 @@ globs: ["apps/**/*", "packages/ui/**/*", "src/lib/env-domains.ts"]
 ### Domain Resolution
 - **Configuration Module**: `src/lib/env-domains.ts` provides:
   - `getEnvConfig()` - Current environment configuration
-  - `getSubdomainUrl(subdomain)` - Build subdomain URLs
+  - `getSubdomainUrl(subdomain)` - Build full external URLs for cross-portal navigation
   - `extractSubdomain(hostname)` - Parse subdomains from requests
   - `isValidDomain(hostname)` - Validate domain ownership
+- **Tenant Site Navigation**: Within tenant site pages (`src/app/sites/[slug]/`), client-side links and `router.push` calls must use simple paths like `/checkout`, `/register`, `/account` — never `/sites/{slug}/...`. The middleware already prepends `/sites/{slug}` via internal rewrite. See `02-Architecture.mdc` for the full URL construction rules.

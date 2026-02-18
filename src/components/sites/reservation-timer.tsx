@@ -7,14 +7,13 @@ import { cn } from "@/lib/utils"
 
 interface ReservationTimerProps {
   expiresAt: string
-  organizationSlug: string
+  organizationSlug?: string
   onExpired?: () => void
   className?: string
 }
 
 export function ReservationTimer({
   expiresAt,
-  organizationSlug,
   onExpired,
   className,
 }: ReservationTimerProps) {
@@ -58,11 +57,11 @@ export function ReservationTimer({
   useEffect(() => {
     if (isExpired) {
       const timeout = setTimeout(() => {
-        router.push(`/sites/${organizationSlug}/queue?expired=true`)
+        router.push("/queue?expired=true")
       }, 3000)
       return () => clearTimeout(timeout)
     }
-  }, [isExpired, router, organizationSlug])
+  }, [isExpired, router])
 
   const minutes = Math.floor(remainingSeconds / 60)
   const seconds = remainingSeconds % 60

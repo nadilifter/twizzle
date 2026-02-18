@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { Minus, Plus, ShoppingCart, Trash2, User, Info } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -54,11 +53,6 @@ export function CartSheet() {
     setItemToRemove(null)
     setDependentItems([])
   }
-  const pathname = usePathname()
-  
-  // Extract slug from pathname (e.g., /sites/london-western/...)
-  const slug = pathname?.split("/")[2]
-
   return (
     <>
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -168,7 +162,7 @@ export function CartSheet() {
             )}
             <SheetFooter>
                 <Button className="w-full" asChild onClick={() => setIsOpen(false)}>
-                  <Link href={slug ? `/sites/${slug}/checkout` : '/checkout'}>
+                  <Link href="/checkout">
                     Checkout
                   </Link>
                 </Button>

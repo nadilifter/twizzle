@@ -157,7 +157,7 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
 
   const handleReturnToQueue = () => {
     setShowBlockingModal(false)
-    router.push(`/sites/${organizationSlug}/queue`)
+    router.push("/queue")
   }
 
   return (

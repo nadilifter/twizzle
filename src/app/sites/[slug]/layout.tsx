@@ -228,7 +228,7 @@ export default async function SiteLayout({
   // Build portal URLs for the user menu
   const adminUrl = getSubdomainUrl("admin");
   const athleteUrl = getSubdomainUrl("athletes");
-  const accountUrl = `/sites/${subdomain}/account`;
+  const accountUrl = "/account";
 
   const primaryColor = config.primaryColor || "#000000";
   const secondaryColor = config.secondaryColor || "#ffffff";

@@ -176,6 +176,12 @@ sequenceDiagram
     end
 ```
 
+## Tenant Site Routing
+
+The middleware rewrites tenant subdomain requests internally: a visit to `gym-name.uplifterinc.com/checkout` becomes `/sites/gym-name/checkout` at the routing layer, but the browser URL stays as `/checkout`.
+
+**Key rule:** Client-side navigation within tenant sites (Link hrefs, router.push) must use simple paths (`/checkout`, `/register`, `/account`). Never include `/sites/{slug}/` in client-visible URLs — the middleware handles that prefix automatically. API fetch calls (`/api/sites/{slug}/...`) are unaffected since API routes bypass the rewrite. See `WEBSITE_BUILDER_README.md` for detailed examples.
+
 ## Multi-Organization Support
 
 ```mermaid

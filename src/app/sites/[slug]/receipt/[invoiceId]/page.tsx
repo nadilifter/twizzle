@@ -89,7 +89,7 @@ export default async function ReceiptPage({
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
                 <Button className="w-full" asChild>
-                    <Link href={`/sites/${subdomain}/`}>Return to Home</Link>
+                    <Link href="/">Return to Home</Link>
                 </Button>
             </CardFooter>
         </Card>
