@@ -256,14 +256,14 @@ function buildTimelineItems(competition: CompetitionDetail) {
   const items: {
     title: string
     date: Date | null
-    description: string
+    time: string | null
     hollow: boolean
   }[] = []
 
   items.push({
     title: "Registration Created",
     date: new Date(competition.createdAt),
-    description: `The competition "${competition.name}" was set up and configured with ${competition.categories.length} event${competition.categories.length === 1 ? "" : "s"}.`,
+    time: format(new Date(competition.createdAt), "h:mm a"),
     hollow: false,
   })
 
@@ -277,19 +277,20 @@ function buildTimelineItems(competition: CompetitionDetail) {
     competition.status === "COMPLETED"
 
   if (hasGoneLive) {
+    const goLiveDate = competition.scheduledGoLiveDate
+      ? new Date(competition.scheduledGoLiveDate)
+      : null
     items.push({
       title: "Registration Live",
-      date: competition.scheduledGoLiveDate
-        ? new Date(competition.scheduledGoLiveDate)
-        : null,
-      description: "Registration opened and athletes can now sign up for events.",
+      date: goLiveDate,
+      time: competition.scheduledGoLiveTime ?? null,
       hollow: false,
     })
   } else if (competition.publishStatus === "SCHEDULED" && competition.scheduledGoLiveDate) {
     items.push({
       title: "Registration Scheduled to Go Live",
       date: new Date(competition.scheduledGoLiveDate),
-      description: "Registration is scheduled to open automatically on this date.",
+      time: competition.scheduledGoLiveTime ?? null,
       hollow: true,
     })
   }
@@ -305,7 +306,7 @@ function buildTimelineItems(competition: CompetitionDetail) {
     items.push({
       title: "Registration Closed",
       date: null,
-      description: `Registration closed with ${competition._count.entries} total ${competition._count.entries === 1 ? "entry" : "entries"}.`,
+      time: null,
       hollow: false,
     })
   }
@@ -315,9 +316,7 @@ function buildTimelineItems(competition: CompetitionDetail) {
   items.push({
     title: "Competition Begins",
     date: startDate,
-    description: startPast
-      ? "The competition has started."
-      : `The competition is scheduled to begin at ${competition.startTime}.`,
+    time: competition.startTime,
     hollow: !startPast,
   })
 
@@ -326,9 +325,7 @@ function buildTimelineItems(competition: CompetitionDetail) {
   items.push({
     title: "Competition Ends",
     date: endDate,
-    description: endPast
-      ? `The competition concluded with ${competition._count.results} result${competition._count.results === 1 ? "" : "s"} recorded.`
-      : `Scheduled to conclude at ${competition.endTime}.`,
+    time: competition.endTime,
     hollow: !endPast,
   })
 
@@ -646,7 +643,7 @@ export default function CompetitionProfilePage() {
 
             {/* Right column */}
             <div className="md:col-span-2 space-y-6">
-              {/* Registration Timeline Card (Latest Activity style) */}
+              {/* Registration Timeline Card */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Registration Timeline</CardTitle>
@@ -657,7 +654,6 @@ export default function CompetitionProfilePage() {
                       const isLast = idx === timelineItems.length - 1
                       return (
                         <div key={idx} className="relative flex gap-4">
-                          {/* Vertical line + dot */}
                           <div className="flex flex-col items-center">
                             <div
                               className={cn(
@@ -671,8 +667,7 @@ export default function CompetitionProfilePage() {
                               <div className="w-[2px] flex-1 bg-border my-1" />
                             )}
                           </div>
-                          {/* Content */}
-                          <div className={cn("pb-6", isLast && "pb-0")}>
+                          <div className={cn("pb-5", isLast && "pb-0")}>
                             <div className="flex items-center gap-2">
                               <h4 className="text-sm font-semibold">{item.title}</h4>
                               {item.hollow && (
@@ -682,10 +677,9 @@ export default function CompetitionProfilePage() {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {item.date ? format(item.date, "MMMM d, yyyy") : "Date pending"}
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {item.description}
+                              {item.date
+                                ? `${format(item.date, "MMMM d, yyyy")}${item.time ? ` at ${item.time}` : ""}`
+                                : "Date pending"}
                             </p>
                           </div>
                         </div>
@@ -695,106 +689,103 @@ export default function CompetitionProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Transaction History Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Transaction History</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {competition.lineItems && competition.lineItems.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Family</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {competition.lineItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.description}</TableCell>
-                            <TableCell>
-                              {item.invoice?.family?.name ?? "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "capitalize",
-                                  INVOICE_STATUS_STYLES[item.invoice?.status] ?? "",
-                                )}
-                              >
-                                {item.invoice?.status?.toLowerCase() ?? "unknown"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {format(new Date(item.createdAt), "MM/dd/yyyy")}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {formatPrice(item.total)}
-                            </TableCell>
+              {/* Transaction History + Families side by side */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Transaction History Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Transaction History</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {competition.lineItems && competition.lineItems.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <div className="py-10 text-center text-muted-foreground">
-                      No transactions found for this competition.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {competition.lineItems.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <p className="font-medium">{item.description}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {item.invoice?.family?.name ?? "N/A"} &middot; {format(new Date(item.createdAt), "MM/dd/yyyy")}
+                                </p>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "capitalize",
+                                    INVOICE_STATUS_STYLES[item.invoice?.status] ?? "",
+                                  )}
+                                >
+                                  {item.invoice?.status?.toLowerCase() ?? "unknown"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatPrice(item.total)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="py-10 text-center text-muted-foreground">
+                        No transactions found.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-              {/* Families Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Families</CardTitle>
-                  <CardDescription>
-                    Families with athletes registered in this competition
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {families.length > 0 ? (
-                    <div className="space-y-4">
-                      {families.map((family) => (
-                        <div
-                          key={family.id}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarFallback>
-                                {family.name
-                                  .split(" ")
-                                  .map((w) => w[0])
-                                  .join("")
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="text-sm font-medium">{family.name}</p>
-                              <p className="text-sm text-muted-foreground">{family.email}</p>
+                {/* Families Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Families</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {families.length > 0 ? (
+                      <div className="space-y-4">
+                        {families.map((family) => (
+                          <div
+                            key={family.id}
+                            className="flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarFallback>
+                                  {family.name
+                                    .split(" ")
+                                    .map((w) => w[0])
+                                    .join("")
+                                    .slice(0, 2)
+                                    .toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-medium">{family.name}</p>
+                                <p className="text-sm text-muted-foreground">{family.email}</p>
+                              </div>
                             </div>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/dashboard/athletes/families/${family.id}`}>
+                                View
+                              </Link>
+                            </Button>
                           </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/dashboard/athletes/families/${family.id}`}>
-                              View Profile
-                            </Link>
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="py-6 text-center text-muted-foreground">
-                      No families registered yet.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-6 text-center text-muted-foreground">
+                        No families registered yet.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </TabsContent>
