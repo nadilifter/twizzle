@@ -83,6 +83,7 @@ const createCompetitionSchema = z.object({
   stateProvince: z.string().optional().default(""),
   city: z.string().optional().default(""),
   streetAddress: z.string().optional().default(""),
+  postalCode: z.string().optional().default(""),
 
   // Dates
   startDate: z.string().or(z.date()),
@@ -187,6 +188,7 @@ export async function POST(request: NextRequest) {
         stateProvince: data.stateProvince,
         city: data.city,
         streetAddress: data.streetAddress,
+        postalCode: data.postalCode,
 
         // Dates
         startDate: new Date(data.startDate),

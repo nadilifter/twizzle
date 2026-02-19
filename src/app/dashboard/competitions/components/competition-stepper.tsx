@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -23,6 +24,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronsUpDown,
   Loader2,
   Users,
   Layers,
@@ -49,6 +51,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { format } from "date-fns"
+import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data"
 
 interface OrgSport {
   id: string
@@ -76,6 +79,7 @@ interface Facility {
   street: string | null
   city: string | null
   stateProvince: string | null
+  postalCode: string | null
   country: string | null
 }
 
@@ -159,6 +163,7 @@ interface CompetitionFormData {
   stateProvince: string
   city: string
   streetAddress: string
+  postalCode: string
   startDate: Date | null
   endDate: Date | null
   startTime: string
@@ -247,6 +252,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
   // selectedCombos: Set of "eventId:ageCategoryId" keys the user picked
   const [selectedCombos, setSelectedCombos] = React.useState<Set<string>>(new Set())
 
+  // Location field validation errors
+  const [locationErrors, setLocationErrors] = React.useState<Record<string, string>>({})
+  const [stateProvinceOpen, setStateProvinceOpen] = React.useState(false)
 
   // Form state
   const [formData, setFormData] = React.useState<CompetitionFormData>({
@@ -258,6 +266,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
     stateProvince: "",
     city: "",
     streetAddress: "",
+    postalCode: "",
     startDate: null,
     endDate: null,
     startTime: "09:00",
@@ -369,6 +378,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           stateProvince: data.stateProvince || "",
           city: data.city || "",
           streetAddress: data.streetAddress || "",
+          postalCode: data.postalCode || "",
           startDate: data.startDate ? new Date(data.startDate) : null,
           endDate: data.endDate ? new Date(data.endDate) : null,
           startTime: data.startTime || "09:00",
@@ -563,6 +573,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
   // Handle facility selection to auto-fill address
   const handleFacilityChange = (facilityId: string) => {
+    setLocationErrors({})
     if (facilityId === "__manual__") {
       setFormData(prev => ({
         ...prev,
@@ -571,6 +582,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         stateProvince: "",
         city: "",
         streetAddress: "",
+        postalCode: "",
       }))
       return
     }
@@ -583,6 +595,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         stateProvince: facility.stateProvince || "",
         city: facility.city || "",
         streetAddress: facility.street || "",
+        postalCode: facility.postalCode || "",
       }))
     }
   }
@@ -620,10 +633,26 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           toast.error("Please select an end date")
           return false
         }
-        if (!formData.city.trim() && !formData.facilityId) {
-          toast.error("Please enter a city or select a facility")
-          return false
+        if (!formData.facilityId) {
+          const locErrors: Record<string, string> = {}
+          if (!formData.country) locErrors.country = "Country is required"
+          if (!formData.stateProvince) locErrors.stateProvince = formData.country === "CA" ? "Province is required" : "State is required"
+          if (!formData.city.trim()) locErrors.city = "City is required"
+          if (!formData.streetAddress.trim()) locErrors.streetAddress = "Street address is required"
+          if (!formData.postalCode.trim()) {
+            locErrors.postalCode = formData.country === "CA" ? "Postal code is required" : "ZIP code is required"
+          } else if (formData.country && !isValidPostalCode(formData.postalCode, formData.country)) {
+            locErrors.postalCode = formData.country === "US"
+              ? "Enter a valid ZIP code (e.g. 12345 or 12345-6789)"
+              : "Enter a valid postal code (e.g. A1A 1A1)"
+          }
+          if (Object.keys(locErrors).length > 0) {
+            setLocationErrors(locErrors)
+            toast.error("Please fill in all required location fields")
+            return false
+          }
         }
+        setLocationErrors({})
         return true
       case "categories":
         return true
@@ -751,6 +780,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         stateProvince: formData.stateProvince,
         city: formData.city,
         streetAddress: formData.streetAddress,
+        postalCode: formData.postalCode,
         startDate: formData.startDate?.toISOString(),
         endDate: formData.endDate?.toISOString(),
         startTime: formData.startTime,
@@ -977,47 +1007,141 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Select a facility to auto-fill the address, or enter it manually below.
+                    {formData.facilityId
+                      ? "Address fields are populated from the selected facility."
+                      : "Select a facility to auto-fill the address, or enter it manually below."}
                   </p>
                 </div>
 
                 {/* Address Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Country */}
                   <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                      id="country"
-                      placeholder="e.g., Canada"
-                      value={formData.country}
-                      onChange={e => setFormData(prev => ({ ...prev, country: e.target.value }))}
-                    />
+                    <Label htmlFor="country">Country *</Label>
+                    <Select
+                      value={formData.country || undefined}
+                      onValueChange={(value) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          country: value,
+                          stateProvince: prev.country !== value ? "" : prev.stateProvince,
+                        }))
+                        if (locationErrors.country) setLocationErrors(prev => ({ ...prev, country: "" }))
+                        if (locationErrors.postalCode) setLocationErrors(prev => ({ ...prev, postalCode: "" }))
+                      }}
+                      disabled={!!formData.facilityId}
+                    >
+                      <SelectTrigger className={locationErrors.country ? "border-destructive" : ""}>
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map(c => (
+                          <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {locationErrors.country && <p className="text-sm text-destructive">{locationErrors.country}</p>}
                   </div>
+
+                  {/* State / Province */}
                   <div className="space-y-2">
-                    <Label htmlFor="stateProvince">Province / State</Label>
-                    <Input
-                      id="stateProvince"
-                      placeholder="e.g., Ontario"
-                      value={formData.stateProvince}
-                      onChange={e => setFormData(prev => ({ ...prev, stateProvince: e.target.value }))}
-                    />
+                    <Label>{formData.country === "CA" ? "Province" : "State"} *</Label>
+                    <Popover open={stateProvinceOpen} onOpenChange={setStateProvinceOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={stateProvinceOpen}
+                          disabled={!!formData.facilityId || !formData.country}
+                          className={cn(
+                            "w-full justify-between font-normal",
+                            !formData.stateProvince && "text-muted-foreground",
+                            locationErrors.stateProvince && "border-destructive"
+                          )}
+                        >
+                          {formData.stateProvince
+                            ? getRegionsForCountry(formData.country).find(r => r.code === formData.stateProvince)?.name ?? formData.stateProvince
+                            : formData.country ? `Select ${formData.country === "CA" ? "province" : "state"}...` : "Select country first"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder={`Search ${formData.country === "CA" ? "provinces" : "states"}...`} />
+                          <CommandList>
+                            <CommandEmpty>No results found.</CommandEmpty>
+                            <CommandGroup>
+                              {getRegionsForCountry(formData.country).map(region => (
+                                <CommandItem
+                                  key={region.code}
+                                  value={region.name}
+                                  onSelect={() => {
+                                    setFormData(prev => ({ ...prev, stateProvince: region.code }))
+                                    setStateProvinceOpen(false)
+                                    if (locationErrors.stateProvince) setLocationErrors(prev => ({ ...prev, stateProvince: "" }))
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", formData.stateProvince === region.code ? "opacity-100" : "opacity-0")} />
+                                  {region.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {locationErrors.stateProvince && <p className="text-sm text-destructive">{locationErrors.stateProvince}</p>}
                   </div>
+
+                  {/* City */}
                   <div className="space-y-2">
                     <Label htmlFor="city">City *</Label>
                     <Input
                       id="city"
                       placeholder="e.g., Toronto"
                       value={formData.city}
-                      onChange={e => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                      disabled={!!formData.facilityId}
+                      onChange={e => {
+                        setFormData(prev => ({ ...prev, city: e.target.value }))
+                        if (locationErrors.city) setLocationErrors(prev => ({ ...prev, city: "" }))
+                      }}
+                      className={locationErrors.city ? "border-destructive" : ""}
                     />
+                    {locationErrors.city && <p className="text-sm text-destructive">{locationErrors.city}</p>}
                   </div>
+
+                  {/* Street Address */}
                   <div className="space-y-2">
-                    <Label htmlFor="streetAddress">Street Address (optional)</Label>
+                    <Label htmlFor="streetAddress">Street Address *</Label>
                     <Input
                       id="streetAddress"
                       placeholder="e.g., 123 Main St"
                       value={formData.streetAddress}
-                      onChange={e => setFormData(prev => ({ ...prev, streetAddress: e.target.value }))}
+                      disabled={!!formData.facilityId}
+                      onChange={e => {
+                        setFormData(prev => ({ ...prev, streetAddress: e.target.value }))
+                        if (locationErrors.streetAddress) setLocationErrors(prev => ({ ...prev, streetAddress: "" }))
+                      }}
+                      className={locationErrors.streetAddress ? "border-destructive" : ""}
                     />
+                    {locationErrors.streetAddress && <p className="text-sm text-destructive">{locationErrors.streetAddress}</p>}
+                  </div>
+
+                  {/* Postal Code / ZIP Code */}
+                  <div className="space-y-2">
+                    <Label htmlFor="postalCode">{formData.country === "CA" ? "Postal Code" : "ZIP Code"} *</Label>
+                    <Input
+                      id="postalCode"
+                      placeholder={formData.country === "CA" ? "A1A 1A1" : "12345"}
+                      value={formData.postalCode}
+                      disabled={!!formData.facilityId}
+                      onChange={e => {
+                        setFormData(prev => ({ ...prev, postalCode: e.target.value }))
+                        if (locationErrors.postalCode) setLocationErrors(prev => ({ ...prev, postalCode: "" }))
+                      }}
+                      className={locationErrors.postalCode ? "border-destructive" : ""}
+                    />
+                    {locationErrors.postalCode && <p className="text-sm text-destructive">{locationErrors.postalCode}</p>}
                   </div>
                 </div>
               </div>

@@ -3698,6 +3698,7 @@ model Competition {
   stateProvince String?
   city          String?
   streetAddress String?
+  postalCode    String?
 
   // Dates & Times
   startDate DateTime

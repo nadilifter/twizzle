@@ -147,6 +147,7 @@ const updateCompetitionSchema = z.object({
   stateProvince: z.string().optional(),
   city: z.string().optional(),
   streetAddress: z.string().optional(),
+  postalCode: z.string().optional(),
 
   startDate: z.string().or(z.date()).optional(),
   endDate: z.string().or(z.date()).optional(),
@@ -216,6 +217,7 @@ export async function PATCH(
     if (data.stateProvince !== undefined) updateData.stateProvince = data.stateProvince
     if (data.city !== undefined) updateData.city = data.city
     if (data.streetAddress !== undefined) updateData.streetAddress = data.streetAddress
+    if (data.postalCode !== undefined) updateData.postalCode = data.postalCode
     if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate)
     if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate)
     if (data.startTime !== undefined) updateData.startTime = data.startTime
