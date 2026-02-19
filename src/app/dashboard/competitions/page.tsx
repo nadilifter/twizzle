@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -29,19 +30,17 @@ import {
 import { format, formatDistanceToNow, isPast, isFuture } from "date-fns"
 import { toast } from "sonner"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { CompetitionConfiguration } from "./competition-configuration"
 
 const COMPETITION_TYPE_LABELS: Record<string, string> = {
   GYMNASTICS: "Gymnastics",
   TRACK_AND_FIELD: "Track & Field",
-}
-
-const PUBLISH_STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  LIVE: "default",
-  DRAFT: "secondary",
-  SCHEDULED: "outline",
-  CLOSED: "outline",
-  COMPLETED: "outline",
 }
 
 const PUBLISH_STATUS_LABELS: Record<string, string> = {
@@ -50,16 +49,6 @@ const PUBLISH_STATUS_LABELS: Record<string, string> = {
   SCHEDULED: "Scheduled",
   CLOSED: "Closed",
   COMPLETED: "Completed",
-}
-
-const FALLBACK_STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  REGISTRATION_OPEN: "default",
-  PUBLISHED: "default",
-  DRAFT: "secondary",
-  REGISTRATION_CLOSED: "outline",
-  IN_PROGRESS: "default",
-  COMPLETED: "outline",
-  CANCELLED: "destructive",
 }
 
 const FALLBACK_STATUS_LABELS: Record<string, string> = {
@@ -72,19 +61,72 @@ const FALLBACK_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
 }
 
+const PUBLISH_STATUS_STYLES: Record<string, string> = {
+  LIVE: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100",
+  DRAFT: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100",
+  SCHEDULED: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100",
+  CLOSED: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100",
+  COMPLETED: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100",
+}
+
+const FALLBACK_STATUS_STYLES: Record<string, string> = {
+  REGISTRATION_OPEN: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100",
+  PUBLISHED: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100",
+  DRAFT: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100",
+  REGISTRATION_CLOSED: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100",
+  IN_PROGRESS: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100",
+  COMPLETED: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100",
+  CANCELLED: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100",
+}
+
 function getStatusLabel(competition: Competition): string {
+  if (competition.status === "CANCELLED") return "Cancelled"
+  
+  // Draft status takes precedence
+  if (competition.publishStatus === "DRAFT" || (!competition.publishStatus && competition.status === "DRAFT")) {
+    return "Draft"
+  }
+  
+  // Scheduled status takes precedence if defined
+  if (competition.publishStatus === "SCHEDULED") return "Scheduled"
+
+  const startDate = new Date(competition.startDate)
+  const endDate = new Date(competition.endDate)
+
+  // Date-based overrides for Live/Open competitions
+  if (isPast(endDate)) return "Completed"
+  if (isPast(startDate)) return "Closed"
+
   if (competition.publishStatus && PUBLISH_STATUS_LABELS[competition.publishStatus]) {
     return PUBLISH_STATUS_LABELS[competition.publishStatus]
   }
   return FALLBACK_STATUS_LABELS[competition.status] || competition.status
 }
 
-function getStatusVariant(competition: Competition): "default" | "secondary" | "outline" | "destructive" {
-  if (competition.publishStatus && PUBLISH_STATUS_VARIANTS[competition.publishStatus]) {
-    return PUBLISH_STATUS_VARIANTS[competition.publishStatus]
+function getStatusStyle(competition: Competition): string {
+  if (competition.status === "CANCELLED") return FALLBACK_STATUS_STYLES.CANCELLED
+  
+  // Draft style
+  if (competition.publishStatus === "DRAFT" || (!competition.publishStatus && competition.status === "DRAFT")) {
+    return PUBLISH_STATUS_STYLES.DRAFT
   }
-  return FALLBACK_STATUS_VARIANTS[competition.status] || "secondary"
+  
+  // Scheduled style
+  if (competition.publishStatus === "SCHEDULED") return PUBLISH_STATUS_STYLES.SCHEDULED
+
+  const startDate = new Date(competition.startDate)
+  const endDate = new Date(competition.endDate)
+
+  // Date-based overrides
+  if (isPast(endDate)) return PUBLISH_STATUS_STYLES.COMPLETED
+  if (isPast(startDate)) return PUBLISH_STATUS_STYLES.CLOSED
+
+  if (competition.publishStatus && PUBLISH_STATUS_STYLES[competition.publishStatus]) {
+    return PUBLISH_STATUS_STYLES[competition.publishStatus]
+  }
+  return FALLBACK_STATUS_STYLES[competition.status] || "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
 }
+
 
 function formatPrice(price: number | string | null | undefined): string {
   if (price === null || price === undefined) return "Free"
@@ -189,7 +231,8 @@ export default function CompetitionsPage() {
   }, [competitions, searchTerm])
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <TooltipProvider>
+      <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Competitions</h1>
@@ -276,30 +319,32 @@ export default function CompetitionsPage() {
             const scheduledDate = hasScheduledGoLive ? new Date(competition.scheduledGoLiveDate!) : null
 
             return (
-              <Card key={competition.id} className="flex flex-col">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1.5 min-w-0">
-                      <CardTitle className="leading-tight">{competition.name}</CardTitle>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <Badge
-                        variant={getStatusVariant(competition)}
-                        className="text-[10px]"
-                      >
-                        {getStatusLabel(competition)}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground">
-                        {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}
-                      </span>
+              <Card key={competition.id} className="flex flex-col h-full border-muted/60 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3 pt-4 px-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 min-w-0 w-full">
+                      <div className="flex items-center justify-between gap-2 w-full">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={cn("text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0", getStatusStyle(competition))}
+                        >
+                          {getStatusLabel(competition)}
+                        </Badge>
+                      </div>
+                      <CardTitle className="text-base font-semibold leading-tight line-clamp-2 pt-1">
+                        {competition.name}
+                      </CardTitle>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 pb-3">
-                  <div className="space-y-1.5">
+                <CardContent className="flex-1 pb-3 px-4">
+                  <div className="space-y-2">
                     {/* Dates */}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <CalendarDays className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CalendarDays className="h-4 w-4 shrink-0" />
                       <span>
                         {format(startDate, "MMM d, yyyy")}
                         {competition.endDate && competition.endDate !== competition.startDate && (
@@ -309,31 +354,31 @@ export default function CompetitionsPage() {
                     </div>
 
                     {/* Time */}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4 shrink-0" />
                       <span>{competition.startTime} &ndash; {competition.endTime}</span>
                     </div>
 
                     {/* Location */}
                     {location && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5" />
-                        <span>{location}</span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 shrink-0" />
+                        <span className="line-clamp-1">{location}</span>
                       </div>
                     )}
 
                     {/* Price */}
                     {competition.pricingMode !== "FREE" && (
-                      <div className="flex items-center gap-1.5 text-xs font-medium">
-                        <span className="text-muted-foreground">$</span>
-                        <span>{formatPrice(competition.entryFee)}</span>
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <span className="text-muted-foreground ml-0.5">$</span>
+                        <span className="ml-1">{formatPrice(competition.entryFee)}</span>
                       </div>
                     )}
 
                     {/* Scheduled go-live for non-open competitions */}
                     {!isOpen && scheduledDate && (
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Radio className="h-3.5 w-3.5 text-amber-500" />
+                      <div className="flex items-center gap-2 text-xs pt-1">
+                        <Radio className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                         {isFuture(scheduledDate) ? (
                           <span className="text-amber-600 dark:text-amber-400">
                             Goes live {formatDistanceToNow(scheduledDate, { addSuffix: true })}
@@ -349,8 +394,8 @@ export default function CompetitionsPage() {
 
                     {/* Registration closes when event starts — show for open competitions */}
                     {isOpen && (
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Radio className="h-3.5 w-3.5 text-green-500" />
+                      <div className="flex items-center gap-2 text-xs pt-1">
+                        <Radio className={cn("h-3.5 w-3.5 shrink-0", isFuture(startDate) ? "text-green-500" : "text-muted-foreground")} />
                         {isFuture(startDate) ? (
                           <span className="text-green-600 dark:text-green-400">
                             Registration closes {formatDistanceToNow(startDate, { addSuffix: true })}
@@ -365,23 +410,23 @@ export default function CompetitionsPage() {
                   </div>
 
                   {/* Tags */}
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {categoryCount > 0 && (
-                      <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded-full">
-                        <Trophy className="h-3 w-3" />
+                      <div className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                        <Trophy className="h-3.5 w-3.5" />
                         {categoryCount} {categoryCount === 1 ? "category" : "categories"}
                       </div>
                     )}
                     {entryCount > 0 && (
-                      <div className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded-full">
-                        <Users className="h-3 w-3" />
+                      <div className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-900">
+                        <Users className="h-3.5 w-3.5" />
                         {entryCount} {entryCount === 1 ? "entry" : "entries"}
                       </div>
                     )}
                   </div>
                 </CardContent>
-                <CardFooter className="border-t pt-3 gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" asChild>
+                <CardFooter className="border-t bg-muted/20 pt-3 pb-3 px-4 gap-2">
+                  <Button variant="outline" size="sm" className="flex-1 h-9" asChild>
                     <Link href={`/dashboard/competitions/${competition.id}`}>
                       View Details
                     </Link>
@@ -389,20 +434,22 @@ export default function CompetitionsPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9 text-muted-foreground hover:text-foreground"
                     onClick={() => handleEditCompetition(competition)}
                     title="Edit competition"
                   >
                     <Settings className="h-4 w-4" />
                   </Button>
-                  {isDraft && (
+
+                  {isDraft ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           disabled={deletingId === competition.id}
+                          title="Delete competition"
                         >
                           {deletingId === competition.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -429,6 +476,24 @@ export default function CompetitionsPage() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0} className="inline-flex">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground opacity-30 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground"
+                            disabled
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Previously open or active competitions cannot be deleted</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </CardFooter>
               </Card>
@@ -452,6 +517,7 @@ export default function CompetitionsPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }
