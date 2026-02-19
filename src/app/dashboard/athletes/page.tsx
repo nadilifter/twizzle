@@ -32,6 +32,7 @@ import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
+  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -72,10 +73,6 @@ import {
   Plus,
   Search,
   Filter,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Loader2,
   AlertCircle,
   Mail,
@@ -90,6 +87,9 @@ import {
 } from "@/components/ui/popover"
 import { toast } from "sonner"
 
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAthletes } from "@/hooks/use-athletes"
@@ -114,11 +114,8 @@ export default function AthletesPage() {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: 10,
-  })
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
@@ -149,7 +146,6 @@ export default function AthletesPage() {
   // Fetch athletes from API
   const {
     athletes,
-    total,
     isLoading,
     isCreating,
     isUpdating,
@@ -268,7 +264,7 @@ export default function AthletesPage() {
     },
     {
       accessorKey: "name",
-      header: "Athlete",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Athlete" />,
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <Avatar>
@@ -286,7 +282,7 @@ export default function AthletesPage() {
     },
     {
       accessorKey: "level",
-      header: "Level",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Level" />,
       cell: ({ row }) => <Badge variant="outline">{row.original.level}</Badge>,
       filterFn: (row, id, value) => {
         return value.includes(row.getValue(id))
@@ -294,14 +290,14 @@ export default function AthletesPage() {
     },
     {
       accessorKey: "group",
-      header: "Group",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Group" />,
       filterFn: (row, id, value) => {
         return value.includes(row.getValue(id))
       },
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => (
         <Badge variant={getStatusVariant(row.original.status)}>
           {formatStatus(row.original.status)}
@@ -312,8 +308,19 @@ export default function AthletesPage() {
       },
     },
     {
-      accessorKey: "parent",
-      header: "Parent/Guardian",
+      id: "program",
+      accessorFn: (row) => row.enrollments?.[0]?.program?.name ?? "",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Program" />,
+      cell: ({ row }) => {
+        const enrollment = row.original.enrollments?.[0]
+        if (!enrollment) return <span className="text-muted-foreground">-</span>
+        return <Badge variant="outline">{enrollment.program.name}</Badge>
+      },
+    },
+    {
+      id: "parent",
+      accessorFn: (row) => row.family?.primaryContact ?? row.parent ?? "",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Parent/Guardian" />,
       cell: ({ row }) => row.original.family?.primaryContact ?? row.original.parent ?? "N/A",
     },
     {
@@ -365,19 +372,17 @@ export default function AthletesPage() {
   const table = useReactTable({
     data: athletes,
     columns,
+    state: { sorting, columnFilters, columnVisibility, rowSelection },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
-    state: {
-      sorting,
-      columnFilters,
-      rowSelection,
-      pagination,
+    initialState: {
+      pagination: { pageSize: 20 },
     },
   })
 
@@ -713,6 +718,7 @@ export default function AthletesPage() {
             </div>
           </PopoverContent>
         </Popover>
+        <DataTableViewOptions table={table} />
         <Button variant="outline" onClick={() => fetchAthletes()} disabled={isLoading}>
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -748,7 +754,7 @@ export default function AthletesPage() {
       {/* Table */}
       {(!isLoading || athletes.length > 0) && !error && (
         <>
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -791,7 +797,7 @@ export default function AthletesPage() {
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No athletes found.
+                      No results.
                     </TableCell>
                   </TableRow>
                 )}
@@ -799,79 +805,7 @@ export default function AthletesPage() {
             </Table>
           </div>
 
-          <div className="flex items-center justify-between px-2">
-            <div className="flex-1 text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
-              {total > 0 && (
-                <span className="ml-2">({total} total)</span>
-              )}
-            </div>
-            <div className="flex items-center space-x-6 lg:space-x-8">
-              <div className="flex items-center space-x-2">
-                <p className="text-sm font-medium">Rows per page</p>
-                <Select
-                  value={`${table.getState().pagination.pageSize}`}
-                  onValueChange={(value) => {
-                    table.setPageSize(Number(value))
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[70px]">
-                    <SelectValue placeholder={table.getState().pagination.pageSize} />
-                  </SelectTrigger>
-                  <SelectContent side="top">
-                    {[10, 20, 30, 40, 50].map((pageSize) => (
-                      <SelectItem key={pageSize} value={`${pageSize}`}>
-                        {pageSize}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  className="hidden h-8 w-8 p-0 lg:flex"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <span className="sr-only">Go to first page</span>
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <span className="sr-only">Go to previous page</span>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <span className="sr-only">Go to next page</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  className="hidden h-8 w-8 p-0 lg:flex"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <span className="sr-only">Go to last page</span>
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
+          <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
         </>
       )}
 

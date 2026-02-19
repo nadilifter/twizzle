@@ -2,18 +2,25 @@
 
 export type AthleteStatus = "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED";
 
+export type GenderDeclaration = "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
+
 // Base athlete type from database
 export interface Athlete {
   id: string;
-  name: string;
+  name: string; // Deprecated: use firstName + lastName
+  firstName: string;
+  lastName: string;
   email: string | null;
   level: string;
   group: string;
   status: AthleteStatus;
   avatar: string | null;
   birthDate: string | null;
+  gender: GenderDeclaration | null;
+  customId: string | null;
+  organizationId: string | null;
   // familyId is deprecated/removed in schema, but may be present in older API responses or forms
-  familyId?: string | null; 
+  familyId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,7 +46,6 @@ export interface FamilySummary {
 export interface ProgramSummary {
   id: string;
   name: string;
-  level: string;
 }
 
 // Enrollment with program details

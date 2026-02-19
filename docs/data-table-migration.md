@@ -10,6 +10,7 @@ Tracks migration of all tables to the reusable `@/components/data-table` compone
 | `src/app/dashboard/competitions/[id]/athletes/[athleteId]/page.tsx` | `/dashboard/competitions/[id]/athletes/[athleteId]` | Athlete event registrations with sortable columns |
 | `src/app/dashboard/financials/ledgers/gl-codes-table.tsx` | `/dashboard/financials/ledgers` | GL codes with sorting, pagination, column visibility, CSV import/export |
 | `src/app/dashboard/financials/ledgers/ledger-transactions.tsx` | `/dashboard/financials/ledgers` | Ledger transactions (double-entry) with sorting, pagination, column visibility, export |
+| `src/app/dashboard/athletes/page.tsx` | `/dashboard/athletes` | Athletes directory with sorting, pagination, column visibility, level/group/status filters |
 
 ## Needs Migration — Standard Tables
 
@@ -17,7 +18,6 @@ These use TanStack Table but with inline boilerplate instead of the reusable com
 
 | # | File | Route | Description | Notes |
 |---|------|-------|-------------|-------|
-| 1 | `src/app/dashboard/athletes/page.tsx` | `/dashboard/athletes` | Athletes management list | Has level/group/status filters |
 | 2 | `src/app/dashboard/financials/discounts/page.tsx` | `/dashboard/financials/discounts` | Discount codes/promotions | |
 | 3 | `src/app/dashboard/forms/surveys/survey-table.tsx` | `/dashboard/forms/surveys` | Surveys list | |
 | 4 | `src/app/dashboard/forms/waivers/waiver-table.tsx` | `/dashboard/forms/waivers` | Waivers list | |
