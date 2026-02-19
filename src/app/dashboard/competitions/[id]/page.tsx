@@ -634,16 +634,37 @@ export default function CompetitionProfilePage() {
 
               {/* Events Card */}
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base">Events</CardTitle>
+                  {competition.categories.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-xs"
+                      onClick={() => setActiveTab("events")}
+                    >
+                      View All
+                      <ArrowRight className="h-3 w-3" />
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {competition.categories.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {competition.categories.map((category) => (
-                        <Badge key={category.id} variant="secondary" className="font-normal">
-                          {getCategoryLabel(category)}
-                        </Badge>
+                    <div className="space-y-3">
+                      {competition.categories.slice(0, 5).map((category) => (
+                        <div key={category.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <Flag className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <p className="text-sm font-medium truncate">
+                              {getCategoryLabel(category)}
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="shrink-0 ml-2">
+                            {category._count.entries} {category._count.entries === 1 ? "entry" : "entries"}
+                          </Badge>
+                        </div>
                       ))}
                     </div>
                   ) : (
