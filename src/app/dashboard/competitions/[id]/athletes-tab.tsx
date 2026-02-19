@@ -241,7 +241,7 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 25 },
+      pagination: { pageSize: 20 },
     },
   })
 
@@ -331,9 +331,7 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
                 </TableBody>
               </Table>
             </div>
-            {table.getPageCount() > 1 && (
-              <DataTablePagination table={table} pageSizeOptions={[10, 25, 50]} />
-            )}
+            <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
           </div>
         )}
       </CardContent>

@@ -18,18 +18,28 @@ import {
 interface DataTablePaginationProps<TData> {
   table: Table<TData>
   pageSizeOptions?: number[]
+  showSelectedCount?: boolean
 }
 
 export function DataTablePagination<TData>({
   table,
   pageSizeOptions = [10, 20, 25, 30, 50],
+  showSelectedCount,
 }: DataTablePaginationProps<TData>) {
+  const hasSelection =
+    showSelectedCount ??
+    table.getAllColumns().some((col) => col.id === "select")
+
   return (
     <div className="flex items-center justify-between px-2">
-      <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-        {table.getFilteredSelectedRowModel().rows.length} of{" "}
-        {table.getFilteredRowModel().rows.length} row(s) selected.
-      </div>
+      {hasSelection ? (
+        <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+      ) : (
+        <div className="hidden flex-1 lg:flex" />
+      )}
       <div className="flex w-full items-center gap-6 lg:w-fit lg:gap-8">
         <div className="hidden items-center gap-2 lg:flex">
           <p className="text-sm font-medium">Rows per page</p>
