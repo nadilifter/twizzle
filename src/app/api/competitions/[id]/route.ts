@@ -37,9 +37,6 @@ const competitionInclude = {
           lastName: true,
           name: true,
           familyId: true,
-          family: {
-            select: { id: true, name: true, email: true, primaryContact: true },
-          },
         },
       },
       category: { select: { id: true, resultType: true } },
@@ -100,7 +97,37 @@ export async function GET(
       return NextResponse.json({ error: "Competition not found" }, { status: 404 })
     }
 
-    return NextResponse.json(competition)
+    // Resolve families from athlete familyId values (no direct relation on Athlete)
+    const familyIds = [
+      ...new Set(
+        competition.entries
+          .map((e) => e.athlete.familyId)
+          .filter((fid): fid is string => fid != null)
+      ),
+    ]
+    const families =
+      familyIds.length > 0
+        ? await db.family.findMany({
+            where: { id: { in: familyIds } },
+            select: { id: true, name: true, email: true, primaryContact: true },
+          })
+        : []
+    const familyMap = new Map(families.map((f) => [f.id, f]))
+
+    const enrichedEntries = competition.entries.map((entry) => ({
+      ...entry,
+      athlete: {
+        ...entry.athlete,
+        family: entry.athlete.familyId
+          ? familyMap.get(entry.athlete.familyId) ?? null
+          : null,
+      },
+    }))
+
+    return NextResponse.json({
+      ...competition,
+      entries: enrichedEntries,
+    })
   } catch (error) {
     console.error("Error fetching competition:", error)
     return NextResponse.json(
