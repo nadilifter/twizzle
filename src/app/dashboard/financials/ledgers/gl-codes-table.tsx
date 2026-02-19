@@ -2,10 +2,10 @@
 
 import * as React from "react"
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -13,12 +13,14 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, Download, MoreHorizontal, Plus, Upload } from "lucide-react"
+import { Download, MoreHorizontal, Plus, Upload } from "lucide-react"
 
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -67,71 +69,37 @@ const getBadgeColor = (type: string) => {
 export const columns: ColumnDef<GLCode>[] = [
   {
     accessorKey: "code",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Code
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => <div className="font-medium ml-4">{row.getValue("code")}</div>,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Code" />
+    ),
+    cell: ({ row }) => <div className="font-medium">{row.getValue("code")}</div>,
   },
   {
     accessorKey: "description",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Description
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => <div className="ml-4">{row.getValue("description")}</div>,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Description" />
+    ),
+    cell: ({ row }) => <div>{row.getValue("description")}</div>,
   },
   {
     accessorKey: "type",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Type
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Type" />
+    ),
     cell: ({ row }) => {
       const type = row.getValue("type") as string
-      return (
-        <Badge className={getBadgeColor(type) + " ml-4"}>{type}</Badge>
-      )
+      return <Badge className={getBadgeColor(type)}>{type}</Badge>
     },
   },
   {
     accessorKey: "status",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Status
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
     cell: ({ row }) => {
       const status = row.getValue("status") as string
       return (
-        <Badge variant={status === "Active" ? "default" : "secondary"} className={(status === "Active" ? "bg-green-500 hover:bg-green-600" : "") + " ml-4"}>
+        <Badge variant={status === "Active" ? "default" : "secondary"} className={status === "Active" ? "bg-green-500 hover:bg-green-600" : ""}>
           {status}
         </Badge>
       )
@@ -179,46 +147,37 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: 10,
-  })
-  
-  // CSV Import State
+
   const [isImportOpen, setIsImportOpen] = React.useState(false)
   const [csvContent, setCsvContent] = React.useState("")
 
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
-      rowSelection,
-      pagination,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    initialState: {
+      pagination: { pageSize: 20 },
     },
   })
 
   const handleExportCSV = () => {
-    // Generate CSV content
     const headers = ["ID", "Code", "Description", "Type", "Status"]
-    const rows = data.map(item => 
+    const rows = data.map(item =>
       [item.id, item.code, item.description, item.type, item.status].join(",")
     )
     const csvString = [headers.join(","), ...rows].join("\n")
-    
-    // Create download link
+
     const blob = new Blob([csvString], { type: "text/csv" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
@@ -227,27 +186,26 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    
+
     toast.success("GL Codes exported successfully")
   }
 
   const handleImportCSV = () => {
     if (!csvContent) {
-        toast.error("Please enter CSV content")
-        return
+      toast.error("Please enter CSV content")
+      return
     }
-    
-    // In a real app, we would parse this and update the state/backend
+
     console.log("Importing CSV:", csvContent)
-    
+
     toast.success("GL Codes imported successfully (Simulation)")
     setCsvContent("")
     setIsImportOpen(false)
   }
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between py-4">
+    <div className="w-full space-y-4">
+      <div className="flex items-center justify-between">
         <Input
           placeholder="Filter descriptions..."
           value={(table.getColumn("description")?.getFilterValue() as string) ?? ""}
@@ -257,66 +215,38 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportCSV}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+          <DataTableViewOptions table={table} />
+          {onAddClick && (
+            <Button size="sm" onClick={onAddClick}>
+              <Plus className="mr-2 h-4 w-4" />
+              New GL Code
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Import
-            </Button>
-            
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="ml-auto">
-                Columns <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                    return (
-                    <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                        }
-                    >
-                        {column.id}
-                    </DropdownMenuCheckboxItem>
-                    )
-                })}
-            </DropdownMenuContent>
-            </DropdownMenu>
-            {onAddClick && (
-                 <Button size="sm" onClick={onAddClick}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    New GL Code
-                </Button>
-            )}
+          )}
         </div>
       </div>
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} colSpan={header.colSpan}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -350,51 +280,28 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
 
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
         <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Import GL Codes</DialogTitle>
-                <DialogDescription>
-                    Paste your CSV content below. The format should be: Code, Description, Type, Status.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-                <Textarea 
-                    placeholder="4001,Day Pass Sales,Revenue,Active"
-                    className="h-[200px] font-mono text-xs"
-                    value={csvContent}
-                    onChange={(e) => setCsvContent(e.target.value)}
-                />
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button>
-                <Button onClick={handleImportCSV}>Import</Button>
-            </DialogFooter>
+          <DialogHeader>
+            <DialogTitle>Import GL Codes</DialogTitle>
+            <DialogDescription>
+              Paste your CSV content below. The format should be: Code, Description, Type, Status.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="4001,Day Pass Sales,Revenue,Active"
+              className="h-[200px] font-mono text-xs"
+              value={csvContent}
+              onChange={(e) => setCsvContent(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button>
+            <Button onClick={handleImportCSV}>Import</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

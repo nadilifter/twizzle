@@ -1,0 +1,49 @@
+---
+description: Reusable data table components and patterns for all tables in the application
+globs: ["**/*table*", "**/*-tab.tsx", "**/data-table/**"]
+---
+# 10-Data-Tables
+
+## Mandates
+
+### Reusable Components
+- **All tables** must use TanStack Table (`@tanstack/react-table`) with the reusable components from `@/components/data-table`.
+- **Never** build a table from scratch with raw `<Table>` + static `<TableHead>` markup. Always use TanStack Table with our reusable sub-components.
+
+### Available Components (`src/components/data-table/`)
+- `DataTable<TData, TValue>` — Generic wrapper. Accepts `columns`, `data`, `pageSize`, `pageSizeOptions`, `showPagination`.
+- `DataTableColumnHeader` — Sortable/hideable column header with dropdown (Asc/Desc/Hide). Use for **every** column header.
+- `DataTablePagination` — Full pagination: page size selector, first/prev/next/last buttons, page indicator, optional row selection count.
+- `DataTableViewOptions` — Column visibility toggle dropdown. Add to toolbar area for tables with many columns.
+
+### Usage Pattern
+```tsx
+import { DataTableColumnHeader, DataTablePagination, DataTableViewOptions } from "@/components/data-table"
+
+// Column definitions — always use DataTableColumnHeader
+const columns: ColumnDef<MyType>[] = [
+  {
+    accessorKey: "name",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+    cell: ({ row }) => row.original.name,
+  },
+]
+```
+
+### Styling Rules
+- Wrap the `<Table>` in a `<div className="overflow-hidden rounded-md border">` container.
+- Use default `CardContent` padding (`p-6 pt-0`). Never use `p-0` on CardContent and then add manual padding to children.
+- Always include a "No results." empty row when filtered data returns zero matches.
+- Default page size: **20 rows per page**.
+- Page size options should include `20` (e.g. `[10, 20, 30, 50]`).
+
+### Row Selection Count
+- `DataTablePagination` auto-detects whether the table has a `select` column. If not, it hides the "X of Y row(s) selected" text.
+- Override with `showSelectedCount={true|false}` prop if needed.
+
+### Special Cases
+- `src/components/data-table.tsx` (the drag-and-drop form builder table) is a **separate** component with DnD logic. Do not confuse it with the reusable `src/components/data-table/` directory.
+
+### Reference Implementations
+- `src/app/dashboard/competitions/[id]/athletes-tab.tsx` — Full example with search, dynamic columns, pagination, view options.
+- `src/app/dashboard/competitions/[id]/athletes/[athleteId]/page.tsx` — Simpler example with sorting only.

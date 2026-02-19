@@ -251,7 +251,7 @@ export default function LedgersPage() {
           <TabsTrigger value="rules">Routing Rules</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+          <div className="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-7">
             <Card className="col-span-4">
               <CardHeader>
                 <CardTitle>GL Codes</CardTitle>

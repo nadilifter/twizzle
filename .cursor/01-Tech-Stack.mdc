@@ -25,6 +25,7 @@ globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "package.json"]
 - **Authentication**: NextAuth.js with JWT sessions
 - **Payments**: Adyen, Stripe (future)
 - **SMS**: Twilio
+- **Data Tables**: TanStack Table (`@tanstack/react-table`) with reusable components in `src/components/data-table/`. See `10-Data-Tables.mdc` for patterns and mandates.
 
 ### Environment Configuration
 - **Module**: `src/lib/env-domains.ts` for environment-aware domain/service configuration
