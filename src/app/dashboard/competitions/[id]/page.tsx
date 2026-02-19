@@ -494,23 +494,18 @@ export default function CompetitionProfilePage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">{competition.name}</h1>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0",
-                getStatusStyle(competition),
-              )}
-            >
-              {getStatusLabel(competition)}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{competition.name}</h1>
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0",
+              getStatusStyle(competition),
+            )}
+          >
+            {getStatusLabel(competition)}
+          </Badge>
         </div>
         <Button onClick={() => setIsEditOpen(true)}>
           <Settings className="mr-2 h-4 w-4" />
@@ -589,6 +584,15 @@ export default function CompetitionProfilePage() {
                   </div>
 
                   <div className="space-y-4 text-sm">
+                    <div className="flex items-start gap-3">
+                      <Trophy className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="font-medium">Sport</p>
+                        <p className="text-muted-foreground">
+                          {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}
+                        </p>
+                      </div>
+                    </div>
                     <div className="flex items-start gap-3">
                       <CalendarDays className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                       <div>
