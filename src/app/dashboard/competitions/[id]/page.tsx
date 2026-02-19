@@ -2,27 +2,19 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { format, isPast } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import {
-  formatSeedMarkForDisplay,
-  type SeedMarkFields,
-  type ResultType as AthleticsResultType,
-} from "@/lib/athletics-formats"
-import {
   CalendarDays,
   Clock,
   MapPin,
-  Users,
   Trophy,
   BarChart3,
   Settings,
-  LayoutGrid,
   DollarSign,
   Info,
-  FileText,
   UserCheck,
   Flag,
   Receipt,
@@ -53,6 +45,7 @@ import {
   getStatusLabel,
   getStatusStyle,
 } from "../lib/competition-status"
+import { AthletesTab } from "./athletes-tab"
 
 interface CompetitionCategory {
   id: string
@@ -124,29 +117,10 @@ interface CompetitionDetail {
   }[]
   lineItems: CompetitionLineItem[]
   _count: { entries: number; results: number; teams: number }
-}
-
-interface CompetitionEntry {
-  id: string
-  status: string
-  seedHours: number | null
-  seedMinutes: number | null
-  seedSeconds: number | null
-  seedMs: number | null
-  seedHandTimed: boolean
-  seedDistance: number | null
-  seedPoints: number | null
-  seedPlacement: string | null
-  athlete: {
-    id: string
-    firstName: string | null
-    lastName: string | null
-    name: string | null
-  }
-  category: {
-    id: string
-    resultType: string
-  }
+  hasLevelRestriction: boolean
+  hasMembershipRestriction: boolean
+  hasWaiverRestriction: boolean
+  hasMedicalRequirement: boolean
 }
 
 interface CompetitionResult {
@@ -337,18 +311,16 @@ function buildTimelineItems(competition: CompetitionDetail) {
 
 export default function CompetitionProfilePage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const competitionId = params.id as string
 
   const [competition, setCompetition] = React.useState<CompetitionDetail | null>(null)
-  const [entries, setEntries] = React.useState<CompetitionEntry[]>([])
   const [results, setResults] = React.useState<CompetitionResult[]>([])
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<string>("all")
-  const [entryStatus, setEntryStatus] = React.useState<string>("all")
   const [loading, setLoading] = React.useState(true)
-  const [entriesLoading, setEntriesLoading] = React.useState(false)
   const [resultsLoading, setResultsLoading] = React.useState(false)
   const [isEditOpen, setIsEditOpen] = React.useState(false)
-  const [activeTab, setActiveTab] = React.useState("overview")
+  const [activeTab, setActiveTab] = React.useState(searchParams.get("tab") ?? "overview")
 
   useBreadcrumbOverride(
     competition ? `/dashboard/competitions/${competitionId}` : undefined,
@@ -380,32 +352,6 @@ export default function CompetitionProfilePage() {
       setSelectedCategoryId("all")
     }
   }, [competition])
-
-  React.useEffect(() => {
-    const fetchEntries = async () => {
-      setEntriesLoading(true)
-      try {
-        const url = new URL(`/api/competitions/${competitionId}/entries`, window.location.origin)
-        if (selectedCategoryId !== "all") {
-          url.searchParams.set("categoryId", selectedCategoryId)
-        }
-        if (entryStatus !== "all") {
-          url.searchParams.set("status", entryStatus)
-        }
-
-        const response = await fetch(url.toString())
-        if (!response.ok) throw new Error("Failed to fetch registrations")
-        const data = await response.json()
-        setEntries(data)
-      } catch (error) {
-        toast.error("Failed to load registrations")
-      } finally {
-        setEntriesLoading(false)
-      }
-    }
-
-    fetchEntries()
-  }, [competitionId, selectedCategoryId, entryStatus])
 
   React.useEffect(() => {
     const fetchResults = async () => {
@@ -530,9 +476,9 @@ export default function CompetitionProfilePage() {
             <Info className="h-4 w-4" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="registrations" className="gap-2">
-            <Users className="h-4 w-4" />
-            Registrations
+          <TabsTrigger value="athletes" className="gap-2">
+            <UserCheck className="h-4 w-4" />
+            Athletes
           </TabsTrigger>
           <TabsTrigger value="results" className="gap-2">
             <Trophy className="h-4 w-4" />
@@ -549,10 +495,6 @@ export default function CompetitionProfilePage() {
           <TabsTrigger value="reports" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Reports
-          </TabsTrigger>
-          <TabsTrigger value="athletes" className="gap-2">
-            <UserCheck className="h-4 w-4" />
-            Athletes
           </TabsTrigger>
           <TabsTrigger value="events" className="gap-2">
             <Flag className="h-4 w-4" />
@@ -849,112 +791,6 @@ export default function CompetitionProfilePage() {
           </div>
         </TabsContent>
 
-        {/* ===== REGISTRATIONS TAB ===== */}
-        <TabsContent value="registrations">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <CardTitle>Registrations</CardTitle>
-                  <CardDescription className="mt-1">
-                    {entries.length} registration{entries.length === 1 ? "" : "s"}
-                    {selectedCategory ? ` in ${getCategoryLabel(selectedCategory)}` : ""}
-                  </CardDescription>
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                  <div className="w-full sm:w-[220px]">
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Category</label>
-                    <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All categories</SelectItem>
-                        {competition.categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {getCategoryLabel(category)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="w-full sm:w-[180px]">
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status</label>
-                    <Select value={entryStatus} onValueChange={setEntryStatus}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="All statuses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All statuses</SelectItem>
-                        <SelectItem value="APPROVED">Approved</SelectItem>
-                        <SelectItem value="PENDING_SEED">Pending Seed</SelectItem>
-                        <SelectItem value="PENDING_REVIEW">Pending Review</SelectItem>
-                        <SelectItem value="REJECTED">Rejected</SelectItem>
-                        <SelectItem value="WITHDRAWN">Withdrawn</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {entriesLoading ? (
-                <div className="p-6 space-y-2">
-                  <Skeleton className="h-10" />
-                  <Skeleton className="h-10" />
-                  <Skeleton className="h-10" />
-                </div>
-              ) : entries.length === 0 ? (
-                <div className="py-10 text-center text-muted-foreground">
-                  No registrations found for this selection.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Athlete</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Result Type</TableHead>
-                      <TableHead>Seed Mark</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {entries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="font-medium">
-                          {[
-                            entry.athlete.firstName,
-                            entry.athlete.lastName,
-                          ].filter(Boolean).join(" ") || entry.athlete.name || "Unknown athlete"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{entry.status}</Badge>
-                        </TableCell>
-                        <TableCell>{entry.category?.resultType || "-"}</TableCell>
-                        <TableCell>
-                          {formatSeedMarkForDisplay(
-                            {
-                              seedHours: entry.seedHours,
-                              seedMinutes: entry.seedMinutes,
-                              seedSeconds: entry.seedSeconds,
-                              seedMs: entry.seedMs,
-                              seedHandTimed: entry.seedHandTimed,
-                              seedDistance: entry.seedDistance,
-                              seedPoints: entry.seedPoints,
-                              seedPlacement: entry.seedPlacement,
-                            } as SeedMarkFields,
-                            (entry.category?.resultType ?? "TIME") as AthleticsResultType,
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* ===== RESULTS TAB ===== */}
         <TabsContent value="results">
           <Card>
@@ -1092,25 +928,9 @@ export default function CompetitionProfilePage() {
           </Card>
         </TabsContent>
 
-        {/* ===== ATHLETES TAB (placeholder) ===== */}
+        {/* ===== ATHLETES TAB ===== */}
         <TabsContent value="athletes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Athletes</CardTitle>
-              <CardDescription>
-                Athletes participating in this competition
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <UserCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Coming Soon</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  A detailed view of all athletes registered for this competition, including their entries, seed marks, and results across categories.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <AthletesTab competitionId={competitionId} />
         </TabsContent>
 
         {/* ===== EVENTS TAB (placeholder) ===== */}
