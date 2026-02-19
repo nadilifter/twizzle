@@ -19,6 +19,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@shadcn-map": "http://shadcn-map.vercel.app/r/{name}.json"
+    "@shadcn-map": "http://shadcn-map.vercel.app/r/{name}.json",
+    "@aceternity": "https://ui.aceternity.com/registry/{name}.json"
   }
 }

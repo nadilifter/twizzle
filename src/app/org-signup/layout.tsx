@@ -20,7 +20,7 @@ export default async function SignupsLayout({
 }) {
   const headersList = await headers()
   const loginUrl = getLoginUrlForHost(headersList.get("host"))
-  
+
   return (
     <div className="flex flex-col min-h-screen bg-background relative overflow-hidden">
       <GradientBackground className="z-0" />
@@ -51,7 +51,16 @@ export default async function SignupsLayout({
       {/* Footer */}
       <footer className="relative z-10 border-t bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Uplifter Inc. All rights reserved.</p>
+          <p>
+            &copy; {new Date().getFullYear()} Uplifter Inc. All rights reserved.
+            {" · "}
+            <Link
+              href="/why"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Why Uplifter?
+            </Link>
+          </p>
         </div>
       </footer>
     </div>
