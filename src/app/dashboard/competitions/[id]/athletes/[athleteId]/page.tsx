@@ -6,6 +6,14 @@ import { useParams } from "next/navigation"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import {
+  type ColumnDef,
+  type SortingState,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table"
+import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
@@ -21,6 +29,7 @@ import {
 } from "lucide-react"
 import { calculateAge } from "@/lib/age-utils"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -325,65 +334,7 @@ export default function CompetitionAthleteDetailPage() {
       </div>
 
       {/* Registrations */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            Registrations
-          </CardTitle>
-          <CardDescription>
-            {entries.length} event{entries.length === 1 ? "" : "s"} registered
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {entries.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">
-              No event registrations found.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Result Type</TableHead>
-                  <TableHead>Seed Mark</TableHead>
-                  <TableHead>Seed Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="font-medium">{entry.category.label}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={ENTRY_STATUS_STYLES[entry.status] ?? ""}
-                      >
-                        {formatEntryStatus(entry.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{entry.category.resultType}</TableCell>
-                    <TableCell>{entry.seedMark ?? "-"}</TableCell>
-                    <TableCell>
-                      {entry.seedMarkStatus ? (
-                        <Badge
-                          variant="outline"
-                          className={ENTRY_STATUS_STYLES[entry.seedMarkStatus] ?? ""}
-                        >
-                          {formatEntryStatus(entry.seedMarkStatus)}
-                        </Badge>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <RegistrationsTable entries={entries} />
 
       {/* Membership + Waivers row */}
       {(requirements.hasMembershipRestriction || requirements.hasWaiverRestriction) && (
@@ -476,6 +427,138 @@ export default function CompetitionAthleteDetailPage() {
         onClose={() => setViewingWaiver(null)}
       />
     </div>
+  )
+}
+
+// ─── Registrations Table ─────────────────────────────────────────────
+
+type EntryRow = AthleteDetail["entries"][number]
+
+const registrationColumns: ColumnDef<EntryRow>[] = [
+  {
+    id: "event",
+    accessorFn: (row) => row.category.label,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Event" />
+    ),
+    cell: ({ row }) => (
+      <span className="font-medium">{row.original.category.label}</span>
+    ),
+  },
+  {
+    accessorKey: "status",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Status" />
+    ),
+    cell: ({ row }) => (
+      <Badge
+        variant="outline"
+        className={ENTRY_STATUS_STYLES[row.original.status] ?? ""}
+      >
+        {formatEntryStatus(row.original.status)}
+      </Badge>
+    ),
+  },
+  {
+    id: "resultType",
+    accessorFn: (row) => row.category.resultType,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Result Type" />
+    ),
+    cell: ({ row }) => row.original.category.resultType,
+  },
+  {
+    accessorKey: "seedMark",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Seed Mark" />
+    ),
+    cell: ({ row }) => row.original.seedMark ?? "-",
+  },
+  {
+    accessorKey: "seedMarkStatus",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Seed Status" />
+    ),
+    cell: ({ row }) => {
+      const status = row.original.seedMarkStatus
+      if (!status) return "-"
+      return (
+        <Badge
+          variant="outline"
+          className={ENTRY_STATUS_STYLES[status] ?? ""}
+        >
+          {formatEntryStatus(status)}
+        </Badge>
+      )
+    },
+  },
+]
+
+function RegistrationsTable({ entries }: { entries: EntryRow[] }) {
+  const [sorting, setSorting] = React.useState<SortingState>([])
+
+  const table = useReactTable({
+    data: entries,
+    columns: registrationColumns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ClipboardList className="h-5 w-5" />
+          Registrations
+        </CardTitle>
+        <CardDescription>
+          {entries.length} event{entries.length === 1 ? "" : "s"} registered
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-hidden rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} colSpan={header.colSpan}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={registrationColumns.length}
+                    className="h-24 text-center"
+                  >
+                    No event registrations found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
