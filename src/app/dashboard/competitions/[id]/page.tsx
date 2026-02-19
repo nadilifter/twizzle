@@ -46,6 +46,7 @@ import {
   getStatusStyle,
 } from "../lib/competition-status"
 import { AthletesTab } from "./athletes-tab"
+import { TransactionsTab } from "./transactions-tab"
 
 interface CompetitionCategory {
   id: string
@@ -865,25 +866,9 @@ export default function CompetitionProfilePage() {
           </Card>
         </TabsContent>
 
-        {/* ===== TRANSACTIONS TAB (placeholder) ===== */}
+        {/* ===== TRANSACTIONS TAB ===== */}
         <TabsContent value="transactions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Transactions</CardTitle>
-              <CardDescription>
-                All invoices and payments for this competition
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Coming Soon</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  A full transaction ledger with filtering, search, and export capabilities for all competition-related invoices and payments.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <TransactionsTab lineItems={competition.lineItems} />
         </TabsContent>
 
         {/* ===== FAMILIES TAB (placeholder) ===== */}
