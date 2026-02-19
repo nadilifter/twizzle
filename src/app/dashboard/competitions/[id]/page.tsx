@@ -25,6 +25,9 @@ import {
   FileText,
   UserCheck,
   Flag,
+  Receipt,
+  UsersRound,
+  ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -345,6 +348,7 @@ export default function CompetitionProfilePage() {
   const [entriesLoading, setEntriesLoading] = React.useState(false)
   const [resultsLoading, setResultsLoading] = React.useState(false)
   const [isEditOpen, setIsEditOpen] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState("overview")
 
   useBreadcrumbOverride(
     competition ? `/dashboard/competitions/${competitionId}` : undefined,
@@ -525,7 +529,7 @@ export default function CompetitionProfilePage() {
       </Sheet>
 
       {/* Top-level tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview" className="gap-2">
             <Info className="h-4 w-4" />
@@ -538,6 +542,14 @@ export default function CompetitionProfilePage() {
           <TabsTrigger value="results" className="gap-2">
             <Trophy className="h-4 w-4" />
             Results
+          </TabsTrigger>
+          <TabsTrigger value="transactions" className="gap-2">
+            <Receipt className="h-4 w-4" />
+            Transactions
+          </TabsTrigger>
+          <TabsTrigger value="families" className="gap-2">
+            <UsersRound className="h-4 w-4" />
+            Families
           </TabsTrigger>
           <TabsTrigger value="reports" className="gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -691,10 +703,21 @@ export default function CompetitionProfilePage() {
 
               {/* Transaction History + Families side by side */}
               <div className="grid gap-6 lg:grid-cols-2">
-                {/* Transaction History Card */}
+                {/* Transaction History Card (latest 5) */}
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Transaction History</CardTitle>
+                    {competition.lineItems && competition.lineItems.length > 5 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-xs"
+                        onClick={() => setActiveTab("transactions")}
+                      >
+                        View All
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent className="p-0">
                     {competition.lineItems && competition.lineItems.length > 0 ? (
@@ -707,7 +730,7 @@ export default function CompetitionProfilePage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {competition.lineItems.map((item) => (
+                          {competition.lineItems.slice(0, 5).map((item) => (
                             <TableRow key={item.id}>
                               <TableCell>
                                 <p className="font-medium">{item.description}</p>
@@ -741,15 +764,26 @@ export default function CompetitionProfilePage() {
                   </CardContent>
                 </Card>
 
-                {/* Families Card */}
+                {/* Families Card (latest 5) */}
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Families</CardTitle>
+                    {families.length > 5 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-xs"
+                        onClick={() => setActiveTab("families")}
+                      >
+                        View All
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {families.length > 0 ? (
                       <div className="space-y-4">
-                        {families.map((family) => (
+                        {families.slice(0, 5).map((family) => (
                           <div
                             key={family.id}
                             className="flex items-center justify-between"
@@ -966,6 +1000,48 @@ export default function CompetitionProfilePage() {
                   </TableBody>
                 </Table>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== TRANSACTIONS TAB (placeholder) ===== */}
+        <TabsContent value="transactions">
+          <Card>
+            <CardHeader>
+              <CardTitle>Transactions</CardTitle>
+              <CardDescription>
+                All invoices and payments for this competition
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium">Coming Soon</h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                  A full transaction ledger with filtering, search, and export capabilities for all competition-related invoices and payments.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== FAMILIES TAB (placeholder) ===== */}
+        <TabsContent value="families">
+          <Card>
+            <CardHeader>
+              <CardTitle>Families</CardTitle>
+              <CardDescription>
+                All families with athletes in this competition
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <UsersRound className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium">Coming Soon</h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                  A complete directory of all families registered for this competition, with contact information, athletes, and payment status.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
