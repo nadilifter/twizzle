@@ -353,7 +353,7 @@ export default async function SiteLayout({
         <footer className="border-t border-border/40 bg-muted/50 py-6">
              <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-8">
                 <p className="text-center text-sm text-muted-foreground">
-                    © {new Date().getFullYear()} {config.organization.name}. All rights reserved.
+                    © {new Date().getFullYear()} {config.organization.name}. All rights reserved. Powered by Uplifter.
                 </p>
                 <div className="flex items-center gap-4 flex-wrap justify-center">
                     {config.showContact && (
@@ -397,16 +397,6 @@ export default async function SiteLayout({
                         Terms
                     </a>
                 </div>
-             </div>
-             <div className="mx-auto mt-4 text-center">
-                <a
-                    href="https://www.uplifterinc.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
-                >
-                    Powered by Uplifter
-                </a>
              </div>
         </footer>
         <VisitorTracker organizationId={config.organizationId} />
