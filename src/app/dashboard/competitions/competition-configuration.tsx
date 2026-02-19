@@ -807,58 +807,325 @@ export function CompetitionConfiguration({
 
           {/* RESTRICTIONS TAB */}
           <TabsContent value="restrictions" className="mt-0 space-y-6 max-w-2xl">
+            {/* Level Restriction */}
             {trainingEnabled && (
-                <div className="rounded-lg border p-4 flex items-center justify-between">
-                    <div>
-                        <Label className="text-base">Level Restriction</Label>
-                        <p className="text-sm text-muted-foreground">Require athletes to be at specific levels</p>
-                    </div>
-                    <Switch 
-                        checked={formData.hasLevelRestriction}
-                        onCheckedChange={c => setFormData(prev => ({ ...prev, hasLevelRestriction: c }))}
-                    />
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Level Restriction</Label>
+                    <p className="text-sm text-muted-foreground">Require athletes to be at one of the selected levels</p>
+                  </div>
+                  <Switch
+                    checked={formData.hasLevelRestriction}
+                    onCheckedChange={checked => setFormData(prev => ({
+                      ...prev,
+                      hasLevelRestriction: checked,
+                      levelRequirementIds: checked ? prev.levelRequirementIds : [],
+                    }))}
+                  />
                 </div>
-            )}
-            
-            {formData.hasLevelRestriction && (
-                <div className="grid grid-cols-2 gap-2 p-4 border rounded-lg bg-muted/10">
-                    {levels.map(l => (
-                        <div key={l.id} className="flex items-center gap-2">
-                            <Checkbox 
-                                checked={formData.levelRequirementIds.includes(l.id)}
-                                onCheckedChange={(checked) => {
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        levelRequirementIds: checked 
-                                            ? [...prev.levelRequirementIds, l.id] 
-                                            : prev.levelRequirementIds.filter(id => id !== l.id)
-                                    }))
-                                }}
+
+                {formData.hasLevelRestriction && (
+                  <div className="pt-2 border-t">
+                    {loadingLevels ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading levels...
+                      </div>
+                    ) : levels.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No levels configured.{" "}
+                        <a href="/dashboard/training/levels" className="text-primary underline">Create levels</a> first.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        {levels.map(level => (
+                          <label
+                            key={level.id}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                              formData.levelRequirementIds.includes(level.id)
+                                ? "border-primary bg-primary/5"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
+                            <Checkbox
+                              checked={formData.levelRequirementIds.includes(level.id)}
+                              onCheckedChange={checked => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  levelRequirementIds: checked
+                                    ? [...prev.levelRequirementIds, level.id]
+                                    : prev.levelRequirementIds.filter(id => id !== level.id),
+                                }))
+                              }}
                             />
-                            <span className="text-sm">{l.name}</span>
-                        </div>
-                    ))}
-                </div>
+                            <div className="flex items-center gap-2">
+                              {level.color && (
+                                <div
+                                  className="h-3 w-3 rounded-full"
+                                  style={{ backgroundColor: level.color }}
+                                />
+                              )}
+                              <span className="text-sm font-medium">{level.name}</span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
-            <div className="rounded-lg border p-4 flex items-center justify-between">
-                <div>
-                    <Label className="text-base">Capacity Limit</Label>
-                    <p className="text-sm text-muted-foreground">Limit total participants</p>
+            {/* Capacity Limit */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Capacity Limit</Label>
+                  <p className="text-sm text-muted-foreground">Set a maximum number of participants</p>
                 </div>
-                <Switch 
-                    checked={formData.hasCapacityRestriction}
-                    onCheckedChange={c => setFormData(prev => ({ ...prev, hasCapacityRestriction: c }))}
+                <Switch
+                  checked={formData.hasCapacityRestriction}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    hasCapacityRestriction: checked,
+                    capacity: checked ? prev.capacity : null,
+                  }))}
                 />
+              </div>
+
+              {formData.hasCapacityRestriction && (
+                <div className="pt-2 border-t">
+                  <Label htmlFor="capacity">Maximum Capacity</Label>
+                  <Input
+                    id="capacity"
+                    type="number"
+                    min={1}
+                    placeholder="e.g., 200"
+                    value={formData.capacity ?? ""}
+                    onChange={e => setFormData(prev => ({
+                      ...prev,
+                      capacity: e.target.value ? parseInt(e.target.value, 10) : null,
+                    }))}
+                    className="mt-2 max-w-xs"
+                  />
+                </div>
+              )}
             </div>
-            {formData.hasCapacityRestriction && (
-                <Input 
-                    type="number" 
-                    placeholder="Max capacity" 
-                    value={formData.capacity || ""} 
-                    onChange={e => setFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || null }))}
+
+            {/* Age Restriction */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Age Restriction</Label>
+                  <p className="text-sm text-muted-foreground">Restrict registration by age range</p>
+                </div>
+                <Switch
+                  checked={formData.hasAgeRestriction}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    hasAgeRestriction: checked,
+                    minAge: checked ? prev.minAge : null,
+                    maxAge: checked ? prev.maxAge : null,
+                  }))}
                 />
-            )}
+              </div>
+
+              {formData.hasAgeRestriction && (
+                <div className="pt-2 border-t">
+                  <div className="grid grid-cols-2 gap-4 max-w-sm">
+                    <div className="space-y-2">
+                      <Label htmlFor="minAge">Minimum Age</Label>
+                      <Input
+                        id="minAge"
+                        type="number"
+                        min={0}
+                        placeholder="e.g., 6"
+                        value={formData.minAge ?? ""}
+                        onChange={e => setFormData(prev => ({
+                          ...prev,
+                          minAge: e.target.value ? parseInt(e.target.value, 10) : null,
+                        }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="maxAge">Maximum Age</Label>
+                      <Input
+                        id="maxAge"
+                        type="number"
+                        min={0}
+                        placeholder="e.g., 18"
+                        value={formData.maxAge ?? ""}
+                        onChange={e => setFormData(prev => ({
+                          ...prev,
+                          maxAge: e.target.value ? parseInt(e.target.value, 10) : null,
+                        }))}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    At least one of minimum or maximum age is required.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Membership Requirement */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Membership Requirement</Label>
+                  <p className="text-sm text-muted-foreground">Require athletes to have an active membership</p>
+                </div>
+                <Switch
+                  checked={formData.hasMembershipRestriction}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    hasMembershipRestriction: checked,
+                    membershipRequirementIds: checked ? prev.membershipRequirementIds : [],
+                  }))}
+                />
+              </div>
+
+              {formData.hasMembershipRestriction && (
+                <div className="pt-2 border-t">
+                  {loadingMemberships ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading memberships...
+                    </div>
+                  ) : membershipInstances.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No memberships configured.{" "}
+                      <a href="/dashboard/athletes/memberships" className="text-primary underline">Create memberships</a> first.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {membershipInstances.map(instance => (
+                        <label
+                          key={instance.id}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                            formData.membershipRequirementIds.includes(instance.id)
+                              ? "border-primary bg-primary/5"
+                              : "hover:bg-muted/50"
+                          )}
+                        >
+                          <Checkbox
+                            checked={formData.membershipRequirementIds.includes(instance.id)}
+                            onCheckedChange={checked => {
+                              setFormData(prev => ({
+                                ...prev,
+                                membershipRequirementIds: checked
+                                  ? [...prev.membershipRequirementIds, instance.id]
+                                  : prev.membershipRequirementIds.filter(id => id !== instance.id),
+                              }))
+                            }}
+                          />
+                          <div>
+                            <span className="text-sm font-medium">{instance.name}</span>
+                            <span className="text-xs text-muted-foreground ml-1">({instance.groupName})</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Waiver Requirement */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Waiver Requirement</Label>
+                  <p className="text-sm text-muted-foreground">Require participants to sign a waiver before registering</p>
+                </div>
+                <Switch
+                  checked={formData.hasWaiverRestriction}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    hasWaiverRestriction: checked,
+                    waiverRequirementIds: checked ? prev.waiverRequirementIds : [],
+                  }))}
+                />
+              </div>
+
+              {formData.hasWaiverRestriction && (
+                <div className="pt-2 border-t">
+                  {loadingWaivers ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading waivers...
+                    </div>
+                  ) : waivers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No active waivers found.{" "}
+                      <a href="/dashboard/forms/waivers" className="text-primary underline">Create a waiver</a> first.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {waivers.map(waiver => (
+                        <label
+                          key={waiver.id}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                            formData.waiverRequirementIds.includes(waiver.id)
+                              ? "border-primary bg-primary/5"
+                              : "hover:bg-muted/50"
+                          )}
+                        >
+                          <Checkbox
+                            checked={formData.waiverRequirementIds.includes(waiver.id)}
+                            onCheckedChange={checked => {
+                              setFormData(prev => ({
+                                ...prev,
+                                waiverRequirementIds: checked
+                                  ? [...prev.waiverRequirementIds, waiver.id]
+                                  : prev.waiverRequirementIds.filter(id => id !== waiver.id),
+                              }))
+                            }}
+                          />
+                          <span className="text-sm font-medium">{waiver.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Medical Information Requirement */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Medical Information Requirement</Label>
+                  <p className="text-sm text-muted-foreground">Require athletes to have medical information on file</p>
+                </div>
+                <Switch
+                  checked={formData.hasMedicalRequirement}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    hasMedicalRequirement: checked,
+                  }))}
+                />
+              </div>
+
+              {formData.hasMedicalRequirement && (
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Info className="h-4 w-4" />
+                    <span>
+                      Configure medical form fields in{" "}
+                      <a href="/dashboard/organization/medical" className="text-primary underline">
+                        Medical Settings
+                      </a>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="pt-2 flex justify-end">
               <Button onClick={() => saveChanges("Restrictions")} disabled={isSaving}>
