@@ -43,12 +43,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import {
-  Timeline,
-  TimelineItem,
-  TimelineItemDate,
-  TimelineItemTitle,
-} from "@/components/blocks/timeline"
+// Timeline is rendered inline in the Overview tab
 import { CompetitionConfiguration } from "../competition-configuration"
 import {
   COMPETITION_TYPE_LABELS,
@@ -258,24 +253,21 @@ function getUniqueFamilies(competition: CompetitionDetail): UniqueFamily[] {
 }
 
 function buildTimelineItems(competition: CompetitionDetail) {
-  const now = new Date()
   const items: {
     title: string
     date: Date | null
-    variant: "default" | "secondary" | "destructive" | "outline"
+    description: string
     hollow: boolean
   }[] = []
 
-  // 1. Registration created
   items.push({
     title: "Registration Created",
     date: new Date(competition.createdAt),
-    variant: "default",
+    description: `The competition "${competition.name}" was set up and configured with ${competition.categories.length} event${competition.categories.length === 1 ? "" : "s"}.`,
     hollow: false,
   })
 
-  // 2. Registration went live
-  if (
+  const hasGoneLive =
     competition.publishStatus === "LIVE" ||
     competition.publishStatus === "CLOSED" ||
     competition.publishStatus === "COMPLETED" ||
@@ -283,58 +275,60 @@ function buildTimelineItems(competition: CompetitionDetail) {
     competition.status === "REGISTRATION_CLOSED" ||
     competition.status === "IN_PROGRESS" ||
     competition.status === "COMPLETED"
-  ) {
-    const goLiveDate = competition.scheduledGoLiveDate
-      ? new Date(competition.scheduledGoLiveDate)
-      : null
+
+  if (hasGoneLive) {
     items.push({
       title: "Registration Live",
-      date: goLiveDate,
-      variant: "default",
+      date: competition.scheduledGoLiveDate
+        ? new Date(competition.scheduledGoLiveDate)
+        : null,
+      description: "Registration opened and athletes can now sign up for events.",
       hollow: false,
     })
   } else if (competition.publishStatus === "SCHEDULED" && competition.scheduledGoLiveDate) {
     items.push({
       title: "Registration Scheduled to Go Live",
       date: new Date(competition.scheduledGoLiveDate),
-      variant: "secondary",
+      description: "Registration is scheduled to open automatically on this date.",
       hollow: true,
     })
   }
 
-  // 3. Registration closed
-  if (
+  const hasClosed =
     competition.status === "REGISTRATION_CLOSED" ||
     competition.status === "IN_PROGRESS" ||
     competition.status === "COMPLETED" ||
     competition.publishStatus === "CLOSED" ||
     competition.publishStatus === "COMPLETED"
-  ) {
+
+  if (hasClosed) {
     items.push({
       title: "Registration Closed",
       date: null,
-      variant: "destructive",
+      description: `Registration closed with ${competition._count.entries} total ${competition._count.entries === 1 ? "entry" : "entries"}.`,
       hollow: false,
     })
   }
 
-  // 4. Competition starts
   const startDate = new Date(competition.startDate)
   const startPast = isPast(startDate)
   items.push({
     title: "Competition Begins",
     date: startDate,
-    variant: startPast ? "default" : "secondary",
+    description: startPast
+      ? "The competition has started."
+      : `The competition is scheduled to begin at ${competition.startTime}.`,
     hollow: !startPast,
   })
 
-  // 5. Competition ends
   const endDate = new Date(competition.endDate)
   const endPast = isPast(endDate)
   items.push({
     title: "Competition Ends",
     date: endDate,
-    variant: endPast ? "default" : "outline",
+    description: endPast
+      ? `The competition concluded with ${competition._count.results} result${competition._count.results === 1 ? "" : "s"} recorded.`
+      : `Scheduled to conclude at ${competition.endTime}.`,
     hollow: !endPast,
   })
 
@@ -648,36 +642,63 @@ export default function CompetitionProfilePage() {
                   )}
                 </CardContent>
               </Card>
-
-              {/* Registration Timeline Card */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Registration Timeline</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Timeline orientation="vertical" noCards vertItemSpacing={32}>
-                    {timelineItems.map((item, idx) => (
-                      <TimelineItem key={idx} variant={item.variant} hollow={item.hollow}>
-                        <TimelineItemTitle>{item.title}</TimelineItemTitle>
-                        <TimelineItemDate>
-                          {item.date ? format(item.date, "MMM d, yyyy") : "Date pending"}
-                        </TimelineItemDate>
-                      </TimelineItem>
-                    ))}
-                  </Timeline>
-                </CardContent>
-              </Card>
             </div>
 
             {/* Right column */}
             <div className="md:col-span-2 space-y-6">
+              {/* Registration Timeline Card (Latest Activity style) */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Registration Timeline</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-0">
+                    {timelineItems.map((item, idx) => {
+                      const isLast = idx === timelineItems.length - 1
+                      return (
+                        <div key={idx} className="relative flex gap-4">
+                          {/* Vertical line + dot */}
+                          <div className="flex flex-col items-center">
+                            <div
+                              className={cn(
+                                "h-3 w-3 rounded-full border-2 shrink-0 mt-1.5",
+                                item.hollow
+                                  ? "bg-background border-muted-foreground/40"
+                                  : "bg-primary border-primary",
+                              )}
+                            />
+                            {!isLast && (
+                              <div className="w-[2px] flex-1 bg-border my-1" />
+                            )}
+                          </div>
+                          {/* Content */}
+                          <div className={cn("pb-6", isLast && "pb-0")}>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold">{item.title}</h4>
+                              {item.hollow && (
+                                <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                                  Upcoming
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {item.date ? format(item.date, "MMMM d, yyyy") : "Date pending"}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {item.description}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Transaction History Card */}
               <Card>
                 <CardHeader>
                   <CardTitle>Transaction History</CardTitle>
-                  <CardDescription>
-                    Invoices and payments related to this competition
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                   {competition.lineItems && competition.lineItems.length > 0 ? (
