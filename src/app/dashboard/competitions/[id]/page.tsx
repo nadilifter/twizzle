@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useParams, useSearchParams } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { format, isPast } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -18,7 +18,6 @@ import {
   UserCheck,
   Flag,
   Receipt,
-  UsersRound,
   ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -100,13 +99,17 @@ interface CompetitionDetail {
   endTime: string
   city: string | null
   stateProvince: string | null
+  streetAddress: string | null
+  postalCode: string | null
+  country: string | null
   pricingMode: string
   entryFee: number | string | null
   createdAt: string
-  facility: { id: string; name: string; city: string | null; stateProvince: string | null } | null
+  facility: { id: string; name: string; street: string | null; city: string | null; stateProvince: string | null; postalCode: string | null } | null
   categories: CompetitionCategory[]
   entries: {
     id: string
+    createdAt: string
     athlete: {
       id: string
       firstName: string | null
@@ -150,11 +153,26 @@ interface CompetitionResult {
   }
 }
 
-interface UniqueFamily {
-  id: string
-  name: string
-  email: string
-  primaryContact: string
+interface LatestRegistration {
+  athleteId: string
+  athleteName: string
+  familyName: string | null
+  registeredAt: string
+}
+
+function getLatestRegistrations(competition: CompetitionDetail): LatestRegistration[] {
+  const seen = new Map<string, LatestRegistration>()
+  for (const entry of competition.entries) {
+    const athlete = entry.athlete
+    if (seen.has(athlete.id)) continue
+    seen.set(athlete.id, {
+      athleteId: athlete.id,
+      athleteName: [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") || athlete.name || "Unknown athlete",
+      familyName: athlete.family?.name ?? null,
+      registeredAt: entry.createdAt,
+    })
+  }
+  return Array.from(seen.values())
 }
 
 function getCategoryLabel(category: CompetitionCategory): string {
@@ -217,17 +235,6 @@ const INVOICE_STATUS_STYLES: Record<string, string> = {
   DRAFT: "bg-muted text-muted-foreground",
   CANCELLED: "bg-muted text-muted-foreground",
   PARTIAL: "bg-yellow-50 text-yellow-700 border-yellow-200",
-}
-
-function getUniqueFamilies(competition: CompetitionDetail): UniqueFamily[] {
-  const familyMap = new Map<string, UniqueFamily>()
-  for (const entry of competition.entries) {
-    const family = entry.athlete.family
-    if (family && !familyMap.has(family.id)) {
-      familyMap.set(family.id, family)
-    }
-  }
-  return Array.from(familyMap.values())
 }
 
 function buildTimelineItems(competition: CompetitionDetail) {
@@ -313,6 +320,7 @@ function buildTimelineItems(competition: CompetitionDetail) {
 export default function CompetitionProfilePage() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const competitionId = params.id as string
 
   const [competition, setCompetition] = React.useState<CompetitionDetail | null>(null)
@@ -321,7 +329,19 @@ export default function CompetitionProfilePage() {
   const [loading, setLoading] = React.useState(true)
   const [resultsLoading, setResultsLoading] = React.useState(false)
   const [isEditOpen, setIsEditOpen] = React.useState(false)
-  const [activeTab, setActiveTab] = React.useState(searchParams.get("tab") ?? "overview")
+  const [activeTab, setActiveTabState] = React.useState(searchParams.get("tab") ?? "overview")
+
+  const setActiveTab = React.useCallback((tab: string) => {
+    setActiveTabState(tab)
+    const params = new URLSearchParams(searchParams.toString())
+    if (tab === "overview") {
+      params.delete("tab")
+    } else {
+      params.set("tab", tab)
+    }
+    const qs = params.toString()
+    router.replace(`${window.location.pathname}${qs ? `?${qs}` : ""}`, { scroll: false })
+  }, [searchParams, router])
 
   useBreadcrumbOverride(
     competition ? `/dashboard/competitions/${competitionId}` : undefined,
@@ -405,9 +425,10 @@ export default function CompetitionProfilePage() {
     )
   }
 
-  const location = competition.facility
-    ? `${competition.facility.name}${competition.facility.city ? `, ${competition.facility.city}` : ""}`
-    : [competition.city, competition.stateProvince].filter(Boolean).join(", ")
+  const facilityName = competition.facility?.name ?? null
+  const locationAddress = competition.facility
+    ? [competition.facility.street, competition.facility.city, [competition.facility.stateProvince, competition.facility.postalCode].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+    : [competition.streetAddress, competition.city, [competition.stateProvince, competition.postalCode].filter(Boolean).join(" ")].filter(Boolean).join(", ")
 
   const selectedCategory =
     selectedCategoryId === "all"
@@ -435,7 +456,7 @@ export default function CompetitionProfilePage() {
     </div>
   )
 
-  const families = getUniqueFamilies(competition)
+  const latestRegistrations = getLatestRegistrations(competition)
   const timelineItems = buildTimelineItems(competition)
 
   return (
@@ -481,25 +502,21 @@ export default function CompetitionProfilePage() {
             <UserCheck className="h-4 w-4" />
             Athletes
           </TabsTrigger>
-          <TabsTrigger value="results" className="gap-2">
-            <Trophy className="h-4 w-4" />
-            Results
+          <TabsTrigger value="events" className="gap-2">
+            <Flag className="h-4 w-4" />
+            Events
           </TabsTrigger>
           <TabsTrigger value="transactions" className="gap-2">
             <Receipt className="h-4 w-4" />
             Transactions
           </TabsTrigger>
-          <TabsTrigger value="families" className="gap-2">
-            <UsersRound className="h-4 w-4" />
-            Families
-          </TabsTrigger>
           <TabsTrigger value="reports" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Reports
           </TabsTrigger>
-          <TabsTrigger value="events" className="gap-2">
-            <Flag className="h-4 w-4" />
-            Events
+          <TabsTrigger value="results" className="gap-2">
+            <Trophy className="h-4 w-4" />
+            Results
           </TabsTrigger>
         </TabsList>
 
@@ -526,54 +543,43 @@ export default function CompetitionProfilePage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 text-sm">
-                    <div className="flex items-start gap-3">
-                      <Trophy className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                      <div>
-                        <p className="font-medium">Sport</p>
-                        <p className="text-muted-foreground">
-                          {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}
-                        </p>
-                      </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Trophy className="h-4 w-4 shrink-0" />
+                      <span>{COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}</span>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CalendarDays className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                      <div>
-                        <p className="font-medium">Dates</p>
-                        <p className="text-muted-foreground">
-                          {format(new Date(competition.startDate), "MMM d, yyyy")}
-                          {competition.endDate && competition.endDate !== competition.startDate && (
-                            <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
-                          )}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <CalendarDays className="h-4 w-4 shrink-0" />
+                      <span>
+                        {format(new Date(competition.startDate), "MMM d, yyyy")}
+                        {competition.endDate && competition.endDate !== competition.startDate && (
+                          <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
+                        )}
+                      </span>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <Clock className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                      <div>
-                        <p className="font-medium">Time</p>
-                        <p className="text-muted-foreground">
-                          {competition.startTime} &ndash; {competition.endTime}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4 shrink-0" />
+                      <span>{competition.startTime} &ndash; {competition.endTime}</span>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                      <div>
-                        <p className="font-medium">Location</p>
-                        <p className="text-muted-foreground">{location || "No location set"}</p>
-                      </div>
+                    <div className="flex items-start gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+                      {facilityName || locationAddress ? (
+                        <div>
+                          {facilityName && <span className="font-medium text-foreground">{facilityName}</span>}
+                          {facilityName && locationAddress && <br />}
+                          {locationAddress && <span>{locationAddress}</span>}
+                        </div>
+                      ) : (
+                        <span>No location set</span>
+                      )}
                     </div>
-                    <div className="flex items-start gap-3">
-                      <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                      <div>
-                        <p className="font-medium">Pricing</p>
-                        <p className="text-muted-foreground">
-                          {competition.pricingMode === "FREE"
-                            ? "Free"
-                            : `${formatPrice(competition.entryFee)} (${PRICING_MODE_LABELS[competition.pricingMode] || competition.pricingMode})`}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <DollarSign className="h-4 w-4 shrink-0" />
+                      <span>
+                        {competition.pricingMode === "FREE"
+                          ? "Free"
+                          : `${formatPrice(competition.entryFee)} (${PRICING_MODE_LABELS[competition.pricingMode] || competition.pricingMode})`}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
@@ -669,7 +675,7 @@ export default function CompetitionProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Transaction History + Families side by side */}
+              {/* Transaction History + Latest Registrations side by side */}
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Transaction History Card (latest 5) */}
                 <Card>
@@ -732,16 +738,16 @@ export default function CompetitionProfilePage() {
                   </CardContent>
                 </Card>
 
-                {/* Families Card (latest 5) */}
+                {/* Latest Registrations Card */}
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Families</CardTitle>
-                    {families.length > 5 && (
+                    <CardTitle>Latest Registrations</CardTitle>
+                    {latestRegistrations.length > 5 && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="gap-1 text-xs"
-                        onClick={() => setActiveTab("families")}
+                        onClick={() => setActiveTab("athletes")}
                       >
                         View All
                         <ArrowRight className="h-3 w-3" />
@@ -749,17 +755,17 @@ export default function CompetitionProfilePage() {
                     )}
                   </CardHeader>
                   <CardContent>
-                    {families.length > 0 ? (
+                    {latestRegistrations.length > 0 ? (
                       <div className="space-y-4">
-                        {families.slice(0, 5).map((family) => (
+                        {latestRegistrations.slice(0, 5).map((reg) => (
                           <div
-                            key={family.id}
+                            key={reg.athleteId}
                             className="flex items-center justify-between"
                           >
                             <div className="flex items-center gap-3">
                               <Avatar className="h-10 w-10">
                                 <AvatarFallback>
-                                  {family.name
+                                  {reg.athleteName
                                     .split(" ")
                                     .map((w) => w[0])
                                     .join("")
@@ -768,12 +774,15 @@ export default function CompetitionProfilePage() {
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="text-sm font-medium">{family.name}</p>
-                                <p className="text-sm text-muted-foreground">{family.email}</p>
+                                <p className="text-sm font-medium">{reg.athleteName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {reg.familyName && <>{reg.familyName} &middot; </>}
+                                  {format(new Date(reg.registeredAt), "MMM d, yyyy")}
+                                </p>
                               </div>
                             </div>
                             <Button variant="outline" size="sm" asChild>
-                              <Link href={`/dashboard/athletes/families/${family.id}`}>
+                              <Link href={`/dashboard/competitions/${competition.id}/athletes/${reg.athleteId}`}>
                                 View
                               </Link>
                             </Button>
@@ -782,7 +791,7 @@ export default function CompetitionProfilePage() {
                       </div>
                     ) : (
                       <div className="py-6 text-center text-muted-foreground">
-                        No families registered yet.
+                        No athletes registered yet.
                       </div>
                     )}
                   </CardContent>
@@ -869,27 +878,6 @@ export default function CompetitionProfilePage() {
         {/* ===== TRANSACTIONS TAB ===== */}
         <TabsContent value="transactions">
           <TransactionsTab lineItems={competition.lineItems} />
-        </TabsContent>
-
-        {/* ===== FAMILIES TAB (placeholder) ===== */}
-        <TabsContent value="families">
-          <Card>
-            <CardHeader>
-              <CardTitle>Families</CardTitle>
-              <CardDescription>
-                All families with athletes in this competition
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <UsersRound className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Coming Soon</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  A complete directory of all families registered for this competition, with contact information, athletes, and payment status.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* ===== REPORTS TAB (placeholder) ===== */}

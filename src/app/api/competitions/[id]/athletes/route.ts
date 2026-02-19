@@ -57,6 +57,7 @@ export async function GET(
             birthDate: true,
             gender: true,
             level: true,
+            familyId: true,
           },
         },
       },
@@ -83,6 +84,23 @@ export async function GET(
     }
 
     const athleteIds = Array.from(athleteMap.keys())
+
+    // Batch-resolve families from familyId values
+    const familyIds = [
+      ...new Set(
+        Array.from(athleteMap.values())
+          .map(({ athlete }) => athlete.familyId)
+          .filter((fid): fid is string => fid != null)
+      ),
+    ]
+    const familyList =
+      familyIds.length > 0
+        ? await db.family.findMany({
+            where: { id: { in: familyIds } },
+            select: { id: true, name: true },
+          })
+        : []
+    const familyMap = new Map(familyList.map((f) => [f.id, f]))
 
     // Resolve level names if level restriction is active
     let levelMap = new Map<string, string>()
@@ -183,6 +201,7 @@ export async function GET(
         birthDate: athlete.birthDate,
         gender: athlete.gender,
         level,
+        family: athlete.familyId ? familyMap.get(athlete.familyId) ?? null : null,
         eventCount,
         compliance,
       }

@@ -14,13 +14,16 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { CheckCircle2, AlertCircle, Search, UserCheck } from "lucide-react"
+import { CheckCircle2, AlertCircle, Search, UserCheck, Filter, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { calculateAge } from "@/lib/age-utils"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -41,6 +44,7 @@ interface CompetitionAthlete {
   birthDate: string | null
   gender: string | null
   level: { id: string; name: string } | null
+  family: { id: string; name: string } | null
   eventCount: number
   compliance: {
     membership?: "verified" | "missing"
@@ -134,6 +138,28 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
         filterFn: "includesString",
       },
       {
+        id: "family",
+        accessorFn: (row) => row.family?.name ?? "",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Family" />
+        ),
+        cell: ({ row }) => {
+          const family = row.original.family
+          if (!family) return <span className="text-muted-foreground">-</span>
+          return (
+            <Link
+              href={`/dashboard/athletes/families/${family.id}`}
+              className="text-primary hover:underline"
+            >
+              {family.name}
+            </Link>
+          )
+        },
+        filterFn: (row, id, value) => {
+          return value.includes(row.getValue(id))
+        },
+      },
+      {
         accessorKey: "eventCount",
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title="Events" />
@@ -152,6 +178,14 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
           const age = calculateAge(row.original.birthDate)
           return age !== null ? age : "-"
         },
+        filterFn: (row, id, value: [number | null, number | null]) => {
+          const age = row.getValue(id) as number | null
+          if (age === null) return false
+          const [min, max] = value
+          if (min !== null && age < min) return false
+          if (max !== null && age > max) return false
+          return true
+        },
       },
       {
         accessorKey: "gender",
@@ -162,6 +196,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
           const gender = row.original.gender
           if (!gender) return "-"
           return gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase()
+        },
+        filterFn: (row, id, value) => {
+          return value.includes(row.getValue(id))
         },
       },
     ]
@@ -193,6 +230,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
           if (!status) return "-"
           return <ComplianceBadge status={status} goodLabel="Verified" badLabel="Missing" />
         },
+        filterFn: (row, id, value) => {
+          return value.includes(row.getValue(id))
+        },
       })
     }
 
@@ -208,6 +248,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
           if (!status) return "-"
           return <ComplianceBadge status={status} goodLabel="Signed" badLabel="Not Signed" />
         },
+        filterFn: (row, id, value) => {
+          return value.includes(row.getValue(id))
+        },
       })
     }
 
@@ -222,6 +265,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
           const status = row.original.compliance.medical
           if (!status) return "-"
           return <ComplianceBadge status={status} goodLabel="On File" badLabel="Incomplete" />
+        },
+        filterFn: (row, id, value) => {
+          return value.includes(row.getValue(id))
         },
       })
     }
@@ -245,6 +291,30 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
     },
   })
 
+  const genders = React.useMemo(
+    () => Array.from(new Set(athletes.map((a) => a.gender).filter(Boolean))).sort() as string[],
+    [athletes],
+  )
+
+  const familyNames = React.useMemo(
+    () => Array.from(new Set(athletes.map((a) => a.family?.name).filter(Boolean))).sort() as string[],
+    [athletes],
+  )
+
+  const handleFilterChange = (columnId: string, value: string, checked: boolean) => {
+    const column = table.getColumn(columnId)
+    const filterValue = (column?.getFilterValue() as string[]) || []
+    if (checked) {
+      column?.setFilterValue([...filterValue, value])
+    } else {
+      column?.setFilterValue(filterValue.filter((v) => v !== value))
+    }
+  }
+
+  const isFiltered = table.getState().columnFilters.some((f) => f.id !== "name")
+
+  const ageFilter = (table.getColumn("age")?.getFilterValue() as [number | null, number | null]) ?? [null, null]
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -267,6 +337,163 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
                 className="pl-9 h-9"
               />
             </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 border-dashed">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filter
+                  {isFiltered && (
+                    <Badge variant="secondary" className="ml-2 rounded-sm px-1 font-normal">
+                      {table.getState().columnFilters.filter((f) => f.id !== "name").length}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[220px] p-0" align="end">
+                <div className="p-4 pb-0">
+                  <h4 className="font-medium leading-none">Filters</h4>
+                </div>
+                <div className="p-4 pt-2 space-y-4 max-h-[400px] overflow-y-auto">
+                  {genders.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Gender</h4>
+                      <div className="grid gap-2">
+                        {genders.map((gender) => (
+                          <div key={gender} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`gender-${gender}`}
+                              checked={(table.getColumn("gender")?.getFilterValue() as string[])?.includes(gender)}
+                              onCheckedChange={(checked) => handleFilterChange("gender", gender, !!checked)}
+                            />
+                            <label htmlFor={`gender-${gender}`} className="text-sm leading-none">
+                              {gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase()}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-muted-foreground">Age Range</h4>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        className="h-8 text-sm"
+                        value={ageFilter[0] ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value ? Number(e.target.value) : null
+                          table.getColumn("age")?.setFilterValue([val, ageFilter[1]])
+                        }}
+                      />
+                      <span className="text-muted-foreground text-xs">to</span>
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        className="h-8 text-sm"
+                        value={ageFilter[1] ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value ? Number(e.target.value) : null
+                          table.getColumn("age")?.setFilterValue([ageFilter[0], val])
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {requirements.hasMembershipRestriction && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Membership</h4>
+                      <div className="grid gap-2">
+                        {(["verified", "missing"] as const).map((status) => (
+                          <div key={status} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`membership-${status}`}
+                              checked={(table.getColumn("membership")?.getFilterValue() as string[])?.includes(status)}
+                              onCheckedChange={(checked) => handleFilterChange("membership", status, !!checked)}
+                            />
+                            <label htmlFor={`membership-${status}`} className="text-sm leading-none">
+                              {status === "verified" ? "Verified" : "Missing"}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {requirements.hasWaiverRestriction && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Waivers</h4>
+                      <div className="grid gap-2">
+                        {(["signed", "unsigned"] as const).map((status) => (
+                          <div key={status} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`waiver-${status}`}
+                              checked={(table.getColumn("waiver")?.getFilterValue() as string[])?.includes(status)}
+                              onCheckedChange={(checked) => handleFilterChange("waiver", status, !!checked)}
+                            />
+                            <label htmlFor={`waiver-${status}`} className="text-sm leading-none">
+                              {status === "signed" ? "Signed" : "Not Signed"}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {requirements.hasMedicalRequirement && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Medical</h4>
+                      <div className="grid gap-2">
+                        {(["complete", "incomplete"] as const).map((status) => (
+                          <div key={status} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`medical-${status}`}
+                              checked={(table.getColumn("medical")?.getFilterValue() as string[])?.includes(status)}
+                              onCheckedChange={(checked) => handleFilterChange("medical", status, !!checked)}
+                            />
+                            <label htmlFor={`medical-${status}`} className="text-sm leading-none">
+                              {status === "complete" ? "On File" : "Incomplete"}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {familyNames.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Family</h4>
+                      <div className="grid gap-2">
+                        {familyNames.map((name) => (
+                          <div key={name} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`family-${name}`}
+                              checked={(table.getColumn("family")?.getFilterValue() as string[])?.includes(name)}
+                              onCheckedChange={(checked) => handleFilterChange("family", name, !!checked)}
+                            />
+                            <label htmlFor={`family-${name}`} className="text-sm leading-none truncate">
+                              {name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {isFiltered && (
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-center text-center h-8"
+                      onClick={() => {
+                        const nameFilter = table.getColumn("name")?.getFilterValue()
+                        table.resetColumnFilters()
+                        if (nameFilter) {
+                          table.getColumn("name")?.setFilterValue(nameFilter)
+                        }
+                      }}
+                    >
+                      <X className="mr-2 h-3 w-3" />
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
             <DataTableViewOptions table={table} />
           </div>
         </div>
