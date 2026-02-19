@@ -45,6 +45,7 @@ import {
   getStatusStyle,
 } from "../lib/competition-status"
 import { AthletesTab } from "./athletes-tab"
+import { EventsTab, getCategoryLabel } from "./events-tab"
 import { TransactionsTab } from "./transactions-tab"
 
 interface CompetitionCategory {
@@ -52,6 +53,12 @@ interface CompetitionCategory {
   resultType: "TIME" | "DISTANCE" | "HEIGHT" | "SCORE"
   sortDirection: "ASC" | "DESC"
   precision: number
+  seedMarkRequired: boolean
+  isTeamEvent: boolean
+  teamSize: number | null
+  price: string | number | null
+  isActive: boolean
+  displayOrder: number
   combinationEntry: {
     id: string
     rowValue: { id: string; name: string }
@@ -173,19 +180,6 @@ function getLatestRegistrations(competition: CompetitionDetail): LatestRegistrat
     })
   }
   return Array.from(seen.values())
-}
-
-function getCategoryLabel(category: CompetitionCategory): string {
-  if (category.ageCategory && category.sportEvent) {
-    return `${category.ageCategory.code} ${category.sportEvent.name}`
-  }
-  if (category.sportEvent) return category.sportEvent.name
-  if (category.ageCategory) return category.ageCategory.name
-  if (category.individualEntry?.name) return category.individualEntry.name
-  if (category.combinationEntry) {
-    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`
-  }
-  return `Category ${category.id.slice(-4)}`
 }
 
 function formatResultValue(value: number, resultType: string, precision: number): string {
@@ -908,23 +902,11 @@ export default function CompetitionProfilePage() {
 
         {/* ===== EVENTS TAB (placeholder) ===== */}
         <TabsContent value="events">
-          <Card>
-            <CardHeader>
-              <CardTitle>Events</CardTitle>
-              <CardDescription>
-                Event schedule and category management
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Flag className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Coming Soon</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  Manage event scheduling, heats, flights, and category-level configuration from this tab.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <EventsTab
+            categories={competition.categories}
+            pricingMode={competition.pricingMode}
+            competitionId={competitionId}
+          />
         </TabsContent>
       </Tabs>
     </div>
