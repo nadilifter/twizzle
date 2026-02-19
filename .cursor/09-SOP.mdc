@@ -11,6 +11,19 @@ globs: ["**/*"]
   - Update relevant pages to reflect the changes.
   - If no documentation exists for a new feature, create a new entry.
 
+- **Breadcrumbs — Never Show IDs**:
+  - Breadcrumbs must **NEVER** display raw IDs (UUIDs, numeric IDs, or any database identifier). Users should only see human-readable names.
+  - The `DynamicBreadcrumb` component (`src/components/dynamic-breadcrumb.tsx`) auto-generates breadcrumbs from the URL path. It detects ID-like segments (UUIDs, CUIDs, numeric IDs) and renders them as a non-clickable "…" placeholder. Pages with dynamic route params (e.g. `[id]`, `[athleteId]`, `[instanceId]`) **MUST** call `useBreadcrumbOverride` to replace that placeholder with a human-readable label (e.g. the entity's name).
+  - **How**: Import `useBreadcrumbOverride` from `@/components/breadcrumb-context` and call it with the full path segment and the display label:
+    ```ts
+    useBreadcrumbOverride(
+      data ? `/dashboard/events/${eventId}` : undefined,
+      data?.name,
+    )
+    ```
+  - This applies to **all** admin (`/dashboard/...`) and superadmin (`/superadmin/...`) pages with dynamic route parameters.
+  - If a page has **multiple** dynamic segments (e.g. `/dashboard/competitions/[id]/athletes/[athleteId]`), register an override for **each** ID segment.
+
 - **Planning Files**:
   - **Create**: Use planning files (markdown) to scope out complex tasks.
   - **Update**: Continuously update the plan as you make progress or discover new requirements.

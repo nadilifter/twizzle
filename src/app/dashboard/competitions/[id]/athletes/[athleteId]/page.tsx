@@ -66,6 +66,7 @@ interface WaiverData {
 }
 
 interface AthleteDetail {
+  competitionName: string
   athlete: {
     id: string
     firstName: string | null
@@ -164,6 +165,10 @@ export default function CompetitionAthleteDetailPage() {
     ? [data.athlete.firstName, data.athlete.lastName].filter(Boolean).join(" ") || "Unknown Athlete"
     : undefined
 
+  useBreadcrumbOverride(
+    data ? `/dashboard/competitions/${competitionId}` : undefined,
+    data?.competitionName,
+  )
   useBreadcrumbOverride(
     data ? `/dashboard/competitions/${competitionId}/athletes/${athleteId}` : undefined,
     athleteName,

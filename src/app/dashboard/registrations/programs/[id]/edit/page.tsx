@@ -6,6 +6,7 @@ import { ProgramStepper } from "../../components/program-stepper"
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 import type { ProgramWithRelations } from "@/types/programs"
 
 export default function EditProgramPage() {
@@ -15,7 +16,12 @@ export default function EditProgramPage() {
   const [program, setProgram] = useState<ProgramWithRelations | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
+  useBreadcrumbOverride(
+    program ? `/dashboard/registrations/programs/${programId}` : undefined,
+    program?.name,
+  )
+
   useEffect(() => {
     const fetchProgram = async () => {
       try {

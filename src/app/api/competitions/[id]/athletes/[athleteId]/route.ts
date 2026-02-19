@@ -58,6 +58,7 @@ export async function GET(
       where: { id, organizationId },
       select: {
         id: true,
+        name: true,
         hasLevelRestriction: true,
         levelRequirementIds: true,
         hasMembershipRestriction: true,
@@ -346,6 +347,7 @@ export async function GET(
     }
 
     return NextResponse.json({
+      competitionName: competition.name,
       athlete: {
         id: athlete.id,
         firstName: athlete.firstName,

@@ -66,6 +66,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { useAthletes } from "@/hooks/use-athletes"
 import { useAttendance } from "@/hooks/use-attendance"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 import { toast } from "sonner"
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -111,6 +112,11 @@ export default function EventDetailPage() {
   const [selectedAthleteId, setSelectedAthleteId] = useState("")
   const [isRegisterOpen, setIsRegisterOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  useBreadcrumbOverride(
+    event ? `/dashboard/events/${eventId}` : undefined,
+    event?.title,
+  )
 
   const fetchEvent = useCallback(async () => {
     try {

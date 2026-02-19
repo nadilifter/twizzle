@@ -70,6 +70,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
 
 interface ProgramInstance {
@@ -144,6 +145,11 @@ export default function InstanceDetailPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [instanceNotes, setInstanceNotes] = useState("");
+
+  useBreadcrumbOverride(
+    instance ? `/dashboard/calendar/instance/${instanceId}` : undefined,
+    instance?.program.name,
+  );
 
   const fetchInstance = useCallback(async () => {
     try {

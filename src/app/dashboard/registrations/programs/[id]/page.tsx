@@ -39,6 +39,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
 
 interface Program {
@@ -104,6 +105,11 @@ export default function ProgramDetailPage() {
     const [loading, setLoading] = useState(true);
     const [instancesLoading, setInstancesLoading] = useState(false);
     const [registrationsLoading, setRegistrationsLoading] = useState(false);
+
+    useBreadcrumbOverride(
+        program ? `/dashboard/registrations/programs/${programId}` : undefined,
+        program?.name,
+    );
 
     useEffect(() => {
         fetchProgram();
