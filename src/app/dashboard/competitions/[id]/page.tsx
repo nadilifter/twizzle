@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { format } from "date-fns"
+import { format, isPast } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import {
@@ -19,10 +19,12 @@ import {
   Trophy,
   BarChart3,
   Settings,
-  Loader2,
   LayoutGrid,
   DollarSign,
   Info,
+  FileText,
+  UserCheck,
+  Flag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -39,7 +41,14 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
+import {
+  Timeline,
+  TimelineItem,
+  TimelineItemDate,
+  TimelineItemTitle,
+} from "@/components/blocks/timeline"
 import { CompetitionConfiguration } from "../competition-configuration"
 import {
   COMPETITION_TYPE_LABELS,
@@ -68,6 +77,23 @@ interface CompetitionCategory {
   _count: { entries: number; results: number }
 }
 
+interface CompetitionLineItem {
+  id: string
+  description: string
+  quantity: number
+  unitPrice: string | number
+  total: string | number
+  createdAt: string
+  invoice: {
+    id: string
+    reference: string
+    status: string
+    total: string | number
+    createdAt: string
+    family: { id: string; name: string; primaryContact: string } | null
+  }
+}
+
 interface CompetitionDetail {
   id: string
   name: string
@@ -84,8 +110,21 @@ interface CompetitionDetail {
   stateProvince: string | null
   pricingMode: string
   entryFee: number | string | null
+  createdAt: string
   facility: { id: string; name: string; city: string | null; stateProvince: string | null } | null
   categories: CompetitionCategory[]
+  entries: {
+    id: string
+    athlete: {
+      id: string
+      firstName: string | null
+      lastName: string | null
+      name: string | null
+      familyId: string | null
+      family: { id: string; name: string; email: string; primaryContact: string } | null
+    }
+  }[]
+  lineItems: CompetitionLineItem[]
   _count: { entries: number; results: number; teams: number }
 }
 
@@ -136,6 +175,13 @@ interface CompetitionResult {
     sortDirection: "ASC" | "DESC"
     precision: number
   }
+}
+
+interface UniqueFamily {
+  id: string
+  name: string
+  email: string
+  primaryContact: string
 }
 
 function getCategoryLabel(category: CompetitionCategory): string {
@@ -189,6 +235,110 @@ const PRICING_MODE_LABELS: Record<string, string> = {
   PER_EVENT: "Per Event",
   TIERED: "Tiered",
   PER_CATEGORY: "Per Category",
+}
+
+const INVOICE_STATUS_STYLES: Record<string, string> = {
+  PAID: "bg-green-50 text-green-700 border-green-200",
+  SENT: "bg-blue-50 text-blue-700 border-blue-200",
+  OVERDUE: "bg-red-50 text-red-700 border-red-200",
+  DRAFT: "bg-muted text-muted-foreground",
+  CANCELLED: "bg-muted text-muted-foreground",
+  PARTIAL: "bg-yellow-50 text-yellow-700 border-yellow-200",
+}
+
+function getUniqueFamilies(competition: CompetitionDetail): UniqueFamily[] {
+  const familyMap = new Map<string, UniqueFamily>()
+  for (const entry of competition.entries) {
+    const family = entry.athlete.family
+    if (family && !familyMap.has(family.id)) {
+      familyMap.set(family.id, family)
+    }
+  }
+  return Array.from(familyMap.values())
+}
+
+function buildTimelineItems(competition: CompetitionDetail) {
+  const now = new Date()
+  const items: {
+    title: string
+    date: Date | null
+    variant: "default" | "secondary" | "destructive" | "outline"
+    hollow: boolean
+  }[] = []
+
+  // 1. Registration created
+  items.push({
+    title: "Registration Created",
+    date: new Date(competition.createdAt),
+    variant: "default",
+    hollow: false,
+  })
+
+  // 2. Registration went live
+  if (
+    competition.publishStatus === "LIVE" ||
+    competition.publishStatus === "CLOSED" ||
+    competition.publishStatus === "COMPLETED" ||
+    competition.status === "REGISTRATION_OPEN" ||
+    competition.status === "REGISTRATION_CLOSED" ||
+    competition.status === "IN_PROGRESS" ||
+    competition.status === "COMPLETED"
+  ) {
+    const goLiveDate = competition.scheduledGoLiveDate
+      ? new Date(competition.scheduledGoLiveDate)
+      : null
+    items.push({
+      title: "Registration Live",
+      date: goLiveDate,
+      variant: "default",
+      hollow: false,
+    })
+  } else if (competition.publishStatus === "SCHEDULED" && competition.scheduledGoLiveDate) {
+    items.push({
+      title: "Registration Scheduled to Go Live",
+      date: new Date(competition.scheduledGoLiveDate),
+      variant: "secondary",
+      hollow: true,
+    })
+  }
+
+  // 3. Registration closed
+  if (
+    competition.status === "REGISTRATION_CLOSED" ||
+    competition.status === "IN_PROGRESS" ||
+    competition.status === "COMPLETED" ||
+    competition.publishStatus === "CLOSED" ||
+    competition.publishStatus === "COMPLETED"
+  ) {
+    items.push({
+      title: "Registration Closed",
+      date: null,
+      variant: "destructive",
+      hollow: false,
+    })
+  }
+
+  // 4. Competition starts
+  const startDate = new Date(competition.startDate)
+  const startPast = isPast(startDate)
+  items.push({
+    title: "Competition Begins",
+    date: startDate,
+    variant: startPast ? "default" : "secondary",
+    hollow: !startPast,
+  })
+
+  // 5. Competition ends
+  const endDate = new Date(competition.endDate)
+  const endPast = isPast(endDate)
+  items.push({
+    title: "Competition Ends",
+    date: endDate,
+    variant: endPast ? "default" : "outline",
+    hollow: !endPast,
+  })
+
+  return items
 }
 
 export default function CompetitionProfilePage() {
@@ -289,13 +439,11 @@ export default function CompetitionProfilePage() {
     return (
       <div className="flex flex-col gap-6 p-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
+        <Skeleton className="h-10 w-full max-w-lg" />
+        <div className="grid gap-6 md:grid-cols-3">
+          <Skeleton className="h-96" />
+          <Skeleton className="h-96 md:col-span-2" />
         </div>
-        <Skeleton className="h-96" />
       </div>
     )
   }
@@ -345,6 +493,9 @@ export default function CompetitionProfilePage() {
     </div>
   )
 
+  const families = getUniqueFamilies(competition)
+  const timelineItems = buildTimelineItems(competition)
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Page header */}
@@ -366,9 +517,9 @@ export default function CompetitionProfilePage() {
             {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}
           </p>
         </div>
-        <Button size="sm" onClick={() => setIsEditOpen(true)}>
+        <Button onClick={() => setIsEditOpen(true)}>
           <Settings className="mr-2 h-4 w-4" />
-          Edit Competition
+          Settings
         </Button>
       </div>
 
@@ -382,99 +533,13 @@ export default function CompetitionProfilePage() {
         </SheetContent>
       </Sheet>
 
-      {/* Stats cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Entries</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{competition._count.entries}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Results</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{competition._count.results}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Categories</CardTitle>
-            <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{competition.categories.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Teams</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{competition._count.teams}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Competition details */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-            <div className="flex items-start gap-2.5">
-              <CalendarDays className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-              <div>
-                <dt className="font-medium">Dates</dt>
-                <dd className="text-muted-foreground">
-                  {format(new Date(competition.startDate), "MMM d, yyyy")}
-                  {competition.endDate && competition.endDate !== competition.startDate && (
-                    <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
-                  )}
-                </dd>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <Clock className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-              <div>
-                <dt className="font-medium">Time</dt>
-                <dd className="text-muted-foreground">
-                  {competition.startTime} &ndash; {competition.endTime}
-                </dd>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-              <div>
-                <dt className="font-medium">Location</dt>
-                <dd className="text-muted-foreground">{location || "No location set"}</dd>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-              <div>
-                <dt className="font-medium">Pricing</dt>
-                <dd className="text-muted-foreground">
-                  {competition.pricingMode === "FREE"
-                    ? "Free"
-                    : `${formatPrice(competition.entryFee)} (${PRICING_MODE_LABELS[competition.pricingMode] || competition.pricingMode})`}
-                </dd>
-              </div>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
-
-      {/* Tabbed content */}
-      <Tabs defaultValue="registrations" className="space-y-4">
+      {/* Top-level tabs */}
+      <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="overview" className="gap-2">
+            <Info className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
           <TabsTrigger value="registrations" className="gap-2">
             <Users className="h-4 w-4" />
             Registrations
@@ -483,12 +548,237 @@ export default function CompetitionProfilePage() {
             <Trophy className="h-4 w-4" />
             Results
           </TabsTrigger>
-          <TabsTrigger value="overview" className="gap-2">
-            <Info className="h-4 w-4" />
-            Overview
+          <TabsTrigger value="reports" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Reports
+          </TabsTrigger>
+          <TabsTrigger value="athletes" className="gap-2">
+            <UserCheck className="h-4 w-4" />
+            Athletes
+          </TabsTrigger>
+          <TabsTrigger value="events" className="gap-2">
+            <Flag className="h-4 w-4" />
+            Events
           </TabsTrigger>
         </TabsList>
 
+        {/* ===== OVERVIEW TAB ===== */}
+        <TabsContent value="overview">
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Left column */}
+            <div className="space-y-6">
+              {/* Competition Info Card */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-around text-center border-b pb-4 mb-4">
+                    <div>
+                      <p className="text-2xl font-bold">{competition._count.entries}</p>
+                      <p className="text-xs text-muted-foreground">Entries</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{competition._count.results}</p>
+                      <p className="text-xs text-muted-foreground">Results</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{competition.categories.length}</p>
+                      <p className="text-xs text-muted-foreground">Categories</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 text-sm">
+                    <div className="flex items-start gap-3">
+                      <CalendarDays className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="font-medium">Dates</p>
+                        <p className="text-muted-foreground">
+                          {format(new Date(competition.startDate), "MMM d, yyyy")}
+                          {competition.endDate && competition.endDate !== competition.startDate && (
+                            <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Clock className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="font-medium">Time</p>
+                        <p className="text-muted-foreground">
+                          {competition.startTime} &ndash; {competition.endTime}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="font-medium">Location</p>
+                        <p className="text-muted-foreground">{location || "No location set"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="font-medium">Pricing</p>
+                        <p className="text-muted-foreground">
+                          {competition.pricingMode === "FREE"
+                            ? "Free"
+                            : `${formatPrice(competition.entryFee)} (${PRICING_MODE_LABELS[competition.pricingMode] || competition.pricingMode})`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Events Card */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Events</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {competition.categories.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {competition.categories.map((category) => (
+                        <Badge key={category.id} variant="secondary" className="font-normal">
+                          {getCategoryLabel(category)}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No events configured yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Registration Timeline Card */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Registration Timeline</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Timeline orientation="vertical" noCards vertItemSpacing={32}>
+                    {timelineItems.map((item, idx) => (
+                      <TimelineItem key={idx} variant={item.variant} hollow={item.hollow}>
+                        <TimelineItemTitle>{item.title}</TimelineItemTitle>
+                        <TimelineItemDate>
+                          {item.date ? format(item.date, "MMM d, yyyy") : "Date pending"}
+                        </TimelineItemDate>
+                      </TimelineItem>
+                    ))}
+                  </Timeline>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right column */}
+            <div className="md:col-span-2 space-y-6">
+              {/* Transaction History Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Transaction History</CardTitle>
+                  <CardDescription>
+                    Invoices and payments related to this competition
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {competition.lineItems && competition.lineItems.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Family</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {competition.lineItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.description}</TableCell>
+                            <TableCell>
+                              {item.invoice?.family?.name ?? "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "capitalize",
+                                  INVOICE_STATUS_STYLES[item.invoice?.status] ?? "",
+                                )}
+                              >
+                                {item.invoice?.status?.toLowerCase() ?? "unknown"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(item.createdAt), "MM/dd/yyyy")}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatPrice(item.total)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="py-10 text-center text-muted-foreground">
+                      No transactions found for this competition.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Families Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Families</CardTitle>
+                  <CardDescription>
+                    Families with athletes registered in this competition
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {families.length > 0 ? (
+                    <div className="space-y-4">
+                      {families.map((family) => (
+                        <div
+                          key={family.id}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback>
+                                {family.name
+                                  .split(" ")
+                                  .map((w) => w[0])
+                                  .join("")
+                                  .slice(0, 2)
+                                  .toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">{family.name}</p>
+                              <p className="text-sm text-muted-foreground">{family.email}</p>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href={`/dashboard/athletes/families/${family.id}`}>
+                              View Profile
+                            </Link>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center text-muted-foreground">
+                      No families registered yet.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ===== REGISTRATIONS TAB ===== */}
         <TabsContent value="registrations">
           <Card>
             <CardHeader className="pb-3">
@@ -594,6 +884,7 @@ export default function CompetitionProfilePage() {
           </Card>
         </TabsContent>
 
+        {/* ===== RESULTS TAB ===== */}
         <TabsContent value="results">
           <Card>
             <CardHeader className="pb-3">
@@ -667,59 +958,65 @@ export default function CompetitionProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="overview">
+        {/* ===== REPORTS TAB (placeholder) ===== */}
+        <TabsContent value="reports">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Competition Overview</CardTitle>
+            <CardHeader>
+              <CardTitle>Reports</CardTitle>
               <CardDescription>
-                Additional context and setup details for this competition.
+                Competition analytics and reporting
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 text-sm">
-                <div>
-                  <dt className="font-medium text-muted-foreground">Type</dt>
-                  <dd className="mt-0.5">{COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}</dd>
-                </div>
-                <div>
-                  <dt className="font-medium text-muted-foreground">Pricing Mode</dt>
-                  <dd className="mt-0.5">{PRICING_MODE_LABELS[competition.pricingMode] || competition.pricingMode}</dd>
-                </div>
-                <div>
-                  <dt className="font-medium text-muted-foreground">Entry Fee</dt>
-                  <dd className="mt-0.5">{formatPrice(competition.entryFee)}</dd>
-                </div>
-                <div>
-                  <dt className="font-medium text-muted-foreground">Configured Categories</dt>
-                  <dd className="mt-0.5">{competition.categories.length}</dd>
-                </div>
-                <div>
-                  <dt className="font-medium text-muted-foreground">Status</dt>
-                  <dd className="mt-0.5">{getStatusLabel(competition)}</dd>
-                </div>
-                {competition.facility && (
-                  <div>
-                    <dt className="font-medium text-muted-foreground">Facility</dt>
-                    <dd className="mt-0.5">{competition.facility.name}</dd>
-                  </div>
-                )}
-              </dl>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <BarChart3 className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium">Coming Soon</h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                  Competition reports and analytics will be available here, including entry summaries, result breakdowns, and participation trends.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-              {competition.categories.length > 0 && (
-                <div className="mt-6 border-t pt-4">
-                  <h4 className="text-sm font-medium mb-3">Categories</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {competition.categories.map((category) => (
-                      <Badge key={category.id} variant="secondary" className="font-normal">
-                        {getCategoryLabel(category)}
-                        <span className="ml-1.5 text-muted-foreground">
-                          ({category._count.entries} {category._count.entries === 1 ? "entry" : "entries"})
-                        </span>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+        {/* ===== ATHLETES TAB (placeholder) ===== */}
+        <TabsContent value="athletes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Athletes</CardTitle>
+              <CardDescription>
+                Athletes participating in this competition
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <UserCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium">Coming Soon</h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                  A detailed view of all athletes registered for this competition, including their entries, seed marks, and results across categories.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== EVENTS TAB (placeholder) ===== */}
+        <TabsContent value="events">
+          <Card>
+            <CardHeader>
+              <CardTitle>Events</CardTitle>
+              <CardDescription>
+                Event schedule and category management
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Flag className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium">Coming Soon</h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                  Manage event scheduling, heats, flights, and category-level configuration from this tab.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -30,8 +30,34 @@ const competitionInclude = {
   },
   entries: {
     include: {
-      athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
+      athlete: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          name: true,
+          familyId: true,
+          family: {
+            select: { id: true, name: true, email: true, primaryContact: true },
+          },
+        },
+      },
       category: { select: { id: true, resultType: true } },
+    },
+    orderBy: { createdAt: "desc" as const },
+  },
+  lineItems: {
+    include: {
+      invoice: {
+        select: {
+          id: true,
+          reference: true,
+          status: true,
+          total: true,
+          createdAt: true,
+          family: { select: { id: true, name: true, primaryContact: true } },
+        },
+      },
     },
     orderBy: { createdAt: "desc" as const },
   },
