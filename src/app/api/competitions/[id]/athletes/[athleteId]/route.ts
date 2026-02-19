@@ -80,6 +80,14 @@ export async function GET(
         birthDate: true,
         gender: true,
         level: true,
+        guardians: {
+          include: {
+            family: {
+              select: { id: true, name: true, email: true, primaryContact: true },
+            },
+          },
+          orderBy: { isPrimary: "desc" },
+        },
       },
     })
     if (!athlete) {
@@ -95,6 +103,15 @@ export async function GET(
       })
       level = levelRecord ?? { id: athlete.level, name: athlete.level }
     }
+
+    const families = athlete.guardians.map((g) => ({
+      id: g.family.id,
+      name: g.family.name,
+      email: g.family.email,
+      primaryContact: g.family.primaryContact,
+      relationship: g.relationship,
+      isPrimary: g.isPrimary,
+    }))
 
     // Fetch entries for this athlete in this competition
     const entries = await db.competitionEntry.findMany({
@@ -146,7 +163,24 @@ export async function GET(
       waivers: {
         required: boolean
         status: string
-        waivers: { id: string; title: string; signed: boolean; signedAt: string | null }[]
+        waivers: {
+          id: string
+          title: string
+          signed: boolean
+          signedAt: string | null
+          pages: {
+            id: string
+            pageNumber: number
+            title: string | null
+            content: string
+            signature: {
+              signatureData: string
+              signedByName: string
+              signedByEmail: string
+              signedAt: string
+            } | null
+          }[]
+        }[]
       }
       medical: {
         required: boolean
@@ -199,7 +233,12 @@ export async function GET(
 
       const requiredWaivers = await db.waiver.findMany({
         where: { id: { in: competition.waiverRequirementIds } },
-        select: { id: true, title: true },
+        include: {
+          pages: {
+            orderBy: { pageNumber: "asc" },
+            select: { id: true, pageNumber: true, title: true, content: true },
+          },
+        },
       })
 
       const acceptances = await db.waiverAcceptance.findMany({
@@ -213,6 +252,26 @@ export async function GET(
         acceptances.map((a) => [a.waiverId, a.completedAt])
       )
 
+      // Fetch all signatures for these waivers for this athlete
+      const signatures = await db.waiverSignature.findMany({
+        where: {
+          athleteId,
+          waiverId: { in: competition.waiverRequirementIds },
+        },
+        select: {
+          id: true,
+          waiverId: true,
+          waiverPageId: true,
+          signatureData: true,
+          signedByName: true,
+          signedByEmail: true,
+          signedAt: true,
+        },
+      })
+      const signaturesByPage = new Map(
+        signatures.map((s) => [s.waiverPageId, s])
+      )
+
       const waiverDetails = requiredWaivers.map((w) => {
         const completedAt = acceptanceMap.get(w.id)
         return {
@@ -220,6 +279,23 @@ export async function GET(
           title: w.title,
           signed: !!completedAt,
           signedAt: completedAt?.toISOString() ?? null,
+          pages: w.pages.map((p) => {
+            const sig = signaturesByPage.get(p.id)
+            return {
+              id: p.id,
+              pageNumber: p.pageNumber,
+              title: p.title,
+              content: p.content,
+              signature: sig
+                ? {
+                    signatureData: sig.signatureData,
+                    signedByName: sig.signedByName,
+                    signedByEmail: sig.signedByEmail,
+                    signedAt: sig.signedAt.toISOString(),
+                  }
+                : null,
+            }
+          }),
         }
       })
 
@@ -277,6 +353,7 @@ export async function GET(
         birthDate: athlete.birthDate,
         gender: athlete.gender,
         level,
+        families,
       },
       entries: formattedEntries,
       compliance,

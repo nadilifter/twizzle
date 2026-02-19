@@ -8,7 +8,6 @@ import { toast } from "sonner"
 import {
   ArrowLeft,
   CalendarDays,
-  User,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -16,11 +15,23 @@ import {
   Shield,
   Heart,
   ClipboardList,
+  Users,
+  X,
+  Eye,
 } from "lucide-react"
 import { calculateAge } from "@/lib/age-utils"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import {
   Table,
@@ -31,6 +42,29 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+// ─── Types ──────────────────────────────────────────────────────────
+
+interface WaiverPageData {
+  id: string
+  pageNumber: number
+  title: string | null
+  content: string
+  signature: {
+    signatureData: string
+    signedByName: string
+    signedByEmail: string
+    signedAt: string
+  } | null
+}
+
+interface WaiverData {
+  id: string
+  title: string
+  signed: boolean
+  signedAt: string | null
+  pages: WaiverPageData[]
+}
+
 interface AthleteDetail {
   athlete: {
     id: string
@@ -39,6 +73,14 @@ interface AthleteDetail {
     birthDate: string | null
     gender: string | null
     level: { id: string; name: string } | null
+    families: {
+      id: string
+      name: string
+      email: string
+      primaryContact: string
+      relationship: string | null
+      isPrimary: boolean
+    }[]
   }
   entries: {
     id: string
@@ -56,7 +98,7 @@ interface AthleteDetail {
     waivers: {
       required: boolean
       status: string
-      waivers: { id: string; title: string; signed: boolean; signedAt: string | null }[]
+      waivers: WaiverData[]
     }
     medical: {
       required: boolean
@@ -86,6 +128,8 @@ interface AthleteDetail {
   }
 }
 
+// ─── Constants ──────────────────────────────────────────────────────
+
 const ENTRY_STATUS_STYLES: Record<string, string> = {
   APPROVED: "bg-green-50 text-green-700 border-green-200",
   PENDING_SEED: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -99,6 +143,14 @@ function formatEntryStatus(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+function getInitials(firstName: string | null, lastName: string | null): string {
+  const f = firstName?.charAt(0) ?? ""
+  const l = lastName?.charAt(0) ?? ""
+  return (f + l).toUpperCase() || "?"
+}
+
+// ─── Page Component ─────────────────────────────────────────────────
+
 export default function CompetitionAthleteDetailPage() {
   const params = useParams()
   const competitionId = typeof params.id === "string" ? params.id : ""
@@ -106,6 +158,16 @@ export default function CompetitionAthleteDetailPage() {
 
   const [data, setData] = React.useState<AthleteDetail | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [viewingWaiver, setViewingWaiver] = React.useState<WaiverData | null>(null)
+
+  const athleteName = data
+    ? [data.athlete.firstName, data.athlete.lastName].filter(Boolean).join(" ") || "Unknown Athlete"
+    : undefined
+
+  useBreadcrumbOverride(
+    data ? `/dashboard/competitions/${competitionId}/athletes/${athleteId}` : undefined,
+    athleteName,
+  )
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -156,9 +218,8 @@ export default function CompetitionAthleteDetailPage() {
   }
 
   const { athlete, entries, compliance, requirements } = data
-  const athleteName =
-    [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") || "Unknown Athlete"
   const age = calculateAge(athlete.birthDate)
+  const primaryFamily = athlete.families.find((f) => f.isPrimary) ?? athlete.families[0]
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -172,31 +233,90 @@ export default function CompetitionAthleteDetailPage() {
         </Button>
       </div>
 
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">{athleteName}</h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          {age !== null && (
-            <span className="flex items-center gap-1">
-              <CalendarDays className="h-4 w-4" />
-              {age} years old
-              {athlete.birthDate && (
-                <span className="text-xs">
-                  ({format(new Date(athlete.birthDate), "MMM d, yyyy")})
-                </span>
+      {/* Profile + Medical row */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Profile Card */}
+        <Card>
+          <CardContent className="pt-8 pb-6">
+            <div className="flex flex-col items-center text-center">
+              <Avatar className="h-24 w-24 border-4 border-background shadow-md">
+                <AvatarFallback className="text-2xl font-bold bg-primary/10">
+                  {getInitials(athlete.firstName, athlete.lastName)}
+                </AvatarFallback>
+              </Avatar>
+              <h1 className="text-xl font-bold tracking-tight mt-4">{athleteName ?? "Unknown Athlete"}</h1>
+              {athlete.level && (
+                <Badge variant="outline" className="mt-2">{athlete.level.name}</Badge>
               )}
-            </span>
-          )}
-          {athlete.gender && (
-            <span className="flex items-center gap-1">
-              <User className="h-4 w-4" />
-              {athlete.gender.charAt(0).toUpperCase() + athlete.gender.slice(1).toLowerCase()}
-            </span>
-          )}
-          {athlete.level && (
-            <Badge variant="outline">{athlete.level.name}</Badge>
-          )}
-        </div>
+              <Separator className="my-4 w-full" />
+              <div className="w-full space-y-2.5 text-sm text-left">
+                {athlete.birthDate && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <CalendarDays className="h-4 w-4 shrink-0" />
+                    <span>
+                      {format(new Date(athlete.birthDate), "MMM d, yyyy")}
+                      {age !== null && (
+                        <span className="ml-1 text-foreground font-medium">({age} yrs)</span>
+                      )}
+                    </span>
+                  </div>
+                )}
+                {athlete.gender && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span className="h-4 w-4 shrink-0 flex items-center justify-center text-xs font-bold">
+                      {athlete.gender.charAt(0).toUpperCase()}
+                    </span>
+                    <span>
+                      {athlete.gender.charAt(0).toUpperCase() + athlete.gender.slice(1).toLowerCase()}
+                    </span>
+                  </div>
+                )}
+                {primaryFamily && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="h-4 w-4 shrink-0" />
+                    <span className="truncate">
+                      {primaryFamily.name}
+                      {primaryFamily.primaryContact && (
+                        <span className="text-xs ml-1">
+                          ({primaryFamily.primaryContact})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Medical Card (front and center, 2/3 width) */}
+        {requirements.hasMedicalRequirement ? (
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Heart className="h-5 w-5" />
+                Medical Information
+                <ComplianceStatusBadge status={compliance.medical.status} />
+              </CardTitle>
+              {compliance.medical.info && (
+                <CardDescription>
+                  Last updated: {format(new Date(compliance.medical.info.updatedAt), "MMM d, yyyy")}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              {compliance.medical.info ? (
+                <MedicalInfoDisplay info={compliance.medical.info} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No medical information on file for this athlete.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="md:col-span-2" />
+        )}
       </div>
 
       {/* Registrations */}
@@ -260,16 +380,13 @@ export default function CompetitionAthleteDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Compliance Cards */}
-      {(requirements.hasMembershipRestriction ||
-        requirements.hasWaiverRestriction ||
-        requirements.hasMedicalRequirement) && (
+      {/* Membership + Waivers row */}
+      {(requirements.hasMembershipRestriction || requirements.hasWaiverRestriction) && (
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Membership Card */}
           {requirements.hasMembershipRestriction && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Shield className="h-5 w-5" />
                   Membership
                   <ComplianceStatusBadge status={compliance.membership.status} />
@@ -296,11 +413,10 @@ export default function CompetitionAthleteDetailPage() {
             </Card>
           )}
 
-          {/* Waivers Card */}
           {requirements.hasWaiverRestriction && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <FileText className="h-5 w-5" />
                   Waivers
                   <ComplianceStatusBadge status={compliance.waivers.status} />
@@ -311,19 +427,25 @@ export default function CompetitionAthleteDetailPage() {
                 {compliance.waivers.waivers.length > 0 ? (
                   <div className="space-y-3">
                     {compliance.waivers.waivers.map((w) => (
-                      <div key={w.id} className="flex items-center justify-between">
-                        <p className="text-sm font-medium">{w.title}</p>
-                        <div className="flex items-center gap-2">
+                      <div key={w.id} className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium truncate">{w.title}</p>
+                        <div className="flex items-center gap-2 shrink-0">
                           {w.signed ? (
-                            <div className="flex items-center gap-1.5 text-green-700">
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              <span className="text-sm">Signed</span>
-                              {w.signedAt && (
-                                <span className="text-xs text-muted-foreground">
-                                  {format(new Date(w.signedAt), "MMM d, yyyy")}
-                                </span>
-                              )}
-                            </div>
+                            <>
+                              <div className="flex items-center gap-1.5 text-green-700">
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                <span className="text-sm">Signed</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => setViewingWaiver(w)}
+                              >
+                                <Eye className="h-3.5 w-3.5 mr-1" />
+                                View
+                              </Button>
+                            </>
                           ) : (
                             <div className="flex items-center gap-1.5 text-destructive">
                               <AlertCircle className="h-4 w-4" />
@@ -340,34 +462,96 @@ export default function CompetitionAthleteDetailPage() {
               </CardContent>
             </Card>
           )}
-
-          {/* Medical Card */}
-          {requirements.hasMedicalRequirement && (
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5" />
-                  Medical Information
-                  <ComplianceStatusBadge status={compliance.medical.status} />
-                </CardTitle>
-                <CardDescription>
-                  {compliance.medical.info
-                    ? `Last updated: ${format(new Date(compliance.medical.info.updatedAt), "MMM d, yyyy")}`
-                    : "No medical information on file"}
-                </CardDescription>
-              </CardHeader>
-              {compliance.medical.info && (
-                <CardContent>
-                  <MedicalInfoDisplay info={compliance.medical.info} />
-                </CardContent>
-              )}
-            </Card>
-          )}
         </div>
       )}
+
+      {/* Waiver Viewer Dialog */}
+      <WaiverViewerDialog
+        waiver={viewingWaiver}
+        onClose={() => setViewingWaiver(null)}
+      />
     </div>
   )
 }
+
+// ─── Waiver Viewer Dialog ───────────────────────────────────────────
+
+function WaiverViewerDialog({
+  waiver,
+  onClose,
+}: {
+  waiver: WaiverData | null
+  onClose: () => void
+}) {
+  if (!waiver) return null
+
+  return (
+    <Dialog open={!!waiver} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            {waiver.title}
+          </DialogTitle>
+          <DialogDescription>
+            {waiver.signed && waiver.signedAt
+              ? `Signed on ${format(new Date(waiver.signedAt), "MMMM d, yyyy 'at' h:mm a")}`
+              : "This waiver has not been signed"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 mt-4">
+          {waiver.pages.map((page) => (
+            <div key={page.id} className="space-y-4">
+              {page.title && (
+                <h3 className="font-semibold text-sm">
+                  {waiver.pages.length > 1 && `Page ${page.pageNumber}: `}
+                  {page.title}
+                </h3>
+              )}
+
+              <div
+                className="prose prose-sm max-w-none text-sm border rounded-lg p-4 bg-muted/30"
+                dangerouslySetInnerHTML={{ __html: page.content }}
+              />
+
+              {page.signature ? (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Signature
+                  </p>
+                  <div className="bg-white rounded border p-2 inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={page.signature.signatureData}
+                      alt={`Signature by ${page.signature.signedByName}`}
+                      className="h-20 w-auto"
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    <p>Signed by: {page.signature.signedByName} ({page.signature.signedByEmail})</p>
+                    <p>Date: {format(new Date(page.signature.signedAt), "MMMM d, yyyy 'at' h:mm a")}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="border rounded-lg p-4 border-dashed">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    No signature on file for this page
+                  </p>
+                </div>
+              )}
+
+              {page.pageNumber < waiver.pages.length && <Separator />}
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Status Badges ──────────────────────────────────────────────────
 
 function ComplianceStatusBadge({ status }: { status: string }) {
   const isGood = status === "verified" || status === "signed" || status === "complete"
@@ -429,6 +613,8 @@ function MembershipStatusBadge({ status }: { status: string }) {
   )
 }
 
+// ─── Medical Display ────────────────────────────────────────────────
+
 function MedicalInfoDisplay({
   info,
 }: {
@@ -442,10 +628,10 @@ function MedicalInfoDisplay({
   const hasInsurance = info.insuranceProvider || info.insurancePolicyNumber
 
   return (
-    <div className="space-y-4">
-      {/* Allergies */}
+    <div className="space-y-3">
+      {/* Allergies + Conditions (most critical) */}
       <div>
-        <h4 className="text-sm font-medium mb-1.5">Allergies</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Allergies</h4>
         {hasAllergies ? (
           <div className="flex flex-wrap gap-1.5">
             {info.allergies.map((a, i) => (
@@ -457,14 +643,13 @@ function MedicalInfoDisplay({
         ) : (
           <p className="text-sm text-muted-foreground flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3 text-green-500" />
-            No known allergies
+            None
           </p>
         )}
       </div>
 
-      {/* Conditions */}
       <div>
-        <h4 className="text-sm font-medium mb-1.5">Medical Conditions</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Conditions</h4>
         {hasConditions ? (
           <div className="flex flex-wrap gap-1.5">
             {info.conditions.map((c, i) => (
@@ -476,17 +661,14 @@ function MedicalInfoDisplay({
         ) : (
           <p className="text-sm text-muted-foreground flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3 text-green-500" />
-            No known conditions
+            None
           </p>
         )}
       </div>
 
-      <Separator />
-
-      {/* Medications */}
       {hasMedications && (
         <div>
-          <h4 className="text-sm font-medium mb-1.5">Medications</h4>
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Medications</h4>
           <div className="flex flex-wrap gap-1.5">
             {info.medications.map((m, i) => (
               <Badge key={i} variant="outline" className="text-xs">
@@ -497,60 +679,52 @@ function MedicalInfoDisplay({
         </div>
       )}
 
-      {/* Dietary Restrictions */}
-      {hasDietary && (
-        <div>
-          <h4 className="text-sm font-medium mb-1.5">Dietary Restrictions</h4>
-          <div className="flex flex-wrap gap-1.5">
-            {info.dietaryRestrictions.map((d, i) => (
-              <Badge key={i} variant="outline" className="text-xs">
-                {d}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Emergency Contact & Insurance */}
-      {(hasEmergencyContact || hasInsurance) && (
+      {hasEmergencyContact && (
         <>
           <Separator />
-          <div className="grid gap-4 sm:grid-cols-2">
-            {hasEmergencyContact && (
-              <div>
-                <h4 className="text-sm font-medium mb-1">Emergency Contact</h4>
-                <p className="text-sm">{info.emergencyContactName}</p>
-                {info.emergencyContactPhone && (
-                  <p className="text-sm text-muted-foreground">{info.emergencyContactPhone}</p>
-                )}
-                {info.emergencyContactRelation && (
-                  <p className="text-xs text-muted-foreground">{info.emergencyContactRelation}</p>
-                )}
-              </div>
-            )}
-            {hasInsurance && (
-              <div>
-                <h4 className="text-sm font-medium mb-1">Insurance</h4>
-                <p className="text-sm">{info.insuranceProvider}</p>
-                {info.insurancePolicyNumber && (
-                  <p className="text-sm text-muted-foreground">
-                    Policy: {info.insurancePolicyNumber}
-                  </p>
-                )}
-              </div>
+          <div>
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Emergency Contact</h4>
+            <p className="text-sm">
+              {info.emergencyContactName}
+              {info.emergencyContactPhone && ` \u2022 ${info.emergencyContactPhone}`}
+            </p>
+            {info.emergencyContactRelation && (
+              <p className="text-xs text-muted-foreground">{info.emergencyContactRelation}</p>
             )}
           </div>
         </>
       )}
 
-      {/* Additional Notes */}
-      {info.additionalNotes && (
+      {(hasDietary || hasInsurance || info.additionalNotes) && (
         <>
           <Separator />
-          <div>
-            <h4 className="text-sm font-medium mb-1">Additional Notes</h4>
-            <p className="text-sm text-muted-foreground">{info.additionalNotes}</p>
-          </div>
+          {hasDietary && (
+            <div>
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Dietary Restrictions</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {info.dietaryRestrictions.map((d, i) => (
+                  <Badge key={i} variant="outline" className="text-xs">
+                    {d}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {hasInsurance && (
+            <div>
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Insurance</h4>
+              <p className="text-sm">{info.insuranceProvider}</p>
+              {info.insurancePolicyNumber && (
+                <p className="text-xs text-muted-foreground">Policy: {info.insurancePolicyNumber}</p>
+              )}
+            </div>
+          )}
+          {info.additionalNotes && (
+            <div>
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes</h4>
+              <p className="text-sm text-muted-foreground">{info.additionalNotes}</p>
+            </div>
+          )}
         </>
       )}
     </div>
