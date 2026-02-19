@@ -25,24 +25,27 @@ interface CartItem {
   details?: Record<string, any>;
 }
 
-/**
- * Convert structured seed mark fields into a single Decimal value.
- * Time marks are converted to total seconds.
- */
-function toSeedMarkDecimal(fields: Record<string, unknown>): number | null {
-  if (fields.seedDistance != null) return Number(fields.seedDistance);
-  if (fields.seedPoints != null) return Number(fields.seedPoints);
+const SEED_FIELD_KEYS = [
+  "seedHours",
+  "seedMinutes",
+  "seedSeconds",
+  "seedMs",
+  "seedHandTimed",
+  "seedDistance",
+  "seedPoints",
+  "seedPlacement",
+] as const;
 
-  // Time-based: convert to total seconds (with ms precision)
-  const h = Number(fields.seedHours || 0);
-  const m = Number(fields.seedMinutes || 0);
-  const s = Number(fields.seedSeconds || 0);
-  const ms = Number(fields.seedMs || 0);
-  if (h || m || s || ms) {
-    return h * 3600 + m * 60 + s + ms / 1000;
+function pickSeedFields(raw: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  let hasSeed = false;
+  for (const key of SEED_FIELD_KEYS) {
+    if (raw[key] != null) {
+      out[key] = raw[key];
+      hasSeed = true;
+    }
   }
-
-  return null;
+  return { seedData: out, hasSeed };
 }
 
 /**
@@ -62,9 +65,8 @@ export async function processInvoiceRegistrations(
     if (!reg.competitionId || !reg.athleteId || !reg.categoryIds?.length) continue;
 
     for (const categoryId of reg.categoryIds) {
-      const seedFields = (reg.seedMarks?.[categoryId] || {}) as Record<string, unknown>;
-      const seedMark = toSeedMarkDecimal(seedFields);
-      const hasSeed = seedMark != null;
+      const rawSeed = (reg.seedMarks?.[categoryId] || {}) as Record<string, unknown>;
+      const { seedData, hasSeed } = pickSeedFields(rawSeed);
 
       await db.competitionEntry.upsert({
         where: {
@@ -79,7 +81,7 @@ export async function processInvoiceRegistrations(
           competitionCategoryId: categoryId,
           athleteId: reg.athleteId,
           status: "APPROVED",
-          seedMark: seedMark,
+          ...seedData,
           seedMarkSubmittedAt: hasSeed ? new Date() : null,
           seedMarkStatus: hasSeed ? "APPROVED" : null,
         },
