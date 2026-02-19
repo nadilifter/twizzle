@@ -14,7 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Plus } from "lucide-react"
+import { MoreHorizontal } from "lucide-react"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
@@ -152,8 +152,8 @@ export function WaiverTable({ data, onDelete }: { data: Waiver[]; onDelete: (id:
   })
 
   return (
-    <div className="w-full">
-      <div className="flex items-center py-4 justify-between gap-2">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-2">
         <Input
           placeholder="Filter waivers..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
@@ -162,14 +162,7 @@ export function WaiverTable({ data, onDelete }: { data: Waiver[]; onDelete: (id:
           }
           className="max-w-sm"
         />
-        <div className="flex items-center gap-2">
-          <DataTableViewOptions table={table} />
-          <Button asChild>
-            <a href="/dashboard/forms/waivers/new">
-              <Plus className="mr-2 h-4 w-4" /> Create Waiver
-            </a>
-          </Button>
-        </div>
+        <DataTableViewOptions table={table} />
       </div>
       <div className="overflow-hidden rounded-md border">
         <Table>
