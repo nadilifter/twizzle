@@ -529,7 +529,7 @@ export function CompetitionConfiguration({
   const saveChanges = async (sectionName: string) => {
     // Before saving categories, rebuild categoryResults if needed
     let categoryResultsToSave = formData.categoryResults
-    if (activeTab === "categories" && hasSportSpecificData) {
+    if (hasSportSpecificData) {
         const combos = formData.categoryMode === "ALL" ? eligibilitySet : selectedCombos
         const comboKeys = Array.from(combos)
         const results: CategoryResultConfig[] = []
@@ -703,12 +703,6 @@ export function CompetitionConfiguration({
                 </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <Button onClick={() => saveChanges("General settings")} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save General
-              </Button>
-            </div>
           </TabsContent>
 
           {/* CATEGORIES TAB */}
@@ -797,12 +791,6 @@ export function CompetitionConfiguration({
                 </div>
             )}
 
-            <div className="pt-2 flex justify-end">
-              <Button onClick={() => saveChanges("Categories")} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Categories
-              </Button>
-            </div>
           </TabsContent>
 
           {/* RESTRICTIONS TAB */}
@@ -1127,12 +1115,6 @@ export function CompetitionConfiguration({
               )}
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <Button onClick={() => saveChanges("Restrictions")} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Restrictions
-              </Button>
-            </div>
           </TabsContent>
 
           {/* RESULTS TAB */}
@@ -1180,12 +1162,6 @@ export function CompetitionConfiguration({
                 </div>
             )}
             
-            <div className="pt-2 flex justify-end">
-              <Button onClick={() => saveChanges("Results settings")} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Results Config
-              </Button>
-            </div>
           </TabsContent>
 
           {/* PRICING TAB */}
@@ -1241,12 +1217,6 @@ export function CompetitionConfiguration({
                 </div>
             )}
 
-            <div className="pt-2 flex justify-end">
-              <Button onClick={() => saveChanges("Pricing")} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Pricing
-              </Button>
-            </div>
           </TabsContent>
 
           {/* PUBLISHING TAB */}
@@ -1365,20 +1335,18 @@ export function CompetitionConfiguration({
               </>
             )}
 
-            <div className="pt-2 flex justify-end">
-              <Button onClick={() => saveChanges("Publishing status")} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Publishing
-              </Button>
-            </div>
           </TabsContent>
 
         </div>
       </Tabs>
 
-      <div className="p-4 border-t flex justify-end bg-background">
+      <div className="p-4 border-t flex justify-between bg-background">
         <Button variant="outline" onClick={onClose}>
           Close
+        </Button>
+        <Button onClick={() => saveChanges("Competition")} disabled={isSaving}>
+          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Save Changes
         </Button>
       </div>
     </div>
