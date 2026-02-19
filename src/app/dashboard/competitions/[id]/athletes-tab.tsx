@@ -3,9 +3,10 @@
 import * as React from "react"
 import Link from "next/link"
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -13,12 +14,11 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { CheckCircle2, AlertCircle, Search, UserCheck, ChevronLeft, ChevronRight } from "lucide-react"
+import { CheckCircle2, AlertCircle, Search, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 
 import { calculateAge } from "@/lib/age-utils"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -30,6 +30,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
 
 interface CompetitionAthlete {
   id: string
@@ -92,6 +95,7 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
   const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
 
   React.useEffect(() => {
     const fetchAthletes = async () => {
@@ -116,7 +120,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
       {
         id: "name",
         accessorFn: (row) => getAthleteName(row),
-        header: "Athlete",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Athlete" />
+        ),
         cell: ({ row }) => (
           <Link
             href={`/dashboard/competitions/${competitionId}/athletes/${row.original.id}`}
@@ -129,7 +135,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
       },
       {
         accessorKey: "eventCount",
-        header: "Events",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Events" />
+        ),
         cell: ({ row }) => (
           <Badge variant="secondary">{row.original.eventCount}</Badge>
         ),
@@ -137,7 +145,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
       {
         id: "age",
         accessorFn: (row) => calculateAge(row.birthDate),
-        header: "Age",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Age" />
+        ),
         cell: ({ row }) => {
           const age = calculateAge(row.original.birthDate)
           return age !== null ? age : "-"
@@ -145,7 +155,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
       },
       {
         accessorKey: "gender",
-        header: "Gender",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Gender" />
+        ),
         cell: ({ row }) => {
           const gender = row.original.gender
           if (!gender) return "-"
@@ -158,7 +170,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
       cols.push({
         id: "level",
         accessorFn: (row) => row.level?.name ?? "",
-        header: "Level",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Level" />
+        ),
         cell: ({ row }) => {
           const level = row.original.level
           if (!level) return <span className="text-muted-foreground">-</span>
@@ -171,7 +185,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
       cols.push({
         id: "membership",
         accessorFn: (row) => row.compliance.membership ?? "",
-        header: "Membership",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Membership" />
+        ),
         cell: ({ row }) => {
           const status = row.original.compliance.membership
           if (!status) return "-"
@@ -184,7 +200,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
       cols.push({
         id: "waiver",
         accessorFn: (row) => row.compliance.waiver ?? "",
-        header: "Waivers",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Waivers" />
+        ),
         cell: ({ row }) => {
           const status = row.original.compliance.waiver
           if (!status) return "-"
@@ -197,7 +215,9 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
       cols.push({
         id: "medical",
         accessorFn: (row) => row.compliance.medical ?? "",
-        header: "Medical",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Medical" />
+        ),
         cell: ({ row }) => {
           const status = row.original.compliance.medical
           if (!status) return "-"
@@ -212,9 +232,10 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
   const table = useReactTable({
     data: athletes,
     columns,
-    state: { sorting, columnFilters },
+    state: { sorting, columnFilters, columnVisibility },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -236,27 +257,30 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
                 : `${athletes.length} athlete${athletes.length === 1 ? "" : "s"} registered`}
             </CardDescription>
           </div>
-          <div className="relative w-full sm:w-[280px]">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search athletes..."
-              value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-              onChange={(e) => table.getColumn("name")?.setFilterValue(e.target.value)}
-              className="pl-9 h-9"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative w-full sm:w-[280px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search athletes..."
+                value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                onChange={(e) => table.getColumn("name")?.setFilterValue(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+            <DataTableViewOptions table={table} />
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent>
         {loading ? (
-          <div className="p-6 space-y-2">
+          <div className="space-y-2">
             <Skeleton className="h-10" />
             <Skeleton className="h-10" />
             <Skeleton className="h-10" />
             <Skeleton className="h-10" />
           </div>
         ) : athletes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
             <UserCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium">No Athletes Yet</h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm">
@@ -264,59 +288,53 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
             </p>
           </div>
         ) : (
-          <>
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} colSpan={header.colSpan}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && "selected"}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                      >
+                        No results.
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
             {table.getPageCount() > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t">
-                <p className="text-sm text-muted-foreground">
-                  Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <DataTablePagination table={table} pageSizeOptions={[10, 25, 50]} />
             )}
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
