@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { DemoDataBanner } from "@/components/demo-data-banner"
 import { FeatureProvider } from "@/components/feature-context"
+import { BreadcrumbOverrideProvider } from "@/components/breadcrumb-context"
 
 export default function DashboardLayout({
   children,
@@ -11,16 +12,18 @@ export default function DashboardLayout({
 }) {
   return (
     <FeatureProvider>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col">
-            {children}
-          </div>
-          <DemoDataBanner />
-        </SidebarInset>
-      </SidebarProvider>
+      <BreadcrumbOverrideProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <SiteHeader />
+            <div className="flex flex-1 flex-col">
+              {children}
+            </div>
+            <DemoDataBanner />
+          </SidebarInset>
+        </SidebarProvider>
+      </BreadcrumbOverrideProvider>
     </FeatureProvider>
   )
 }

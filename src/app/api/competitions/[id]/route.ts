@@ -20,6 +20,8 @@ const competitionInclude = {
           template: { select: { id: true, name: true, type: true } },
         },
       },
+      sportEvent: { select: { id: true, name: true, code: true } },
+      ageCategory: { select: { id: true, name: true, code: true } },
       _count: {
         select: { entries: true, results: true },
       },

@@ -10,8 +10,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { useBreadcrumbOverrides } from "@/components/breadcrumb-context"
 
-// Section paths that exist only as navigation groups and don't have their own page
 const sectionOnlyPaths = new Set([
   "/dashboard/communication",
   "/dashboard/usage",
@@ -24,25 +24,19 @@ function capitalize(str: string) {
 
 export function DynamicBreadcrumb() {
   const pathname = usePathname()
+  const { overrides } = useBreadcrumbOverrides()
   
-  // Split pathname and filter out empty strings
   const segments = pathname.split("/").filter((segment) => segment !== "")
   
-  // If we are on the home page, we might not want breadcrumbs or just Home
   if (segments.length === 0) {
     return null
   }
 
-  // Generate breadcrumb items
   const breadcrumbItems = segments.map((segment, index) => {
-    // Build the URL for this breadcrumb
     const href = `/${segments.slice(0, index + 1).join("/")}`
     
-    // Format the title: capitalize and replace hyphens with spaces
-    const title = segment
-      .split("-")
-      .map((word) => capitalize(word))
-      .join(" ")
+    const title = overrides[href]
+      ?? segment.split("-").map((word) => capitalize(word)).join(" ")
 
     const isLast = index === segments.length - 1
 

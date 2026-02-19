@@ -5,13 +5,13 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import {
   formatSeedMarkForDisplay,
   type SeedMarkFields,
   type ResultType as AthleticsResultType,
 } from "@/lib/athletics-formats"
 import {
-  ArrowLeft,
   CalendarDays,
   Clock,
   MapPin,
@@ -20,6 +20,9 @@ import {
   BarChart3,
   Settings,
   Loader2,
+  LayoutGrid,
+  DollarSign,
+  Info,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +39,13 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 import { CompetitionConfiguration } from "../competition-configuration"
+import {
+  COMPETITION_TYPE_LABELS,
+  getStatusLabel,
+  getStatusStyle,
+} from "../lib/competition-status"
 
 interface CompetitionCategory {
   id: string
@@ -54,6 +63,8 @@ interface CompetitionCategory {
     name: string
     template: { id: string; name: string }
   } | null
+  sportEvent: { id: string; name: string; code: string } | null
+  ageCategory: { id: string; name: string; code: string } | null
   _count: { entries: number; results: number }
 }
 
@@ -62,6 +73,9 @@ interface CompetitionDetail {
   name: string
   competitionType: string
   status: string
+  publishStatus: string | null
+  scheduledGoLiveDate: string | null
+  scheduledGoLiveTime: string | null
   startDate: string
   endDate: string
   startTime: string
@@ -124,14 +138,17 @@ interface CompetitionResult {
   }
 }
 
-function getCategoryLabel(category: CompetitionCategory, index: number): string {
-  if (category.individualEntry?.name) {
-    return category.individualEntry.name
+function getCategoryLabel(category: CompetitionCategory): string {
+  if (category.ageCategory && category.sportEvent) {
+    return `${category.ageCategory.code} ${category.sportEvent.name}`
   }
+  if (category.sportEvent) return category.sportEvent.name
+  if (category.ageCategory) return category.ageCategory.name
+  if (category.individualEntry?.name) return category.individualEntry.name
   if (category.combinationEntry) {
     return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`
   }
-  return `Category ${index + 1}`
+  return `Category ${category.id.slice(-4)}`
 }
 
 function formatResultValue(value: number, resultType: string, precision: number): string {
@@ -154,6 +171,26 @@ function formatResultValue(value: number, resultType: string, precision: number)
   return value.toFixed(precision)
 }
 
+function formatPrice(price: number | string | null | undefined): string {
+  if (price === null || price === undefined) return "Free"
+  const numPrice = typeof price === "string" ? parseFloat(price) : price
+  if (numPrice === 0) return "Free"
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(numPrice)
+}
+
+const PRICING_MODE_LABELS: Record<string, string> = {
+  FREE: "Free",
+  PER_COMPETITION: "Per Competition",
+  PER_EVENT: "Per Event",
+  TIERED: "Tiered",
+  PER_CATEGORY: "Per Category",
+}
+
 export default function CompetitionProfilePage() {
   const params = useParams()
   const competitionId = params.id as string
@@ -167,6 +204,11 @@ export default function CompetitionProfilePage() {
   const [entriesLoading, setEntriesLoading] = React.useState(false)
   const [resultsLoading, setResultsLoading] = React.useState(false)
   const [isEditOpen, setIsEditOpen] = React.useState(false)
+
+  useBreadcrumbOverride(
+    competition ? `/dashboard/competitions/${competitionId}` : undefined,
+    competition?.name,
+  )
 
   React.useEffect(() => {
     const fetchCompetition = async () => {
@@ -282,26 +324,49 @@ export default function CompetitionProfilePage() {
       ? null
       : competition.categories.find((category) => category.id === selectedCategoryId) || null
 
+  const categoryFilter = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="w-full sm:max-w-[280px]">
+        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Category</label>
+        <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            {competition.categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {getCategoryLabel(category)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard/competitions">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">{competition.name}</h1>
-              <Badge>{competition.status}</Badge>
-            </div>
-            <p className="text-muted-foreground">
-              Competition profile with registrations, results, and event configuration details.
-            </p>
+      {/* Page header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">{competition.name}</h1>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0",
+                getStatusStyle(competition),
+              )}
+            >
+              {getStatusLabel(competition)}
+            </Badge>
           </div>
+          <p className="text-sm text-muted-foreground">
+            {COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}
+          </p>
         </div>
-        <Button onClick={() => setIsEditOpen(true)}>
+        <Button size="sm" onClick={() => setIsEditOpen(true)}>
           <Settings className="mr-2 h-4 w-4" />
           Edit Competition
         </Button>
@@ -312,41 +377,44 @@ export default function CompetitionProfilePage() {
           <CompetitionConfiguration
             competitionId={competitionId}
             onClose={() => setIsEditOpen(false)}
-            onUpdated={async () => {
-              // Re-fetch is triggered by dependency on isEditOpen
-            }}
+            onUpdated={async () => {}}
           />
         </SheetContent>
       </Sheet>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Stats cards */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Entries</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{competition._count.entries}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Results</CardTitle>
+            <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{competition._count.results}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Categories</CardTitle>
+            <LayoutGrid className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{competition.categories.length}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Teams</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{competition._count.teams}</div>
@@ -354,79 +422,57 @@ export default function CompetitionProfilePage() {
         </Card>
       </div>
 
+      {/* Competition details */}
       <Card>
-        <CardHeader>
-          <CardTitle>Competition Details</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="flex items-start gap-2">
-              <CalendarDays className="h-4 w-4 mt-0.5 text-muted-foreground" />
-              <div className="text-sm">
-                <div className="font-medium">Dates</div>
-                <div className="text-muted-foreground">
+          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+            <div className="flex items-start gap-2.5">
+              <CalendarDays className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div>
+                <dt className="font-medium">Dates</dt>
+                <dd className="text-muted-foreground">
                   {format(new Date(competition.startDate), "MMM d, yyyy")}
                   {competition.endDate && competition.endDate !== competition.startDate && (
-                    <> - {format(new Date(competition.endDate), "MMM d, yyyy")}</>
+                    <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
                   )}
-                </div>
+                </dd>
               </div>
             </div>
-            <div className="flex items-start gap-2">
-              <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
-              <div className="text-sm">
-                <div className="font-medium">Time</div>
-                <div className="text-muted-foreground">
-                  {competition.startTime} - {competition.endTime}
-                </div>
+            <div className="flex items-start gap-2.5">
+              <Clock className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div>
+                <dt className="font-medium">Time</dt>
+                <dd className="text-muted-foreground">
+                  {competition.startTime} &ndash; {competition.endTime}
+                </dd>
               </div>
             </div>
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
-              <div className="text-sm">
-                <div className="font-medium">Location</div>
-                <div className="text-muted-foreground">{location || "No location set"}</div>
+            <div className="flex items-start gap-2.5">
+              <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div>
+                <dt className="font-medium">Location</dt>
+                <dd className="text-muted-foreground">{location || "No location set"}</dd>
               </div>
             </div>
-          </div>
+            <div className="flex items-start gap-2.5">
+              <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div>
+                <dt className="font-medium">Pricing</dt>
+                <dd className="text-muted-foreground">
+                  {competition.pricingMode === "FREE"
+                    ? "Free"
+                    : `${formatPrice(competition.entryFee)} (${PRICING_MODE_LABELS[competition.pricingMode] || competition.pricingMode})`}
+                </dd>
+              </div>
+            </div>
+          </dl>
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="w-full sm:max-w-md">
-          <label className="text-sm text-muted-foreground">Category</label>
-          <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {competition.categories.map((category, index) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {getCategoryLabel(category, index)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-full sm:max-w-xs">
-          <label className="text-sm text-muted-foreground">Registration Status</label>
-          <Select value={entryStatus} onValueChange={setEntryStatus}>
-            <SelectTrigger>
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="APPROVED">Approved</SelectItem>
-              <SelectItem value="PENDING_SEED">Pending Seed</SelectItem>
-              <SelectItem value="PENDING_REVIEW">Pending Review</SelectItem>
-              <SelectItem value="REJECTED">Rejected</SelectItem>
-              <SelectItem value="WITHDRAWN">Withdrawn</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
+      {/* Tabbed content */}
       <Tabs defaultValue="registrations" className="space-y-4">
         <TabsList>
           <TabsTrigger value="registrations" className="gap-2">
@@ -438,19 +484,57 @@ export default function CompetitionProfilePage() {
             Results
           </TabsTrigger>
           <TabsTrigger value="overview" className="gap-2">
-            <BarChart3 className="h-4 w-4" />
-            More
+            <Info className="h-4 w-4" />
+            Overview
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="registrations">
           <Card>
-            <CardHeader>
-              <CardTitle>Registrations</CardTitle>
-              <CardDescription>
-                {entries.length} registration{entries.length === 1 ? "" : "s"}
-                {selectedCategory ? ` in ${getCategoryLabel(selectedCategory, 0)}` : ""}
-              </CardDescription>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle>Registrations</CardTitle>
+                  <CardDescription className="mt-1">
+                    {entries.length} registration{entries.length === 1 ? "" : "s"}
+                    {selectedCategory ? ` in ${getCategoryLabel(selectedCategory)}` : ""}
+                  </CardDescription>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="w-full sm:w-[220px]">
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Category</label>
+                    <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All categories</SelectItem>
+                        {competition.categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {getCategoryLabel(category)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full sm:w-[180px]">
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status</label>
+                    <Select value={entryStatus} onValueChange={setEntryStatus}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="APPROVED">Approved</SelectItem>
+                        <SelectItem value="PENDING_SEED">Pending Seed</SelectItem>
+                        <SelectItem value="PENDING_REVIEW">Pending Review</SelectItem>
+                        <SelectItem value="REJECTED">Rejected</SelectItem>
+                        <SelectItem value="WITHDRAWN">Withdrawn</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {entriesLoading ? (
@@ -512,11 +596,16 @@ export default function CompetitionProfilePage() {
 
         <TabsContent value="results">
           <Card>
-            <CardHeader>
-              <CardTitle>Results</CardTitle>
-              <CardDescription>
-                {results.length} result{results.length === 1 ? "" : "s"} recorded
-              </CardDescription>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle>Results</CardTitle>
+                  <CardDescription className="mt-1">
+                    {results.length} result{results.length === 1 ? "" : "s"} recorded
+                  </CardDescription>
+                </div>
+                {categoryFilter}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {resultsLoading ? (
@@ -580,22 +669,57 @@ export default function CompetitionProfilePage() {
 
         <TabsContent value="overview">
           <Card>
-            <CardHeader>
-              <CardTitle>Competition Overview</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Competition Overview</CardTitle>
               <CardDescription>
                 Additional context and setup details for this competition.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p><span className="font-medium">Type:</span> {competition.competitionType}</p>
-              <p><span className="font-medium">Pricing Mode:</span> {competition.pricingMode}</p>
-              <p>
-                <span className="font-medium">Entry Fee:</span>{" "}
-                {competition.entryFee === null || competition.entryFee === undefined
-                  ? "Free / N/A"
-                  : `$${Number(competition.entryFee).toFixed(2)}`}
-              </p>
-              <p><span className="font-medium">Configured Categories:</span> {competition.categories.length}</p>
+            <CardContent>
+              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+                <div>
+                  <dt className="font-medium text-muted-foreground">Type</dt>
+                  <dd className="mt-0.5">{COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-muted-foreground">Pricing Mode</dt>
+                  <dd className="mt-0.5">{PRICING_MODE_LABELS[competition.pricingMode] || competition.pricingMode}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-muted-foreground">Entry Fee</dt>
+                  <dd className="mt-0.5">{formatPrice(competition.entryFee)}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-muted-foreground">Configured Categories</dt>
+                  <dd className="mt-0.5">{competition.categories.length}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-muted-foreground">Status</dt>
+                  <dd className="mt-0.5">{getStatusLabel(competition)}</dd>
+                </div>
+                {competition.facility && (
+                  <div>
+                    <dt className="font-medium text-muted-foreground">Facility</dt>
+                    <dd className="mt-0.5">{competition.facility.name}</dd>
+                  </div>
+                )}
+              </dl>
+
+              {competition.categories.length > 0 && (
+                <div className="mt-6 border-t pt-4">
+                  <h4 className="text-sm font-medium mb-3">Categories</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {competition.categories.map((category) => (
+                      <Badge key={category.id} variant="secondary" className="font-normal">
+                        {getCategoryLabel(category)}
+                        <span className="ml-1.5 text-muted-foreground">
+                          ({category._count.entries} {category._count.entries === 1 ? "entry" : "entries"})
+                        </span>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
