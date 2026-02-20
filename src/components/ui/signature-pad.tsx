@@ -25,7 +25,10 @@ export const SignaturePad = React.forwardRef<SignaturePadRef, SignaturePadProps>
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const signaturePadRef = useRef<SignaturePadLib | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const onSignatureChangeRef = useRef(onSignatureChange);
     const [canvasWidth, setCanvasWidth] = useState(width || 600);
+
+    onSignatureChangeRef.current = onSignatureChange;
 
     // Resize canvas to fit container
     const resizeCanvas = useCallback(() => {
@@ -73,7 +76,8 @@ export const SignaturePad = React.forwardRef<SignaturePadRef, SignaturePadProps>
       }
 
       signaturePadRef.current.addEventListener("endStroke", () => {
-        onSignatureChange?.(signaturePadRef.current?.isEmpty() ?? true);
+        const empty = signaturePadRef.current?.isEmpty() ?? true;
+        onSignatureChangeRef.current?.(empty);
       });
 
       resizeCanvas();
@@ -81,7 +85,7 @@ export const SignaturePad = React.forwardRef<SignaturePadRef, SignaturePadProps>
       return () => {
         signaturePadRef.current?.off();
       };
-    }, [disabled, onSignatureChange, resizeCanvas]);
+    }, [disabled, resizeCanvas]);
 
     // Handle window resize
     useEffect(() => {
@@ -101,13 +105,13 @@ export const SignaturePad = React.forwardRef<SignaturePadRef, SignaturePadProps>
       },
       clear: () => {
         signaturePadRef.current?.clear();
-        onSignatureChange?.(true);
+        onSignatureChangeRef.current?.(true);
       },
     }));
 
     const handleClear = () => {
       signaturePadRef.current?.clear();
-      onSignatureChange?.(true);
+      onSignatureChangeRef.current?.(true);
     };
 
     return (
