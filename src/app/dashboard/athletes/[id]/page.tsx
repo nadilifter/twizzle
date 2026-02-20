@@ -287,12 +287,15 @@ export default function AthleteProfilePage() {
               {levelInfo ? (
                 <Badge
                   variant="outline"
+                  className="text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0"
                   style={levelInfo.color ? { borderColor: levelInfo.color, color: levelInfo.color, backgroundColor: `${levelInfo.color}15` } : undefined}
                 >
                   {levelInfo.name}
                 </Badge>
               ) : athlete.level ? (
-                <Badge variant="outline">{athlete.level}</Badge>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0">
+                  {athlete.level}
+                </Badge>
               ) : null}
               <Badge variant={athlete.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0">
                 {formatStatus(athlete.status)}
