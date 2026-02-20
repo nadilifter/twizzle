@@ -172,7 +172,6 @@ export async function POST(
         lastName,
         name: `${firstName} ${lastName}`,
         level: "Unassigned",
-        group: "Unassigned",
         birthDate: new Date(birthDate),
         gender,
         status: "ACTIVE",
