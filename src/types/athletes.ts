@@ -45,6 +45,16 @@ export interface FamilySummary {
 export interface ProgramSummary {
   id: string;
   name: string;
+  description?: string | null;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+  pricingModel?: "FLAT_RATE" | "PER_SESSION";
+  basePrice?: number | null;
+  perSessionPrice?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string | null;
+  duration?: number | null;
+  capacity?: number | null;
 }
 
 // Enrollment with program details
@@ -55,6 +65,7 @@ export interface EnrollmentWithProgram {
   startDate: string;
   endDate: string | null;
   status: "ACTIVE" | "PAUSED" | "CANCELLED" | "COMPLETED";
+  createdAt?: string;
   program: ProgramSummary;
 }
 
@@ -230,6 +241,39 @@ export interface AthleteLevelInfo {
   color: string | null;
 }
 
+// Competition entry for athlete profile
+export interface CompetitionEntrySummary {
+  id: string;
+  competitionId: string;
+  competitionName: string;
+  competitionStartDate: string;
+  competitionEndDate: string;
+  competitionStartTime: string;
+  competitionEndTime: string;
+  competitionStatus: string;
+  location: string | null;
+  facilityName: string | null;
+  category: string;
+  status: "PENDING_SEED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "WITHDRAWN" | "SCRATCHED";
+  createdAt: string;
+  link: string;
+}
+
+// Event (program instance) registration for athlete profile
+export interface EventRegistrationSummary {
+  id: string;
+  programInstanceId: string;
+  programId: string;
+  programName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  instanceStatus: string;
+  facilityName: string | null;
+  status: "REGISTERED" | "WAITLISTED" | "CANCELLED" | "ATTENDED" | "NO_SHOW";
+  createdAt: string;
+}
+
 // Full athlete detail for profile page
 export interface AthleteDetail extends Athlete {
   family: FamilyWithPaymentMethods;
@@ -239,6 +283,8 @@ export interface AthleteDetail extends Athlete {
   lineItems: LineItemWithInvoice[];
   memberships: AthleteMembershipSummary[];
   waivers: AthleteWaiverSummary[];
+  competitionEntries: CompetitionEntrySummary[];
+  eventRegistrations: EventRegistrationSummary[];
   medicalInfo: AthleteMedicalSummary | null;
   levelInfo: AthleteLevelInfo | null;
 }

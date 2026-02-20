@@ -212,7 +212,20 @@ export async function GET(
     const competitionEntries = await db.competitionEntry.findMany({
       where: { athleteId: id },
       include: {
-        competition: { select: { id: true, name: true, startDate: true } },
+        competition: {
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+            startTime: true,
+            endTime: true,
+            status: true,
+            city: true,
+            stateProvince: true,
+            facility: { select: { id: true, name: true } },
+          },
+        },
         category: {
           include: {
             combinationEntry: { include: { rowValue: true, colValue: true } },
@@ -223,7 +236,20 @@ export async function GET(
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 20,
+    });
+
+    // Fetch instance registrations (event sessions) for this athlete
+    const instanceRegistrations = await db.instanceRegistration.findMany({
+      where: { athleteId: id },
+      include: {
+        programInstance: {
+          include: {
+            program: { select: { id: true, name: true } },
+            facility: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
 
     // Fetch medical info
@@ -308,6 +334,39 @@ export async function GET(
 
     registrations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
+    // Transform competition entries for frontend
+    const competitionEntriesFormatted = competitionEntries.map((entry) => ({
+      id: entry.id,
+      competitionId: entry.competitionId,
+      competitionName: entry.competition.name,
+      competitionStartDate: entry.competition.startDate.toISOString(),
+      competitionEndDate: entry.competition.endDate.toISOString(),
+      competitionStartTime: entry.competition.startTime,
+      competitionEndTime: entry.competition.endTime,
+      competitionStatus: entry.competition.status,
+      location: [entry.competition.city, entry.competition.stateProvince].filter(Boolean).join(", ") || null,
+      facilityName: (entry.competition as any).facility?.name ?? null,
+      category: getCategoryLabel(entry.category),
+      status: entry.status,
+      createdAt: entry.createdAt.toISOString(),
+      link: `/dashboard/competitions/${entry.competitionId}/athletes/${id}`,
+    }))
+
+    // Transform instance registrations for frontend
+    const eventRegistrations = instanceRegistrations.map((reg) => ({
+      id: reg.id,
+      programInstanceId: reg.programInstanceId,
+      programId: reg.programInstance.program.id,
+      programName: reg.programInstance.program.name,
+      date: reg.programInstance.date.toISOString(),
+      startTime: reg.programInstance.startTime,
+      endTime: reg.programInstance.endTime,
+      instanceStatus: reg.programInstance.status,
+      facilityName: reg.programInstance.facility?.name ?? null,
+      status: reg.status,
+      createdAt: reg.createdAt.toISOString(),
+    }))
+
     return NextResponse.json({
       ...athlete,
       family,
@@ -315,6 +374,8 @@ export async function GET(
       memberships,
       waivers,
       registrations,
+      competitionEntries: competitionEntriesFormatted,
+      eventRegistrations,
       medicalInfo: medicalInfo
         ? {
             id: medicalInfo.id,

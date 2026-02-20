@@ -24,6 +24,17 @@ import {
   Mail,
   History,
   ExternalLink,
+  Plus,
+  MoreHorizontal,
+  Clock,
+  DollarSign,
+  Pause,
+  XCircle,
+  Play,
+  Trash2,
+  Trophy,
+  MapPin,
+  Calendar,
 } from "lucide-react"
 import { calculateAge } from "@/lib/age-utils"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
@@ -40,6 +51,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -47,9 +74,14 @@ import { type ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table/data-table"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { AthleteConfiguration } from "../athlete-configuration"
+import { api, ApiError } from "@/lib/api-client"
 import type {
   AthleteWaiverSummary,
   AthleteMedicalSummary,
+  AthleteMembershipSummary,
+  EnrollmentWithProgram,
+  CompetitionEntrySummary,
+  EventRegistrationSummary,
 } from "@/types/athletes"
 
 interface RegistrationItem {
@@ -234,10 +266,12 @@ export default function AthleteProfilePage() {
 
   const age = calculateAge(athlete.birthDate)
   const levelInfo = (athlete as any).levelInfo as { id: string; name: string; color: string | null } | null
-  const memberships = (athlete as any).memberships as { id: string; instanceName: string; groupName: string; status: string; startDate: string; endDate: string | null }[] ?? []
+  const memberships = ((athlete as any).memberships ?? []) as AthleteMembershipSummary[]
   const waivers = ((athlete as any).waivers ?? []) as AthleteWaiverSummary[]
   const medicalInfo = ((athlete as any).medicalInfo ?? null) as AthleteMedicalSummary | null
   const registrations = ((athlete as any).registrations ?? []) as RegistrationItem[]
+  const competitionEntries = ((athlete as any).competitionEntries ?? []) as CompetitionEntrySummary[]
+  const eventRegistrations = ((athlete as any).eventRegistrations ?? []) as EventRegistrationSummary[]
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -305,6 +339,18 @@ export default function AthleteProfilePage() {
           <TabsTrigger value="programs" className="gap-2">
             <BookOpen className="h-4 w-4" />
             Programs
+          </TabsTrigger>
+          <TabsTrigger value="events" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Events
+          </TabsTrigger>
+          <TabsTrigger value="competitions" className="gap-2">
+            <Trophy className="h-4 w-4" />
+            Competitions
+          </TabsTrigger>
+          <TabsTrigger value="memberships" className="gap-2">
+            <Shield className="h-4 w-4" />
+            Memberships
           </TabsTrigger>
           <TabsTrigger value="attendance" className="gap-2">
             <CalendarCheck className="h-4 w-4" />
@@ -516,23 +562,28 @@ export default function AthleteProfilePage() {
           </div>
         </TabsContent>
 
-        {/* ===== PROGRAMS TAB (placeholder) ===== */}
+        {/* ===== PROGRAMS TAB ===== */}
         <TabsContent value="programs">
-          <Card>
-            <CardHeader>
-              <CardTitle>Programs</CardTitle>
-              <CardDescription>Program enrollments and history</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <BookOpen className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Coming Soon</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  Program enrollment details, history, and management will be available here.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <AthleteProgramsTab
+            athleteId={athlete.id}
+            enrollments={athlete.enrollments}
+            onEnrollmentChange={() => fetchAthlete()}
+          />
+        </TabsContent>
+
+        {/* ===== EVENTS TAB ===== */}
+        <TabsContent value="events">
+          <AthleteEventsTab eventRegistrations={eventRegistrations} />
+        </TabsContent>
+
+        {/* ===== COMPETITIONS TAB ===== */}
+        <TabsContent value="competitions">
+          <AthleteCompetitionsTab competitionEntries={competitionEntries} />
+        </TabsContent>
+
+        {/* ===== MEMBERSHIPS TAB ===== */}
+        <TabsContent value="memberships">
+          <AthleteMembershipsTab memberships={memberships} />
         </TabsContent>
 
         {/* ===== ATTENDANCE TAB (placeholder) ===== */}
@@ -581,6 +632,1087 @@ export default function AthleteProfilePage() {
         waiver={viewingWaiver}
         onClose={() => setViewingWaiver(null)}
       />
+    </div>
+  )
+}
+
+// ─── Programs Tab ───────────────────────────────────────────────────
+
+interface ProgramOption {
+  id: string
+  name: string
+  status: string
+}
+
+const ENROLLMENT_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
+  ACTIVE: { label: "Active", icon: CheckCircle2, className: "bg-green-50 text-green-700 border-green-200" },
+  PAUSED: { label: "Paused", icon: Pause, className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  CANCELLED: { label: "Cancelled", icon: XCircle, className: "bg-red-50 text-destructive border-red-200" },
+  COMPLETED: { label: "Completed", icon: CheckCircle2, className: "bg-blue-50 text-blue-700 border-blue-200" },
+}
+
+function EnrollmentStatusBadge({ status }: { status: string }) {
+  const config = ENROLLMENT_STATUS_CONFIG[status] ?? {
+    label: status,
+    icon: AlertCircle,
+    className: "bg-muted text-muted-foreground",
+  }
+  const Icon = config.icon
+  return (
+    <Badge variant="outline" className={config.className}>
+      <Icon className="h-3 w-3 mr-1" />
+      {config.label}
+    </Badge>
+  )
+}
+
+function AthleteProgramsTab({
+  athleteId,
+  enrollments,
+  onEnrollmentChange,
+}: {
+  athleteId: string
+  enrollments: EnrollmentWithProgram[]
+  onEnrollmentChange: () => void
+}) {
+  const [isEnrollDialogOpen, setIsEnrollDialogOpen] = React.useState(false)
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+
+  const activeCount = enrollments.filter((e) => e.status === "ACTIVE").length
+  const pausedCount = enrollments.filter((e) => e.status === "PAUSED").length
+  const completedCount = enrollments.filter((e) => e.status === "COMPLETED").length
+
+  const handleStatusChange = async (enrollmentId: string, newStatus: string) => {
+    setUpdatingId(enrollmentId)
+    try {
+      await api.patch(`/api/enrollments/${enrollmentId}`, { status: newStatus })
+      toast.success(`Enrollment ${newStatus.toLowerCase()}`)
+      onEnrollmentChange()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update enrollment")
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleDelete = async (enrollmentId: string) => {
+    setUpdatingId(enrollmentId)
+    try {
+      await api.delete(`/api/enrollments/${enrollmentId}`)
+      toast.success("Enrollment removed")
+      onEnrollmentChange()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to remove enrollment")
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const enrollmentColumns: ColumnDef<EnrollmentWithProgram>[] = [
+    {
+      id: "program",
+      accessorFn: (row) => row.program?.name ?? "Unknown",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Program" />
+      ),
+      cell: ({ row }) => (
+        <Link
+          href={`/dashboard/registrations/programs/${row.original.programId}`}
+          className="font-medium text-primary hover:underline"
+        >
+          {row.original.program?.name ?? "Unknown Program"}
+        </Link>
+      ),
+    },
+    {
+      id: "status",
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Status" />
+      ),
+      cell: ({ row }) => <EnrollmentStatusBadge status={row.original.status} />,
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      id: "enrolled",
+      accessorFn: (row) => new Date(row.startDate).getTime(),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Enrolled" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {format(new Date(row.original.startDate), "MMM d, yyyy")}
+        </span>
+      ),
+    },
+    {
+      id: "endDate",
+      accessorFn: (row) => (row.endDate ? new Date(row.endDate).getTime() : 0),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="End Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {row.original.endDate
+            ? format(new Date(row.original.endDate), "MMM d, yyyy")
+            : "—"}
+        </span>
+      ),
+    },
+    {
+      id: "schedule",
+      enableSorting: false,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Schedule" />
+      ),
+      cell: ({ row }) => {
+        const program = row.original.program
+        if (!program?.startTime || !program?.duration) {
+          return <span className="text-muted-foreground">—</span>
+        }
+        const hours = Math.floor(program.duration / 60)
+        const mins = program.duration % 60
+        const durationStr = hours > 0 ? `${hours}h${mins > 0 ? ` ${mins}m` : ""}` : `${mins}m`
+        return (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            <span className="whitespace-nowrap">{program.startTime} · {durationStr}</span>
+          </div>
+        )
+      },
+    },
+    {
+      id: "price",
+      enableSorting: false,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Price" />
+      ),
+      cell: ({ row }) => {
+        const program = row.original.program
+        const price = program?.pricingModel === "PER_SESSION"
+          ? program.perSessionPrice
+          : program?.basePrice
+        if (price == null) return <span className="text-muted-foreground">—</span>
+        return (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <DollarSign className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {Number(price).toFixed(2)}
+              {program?.pricingModel === "PER_SESSION" && (
+                <span className="text-xs ml-0.5">/session</span>
+              )}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      id: "actions",
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const enrollment = row.original
+        const isUpdating = updatingId === enrollment.id
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" disabled={isUpdating}>
+                {isUpdating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/dashboard/registrations/programs/${enrollment.programId}`}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Program
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {enrollment.status !== "ACTIVE" && enrollment.status !== "COMPLETED" && (
+                <DropdownMenuItem onClick={() => handleStatusChange(enrollment.id, "ACTIVE")}>
+                  <Play className="h-4 w-4 mr-2" />
+                  Set Active
+                </DropdownMenuItem>
+              )}
+              {enrollment.status === "ACTIVE" && (
+                <DropdownMenuItem onClick={() => handleStatusChange(enrollment.id, "PAUSED")}>
+                  <Pause className="h-4 w-4 mr-2" />
+                  Pause
+                </DropdownMenuItem>
+              )}
+              {enrollment.status !== "COMPLETED" && (
+                <DropdownMenuItem onClick={() => handleStatusChange(enrollment.id, "COMPLETED")}>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Mark Complete
+                </DropdownMenuItem>
+              )}
+              {enrollment.status !== "CANCELLED" && (
+                <DropdownMenuItem onClick={() => handleStatusChange(enrollment.id, "CANCELLED")}>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancel Enrollment
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => handleDelete(enrollment.id)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remove
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+      size: 50,
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Summary Stats */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active</p>
+                <p className="text-2xl font-bold">{activeCount}</p>
+              </div>
+              <div className="rounded-full bg-green-100 p-2.5">
+                <BookOpen className="h-5 w-5 text-green-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Paused</p>
+                <p className="text-2xl font-bold">{pausedCount}</p>
+              </div>
+              <div className="rounded-full bg-yellow-100 p-2.5">
+                <Pause className="h-5 w-5 text-yellow-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold">{completedCount}</p>
+              </div>
+              <div className="rounded-full bg-blue-100 p-2.5">
+                <CheckCircle2 className="h-5 w-5 text-blue-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{enrollments.length}</p>
+              </div>
+              <div className="rounded-full bg-muted p-2.5">
+                <History className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Enrollments Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Program Enrollments</CardTitle>
+              <CardDescription className="mt-1">
+                {enrollments.length} enrollment{enrollments.length === 1 ? "" : "s"}
+              </CardDescription>
+            </div>
+            <Button size="sm" onClick={() => setIsEnrollDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Enroll in Program
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {enrollments.length > 0 ? (
+            <DataTable
+              columns={enrollmentColumns}
+              data={enrollments}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <BookOpen className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <h3 className="text-sm font-medium">No program enrollments</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                This athlete is not enrolled in any programs yet.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setIsEnrollDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Enroll in Program
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Enroll Dialog */}
+      <EnrollInProgramDialog
+        athleteId={athleteId}
+        open={isEnrollDialogOpen}
+        onOpenChange={setIsEnrollDialogOpen}
+        onEnrolled={onEnrollmentChange}
+        existingProgramIds={enrollments.filter((e) => e.status === "ACTIVE").map((e) => e.programId)}
+      />
+    </div>
+  )
+}
+
+// ─── Enroll In Program Dialog ───────────────────────────────────────
+
+function EnrollInProgramDialog({
+  athleteId,
+  open,
+  onOpenChange,
+  onEnrolled,
+  existingProgramIds,
+}: {
+  athleteId: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onEnrolled: () => void
+  existingProgramIds: string[]
+}) {
+  const [programs, setPrograms] = React.useState<ProgramOption[]>([])
+  const [isLoadingPrograms, setIsLoadingPrograms] = React.useState(false)
+  const [selectedProgramId, setSelectedProgramId] = React.useState("")
+  const [startDate, setStartDate] = React.useState(() => format(new Date(), "yyyy-MM-dd"))
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!open) return
+    setSelectedProgramId("")
+    setStartDate(format(new Date(), "yyyy-MM-dd"))
+    setIsLoadingPrograms(true)
+    api
+      .get<{ data: ProgramOption[] }>("/api/programs", { status: "ACTIVE", limit: 200 })
+      .then((res) => setPrograms(res.data))
+      .catch(() => toast.error("Failed to load programs"))
+      .finally(() => setIsLoadingPrograms(false))
+  }, [open])
+
+  const availablePrograms = programs.filter((p) => !existingProgramIds.includes(p.id))
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProgramId || !startDate) return
+
+    setIsSubmitting(true)
+    try {
+      await api.post("/api/enrollments", {
+        athleteId,
+        programId: selectedProgramId,
+        startDate,
+      })
+      toast.success("Athlete enrolled successfully")
+      onOpenChange(false)
+      onEnrolled()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to enroll athlete")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Enroll in Program</DialogTitle>
+          <DialogDescription>
+            Select a program to enroll this athlete in.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label htmlFor="program">Program</Label>
+            {isLoadingPrograms ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading programs...
+              </div>
+            ) : (
+              <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+                <SelectTrigger id="program">
+                  <SelectValue placeholder="Select a program" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePrograms.length > 0 ? (
+                    availablePrograms.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="__none__" disabled>
+                      No available programs
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="start-date">Start Date</Label>
+            <Input
+              id="start-date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!selectedProgramId || !startDate || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enrolling...
+                </>
+              ) : (
+                "Enroll"
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Events Tab ─────────────────────────────────────────────────────
+
+const EVENT_REG_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  REGISTERED: { label: "Registered", className: "bg-green-50 text-green-700 border-green-200" },
+  WAITLISTED: { label: "Waitlisted", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  CANCELLED: { label: "Cancelled", className: "bg-red-50 text-destructive border-red-200" },
+  ATTENDED: { label: "Attended", className: "bg-blue-50 text-blue-700 border-blue-200" },
+  NO_SHOW: { label: "No Show", className: "bg-muted text-muted-foreground" },
+}
+
+function AthleteEventsTab({
+  eventRegistrations,
+}: {
+  eventRegistrations: EventRegistrationSummary[]
+}) {
+  const now = new Date()
+  const upcoming = eventRegistrations.filter((r) => new Date(r.date) >= now)
+  const past = eventRegistrations.filter((r) => new Date(r.date) < now)
+
+  const eventColumns: ColumnDef<EventRegistrationSummary>[] = [
+    {
+      id: "program",
+      accessorFn: (row) => row.programName,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Program" />
+      ),
+      cell: ({ row }) => (
+        <Link
+          href={`/dashboard/registrations/programs/${row.original.programId}`}
+          className="font-medium text-primary hover:underline"
+        >
+          {row.original.programName}
+        </Link>
+      ),
+    },
+    {
+      id: "date",
+      accessorFn: (row) => new Date(row.date).getTime(),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {format(new Date(row.original.date), "MMM d, yyyy")}
+        </span>
+      ),
+    },
+    {
+      id: "time",
+      enableSorting: false,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Time" />
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <Clock className="h-3.5 w-3.5 shrink-0" />
+          <span className="whitespace-nowrap">
+            {row.original.startTime} – {row.original.endTime}
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: "facility",
+      accessorFn: (row) => row.facilityName ?? "",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Facility" />
+      ),
+      cell: ({ row }) =>
+        row.original.facilityName ? (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate max-w-[180px]">{row.original.facilityName}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      id: "status",
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Status" />
+      ),
+      cell: ({ row }) => {
+        const config = EVENT_REG_STATUS_CONFIG[row.original.status] ?? {
+          label: row.original.status,
+          className: "bg-muted text-muted-foreground",
+        }
+        return (
+          <Badge variant="outline" className={config.className}>
+            {config.label}
+          </Badge>
+        )
+      },
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Summary */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Upcoming</p>
+                <p className="text-2xl font-bold">{upcoming.length}</p>
+              </div>
+              <div className="rounded-full bg-blue-100 p-2.5">
+                <Calendar className="h-5 w-5 text-blue-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Attended</p>
+                <p className="text-2xl font-bold">
+                  {eventRegistrations.filter((r) => r.status === "ATTENDED").length}
+                </p>
+              </div>
+              <div className="rounded-full bg-green-100 p-2.5">
+                <CheckCircle2 className="h-5 w-5 text-green-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{eventRegistrations.length}</p>
+              </div>
+              <div className="rounded-full bg-muted p-2.5">
+                <History className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Upcoming Events */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Upcoming Events</CardTitle>
+          <CardDescription className="mt-1">
+            {upcoming.length} upcoming event{upcoming.length === 1 ? "" : "s"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {upcoming.length > 0 ? (
+            <DataTable
+              columns={eventColumns}
+              data={upcoming}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Calendar className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">No upcoming events</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Past Events */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Past Events</CardTitle>
+          <CardDescription className="mt-1">
+            {past.length} past event{past.length === 1 ? "" : "s"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {past.length > 0 ? (
+            <DataTable
+              columns={eventColumns}
+              data={past}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <History className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">No past events</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Competitions Tab ───────────────────────────────────────────────
+
+const ENTRY_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  PENDING_SEED: { label: "Pending Seed", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  PENDING_REVIEW: { label: "Pending Review", className: "bg-orange-50 text-orange-700 border-orange-200" },
+  APPROVED: { label: "Approved", className: "bg-green-50 text-green-700 border-green-200" },
+  REJECTED: { label: "Rejected", className: "bg-red-50 text-destructive border-red-200" },
+  WITHDRAWN: { label: "Withdrawn", className: "bg-muted text-muted-foreground" },
+  SCRATCHED: { label: "Scratched", className: "bg-muted text-muted-foreground" },
+}
+
+function AthleteCompetitionsTab({
+  competitionEntries,
+}: {
+  competitionEntries: CompetitionEntrySummary[]
+}) {
+  const now = new Date()
+  const upcoming = competitionEntries.filter(
+    (e) => new Date(e.competitionStartDate) >= now
+  )
+  const past = competitionEntries.filter(
+    (e) => new Date(e.competitionStartDate) < now
+  )
+
+  const competitionColumns: ColumnDef<CompetitionEntrySummary>[] = [
+    {
+      id: "competition",
+      accessorFn: (row) => row.competitionName,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Competition" />
+      ),
+      cell: ({ row }) => (
+        <Link
+          href={row.original.link}
+          className="font-medium text-primary hover:underline"
+        >
+          {row.original.competitionName}
+        </Link>
+      ),
+    },
+    {
+      id: "category",
+      accessorFn: (row) => row.category,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Event / Category" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.category}</span>
+      ),
+    },
+    {
+      id: "date",
+      accessorFn: (row) => new Date(row.competitionStartDate).getTime(),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Date" />
+      ),
+      cell: ({ row }) => {
+        const start = new Date(row.original.competitionStartDate)
+        const end = new Date(row.original.competitionEndDate)
+        const sameDay = format(start, "yyyy-MM-dd") === format(end, "yyyy-MM-dd")
+        return (
+          <span className="text-muted-foreground whitespace-nowrap">
+            {sameDay
+              ? format(start, "MMM d, yyyy")
+              : `${format(start, "MMM d")} – ${format(end, "MMM d, yyyy")}`}
+          </span>
+        )
+      },
+    },
+    {
+      id: "location",
+      accessorFn: (row) => row.location ?? "",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Location" />
+      ),
+      cell: ({ row }) =>
+        row.original.location ? (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate max-w-[180px]">{row.original.location}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      id: "status",
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Status" />
+      ),
+      cell: ({ row }) => {
+        const config = ENTRY_STATUS_CONFIG[row.original.status] ?? {
+          label: row.original.status,
+          className: "bg-muted text-muted-foreground",
+        }
+        return (
+          <Badge variant="outline" className={config.className}>
+            {config.label}
+          </Badge>
+        )
+      },
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      id: "actions",
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+          <Link href={row.original.link}>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      ),
+      size: 50,
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Summary */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Upcoming</p>
+                <p className="text-2xl font-bold">{upcoming.length}</p>
+              </div>
+              <div className="rounded-full bg-purple-100 p-2.5">
+                <Trophy className="h-5 w-5 text-purple-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Approved</p>
+                <p className="text-2xl font-bold">
+                  {competitionEntries.filter((e) => e.status === "APPROVED").length}
+                </p>
+              </div>
+              <div className="rounded-full bg-green-100 p-2.5">
+                <CheckCircle2 className="h-5 w-5 text-green-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{competitionEntries.length}</p>
+              </div>
+              <div className="rounded-full bg-muted p-2.5">
+                <History className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Upcoming Competitions */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Upcoming Competitions</CardTitle>
+          <CardDescription className="mt-1">
+            {upcoming.length} upcoming competition{upcoming.length === 1 ? "" : "s"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {upcoming.length > 0 ? (
+            <DataTable
+              columns={competitionColumns}
+              data={upcoming}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Trophy className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">No upcoming competitions</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Past Competitions */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Past Competitions</CardTitle>
+          <CardDescription className="mt-1">
+            {past.length} past competition{past.length === 1 ? "" : "s"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {past.length > 0 ? (
+            <DataTable
+              columns={competitionColumns}
+              data={past}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <History className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">No past competitions</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Memberships Tab ────────────────────────────────────────────────
+
+const MEMBERSHIP_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
+  active: { label: "Active", icon: CheckCircle2, className: "bg-green-50 text-green-700 border-green-200" },
+  expired: { label: "Expired", icon: AlertCircle, className: "bg-red-50 text-destructive border-red-200" },
+  cancelled: { label: "Cancelled", icon: XCircle, className: "bg-muted text-muted-foreground" },
+  archived: { label: "Archived", icon: History, className: "bg-muted text-muted-foreground" },
+}
+
+function AthleteMembershipsTab({
+  memberships,
+}: {
+  memberships: AthleteMembershipSummary[]
+}) {
+  const activeMembers = memberships.filter((m) => m.status === "active")
+  const inactiveMembers = memberships.filter((m) => m.status !== "active")
+
+  const membershipColumns: ColumnDef<AthleteMembershipSummary>[] = [
+    {
+      id: "group",
+      accessorFn: (row) => row.groupName,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Membership" />
+      ),
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium">{row.original.groupName}</p>
+          <p className="text-xs text-muted-foreground">{row.original.instanceName}</p>
+        </div>
+      ),
+    },
+    {
+      id: "status",
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Status" />
+      ),
+      cell: ({ row }) => {
+        const config = MEMBERSHIP_STATUS_CONFIG[row.original.status] ?? {
+          label: row.original.status.charAt(0).toUpperCase() + row.original.status.slice(1),
+          icon: AlertCircle,
+          className: "bg-yellow-50 text-yellow-700 border-yellow-200",
+        }
+        const Icon = config.icon
+        return (
+          <Badge variant="outline" className={config.className}>
+            <Icon className="h-3 w-3 mr-1" />
+            {config.label}
+          </Badge>
+        )
+      },
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      id: "startDate",
+      accessorFn: (row) => new Date(row.startDate).getTime(),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Start Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {format(new Date(row.original.startDate), "MMM d, yyyy")}
+        </span>
+      ),
+    },
+    {
+      id: "endDate",
+      accessorFn: (row) => (row.endDate ? new Date(row.endDate).getTime() : 0),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="End Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {row.original.endDate
+            ? format(new Date(row.original.endDate), "MMM d, yyyy")
+            : "—"}
+        </span>
+      ),
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Summary */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active</p>
+                <p className="text-2xl font-bold">{activeMembers.length}</p>
+              </div>
+              <div className="rounded-full bg-green-100 p-2.5">
+                <Shield className="h-5 w-5 text-green-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Expired / Cancelled</p>
+                <p className="text-2xl font-bold">{inactiveMembers.length}</p>
+              </div>
+              <div className="rounded-full bg-muted p-2.5">
+                <AlertCircle className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{memberships.length}</p>
+              </div>
+              <div className="rounded-full bg-muted p-2.5">
+                <History className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Active Memberships */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Active Memberships</CardTitle>
+          <CardDescription className="mt-1">
+            {activeMembers.length} active membership{activeMembers.length === 1 ? "" : "s"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activeMembers.length > 0 ? (
+            <DataTable
+              columns={membershipColumns}
+              data={activeMembers}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Shield className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">No active memberships</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Past Memberships */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Past Memberships</CardTitle>
+          <CardDescription className="mt-1">
+            {inactiveMembers.length} past membership{inactiveMembers.length === 1 ? "" : "s"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {inactiveMembers.length > 0 ? (
+            <DataTable
+              columns={membershipColumns}
+              data={inactiveMembers}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <History className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">No past memberships</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
