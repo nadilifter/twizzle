@@ -172,6 +172,64 @@ export interface FamilyWithPaymentMethods extends FamilySummary {
   paymentMethods: PaymentMethod[];
 }
 
+// Membership summary for athlete profile
+export interface AthleteMembershipSummary {
+  id: string;
+  instanceName: string;
+  groupName: string;
+  groupId: string;
+  status: string;
+  startDate: string;
+  endDate: string | null;
+}
+
+// Waiver page with signature for athlete profile
+export interface WaiverPageWithSignature {
+  id: string;
+  pageNumber: number;
+  title: string | null;
+  content: string;
+  signature: {
+    signatureData: string;
+    signedByName: string;
+    signedByEmail: string;
+    signedAt: string;
+  } | null;
+}
+
+// Signed waiver for athlete profile
+export interface AthleteWaiverSummary {
+  id: string;
+  title: string;
+  signed: boolean;
+  signedAt: string | null;
+  pages: WaiverPageWithSignature[];
+}
+
+// Medical info summary for athlete profile
+export interface AthleteMedicalSummary {
+  id: string;
+  allergies: string[];
+  medications: string[];
+  conditions: string[];
+  dietaryRestrictions: string[];
+  insuranceProvider: string | null;
+  insurancePolicyNumber: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  emergencyContactRelation: string | null;
+  additionalNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Level info with color for athlete profile
+export interface AthleteLevelInfo {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 // Full athlete detail for profile page
 export interface AthleteDetail extends Athlete {
   family: FamilyWithPaymentMethods;
@@ -179,6 +237,10 @@ export interface AthleteDetail extends Athlete {
   attendances: AttendanceWithEvent[];
   evaluations: Evaluation[];
   lineItems: LineItemWithInvoice[];
+  memberships: AthleteMembershipSummary[];
+  waivers: AthleteWaiverSummary[];
+  medicalInfo: AthleteMedicalSummary | null;
+  levelInfo: AthleteLevelInfo | null;
 }
 
 // API response types

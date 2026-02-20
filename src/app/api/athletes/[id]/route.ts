@@ -4,6 +4,27 @@ import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
+function getCategoryLabel(category: {
+  sportEvent?: { name: string; code: string } | null
+  ageCategory?: { name: string; code: string } | null
+  individualEntry?: { name: string } | null
+  combinationEntry?: {
+    rowValue: { name: string }
+    colValue: { name: string }
+  } | null
+}): string {
+  if (category.ageCategory && category.sportEvent) {
+    return `${category.ageCategory.code} ${category.sportEvent.name}`
+  }
+  if (category.sportEvent) return category.sportEvent.name
+  if (category.ageCategory) return category.ageCategory.name
+  if (category.individualEntry?.name) return category.individualEntry.name
+  if (category.combinationEntry) {
+    return `${category.combinationEntry.rowValue.name} - ${category.combinationEntry.colValue.name}`
+  }
+  return "Event"
+}
+
 const updateAthleteSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional().nullable(),
@@ -45,6 +66,7 @@ export async function GET(
               },
             },
           },
+          orderBy: { isPrimary: "desc" as const },
         },
         enrollments: {
           include: {
@@ -102,13 +124,214 @@ export async function GET(
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
+    // Fetch memberships for this athlete
+    const athleteMemberships = await db.athleteMembership.findMany({
+      where: { athleteId: id },
+      include: {
+        instance: {
+          include: {
+            group: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const memberships = athleteMemberships.map((m) => ({
+      id: m.id,
+      instanceName: m.instance.name,
+      groupName: m.instance.group.name,
+      groupId: m.instance.group.id,
+      status: m.status.toLowerCase(),
+      startDate: m.startDate.toISOString(),
+      endDate: m.endDate?.toISOString() ?? null,
+    }));
+
+    // Fetch waiver acceptances and signatures for this athlete
+    const waiverAcceptances = await db.waiverAcceptance.findMany({
+      where: { athleteId: id },
+      include: {
+        waiver: {
+          include: {
+            pages: {
+              orderBy: { pageNumber: "asc" },
+              select: { id: true, pageNumber: true, title: true, content: true },
+            },
+          },
+        },
+      },
+    });
+
+    const waiverSignatures = waiverAcceptances.length > 0
+      ? await db.waiverSignature.findMany({
+          where: {
+            athleteId: id,
+            waiverId: { in: waiverAcceptances.map((a) => a.waiverId) },
+          },
+          select: {
+            id: true,
+            waiverId: true,
+            waiverPageId: true,
+            signatureData: true,
+            signedByName: true,
+            signedByEmail: true,
+            signedAt: true,
+          },
+        })
+      : [];
+
+    const signaturesByPage = new Map(
+      waiverSignatures.map((s) => [s.waiverPageId, s])
+    );
+
+    const waivers = waiverAcceptances.map((a) => ({
+      id: a.waiver.id,
+      title: a.waiver.title,
+      signed: true,
+      signedAt: a.completedAt.toISOString(),
+      pages: a.waiver.pages.map((p) => {
+        const sig = signaturesByPage.get(p.id);
+        return {
+          id: p.id,
+          pageNumber: p.pageNumber,
+          title: p.title,
+          content: p.content,
+          signature: sig
+            ? {
+                signatureData: sig.signatureData,
+                signedByName: sig.signedByName,
+                signedByEmail: sig.signedByEmail,
+                signedAt: sig.signedAt.toISOString(),
+              }
+            : null,
+        };
+      }),
+    }));
+
+    // Fetch competition entries for this athlete
+    const competitionEntries = await db.competitionEntry.findMany({
+      where: { athleteId: id },
+      include: {
+        competition: { select: { id: true, name: true, startDate: true } },
+        category: {
+          include: {
+            combinationEntry: { include: { rowValue: true, colValue: true } },
+            individualEntry: true,
+            sportEvent: { select: { name: true, code: true } },
+            ageCategory: { select: { name: true, code: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+
+    // Fetch medical info
+    const medicalInfo = await db.athleteMedicalInfo.findUnique({
+      where: { athleteId: id },
+    });
+
+    // Resolve level name
+    let levelInfo: { id: string; name: string; color: string | null } | null = null;
+    if (athlete.level) {
+      const levelRecord = await db.level.findFirst({
+        where: { id: athlete.level, organizationId: session.user.organizationId },
+        select: { id: true, name: true, color: true },
+      });
+      levelInfo = levelRecord ?? { id: athlete.level, name: athlete.level, color: null };
+    }
+
     // Transform for frontend
     const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
     const family = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown", phone: "", address: null, balance: 0, paymentMethods: [] };
 
+    // Build unified registrations timeline
+    type RegistrationItem = {
+      id: string
+      type: "competition" | "program" | "membership" | "waiver"
+      name: string
+      detail: string | null
+      status: string
+      date: string
+      link: string | null
+    }
+
+    const registrations: RegistrationItem[] = []
+
+    for (const entry of competitionEntries) {
+      registrations.push({
+        id: `comp-${entry.id}`,
+        type: "competition",
+        name: entry.competition.name,
+        detail: getCategoryLabel(entry.category),
+        status: entry.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        date: entry.createdAt.toISOString(),
+        link: `/dashboard/competitions/${entry.competition.id}/athletes/${id}`,
+      })
+    }
+
+    for (const enrollment of athlete.enrollments) {
+      registrations.push({
+        id: `prog-${enrollment.id}`,
+        type: "program",
+        name: enrollment.program?.name ?? "Unknown Program",
+        detail: null,
+        status: enrollment.status.charAt(0) + enrollment.status.slice(1).toLowerCase(),
+        date: enrollment.createdAt.toISOString(),
+        link: null,
+      })
+    }
+
+    for (const m of athleteMemberships) {
+      registrations.push({
+        id: `memb-${m.id}`,
+        type: "membership",
+        name: m.instance.group.name,
+        detail: m.instance.name,
+        status: m.status.charAt(0) + m.status.slice(1).toLowerCase(),
+        date: m.createdAt.toISOString(),
+        link: null,
+      })
+    }
+
+    for (const a of waiverAcceptances) {
+      registrations.push({
+        id: `waiv-${a.id}`,
+        type: "waiver",
+        name: a.waiver.title,
+        detail: null,
+        status: "Signed",
+        date: a.completedAt.toISOString(),
+        link: null,
+      })
+    }
+
+    registrations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
     return NextResponse.json({
       ...athlete,
       family,
+      levelInfo,
+      memberships,
+      waivers,
+      registrations,
+      medicalInfo: medicalInfo
+        ? {
+            id: medicalInfo.id,
+            allergies: medicalInfo.allergies,
+            medications: medicalInfo.medications,
+            conditions: medicalInfo.conditions,
+            dietaryRestrictions: medicalInfo.dietaryRestrictions,
+            insuranceProvider: medicalInfo.insuranceProvider,
+            insurancePolicyNumber: medicalInfo.insurancePolicyNumber,
+            emergencyContactName: medicalInfo.emergencyContactName,
+            emergencyContactPhone: medicalInfo.emergencyContactPhone,
+            emergencyContactRelation: medicalInfo.emergencyContactRelation,
+            additionalNotes: medicalInfo.additionalNotes,
+            createdAt: medicalInfo.createdAt.toISOString(),
+            updatedAt: medicalInfo.updatedAt.toISOString(),
+          }
+        : null,
     });
   } catch (error) {
     console.error("Error fetching athlete:", error);
