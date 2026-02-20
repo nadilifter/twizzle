@@ -148,12 +148,12 @@ const data = {
       url: "/dashboard/athletes",
       items: [
         {
-          title: "Attendance",
-          url: "/dashboard/athletes/attendance",
-        },
-        {
           title: "Directory",
           url: "/dashboard/athletes",
+        },
+        {
+          title: "Attendance",
+          url: "/dashboard/athletes/attendance",
         },
         {
           title: "Families",
