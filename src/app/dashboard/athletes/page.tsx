@@ -85,8 +85,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { toast } from "sonner"
 
+import { AthleteConfiguration } from "./athlete-configuration"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
@@ -120,7 +122,7 @@ export default function AthletesPage() {
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isEditOpen, setIsEditOpen] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const [selectedAthlete, setSelectedAthlete] = React.useState<AthleteWithRelations | null>(null)
   
@@ -130,20 +132,8 @@ export default function AthletesPage() {
     lastName: "",
     birthDate: "",
     level: "",
-    group: "",
     familyId: "",
     parentEmail: "",
-  })
-
-  // Form state for editing athlete
-  const [editAthlete, setEditAthlete] = React.useState({
-    name: "",
-    email: "",
-    birthDate: "",
-    level: "",
-    group: "",
-    status: "" as AthleteStatus,
-    familyId: "",
   })
 
   // Fetch athletes from API
@@ -151,7 +141,6 @@ export default function AthletesPage() {
     athletes,
     isLoading,
     isCreating,
-    isUpdating,
     isDeleting,
     error,
     createAthlete,
@@ -175,19 +164,10 @@ export default function AthletesPage() {
     return map
   }, [configuredLevels])
 
-  // Open edit dialog with selected athlete data
+  // Open edit sheet with selected athlete data
   const handleEditClick = React.useCallback((athlete: AthleteWithRelations) => {
     setSelectedAthlete(athlete)
-    setEditAthlete({
-      name: athlete.name,
-      email: athlete.email || "",
-      birthDate: athlete.birthDate ? new Date(athlete.birthDate).toISOString().split("T")[0] : "",
-      level: athlete.level,
-      group: athlete.group,
-      status: athlete.status as AthleteStatus,
-      familyId: athlete.family?.id || "",
-    })
-    setIsEditDialogOpen(true)
+    setIsEditOpen(true)
   }, [])
 
   // Open delete confirmation dialog
@@ -195,32 +175,6 @@ export default function AthletesPage() {
     setSelectedAthlete(athlete)
     setIsDeleteDialogOpen(true)
   }, [])
-
-  // Handle edit form submission
-  const handleEditAthlete = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedAthlete) return
-
-    const payload: UpdateAthletePayload = {
-      name: editAthlete.name,
-      email: editAthlete.email || null,
-      level: editAthlete.level,
-      group: editAthlete.group,
-      status: editAthlete.status,
-      familyId: editAthlete.familyId,
-      birthDate: editAthlete.birthDate || null,
-    }
-
-    const result = await updateAthlete(selectedAthlete.id, payload)
-    
-    if (result) {
-      toast.success("Athlete updated successfully")
-      setIsEditDialogOpen(false)
-      setSelectedAthlete(null)
-    } else {
-      toast.error(error || "Failed to update athlete")
-    }
-  }
 
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
@@ -310,13 +264,6 @@ export default function AthletesPage() {
           <Badge variant="outline">{row.original.level}</Badge>
         )
       },
-      filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id))
-      },
-    },
-    {
-      accessorKey: "group",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Group" />,
       filterFn: (row, id, value) => {
         return value.includes(row.getValue(id))
       },
@@ -417,10 +364,6 @@ export default function AthletesPage() {
     Array.from(new Set(athletes.map(a => a.level))).sort(),
     [athletes]
   )
-  const groups = React.useMemo(() => 
-    Array.from(new Set(athletes.map(a => a.group))).sort(),
-    [athletes]
-  )
   const statuses = React.useMemo(() => 
     Array.from(new Set(athletes.map(a => a.status))).sort(),
     [athletes]
@@ -444,7 +387,7 @@ export default function AthletesPage() {
   const handleAddAthlete = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!newAthlete.firstName || !newAthlete.lastName || !newAthlete.level || !newAthlete.group || !newAthlete.familyId) {
+    if (!newAthlete.firstName || !newAthlete.lastName || !newAthlete.level || !newAthlete.familyId) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -452,7 +395,6 @@ export default function AthletesPage() {
     const payload: CreateAthletePayload = {
       name: `${newAthlete.firstName} ${newAthlete.lastName}`,
       level: newAthlete.level,
-      group: newAthlete.group,
       familyId: newAthlete.familyId,
       birthDate: newAthlete.birthDate || null,
       status: "ACTIVE" as AthleteStatus,
@@ -468,7 +410,6 @@ export default function AthletesPage() {
         lastName: "",
         birthDate: "",
         level: "",
-        group: "",
         familyId: "",
         parentEmail: "",
       })
@@ -566,44 +507,23 @@ export default function AthletesPage() {
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="level">Level *</Label>
-                      <Select 
-                        value={newAthlete.level}
-                        onValueChange={(value) => setNewAthlete(prev => ({ ...prev, level: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLevelsLoading ? "Loading..." : "Select level"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {configuredLevels.map((level) => (
-                            <SelectItem key={level.id} value={level.name}>
-                              {level.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="group">Group *</Label>
-                      <Select 
-                        value={newAthlete.group}
-                        onValueChange={(value) => setNewAthlete(prev => ({ ...prev, group: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select group" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Elite Squad">Elite Squad</SelectItem>
-                          <SelectItem value="National Team">National Team</SelectItem>
-                          <SelectItem value="Juniors A">Juniors A</SelectItem>
-                          <SelectItem value="Juniors B">Juniors B</SelectItem>
-                          <SelectItem value="Development">Development</SelectItem>
-                          <SelectItem value="Boys Team">Boys Team</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="level">Level *</Label>
+                    <Select 
+                      value={newAthlete.level}
+                      onValueChange={(value) => setNewAthlete(prev => ({ ...prev, level: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLevelsLoading ? "Loading..." : "Select level"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {configuredLevels.map((level) => (
+                          <SelectItem key={level.id} value={level.name}>
+                            {level.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <DialogFooter className="mt-6">
                     <Button type="submit" className="w-full" disabled={isCreating}>
@@ -681,26 +601,6 @@ export default function AthletesPage() {
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         {level}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Group</h4>
-                <div className="grid gap-2">
-                  {groups.map((group) => (
-                    <div key={group} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`group-${group}`} 
-                        checked={(table.getColumn("group")?.getFilterValue() as string[])?.includes(group)}
-                        onCheckedChange={(checked) => handleFilterChange("group", group, !!checked)}
-                      />
-                      <label
-                        htmlFor={`group-${group}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {group}
                       </label>
                     </div>
                   ))}
@@ -829,139 +729,40 @@ export default function AthletesPage() {
         </>
       )}
 
-      {/* Edit Athlete Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Athlete</DialogTitle>
-            <DialogDescription>
-              Update athlete information.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditAthlete}>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="editName">Name *</Label>
-                <Input
-                  id="editName"
-                  value={editAthlete.name}
-                  onChange={(e) => setEditAthlete(prev => ({ ...prev, name: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editEmail">Email</Label>
-                <Input
-                  id="editEmail"
-                  type="email"
-                  value={editAthlete.email}
-                  onChange={(e) => setEditAthlete(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editDob">Date of Birth</Label>
-                  <Input
-                    id="editDob"
-                    type="date"
-                    value={editAthlete.birthDate}
-                    onChange={(e) => setEditAthlete(prev => ({ ...prev, birthDate: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editStatus">Status *</Label>
-                  <Select
-                    value={editAthlete.status}
-                    onValueChange={(value) => setEditAthlete(prev => ({ ...prev, status: value as AthleteStatus }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ACTIVE">Active</SelectItem>
-                      <SelectItem value="INACTIVE">Inactive</SelectItem>
-                      <SelectItem value="TRIAL">Trial</SelectItem>
-                      <SelectItem value="GRADUATED">Graduated</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editLevel">Level *</Label>
-                  <Select
-                    value={editAthlete.level}
-                    onValueChange={(value) => setEditAthlete(prev => ({ ...prev, level: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLevelsLoading ? "Loading..." : "Select level"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {configuredLevels.map((level) => (
-                        <SelectItem key={level.id} value={level.name}>
-                          {level.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editGroup">Group *</Label>
-                  <Select
-                    value={editAthlete.group}
-                    onValueChange={(value) => setEditAthlete(prev => ({ ...prev, group: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Elite Squad">Elite Squad</SelectItem>
-                      <SelectItem value="National Team">National Team</SelectItem>
-                      <SelectItem value="Juniors A">Juniors A</SelectItem>
-                      <SelectItem value="Juniors B">Juniors B</SelectItem>
-                      <SelectItem value="Development">Development</SelectItem>
-                      <SelectItem value="Boys Team">Boys Team</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editFamily">Family *</Label>
-                <Select
-                  value={editAthlete.familyId}
-                  onValueChange={(value) => setEditAthlete(prev => ({ ...prev, familyId: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={isFamiliesLoading ? "Loading..." : "Select family"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {families.map((family) => (
-                      <SelectItem key={family.id} value={family.id}>
-                        {family.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* Edit Athlete Sheet */}
+      <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <SheetContent className="sm:max-w-2xl p-0">
+          {selectedAthlete ? (
+            <AthleteConfiguration
+              athlete={{
+                id: selectedAthlete.id,
+                name: selectedAthlete.name,
+                firstName: selectedAthlete.firstName,
+                lastName: selectedAthlete.lastName,
+                email: selectedAthlete.email,
+                level: selectedAthlete.level,
+                status: selectedAthlete.status as "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED",
+                birthDate: selectedAthlete.birthDate,
+                gender: selectedAthlete.gender ?? null,
+                family: selectedAthlete.family
+                  ? { id: selectedAthlete.family.id, name: selectedAthlete.family.name }
+                  : null,
+              }}
+              onClose={() => {
+                setIsEditOpen(false)
+                setSelectedAthlete(null)
+              }}
+              onUpdated={async (data) => {
+                await updateAthlete(selectedAthlete.id, data)
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

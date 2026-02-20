@@ -560,7 +560,7 @@ async function buildRecipientContext(
       if (nameParts.length > 1) context.athleteLastName = nameParts.slice(1).join(" ");
       if (athlete.email) context.athleteEmail = athlete.email;
       if (athlete.level) context.athleteLevel = athlete.level;
-      if (athlete.group) context.athleteGroup = athlete.group;
+      
 
       // Membership context
       const membership = athlete.memberships[0];
@@ -608,7 +608,6 @@ export function renderSmsCampaignPreview(body: string): string {
     athleteLastName: "Johnson",
     athleteEmail: "emma@example.com",
     athleteLevel: "Level 4",
-    athleteGroup: "JO Team",
     familyName: "Johnson Family",
     primaryContact: "Sarah Johnson",
     primaryContactFirstName: "Sarah",

@@ -8,7 +8,6 @@ const updateAthleteSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional().nullable(),
   level: z.string().min(1).optional(),
-  group: z.string().min(1).optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "GRADUATED"]).optional(),
   birthDate: z.string().optional().nullable(),
   familyId: z.string().optional(),

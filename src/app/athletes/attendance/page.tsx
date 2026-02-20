@@ -24,7 +24,6 @@ interface Athlete {
   id: string;
   name: string;
   level: string;
-  group: string;
   avatar?: string | null;
   enrollments?: Array<{
     program: {
@@ -76,7 +75,6 @@ export default function AthleteAttendancePage() {
             id: athlete.id,
             name: athlete.name,
             level: athlete.level,
-            group: athlete.group,
             avatar: athlete.avatar,
             enrollments: athlete.enrollments,
           }));

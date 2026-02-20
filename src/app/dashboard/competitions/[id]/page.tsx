@@ -112,7 +112,7 @@ interface CompetitionDetail {
   pricingMode: string
   entryFee: number | string | null
   createdAt: string
-  facility: { id: string; name: string; street: string | null; city: string | null; stateProvince: string | null; postalCode: string | null } | null
+  facility: { id: string; name: string; street: string | null; city: string | null; stateProvince: string | null; postalCode: string | null; country: string | null } | null
   categories: CompetitionCategory[]
   entries: {
     id: string
@@ -421,8 +421,8 @@ export default function CompetitionProfilePage() {
 
   const facilityName = competition.facility?.name ?? null
   const locationAddress = competition.facility
-    ? [competition.facility.street, competition.facility.city, [competition.facility.stateProvince, competition.facility.postalCode].filter(Boolean).join(" ")].filter(Boolean).join(", ")
-    : [competition.streetAddress, competition.city, [competition.stateProvince, competition.postalCode].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+    ? [competition.facility.street, competition.facility.city, [competition.facility.stateProvince, competition.facility.postalCode].filter(Boolean).join(" "), competition.facility.country].filter(Boolean).join(", ")
+    : [competition.streetAddress, competition.city, [competition.stateProvince, competition.postalCode].filter(Boolean).join(" "), competition.country].filter(Boolean).join(", ")
 
   const selectedCategory =
     selectedCategoryId === "all"
@@ -537,43 +537,41 @@ export default function CompetitionProfilePage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Trophy className="h-4 w-4 shrink-0" />
+                      <Trophy className="h-3.5 w-3.5 shrink-0" />
                       <span>{COMPETITION_TYPE_LABELS[competition.competitionType] || competition.competitionType}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <CalendarDays className="h-4 w-4 shrink-0" />
-                      <span>
-                        {format(new Date(competition.startDate), "MMM d, yyyy")}
-                        {competition.endDate && competition.endDate !== competition.startDate && (
-                          <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4 shrink-0" />
-                      <span>{competition.startTime} &ndash; {competition.endTime}</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-muted-foreground">
-                      <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
-                      {facilityName || locationAddress ? (
-                        <div>
-                          {facilityName && <span className="font-medium text-foreground">{facilityName}</span>}
-                          {facilityName && locationAddress && <br />}
-                          {locationAddress && <span>{locationAddress}</span>}
-                        </div>
-                      ) : (
-                        <span>No location set</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <DollarSign className="h-4 w-4 shrink-0" />
+                      <DollarSign className="h-3.5 w-3.5 shrink-0" />
                       <span>
                         {competition.pricingMode === "FREE"
                           ? "Free"
                           : `${formatPrice(competition.entryFee)} (${PRICING_MODE_LABELS[competition.pricingMode] || competition.pricingMode})`}
                       </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
+                      <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        {format(new Date(competition.startDate), "MMM d, yyyy")}
+                        {competition.endDate && competition.endDate !== competition.startDate && (
+                          <> &ndash; {format(new Date(competition.endDate), "MMM d, yyyy")}</>
+                        )}
+                        {" · "}
+                        {competition.startTime} &ndash; {competition.endTime}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2 text-muted-foreground col-span-2">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                      {facilityName || locationAddress ? (
+                        <div className="min-w-0">
+                          {facilityName && <span className="font-medium text-foreground">{facilityName}</span>}
+                          {facilityName && locationAddress && <br />}
+                          {locationAddress && <span className="text-xs">{locationAddress}</span>}
+                        </div>
+                      ) : (
+                        <span>No location set</span>
+                      )}
                     </div>
                   </div>
                 </CardContent>

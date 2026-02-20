@@ -112,7 +112,7 @@ export function AttendanceDetailSheet({
                   </SheetTitle>
                   {athlete?.level && (
                     <p className="text-sm text-muted-foreground">
-                      {athlete.level} {athlete.group ? `• ${athlete.group}` : ""}
+                      {athlete.level}
                     </p>
                   )}
                 </div>

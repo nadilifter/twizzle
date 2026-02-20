@@ -189,7 +189,6 @@ const PLACEHOLDER_DEFS: PlaceholderDefinition[] = [
   { key: "athleteLastName", label: "Athlete Last Name", description: "Last name of the athlete", example: "Johnson", category: "athlete" },
   { key: "athleteEmail", label: "Athlete Email", description: "Email address of the athlete", example: "emma@example.com", category: "athlete" },
   { key: "athleteLevel", label: "Athlete Level", description: "Current level/tier of the athlete", example: "Level 4", category: "athlete" },
-  { key: "athleteGroup", label: "Athlete Group", description: "Training group of the athlete", example: "JO Team", category: "athlete" },
   { key: "familyName", label: "Family Name", description: "Name of the family/account", example: "Johnson Family", category: "family" },
   { key: "primaryContact", label: "Primary Contact", description: "Full name of the primary contact", example: "Sarah Johnson", category: "family" },
   { key: "primaryContactFirstName", label: "First Name", description: "First name of the primary contact", example: "Sarah", category: "family" },

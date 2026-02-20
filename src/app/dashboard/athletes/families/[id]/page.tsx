@@ -185,7 +185,7 @@ export default function FamilyDetailPage() {
                         </Badge>
                       </div>
                       <div className="bg-muted/50 px-4 py-3 flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{athlete.group}</span>
+                        <span className="text-muted-foreground">{athlete.level}</span>
                         <Button variant="ghost" size="sm" className="h-auto p-0 text-primary">
                           Manage
                         </Button>

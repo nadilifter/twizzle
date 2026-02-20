@@ -20,7 +20,6 @@ interface Athlete {
   name: string;
   avatar: string | null;
   level: string;
-  group: string;
 }
 
 export default function AthleteMedicalPage() {
@@ -172,7 +171,7 @@ export default function AthleteMedicalPage() {
               <div>
                 <h2 className="text-2xl font-bold">{selectedAthlete.name}</h2>
                 <p className="text-muted-foreground">
-                  {selectedAthlete.level} - {selectedAthlete.group}
+                  {selectedAthlete.level}
                 </p>
               </div>
             </div>

@@ -36,7 +36,6 @@ export interface TemplateContext {
   athleteLastName?: string;
   athleteEmail?: string;
   athleteLevel?: string;
-  athleteGroup?: string;
   athleteBirthDate?: string;
   athleteAge?: number;
   
@@ -145,13 +144,6 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     label: "Athlete Level",
     description: "Current level/tier of the athlete",
     example: "Level 4",
-    category: "athlete",
-  },
-  {
-    key: "athleteGroup",
-    label: "Athlete Group",
-    description: "Training group of the athlete",
-    example: "JO Team",
     category: "athlete",
   },
   {

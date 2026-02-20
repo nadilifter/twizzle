@@ -618,7 +618,7 @@ export async function buildTemplateContext(
       context.athleteLastName = nameParts.slice(1).join(" ") || undefined;
       context.athleteEmail = athlete.email || undefined;
       context.athleteLevel = athlete.level || undefined;
-      context.athleteGroup = athlete.group || undefined;
+      
       if (athlete.birthDate) {
         context.athleteBirthDate = formatDate(athlete.birthDate);
         context.athleteAge = calculateAge(athlete.birthDate);

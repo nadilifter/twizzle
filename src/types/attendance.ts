@@ -19,7 +19,6 @@ export interface AttendanceWithRelations extends Attendance {
     name: string;
     avatar?: string | null;
     level?: string;
-    group?: string;
     family?: {
       id: string;
       name: string;
@@ -111,7 +110,6 @@ export interface AttendanceBreakdownItem {
   rate: number;
   // Optional fields based on groupBy
   level?: string | null;
-  group?: string | null;
   email?: string | null;
   date?: string;
 }

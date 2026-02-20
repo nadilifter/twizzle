@@ -5,7 +5,7 @@ import { db } from "@/lib/db"
 import { z } from "zod"
 
 const competitionInclude = {
-  facility: { select: { id: true, name: true, street: true, city: true, stateProvince: true, postalCode: true } },
+  facility: { select: { id: true, name: true, street: true, city: true, stateProvince: true, postalCode: true, country: true } },
   categories: {
     include: {
       combinationEntry: {

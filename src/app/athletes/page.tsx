@@ -18,7 +18,6 @@ interface Athlete {
   id: string;
   name: string;
   level: string;
-  group: string;
   enrollments?: Array<{
     program: {
       id: string;
@@ -73,7 +72,6 @@ export default function AthleteDashboard() {
           id: athlete.id,
           name: athlete.name,
           level: athlete.level,
-          group: athlete.group,
           enrollments: athlete.enrollments,
         }));
         setAthletes(athleteData);

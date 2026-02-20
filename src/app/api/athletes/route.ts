@@ -8,7 +8,6 @@ const createAthleteSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email().optional().nullable(),
   level: z.string().min(1, "Level is required"),
-  group: z.string().min(1, "Group is required"),
   status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "GRADUATED"]).default("ACTIVE"),
   birthDate: z.string().optional().nullable(),
   familyId: z.string().min(1, "Family is required"),
@@ -37,7 +36,6 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status");
     const level = searchParams.get("level");
-    const group = searchParams.get("group");
     const familyId = searchParams.get("familyId");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
@@ -58,7 +56,6 @@ export async function GET(request: NextRequest) {
       }),
       ...(status && { status: status as "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED" }),
       ...(level && { level }),
-      ...(group && { group }),
       ...(familyId && {
         guardians: {
           some: {
@@ -186,7 +183,6 @@ export async function POST(request: NextRequest) {
         name: validatedData.name,
         email: validatedData.email ?? null,
         level: validatedData.level,
-        group: validatedData.group,
         status: validatedData.status,
         // Use parseDateOnly to set noon UTC, avoiding timezone date shifts
         birthDate: parseDateOnly(validatedData.birthDate),

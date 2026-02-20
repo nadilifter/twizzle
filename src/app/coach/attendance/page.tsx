@@ -58,7 +58,6 @@ interface EnrolledAthlete {
   name: string;
   avatar: string | null;
   level: string;
-  group: string;
 }
 
 export default function CoachAttendancePage() {
@@ -120,7 +119,6 @@ export default function CoachAttendancePage() {
             name: enrollment.athlete.name,
             avatar: enrollment.athlete.avatar,
             level: enrollment.athlete.level,
-            group: enrollment.athlete.group,
           }))
         );
       } else {

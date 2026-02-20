@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,12 +17,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ShieldAlert, Phone as PhoneIcon, FileHeart, CalendarCheck, CalendarX, User, Mail, CalendarDays, Trophy, TrendingUp, Star, FileText, ChevronDown, Plus, Loader2, AlertCircle, ArrowLeft, Heart } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useAthlete } from "@/hooks/use-athletes"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
+import { useLevels } from "@/hooks/use-levels"
 import { useAthleteMedicalInfo } from "@/hooks/use-medical"
 import { MedicalDisplay, MedicalAlertBadge } from "@/components/medical/medical-display"
 import { MedicalForm } from "@/components/medical/medical-form"
 import { useFeatures } from "@/components/feature-context"
 import { toast } from "sonner"
 import Link from "next/link"
+import { AthleteConfiguration } from "../athlete-configuration"
 
 // Transform status for display
 function formatStatus(status: string): string {
@@ -56,7 +60,8 @@ export default function AthleteProfilePage() {
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
   
-  const { athlete, isLoading, error, fetchAthlete } = useAthlete(athleteId)
+  const { athlete, isLoading, error, fetchAthlete, updateAthlete } = useAthlete(athleteId)
+  const { levels: configuredLevels } = useLevels()
   const { 
     medicalInfo, 
     customQuestions, 
@@ -66,6 +71,17 @@ export default function AthleteProfilePage() {
     saveMedicalInfo 
   } = useAthleteMedicalInfo(athleteId)
   const [isEditingMedical, setIsEditingMedical] = React.useState(false)
+  const [isEditOpen, setIsEditOpen] = React.useState(false)
+
+  const levelColor = React.useMemo(() => {
+    if (!athlete) return null
+    return configuredLevels.find((l) => l.name === athlete.level)?.color ?? null
+  }, [athlete, configuredLevels])
+
+  useBreadcrumbOverride(
+    athlete ? `/dashboard/athletes/${athleteId}` : undefined,
+    athlete?.name,
+  )
 
   // Loading state
   if (isLoading) {
@@ -143,9 +159,17 @@ export default function AthleteProfilePage() {
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight">{athlete.name}</h1>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Badge variant="secondary" className="rounded-md">{athlete.level}</Badge>
-              <span>•</span>
-              <span className="flex items-center gap-1"><User className="h-4 w-4" /> {athlete.group}</span>
+              {levelColor ? (
+                <Badge
+                  variant="outline"
+                  className="rounded-md"
+                  style={{ borderColor: levelColor, color: levelColor, backgroundColor: `${levelColor}15` }}
+                >
+                  {athlete.level}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="rounded-md">{athlete.level}</Badge>
+              )}
               <span>•</span>
               <Badge variant={athlete.status === "ACTIVE" ? "default" : "secondary"}>
                 {formatStatus(athlete.status)}
@@ -168,10 +192,33 @@ export default function AthleteProfilePage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">Edit Profile</Button>
+          <Button variant="outline" onClick={() => setIsEditOpen(true)}>Edit Profile</Button>
           <Button>Contact</Button>
         </div>
       </div>
+
+      <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <SheetContent className="sm:max-w-2xl p-0">
+          <AthleteConfiguration
+            athlete={{
+              id: athlete.id,
+              name: athlete.name,
+              firstName: athlete.firstName,
+              lastName: athlete.lastName,
+              email: athlete.email,
+              level: athlete.level,
+              status: athlete.status as "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED",
+              birthDate: athlete.birthDate,
+              gender: athlete.gender ?? null,
+              family: athlete.family ? { id: athlete.family.id, name: athlete.family.name } : null,
+            }}
+            onClose={() => setIsEditOpen(false)}
+            onUpdated={async (data) => {
+              await updateAthlete(data)
+            }}
+          />
+        </SheetContent>
+      </Sheet>
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

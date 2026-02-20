@@ -12,7 +12,6 @@ export interface Athlete {
   lastName: string;
   email: string | null;
   level: string;
-  group: string;
   status: AthleteStatus;
   avatar: string | null;
   birthDate: string | null;
@@ -191,7 +190,6 @@ export interface CreateAthletePayload {
   name: string;
   email?: string | null;
   level: string;
-  group: string;
   status?: AthleteStatus;
   birthDate?: string | null;
   familyId: string;
@@ -201,7 +199,6 @@ export interface UpdateAthletePayload {
   name?: string;
   email?: string | null;
   level?: string;
-  group?: string;
   status?: AthleteStatus;
   birthDate?: string | null;
   familyId?: string;
@@ -212,7 +209,6 @@ export interface AthletesQueryParams {
   search?: string;
   status?: AthleteStatus;
   level?: string;
-  group?: string;
   familyId?: string;
   limit?: number;
   offset?: number;

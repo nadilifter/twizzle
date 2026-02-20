@@ -384,7 +384,6 @@ model Athlete {
   lastName  String        @default("")
   email     String?
   level     String
-  group     String
   status    AthleteStatus @default(ACTIVE)
   avatar    String?
   birthDate DateTime?
