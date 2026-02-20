@@ -301,17 +301,28 @@ export default function AthleteProfilePage() {
                 {formatStatus(athlete.status)}
               </Badge>
             </div>
-            <div className="flex items-center gap-x-3 gap-y-0.5 flex-wrap text-sm text-muted-foreground">
+            <div className="flex items-center gap-x-1.5 gap-y-0.5 flex-wrap text-sm text-muted-foreground">
               {athlete.birthDate && (
-                <span>
-                  {format(new Date(athlete.birthDate), "MMM d, yyyy")}
-                  {age !== null && <span className="text-foreground font-medium ml-1">({age} yrs)</span>}
-                </span>
+                <>
+                  <span>
+                    {format(new Date(athlete.birthDate), "MMM d, yyyy")}
+                    {age !== null && <span className="text-foreground font-medium ml-1">({age} yrs)</span>}
+                  </span>
+                  <span className="text-border">·</span>
+                </>
               )}
               {athlete.gender && (
-                <span>{athlete.gender.charAt(0).toUpperCase() + athlete.gender.slice(1).toLowerCase()}</span>
+                <>
+                  <span>{athlete.gender.charAt(0).toUpperCase() + athlete.gender.slice(1).toLowerCase()}</span>
+                  <span className="text-border">·</span>
+                </>
               )}
-              {athlete.email && <span className="truncate max-w-[200px]">{athlete.email}</span>}
+              {athlete.email && (
+                <>
+                  <span className="truncate max-w-[200px]">{athlete.email}</span>
+                  {athlete.family && <span className="text-border">·</span>}
+                </>
+              )}
               {athlete.family && (
                 <span className="truncate max-w-[200px]">
                   {athlete.family.name}
