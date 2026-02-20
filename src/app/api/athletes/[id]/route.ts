@@ -257,11 +257,14 @@ export async function GET(
       where: { athleteId: id },
     });
 
-    // Resolve level name
+    // Resolve level name and color
     let levelInfo: { id: string; name: string; color: string | null } | null = null;
     if (athlete.level) {
       const levelRecord = await db.level.findFirst({
-        where: { id: athlete.level, organizationId: session.user.organizationId },
+        where: {
+          organizationId: session.user.organizationId,
+          OR: [{ id: athlete.level }, { name: athlete.level }],
+        },
         select: { id: true, name: true, color: true },
       });
       levelInfo = levelRecord ?? { id: athlete.level, name: athlete.level, color: null };
