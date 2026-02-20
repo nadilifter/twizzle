@@ -7,21 +7,18 @@ import { format } from "date-fns"
 import { toast } from "sonner"
 import {
   ArrowLeft,
-  CalendarDays,
   CheckCircle2,
   AlertCircle,
   Loader2,
   FileText,
   Shield,
   Heart,
-  Users,
   Eye,
   Settings,
   Info,
   BookOpen,
   CalendarCheck,
   ClipboardList,
-  Mail,
   History,
   ExternalLink,
   Plus,
@@ -276,31 +273,51 @@ export default function AthleteProfilePage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{athlete.name}</h1>
-          {levelInfo ? (
-            <Badge
-              variant="outline"
-              className="text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0"
-              style={levelInfo.color ? {
-                borderColor: levelInfo.color,
-                color: levelInfo.color,
-                backgroundColor: `${levelInfo.color}15`,
-              } : undefined}
-            >
-              {levelInfo.name}
-            </Badge>
-          ) : athlete.level ? (
-            <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0">
-              {athlete.level}
-            </Badge>
-          ) : null}
-          <Badge variant={athlete.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0">
-            {formatStatus(athlete.status)}
-          </Badge>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <Avatar className="h-14 w-14 border-2 border-background shadow-sm shrink-0">
+            <AvatarImage src={athlete.avatar ?? undefined} alt={athlete.name} />
+            <AvatarFallback className="text-lg font-bold bg-primary/10">
+              {getInitials(athlete.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-semibold tracking-tight">{athlete.name}</h1>
+              {levelInfo ? (
+                <Badge
+                  variant="outline"
+                  style={levelInfo.color ? { borderColor: levelInfo.color, color: levelInfo.color, backgroundColor: `${levelInfo.color}15` } : undefined}
+                >
+                  {levelInfo.name}
+                </Badge>
+              ) : athlete.level ? (
+                <Badge variant="outline">{athlete.level}</Badge>
+              ) : null}
+              <Badge variant={athlete.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px] uppercase tracking-wider font-semibold h-5 px-1.5 shrink-0">
+                {formatStatus(athlete.status)}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-x-3 gap-y-0.5 flex-wrap text-sm text-muted-foreground">
+              {athlete.birthDate && (
+                <span>
+                  {format(new Date(athlete.birthDate), "MMM d, yyyy")}
+                  {age !== null && <span className="text-foreground font-medium ml-1">({age} yrs)</span>}
+                </span>
+              )}
+              {athlete.gender && (
+                <span>{athlete.gender.charAt(0).toUpperCase() + athlete.gender.slice(1).toLowerCase()}</span>
+              )}
+              {athlete.email && <span className="truncate max-w-[200px]">{athlete.email}</span>}
+              {athlete.family && (
+                <span className="truncate max-w-[200px]">
+                  {athlete.family.name}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <Button onClick={() => setIsEditOpen(true)}>
+        <Button onClick={() => setIsEditOpen(true)} className="shrink-0">
           <Settings className="mr-2 h-4 w-4" />
           Edit Profile
         </Button>
@@ -367,87 +384,16 @@ export default function AthleteProfilePage() {
         {/* ===== OVERVIEW TAB ===== */}
         <TabsContent value="overview">
           <div className="flex flex-col gap-6">
-            {/* Profile + Medical row */}
-            <div className="grid gap-6 md:grid-cols-3">
-              {/* Profile Card */}
-              <Card>
-                <CardContent className="pt-8 pb-6">
-                  <div className="flex flex-col items-center text-center">
-                    <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                      <AvatarImage src={athlete.avatar ?? undefined} alt={athlete.name} />
-                      <AvatarFallback className="text-2xl font-bold bg-primary/10">
-                        {getInitials(athlete.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <h2 className="text-xl font-bold tracking-tight mt-4">{athlete.name}</h2>
-                    {levelInfo && (
-                      <Badge
-                        variant="outline"
-                        className="mt-2"
-                        style={levelInfo.color ? {
-                          borderColor: levelInfo.color,
-                          color: levelInfo.color,
-                          backgroundColor: `${levelInfo.color}15`,
-                        } : undefined}
-                      >
-                        {levelInfo.name}
-                      </Badge>
-                    )}
-                    <Separator className="my-4 w-full" />
-                    <div className="w-full space-y-2.5 text-sm text-left">
-                      {athlete.birthDate && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <CalendarDays className="h-4 w-4 shrink-0" />
-                          <span>
-                            {format(new Date(athlete.birthDate), "MMM d, yyyy")}
-                            {age !== null && (
-                              <span className="ml-1 text-foreground font-medium">({age} yrs)</span>
-                            )}
-                          </span>
-                        </div>
-                      )}
-                      {athlete.gender && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <span className="h-4 w-4 shrink-0 flex items-center justify-center text-xs font-bold">
-                            {athlete.gender.charAt(0).toUpperCase()}
-                          </span>
-                          <span>
-                            {athlete.gender.charAt(0).toUpperCase() + athlete.gender.slice(1).toLowerCase()}
-                          </span>
-                        </div>
-                      )}
-                      {athlete.email && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Mail className="h-4 w-4 shrink-0" />
-                          <span className="truncate">{athlete.email}</span>
-                        </div>
-                      )}
-                      {athlete.family && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Users className="h-4 w-4 shrink-0" />
-                          <span className="truncate">
-                            {athlete.family.name}
-                            {athlete.family.primaryContact && (
-                              <span className="text-xs ml-1">
-                                ({athlete.family.primaryContact})
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
+            {/* Medical + Memberships + Waivers row */}
+            <div className="grid gap-6 lg:grid-cols-3">
               {/* Medical Card */}
-              <Card className="md:col-span-2">
+              <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Heart className="h-5 w-5" />
                     Medical Information
                     {medicalInfo && (
-                      <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+                      <Badge variant="outline" className="ml-auto bg-green-50 text-green-700 border-green-200">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         On File
                       </Badge>
@@ -455,7 +401,7 @@ export default function AthleteProfilePage() {
                   </CardTitle>
                   {medicalInfo && (
                     <CardDescription>
-                      Last updated: {format(new Date(medicalInfo.updatedAt), "MMM d, yyyy")}
+                      Updated {format(new Date(medicalInfo.updatedAt), "MMM d, yyyy")}
                     </CardDescription>
                   )}
                 </CardHeader>
@@ -464,31 +410,29 @@ export default function AthleteProfilePage() {
                     <MedicalInfoDisplay info={medicalInfo} />
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      No medical information on file for this athlete.
+                      No medical information on file.
                     </p>
                   )}
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Membership + Waivers row */}
-            <div className="grid gap-6 md:grid-cols-2">
+              {/* Memberships Card */}
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Shield className="h-5 w-5" />
                     Memberships
                   </CardTitle>
-                  <CardDescription>Active memberships for this athlete</CardDescription>
+                  <CardDescription>Active memberships</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {memberships.length > 0 ? (
                     <div className="space-y-3">
                       {memberships.map((m) => (
-                        <div key={m.id} className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">{m.groupName}</p>
-                            <p className="text-xs text-muted-foreground">{m.instanceName}</p>
+                        <div key={m.id} className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{m.groupName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{m.instanceName}</p>
                           </div>
                           <MembershipStatusBadge status={m.status} />
                         </div>
@@ -500,13 +444,14 @@ export default function AthleteProfilePage() {
                 </CardContent>
               </Card>
 
+              {/* Waivers Card */}
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <FileText className="h-5 w-5" />
                     Waivers
                   </CardTitle>
-                  <CardDescription>Signed waivers for this athlete</CardDescription>
+                  <CardDescription>Signed waivers</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {waivers.length > 0 ? (
@@ -514,11 +459,8 @@ export default function AthleteProfilePage() {
                       {waivers.map((w) => (
                         <div key={w.id} className="flex items-center justify-between gap-2">
                           <p className="text-sm font-medium truncate">{w.title}</p>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="flex items-center gap-1.5 text-green-700">
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              <span className="text-sm">Signed</span>
-                            </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
                             <Button
                               variant="ghost"
                               size="sm"
