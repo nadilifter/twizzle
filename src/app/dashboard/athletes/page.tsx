@@ -94,6 +94,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAthletes } from "@/hooks/use-athletes"
 import { useFamilies } from "@/hooks/use-families"
+import { useLevels } from "@/hooks/use-levels"
 import type { AthleteWithRelations, CreateAthletePayload, UpdateAthletePayload, AthleteStatus } from "@/types/athletes"
 
 // Transform status for display
@@ -113,7 +114,9 @@ function getStatusVariant(status: string): "default" | "destructive" | "secondar
 export default function AthletesPage() {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
+    { id: "status", value: ["ACTIVE", "TRIAL", "GRADUATED"] },
+  ])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
@@ -160,6 +163,17 @@ export default function AthletesPage() {
 
   // Fetch families for the dropdown
   const { families, isLoading: isFamiliesLoading } = useFamilies()
+
+  // Fetch configured levels for dropdowns
+  const { levels: configuredLevels, isLoading: isLevelsLoading } = useLevels()
+
+  const levelColorMap = React.useMemo(() => {
+    const map = new Map<string, string>()
+    for (const level of configuredLevels) {
+      if (level.color) map.set(level.name, level.color)
+    }
+    return map
+  }, [configuredLevels])
 
   // Open edit dialog with selected athlete data
   const handleEditClick = React.useCallback((athlete: AthleteWithRelations) => {
@@ -283,7 +297,19 @@ export default function AthletesPage() {
     {
       accessorKey: "level",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Level" />,
-      cell: ({ row }) => <Badge variant="outline">{row.original.level}</Badge>,
+      cell: ({ row }) => {
+        const color = levelColorMap.get(row.original.level)
+        return color ? (
+          <Badge
+            variant="outline"
+            style={{ borderColor: color, color, backgroundColor: `${color}15` }}
+          >
+            {row.original.level}
+          </Badge>
+        ) : (
+          <Badge variant="outline">{row.original.level}</Badge>
+        )
+      },
       filterFn: (row, id, value) => {
         return value.includes(row.getValue(id))
       },
@@ -367,7 +393,7 @@ export default function AthletesPage() {
         </div>
       ),
     },
-  ], [handleEditClick, handleDeleteClick, handleViewAttendance, handleContactParent])
+  ], [handleEditClick, handleDeleteClick, handleViewAttendance, handleContactParent, levelColorMap])
 
   const table = useReactTable({
     data: athletes,
@@ -548,20 +574,14 @@ export default function AthletesPage() {
                         onValueChange={(value) => setNewAthlete(prev => ({ ...prev, level: value }))}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select level" />
+                          <SelectValue placeholder={isLevelsLoading ? "Loading..." : "Select level"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Level 1">Level 1</SelectItem>
-                          <SelectItem value="Level 2">Level 2</SelectItem>
-                          <SelectItem value="Level 3">Level 3</SelectItem>
-                          <SelectItem value="Level 4">Level 4</SelectItem>
-                          <SelectItem value="Level 5">Level 5</SelectItem>
-                          <SelectItem value="Level 6">Level 6</SelectItem>
-                          <SelectItem value="Level 7">Level 7</SelectItem>
-                          <SelectItem value="Level 8">Level 8</SelectItem>
-                          <SelectItem value="Level 9">Level 9</SelectItem>
-                          <SelectItem value="Level 10">Level 10</SelectItem>
-                          <SelectItem value="Elite">Elite</SelectItem>
+                          {configuredLevels.map((level) => (
+                            <SelectItem key={level.id} value={level.name}>
+                              {level.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -874,20 +894,14 @@ export default function AthletesPage() {
                     onValueChange={(value) => setEditAthlete(prev => ({ ...prev, level: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select level" />
+                      <SelectValue placeholder={isLevelsLoading ? "Loading..." : "Select level"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Level 1">Level 1</SelectItem>
-                      <SelectItem value="Level 2">Level 2</SelectItem>
-                      <SelectItem value="Level 3">Level 3</SelectItem>
-                      <SelectItem value="Level 4">Level 4</SelectItem>
-                      <SelectItem value="Level 5">Level 5</SelectItem>
-                      <SelectItem value="Level 6">Level 6</SelectItem>
-                      <SelectItem value="Level 7">Level 7</SelectItem>
-                      <SelectItem value="Level 8">Level 8</SelectItem>
-                      <SelectItem value="Level 9">Level 9</SelectItem>
-                      <SelectItem value="Level 10">Level 10</SelectItem>
-                      <SelectItem value="Elite">Elite</SelectItem>
+                      {configuredLevels.map((level) => (
+                        <SelectItem key={level.id} value={level.name}>
+                          {level.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
