@@ -195,6 +195,8 @@ export default function AthleteProfilePage() {
   const athleteId = typeof params.id === "string" ? params.id : null
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
+  const eventsEnabled = isFeatureEnabled("events")
+  const competitionsEnabled = isFeatureEnabled("competitions")
 
   const { athlete, isLoading, error, fetchAthlete, updateAthlete } = useAthlete(athleteId)
   const [isEditOpen, setIsEditOpen] = React.useState(false)
@@ -371,14 +373,18 @@ export default function AthleteProfilePage() {
             <BookOpen className="h-4 w-4" />
             Programs
           </TabsTrigger>
-          <TabsTrigger value="events" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Events
-          </TabsTrigger>
-          <TabsTrigger value="competitions" className="gap-2">
-            <Trophy className="h-4 w-4" />
-            Competitions
-          </TabsTrigger>
+          {eventsEnabled && (
+            <TabsTrigger value="events" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Events
+            </TabsTrigger>
+          )}
+          {competitionsEnabled && (
+            <TabsTrigger value="competitions" className="gap-2">
+              <Trophy className="h-4 w-4" />
+              Competitions
+            </TabsTrigger>
+          )}
           <TabsTrigger value="memberships" className="gap-2">
             <Shield className="h-4 w-4" />
             Memberships
@@ -528,14 +534,18 @@ export default function AthleteProfilePage() {
         </TabsContent>
 
         {/* ===== EVENTS TAB ===== */}
-        <TabsContent value="events">
-          <AthleteEventsTab eventRegistrations={eventRegistrations} />
-        </TabsContent>
+        {eventsEnabled && (
+          <TabsContent value="events">
+            <AthleteEventsTab eventRegistrations={eventRegistrations} />
+          </TabsContent>
+        )}
 
         {/* ===== COMPETITIONS TAB ===== */}
-        <TabsContent value="competitions">
-          <AthleteCompetitionsTab competitionEntries={competitionEntries} />
-        </TabsContent>
+        {competitionsEnabled && (
+          <TabsContent value="competitions">
+            <AthleteCompetitionsTab competitionEntries={competitionEntries} />
+          </TabsContent>
+        )}
 
         {/* ===== MEMBERSHIPS TAB ===== */}
         <TabsContent value="memberships">

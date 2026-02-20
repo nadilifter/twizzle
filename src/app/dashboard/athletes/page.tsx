@@ -88,6 +88,7 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { toast } from "sonner"
 
+import { useFeatures } from "@/components/feature-context"
 import { AthleteConfiguration } from "./athlete-configuration"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
@@ -115,6 +116,8 @@ function getStatusVariant(status: string): "default" | "destructive" | "secondar
 
 export default function AthletesPage() {
   const router = useRouter()
+  const { isFeatureEnabled } = useFeatures()
+  const competitionsEnabled = isFeatureEnabled("competitions")
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
     { id: "status", value: ["ACTIVE", "TRIAL", "GRADUATED"] },
@@ -314,11 +317,11 @@ export default function AthletesPage() {
         )
       },
     },
-    {
+    ...(competitionsEnabled ? [{
       id: "competitions",
-      accessorFn: (row) => row.upcomingCompetitions ?? 0,
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Competitions" className="justify-end" />,
-      cell: ({ row }) => {
+      accessorFn: (row: AthleteWithRelations) => row.upcomingCompetitions ?? 0,
+      header: ({ column }: { column: import("@tanstack/react-table").Column<AthleteWithRelations, unknown> }) => <DataTableColumnHeader column={column} title="Competitions" className="justify-end" />,
+      cell: ({ row }: { row: import("@tanstack/react-table").Row<AthleteWithRelations> }) => {
         const count = row.original.upcomingCompetitions ?? 0
         return (
           <div className="text-right">
@@ -330,7 +333,7 @@ export default function AthletesPage() {
           </div>
         )
       },
-    },
+    }] : []),
     {
       id: "parent",
       accessorFn: (row) => row.family?.primaryContact ?? row.parent ?? "",
@@ -381,7 +384,7 @@ export default function AthletesPage() {
         </div>
       ),
     },
-  ], [handleEditClick, handleDeleteClick, handleViewAttendance, handleContactParent, levelColorMap])
+  ], [handleEditClick, handleDeleteClick, handleViewAttendance, handleContactParent, levelColorMap, competitionsEnabled])
 
   const table = useReactTable({
     data: athletes,
