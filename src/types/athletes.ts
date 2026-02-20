@@ -67,6 +67,10 @@ export interface AthleteWithRelations extends Athlete {
     attendances: number;
     evaluations: number;
   };
+  // Computed summary counts
+  activePrograms: number;
+  activeMemberships: number;
+  upcomingCompetitions: number;
   // Transformed fields for UI compatibility
   parent?: string;
 }

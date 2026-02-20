@@ -65,6 +65,8 @@ export async function GET(request: NextRequest) {
       }),
     };
 
+    const now = new Date();
+
     const [athletes, total] = await Promise.all([
       db.athlete.findMany({
         where,
@@ -88,9 +90,25 @@ export async function GET(request: NextRequest) {
                 select: {
                   id: true,
                   name: true,
+                  instances: {
+                    where: { date: { gte: now }, status: "SCHEDULED" },
+                    select: { id: true },
+                    take: 1,
+                  },
                 },
               },
             },
+          },
+          memberships: {
+            where: { status: "ACTIVE" },
+            select: { id: true },
+          },
+          competitionEntries: {
+            where: {
+              status: { notIn: ["WITHDRAWN", "SCRATCHED", "REJECTED"] },
+              competition: { endDate: { gte: now } },
+            },
+            select: { competitionId: true },
           },
           _count: {
             select: {
@@ -106,15 +124,27 @@ export async function GET(request: NextRequest) {
       db.athlete.count({ where }),
     ]);
 
-    // Transform for frontend compatibility - keep status as-is (uppercase from DB)
     const transformedAthletes = athletes.map((athlete) => {
       const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
       const family = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown" };
+
+      const programsWithFutureInstances = new Set(
+        athlete.enrollments
+          .filter((e) => e.program.instances.length > 0)
+          .map((e) => e.program.id)
+      );
+
+      const uniqueCompetitionIds = new Set(
+        athlete.competitionEntries.map((e) => e.competitionId)
+      );
       
       return {
         ...athlete,
         family,
         parent: family.primaryContact,
+        activePrograms: programsWithFutureInstances.size,
+        activeMemberships: athlete.memberships.length,
+        upcomingCompetitions: uniqueCompetitionIds.size,
       };
     });
 
@@ -235,6 +265,9 @@ export async function POST(request: NextRequest) {
       ...athlete,
       family: createdFamily,
       parent: createdFamily.primaryContact,
+      activePrograms: 0,
+      activeMemberships: 0,
+      upcomingCompetitions: 0,
     };
 
     return NextResponse.json(transformedAthlete);

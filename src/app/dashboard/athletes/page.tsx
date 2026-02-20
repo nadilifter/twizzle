@@ -281,13 +281,54 @@ export default function AthletesPage() {
       },
     },
     {
-      id: "program",
-      accessorFn: (row) => row.enrollments?.[0]?.program?.name ?? "",
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Program" />,
+      id: "programs",
+      accessorFn: (row) => row.activePrograms ?? 0,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Programs" className="justify-end" />,
       cell: ({ row }) => {
-        const enrollment = row.original.enrollments?.[0]
-        if (!enrollment) return <span className="text-muted-foreground">-</span>
-        return <Badge variant="outline">{enrollment.program.name}</Badge>
+        const count = row.original.activePrograms ?? 0
+        return (
+          <div className="text-right">
+            {count > 0 ? (
+              <Badge variant="outline">{count}</Badge>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      id: "memberships",
+      accessorFn: (row) => row.activeMemberships ?? 0,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Memberships" className="justify-end" />,
+      cell: ({ row }) => {
+        const count = row.original.activeMemberships ?? 0
+        return (
+          <div className="text-right">
+            {count > 0 ? (
+              <Badge variant="outline">{count}</Badge>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      id: "competitions",
+      accessorFn: (row) => row.upcomingCompetitions ?? 0,
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Competitions" className="justify-end" />,
+      cell: ({ row }) => {
+        const count = row.original.upcomingCompetitions ?? 0
+        return (
+          <div className="text-right">
+            {count > 0 ? (
+              <Badge variant="outline">{count}</Badge>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </div>
+        )
       },
     },
     {
