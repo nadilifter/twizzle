@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status");
     const familyId = searchParams.get("familyId");
+    const userId = searchParams.get("userId");
     const programId = searchParams.get("programId");
     const athleteId = searchParams.get("athleteId");
     const startDate = searchParams.get("startDate");
@@ -70,8 +71,12 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    if (familyId) {
+    if (familyId && userId) {
+      where.OR = [{ familyId }, { userId }];
+    } else if (familyId) {
       where.familyId = familyId;
+    } else if (userId) {
+      where.userId = userId;
     }
 
     if (startDate && endDate) {
@@ -219,6 +224,7 @@ export async function POST(request: NextRequest) {
       data: {
         reference,
         familyId: validatedData.familyId,
+        userId: session.user.id,
         status: validatedData.status,
         dueDate: new Date(validatedData.dueDate),
         subtotal,

@@ -200,9 +200,9 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
             )}
           </div>
 
-          {/* Family */}
+          {/* Family / Guardian */}
           <div className="space-y-2">
-            <Label htmlFor="config-family">Family</Label>
+            <Label htmlFor="config-family">Guardian Family (Legacy)</Label>
             <Select
               value={formData.familyId}
               onValueChange={(value) => setFormData((prev) => ({ ...prev, familyId: value }))}

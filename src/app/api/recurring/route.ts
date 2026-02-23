@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const createRecurringChargeSchema = z.object({
-  familyId: z.string().min(1, "Family is required"),
+  familyId: z.string().optional(),
+  userId: z.string().optional(),
   athleteId: z.string().optional().nullable(),
   description: z.string().min(1, "Description is required"),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status");
     const familyId = searchParams.get("familyId");
+    const userId = searchParams.get("userId");
     const athleteId = searchParams.get("athleteId");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
@@ -56,8 +58,12 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    if (familyId) {
+    if (familyId && userId) {
+      where.OR = [{ familyId }, { userId }];
+    } else if (familyId) {
       where.familyId = familyId;
+    } else if (userId) {
+      where.userId = userId;
     }
 
     if (athleteId) {
@@ -180,16 +186,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createRecurringChargeSchema.parse(body);
 
-    // Verify family exists
-    const family = await db.family.findFirst({
-      where: {
-        id: validatedData.familyId,
-        organizationId: session.user.organizationId,
-      },
-    });
+    // Support familyId or userId for Guardian/Ward migration
+    const familyId = validatedData.familyId;
+    const userId = validatedData.userId ?? session.user.id;
 
-    if (!family) {
-      return NextResponse.json({ error: "Family not found" }, { status: 404 });
+    if (!familyId && !userId) {
+      return NextResponse.json({ error: "Family or user is required" }, { status: 400 });
+    }
+
+    // Verify family exists if provided
+    if (familyId) {
+      const family = await db.family.findFirst({
+        where: {
+          id: familyId,
+          organizationId: session.user.organizationId,
+        },
+      });
+
+      if (!family) {
+        return NextResponse.json({ error: "Family not found" }, { status: 404 });
+      }
     }
 
     // Verify athlete if provided
@@ -211,7 +227,10 @@ export async function POST(request: NextRequest) {
       const paymentMethod = await db.paymentMethod.findFirst({
         where: {
           id: validatedData.paymentMethodId,
-          familyId: validatedData.familyId,
+          OR: [
+            ...(familyId ? [{ familyId }] : []),
+            ...(userId ? [{ userId }] : []),
+          ],
         },
       });
 
@@ -223,7 +242,8 @@ export async function POST(request: NextRequest) {
     const charge = await db.recurringCharge.create({
       data: {
         organizationId: session.user.organizationId,
-        familyId: validatedData.familyId,
+        familyId: familyId ?? undefined,
+        userId: userId ?? undefined,
         athleteId: validatedData.athleteId,
         description: validatedData.description,
         amount: validatedData.amount,

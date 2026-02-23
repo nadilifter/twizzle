@@ -7,26 +7,36 @@ import { db } from "@/lib/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, waiverIds, organizationId, athleteId } = body;
+    const { email, waiverIds, organizationId, athleteId, userId } = body;
 
-    if (!email || !waiverIds?.length || !organizationId) {
+    if ((!email && !userId) || !waiverIds?.length || !organizationId) {
       return NextResponse.json(
-        { error: "email, waiverIds, and organizationId are required" },
+        { error: "email or userId, waiverIds, and organizationId are required" },
         { status: 400 }
       );
     }
 
-    // Find the family by email in this organization
-    const family = await db.family.findFirst({
-      where: {
-        email,
-        organizationId,
-      },
-      select: { id: true },
-    });
+    // Resolve familyId and/or userId for lookup
+    let familyId: string | null = null;
+    let resolvedUserId: string | null = userId || null;
 
-    if (!family) {
-      // No family found - none of the waivers are signed
+    if (userId) {
+      // Prefer userId when provided (Guardian/Ward)
+      resolvedUserId = userId;
+    }
+    if (email) {
+      const family = await db.family.findFirst({
+        where: {
+          email,
+          organizationId,
+        },
+        select: { id: true },
+      });
+      familyId = family?.id ?? null;
+    }
+
+    if (!familyId && !resolvedUserId) {
+      // No family or user found - none of the waivers are signed
       const waivers = await db.waiver.findMany({
         where: {
           id: { in: waiverIds },
@@ -38,6 +48,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         familyId: null,
+        userId: null,
         data: waivers.map((w) => ({
           waiverId: w.id,
           waiverTitle: w.title,
@@ -47,12 +58,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check acceptances — per athlete if athleteId is provided
+    // Check acceptances — by familyId and/or userId, per athlete if athleteId is provided
     const acceptances = await db.waiverAcceptance.findMany({
       where: {
-        familyId: family.id,
         waiverId: { in: waiverIds },
         ...(athleteId ? { athleteId } : {}),
+        ...(familyId && resolvedUserId
+          ? { OR: [{ familyId }, { userId: resolvedUserId }] }
+          : familyId
+            ? { familyId }
+            : { userId: resolvedUserId }),
       },
       select: { waiverId: true },
     });
@@ -75,7 +90,8 @@ export async function POST(request: NextRequest) {
     }));
 
     return NextResponse.json({
-      familyId: family.id,
+      familyId,
+      userId: resolvedUserId,
       data: results,
       allSigned: results.every((r) => r.isSigned),
     });

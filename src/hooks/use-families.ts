@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * @deprecated This hook uses the Family model which is being replaced by the Guardian/Ward system.
+ * New code should use User-based guardian relationships instead.
+ * See: AthleteGuardian.userId, UserContact, UserBillingAddress
+ */
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import type {

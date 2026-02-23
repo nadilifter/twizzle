@@ -22,6 +22,7 @@ export interface PlaceholderDefinition {
 export type PlaceholderCategory = 
   | "athlete"
   | "family"
+  | "guardian"
   | "membership"
   | "program"
   | "event"
@@ -46,6 +47,11 @@ export interface TemplateContext {
   familyEmail?: string;
   familyPhone?: string;
   familyBalance?: string;
+  
+  // Guardian context (user-based guardian)
+  guardianName?: string;
+  guardianEmail?: string;
+  guardianPhone?: string;
   
   // Membership context
   membershipName?: string;
@@ -203,6 +209,29 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     description: "Current account balance",
     example: "$150.00",
     category: "family",
+  },
+
+  // Guardian placeholders (user-based guardian)
+  {
+    key: "guardianName",
+    label: "Guardian Name",
+    description: "Name of the guardian user (when using user-based guardianship)",
+    example: "Sarah Johnson",
+    category: "guardian",
+  },
+  {
+    key: "guardianEmail",
+    label: "Guardian Email",
+    description: "Email address of the guardian user",
+    example: "sarah@example.com",
+    category: "guardian",
+  },
+  {
+    key: "guardianPhone",
+    label: "Guardian Phone",
+    description: "Phone number of the guardian user",
+    example: "(555) 123-4567",
+    category: "guardian",
   },
 
   // Membership placeholders
@@ -441,13 +470,13 @@ export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType):
   switch (triggerType) {
     case "MEMBERSHIP_EXPIRY":
     case "MEMBERSHIP_EXPIRED":
-      additionalCategories.push("athlete", "family", "membership");
+      additionalCategories.push("athlete", "family", "guardian", "membership");
       break;
       
     case "PAYMENT_DUE":
     case "PAYMENT_OVERDUE":
     case "PAYMENT_RECEIVED":
-      additionalCategories.push("family", "payment");
+      additionalCategories.push("family", "guardian", "payment");
       break;
       
     case "PROGRAM_REMINDER":
@@ -459,7 +488,7 @@ export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType):
     case "EVENT_REMINDER":
     case "EVENT_REGISTRATION_OPEN":
     case "EVENT_REGISTRATION_CLOSE":
-      additionalCategories.push("athlete", "family", "event");
+      additionalCategories.push("athlete", "family", "guardian", "event");
       break;
       
     case "ATTENDANCE_MISSED":
@@ -470,16 +499,16 @@ export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType):
       break;
       
     case "BIRTHDAY":
-      additionalCategories.push("athlete", "family");
+      additionalCategories.push("athlete", "family", "guardian");
       break;
       
     case "WAITLIST_OPENING":
-      additionalCategories.push("athlete", "family", "program", "event");
+      additionalCategories.push("athlete", "family", "guardian", "program", "event");
       break;
       
     case "CONTRACT_RENEWAL":
     case "MAKEUP_CLASS_EXPIRING":
-      additionalCategories.push("athlete", "family", "program");
+      additionalCategories.push("athlete", "family", "guardian", "program");
       break;
       
     case "CUSTOM":
@@ -487,7 +516,7 @@ export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType):
       return PLACEHOLDER_DEFINITIONS;
       
     default:
-      additionalCategories.push("athlete", "family");
+      additionalCategories.push("athlete", "family", "guardian");
   }
   
   const allCategories = [...baseCategories, ...additionalCategories];
@@ -636,6 +665,7 @@ export function getTemplatePlaceholderSummary(template: string): Record<Placehol
   const summary: Record<PlaceholderCategory, string[]> = {
     athlete: [],
     family: [],
+    guardian: [],
     membership: [],
     program: [],
     event: [],

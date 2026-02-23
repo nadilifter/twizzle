@@ -156,7 +156,7 @@ const data = {
           url: "/dashboard/athletes/attendance",
         },
         {
-          title: "Families",
+          title: "Guardians",
           url: "/dashboard/athletes/families",
         },
         {

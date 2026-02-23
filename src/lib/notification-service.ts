@@ -60,6 +60,7 @@ export interface ExecuteNotificationParams {
   // Optional context data for specific triggers
   athleteId?: string;
   familyId?: string;
+  userId?: string;
   membershipId?: string;
   programId?: string;
   eventId?: string;
@@ -258,6 +259,7 @@ export async function getRecipients(
   contextData?: {
     athleteId?: string;
     familyId?: string;
+    userId?: string;
     programId?: string;
     eventId?: string;
   }
@@ -290,6 +292,31 @@ export async function getRecipients(
       phone: family.smsOptOut ? undefined : family.phone,
       name: family.primaryContact,
       familyId: family.id,
+    });
+  };
+
+  // Helper to add a user recipient (guardian with userId)
+  const addGuardianUser = (user: {
+    id: string;
+    email: string;
+    phone: string | null;
+    name: string;
+    smsOptOut?: boolean;
+    emailOptOut?: boolean;
+  }) => {
+    if (user.email && !seenEmails.has(user.email.toLowerCase())) {
+      seenEmails.add(user.email.toLowerCase());
+    }
+    if (user.phone && !seenPhones.has(user.phone)) {
+      seenPhones.add(user.phone);
+    }
+    recipients.push({
+      type: "user",
+      id: user.id,
+      email: user.emailOptOut ? undefined : user.email,
+      phone: user.smsOptOut ? undefined : (user.phone || undefined),
+      name: user.name,
+      userId: user.id,
     });
   };
 
@@ -328,7 +355,7 @@ export async function getRecipients(
     }
 
     case "ALL_ATHLETES": {
-      // Get families of all athletes
+      // Get families and guardian users of all athletes
       const athletes = await db.athlete.findMany({
         where: {
           organizationId,
@@ -349,6 +376,16 @@ export async function getRecipients(
                   emailOptOut: true,
                 },
               },
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  phone: true,
+                  name: true,
+                  smsOptOut: true,
+                  emailOptOut: true,
+                },
+              },
             },
           },
         },
@@ -356,7 +393,18 @@ export async function getRecipients(
 
       for (const athlete of athletes) {
         for (const guardian of athlete.guardians) {
-          addFamily(guardian.family);
+          if (guardian.userId && guardian.user?.email) {
+            addGuardianUser({
+              id: guardian.user.id,
+              email: guardian.user.email,
+              phone: guardian.user.phone,
+              name: guardian.user.name,
+              smsOptOut: guardian.user.smsOptOut,
+              emailOptOut: guardian.user.emailOptOut,
+            });
+          } else if (guardian.family) {
+            addFamily(guardian.family);
+          }
         }
       }
       break;
@@ -392,6 +440,16 @@ export async function getRecipients(
                         emailOptOut: true,
                       },
                     },
+                    user: {
+                      select: {
+                        id: true,
+                        email: true,
+                        phone: true,
+                        name: true,
+                        smsOptOut: true,
+                        emailOptOut: true,
+                      },
+                    },
                   },
                 },
               },
@@ -401,7 +459,18 @@ export async function getRecipients(
 
         for (const enrollment of enrollments) {
           for (const guardian of enrollment.athlete.guardians) {
-            addFamily(guardian.family);
+            if (guardian.userId && guardian.user?.email) {
+              addGuardianUser({
+                id: guardian.user.id,
+                email: guardian.user.email,
+                phone: guardian.user.phone,
+                name: guardian.user.name,
+                smsOptOut: guardian.user.smsOptOut,
+                emailOptOut: guardian.user.emailOptOut,
+              });
+            } else if (guardian.family) {
+              addFamily(guardian.family);
+            }
           }
         }
       } else {
@@ -425,6 +494,16 @@ export async function getRecipients(
                         emailOptOut: true,
                       },
                     },
+                    user: {
+                      select: {
+                        id: true,
+                        email: true,
+                        phone: true,
+                        name: true,
+                        smsOptOut: true,
+                        emailOptOut: true,
+                      },
+                    },
                   },
                 },
               },
@@ -434,7 +513,18 @@ export async function getRecipients(
 
         for (const enrollment of enrollments) {
           for (const guardian of enrollment.athlete.guardians) {
-            addFamily(guardian.family);
+            if (guardian.userId && guardian.user?.email) {
+              addGuardianUser({
+                id: guardian.user.id,
+                email: guardian.user.email,
+                phone: guardian.user.phone,
+                name: guardian.user.name,
+                smsOptOut: guardian.user.smsOptOut,
+                emailOptOut: guardian.user.emailOptOut,
+              });
+            } else if (guardian.family) {
+              addFamily(guardian.family);
+            }
           }
         }
       }
@@ -473,6 +563,16 @@ export async function getRecipients(
                       emailOptOut: true,
                     },
                   },
+                  user: {
+                    select: {
+                      id: true,
+                      email: true,
+                      phone: true,
+                      name: true,
+                      smsOptOut: true,
+                      emailOptOut: true,
+                    },
+                  },
                 },
               },
             },
@@ -482,7 +582,18 @@ export async function getRecipients(
 
       for (const membership of memberships) {
         for (const guardian of membership.athlete.guardians) {
-          addFamily(guardian.family);
+          if (guardian.userId && guardian.user?.email) {
+            addGuardianUser({
+              id: guardian.user.id,
+              email: guardian.user.email,
+              phone: guardian.user.phone,
+              name: guardian.user.name,
+              smsOptOut: guardian.user.smsOptOut,
+              emailOptOut: guardian.user.emailOptOut,
+            });
+          } else if (guardian.family) {
+            addFamily(guardian.family);
+          }
         }
       }
       break;
@@ -549,13 +660,34 @@ export async function getRecipients(
                     emailOptOut: true,
                   },
                 },
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    phone: true,
+                    name: true,
+                    smsOptOut: true,
+                    emailOptOut: true,
+                  },
+                },
               },
             },
           },
         });
         if (athlete) {
           for (const guardian of athlete.guardians) {
-            addFamily(guardian.family);
+            if (guardian.userId && guardian.user?.email) {
+              addGuardianUser({
+                id: guardian.user.id,
+                email: guardian.user.email,
+                phone: guardian.user.phone,
+                name: guardian.user.name,
+                smsOptOut: guardian.user.smsOptOut,
+                emailOptOut: guardian.user.emailOptOut,
+              });
+            } else if (guardian.family) {
+              addFamily(guardian.family);
+            }
           }
         }
       }
@@ -578,6 +710,7 @@ export async function buildTemplateContext(
   data: {
     athleteId?: string;
     familyId?: string;
+    userId?: string;
     membershipId?: string;
     programId?: string;
     eventId?: string;
@@ -638,6 +771,18 @@ export async function buildTemplateContext(
       context.familyEmail = family.email;
       context.familyPhone = family.phone;
       context.familyBalance = formatCurrency(Number(family.balance));
+    }
+  }
+
+  // Get guardian user (for userId-based context)
+  if (data.userId) {
+    const user = await db.user.findUnique({
+      where: { id: data.userId },
+    });
+    if (user) {
+      context.guardianName = user.name;
+      context.guardianEmail = user.email;
+      context.guardianPhone = user.phone || undefined;
     }
   }
 
@@ -776,6 +921,7 @@ export async function executeNotification(
     {
       athleteId: params.athleteId,
       familyId: params.familyId,
+      userId: params.userId,
       programId: params.programId,
       eventId: params.eventId,
     }
@@ -790,6 +936,7 @@ export async function executeNotification(
   const baseContext = await buildTemplateContext(rule.organizationId, {
     athleteId: params.athleteId,
     familyId: params.familyId,
+    userId: params.userId,
     membershipId: params.membershipId,
     programId: params.programId,
     eventId: params.eventId,
@@ -813,6 +960,17 @@ export async function executeNotification(
         context.familyEmail = family.email;
         context.familyPhone = family.phone;
         context.familyBalance = formatCurrency(Number(family.balance));
+      }
+    }
+    // If this is a user recipient and we don't have guardian context yet
+    if (recipient.userId && !context.guardianName) {
+      const user = await db.user.findUnique({
+        where: { id: recipient.userId },
+      });
+      if (user) {
+        context.guardianName = user.name;
+        context.guardianEmail = user.email;
+        context.guardianPhone = user.phone || undefined;
       }
     }
 
@@ -865,6 +1023,7 @@ export async function executeNotification(
             subject: subjectResult.rendered,
             htmlBody: bodyResult.rendered,
             familyId: recipient.familyId,
+            userId: recipient.userId,
           });
           if (actionResult.success) {
             await db.notificationLog.update({
@@ -890,6 +1049,7 @@ export async function executeNotification(
             to: recipient.phone,
             body: smsBody,
             familyId: recipient.familyId,
+            userId: recipient.userId,
           });
           if (actionResult.success) {
             await db.notificationLog.update({

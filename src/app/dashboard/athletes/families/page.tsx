@@ -74,14 +74,14 @@ export default function FamiliesPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Families</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Guardians</h1>
           <p className="text-muted-foreground">
-            Manage family accounts, billing, and contact information.
+            Manage guardian accounts, billing, and contact information. Transitioning from family-based to guardian-based system.
           </p>
         </div>
         <Button onClick={handleAddFamily}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Family
+          Add Guardian Family
         </Button>
       </div>
 
@@ -107,7 +107,7 @@ export default function FamiliesPage() {
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-muted-foreground">Loading families...</p>
+            <p className="text-muted-foreground">Loading guardians...</p>
           </div>
         </div>
       )}
@@ -117,7 +117,7 @@ export default function FamiliesPage() {
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-2 text-destructive">
             <AlertCircle className="h-8 w-8" />
-            <p>Failed to load families</p>
+            <p>Failed to load guardians</p>
             <Button variant="outline" onClick={() => fetchFamilies()}>
               Try Again
             </Button>
@@ -130,7 +130,7 @@ export default function FamiliesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Family Name</TableHead>
+                <TableHead>Guardian / Family</TableHead>
                 <TableHead>Primary Contact</TableHead>
                 <TableHead>Contact Info</TableHead>
                 <TableHead>Athletes</TableHead>
@@ -200,7 +200,7 @@ export default function FamiliesPage() {
               {families.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    No families found.
+                    No guardians found.
                   </TableCell>
                 </TableRow>
               )}

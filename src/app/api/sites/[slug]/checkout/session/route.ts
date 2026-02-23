@@ -5,6 +5,7 @@ import { calculateAge, isAgeEligible } from "@/lib/age-utils";
 import { subDays } from "date-fns";
 import { processInvoiceRegistrations } from "@/lib/invoice-processing";
 import { sendTemplatedEmail } from "@/lib/email";
+import { getAuthSession } from "@/lib/auth";
 
 interface CartItem {
   referenceId: string;
@@ -98,11 +99,14 @@ export async function POST(
         }
       });
 
-      // Find family by email
+      // Find family by email and resolve userId for waiver checks
       const checkFamily = await db.family.findFirst({
         where: { email: userDetails.email, organizationId },
         select: { id: true },
       });
+
+      const authSession = await getAuthSession();
+      const checkUserId = authSession?.user?.id || null;
 
       // Check each athlete's waivers individually
       for (const item of programItems) {
@@ -112,17 +116,20 @@ export async function POST(
 
         if (requiredWaiverIds.length === 0) continue;
 
-        if (!checkFamily) {
+        if (!checkFamily && !checkUserId) {
           return NextResponse.json(
             { error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.` },
             { status: 400 }
           );
         }
 
-        // Check acceptances for this specific athlete
+        // Check acceptances for this specific athlete (by family OR user)
         const acceptances = await db.waiverAcceptance.findMany({
           where: {
-            familyId: checkFamily.id,
+            OR: [
+              ...(checkFamily ? [{ familyId: checkFamily.id }] : []),
+              ...(checkUserId ? [{ userId: checkUserId }] : []),
+            ],
             waiverId: { in: requiredWaiverIds },
             athleteId: athleteId || null,
           },
@@ -714,6 +721,10 @@ export async function POST(
       }
     }
 
+    // Resolve the authenticated user for Guardian/Ward system
+    const checkoutAuthSession = await getAuthSession();
+    const checkoutUserId = checkoutAuthSession?.user?.id || null;
+
     let family = await db.family.findFirst({
         where: {
             organizationId,
@@ -729,23 +740,23 @@ export async function POST(
                 email: resolvedContact.email,
                 phone: resolvedContact.phone,
                 address: [resolvedAddress.street, resolvedAddress.city, resolvedAddress.stateProvince, resolvedAddress.postalCode].filter(Boolean).join(", "),
-                organizationId
+                organizationId,
+                userId: checkoutUserId,
             }
         });
     } else {
-        // Update the family's flat address field for backward compatibility
         await db.family.update({
             where: { id: family.id },
             data: {
                 address: [resolvedAddress.street, resolvedAddress.city, resolvedAddress.stateProvince, resolvedAddress.postalCode].filter(Boolean).join(", "),
                 phone: resolvedContact.phone || family.phone,
+                ...(checkoutUserId && !family.userId ? { userId: checkoutUserId } : {}),
             },
         });
     }
 
     // Save new contact to family profile if not using a saved one
     if (!contactId && resolvedContact.firstName && resolvedContact.email) {
-      // Check if a contact with this email already exists for this family
       const existingContact = await db.familyContact.findFirst({
         where: { familyId: family.id, email: resolvedContact.email },
       });
@@ -767,7 +778,6 @@ export async function POST(
 
     // Save new billing address to family profile if not using a saved one
     if (!billingAddressId && resolvedAddress.street) {
-      // Check if this exact address already exists for this family
       const existingAddress = await db.familyBillingAddress.findFirst({
         where: {
           familyId: family.id,
@@ -790,6 +800,55 @@ export async function POST(
             isPrimary: hasAnyAddresses === 0,
           },
         });
+      }
+    }
+
+    // Guardian/Ward: also save contacts and addresses to User profile
+    if (checkoutUserId) {
+      if (!contactId && resolvedContact.firstName && resolvedContact.email) {
+        const existingUserContact = await db.userContact.findFirst({
+          where: { userId: checkoutUserId, email: resolvedContact.email },
+        });
+        if (!existingUserContact) {
+          const hasAnyUserContacts = await db.userContact.count({ where: { userId: checkoutUserId } });
+          await db.userContact.create({
+            data: {
+              userId: checkoutUserId,
+              firstName: resolvedContact.firstName,
+              lastName: resolvedContact.lastName,
+              email: resolvedContact.email,
+              phone: resolvedContact.phone,
+              relationship: "Self",
+              isPrimary: hasAnyUserContacts === 0,
+            },
+          });
+        }
+      }
+
+      if (!billingAddressId && resolvedAddress.street) {
+        const existingUserAddress = await db.userBillingAddress.findFirst({
+          where: {
+            userId: checkoutUserId,
+            street: resolvedAddress.street,
+            city: resolvedAddress.city,
+            postalCode: resolvedAddress.postalCode,
+          },
+        });
+        if (!existingUserAddress) {
+          const hasAnyUserAddresses = await db.userBillingAddress.count({ where: { userId: checkoutUserId } });
+          await db.userBillingAddress.create({
+            data: {
+              userId: checkoutUserId,
+              label: "Home",
+              street: resolvedAddress.street,
+              city: resolvedAddress.city,
+              stateProvince: resolvedAddress.stateProvince || null,
+              postalCode: resolvedAddress.postalCode,
+              country: "US",
+              isPrimary: hasAnyUserAddresses === 0,
+            },
+          });
+        }
       }
     }
 
@@ -819,13 +878,14 @@ export async function POST(
         data: {
             reference: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             familyId: family.id,
+            userId: checkoutUserId,
             organizationId,
             subtotal,
             tax,
             total,
             status: "DRAFT",
-            dueDate: new Date(), // Due immediately
-            notes: JSON.stringify(invoiceMetadata), // Store metadata for webhook processing
+            dueDate: new Date(),
+            notes: JSON.stringify(invoiceMetadata),
         }
     });
 
@@ -858,7 +918,7 @@ export async function POST(
         data: { status: "PAID" },
       });
 
-      await processInvoiceRegistrations(invoiceMetadata, family.id, items);
+      await processInvoiceRegistrations(invoiceMetadata, family.id, items, checkoutUserId);
 
       // Send receipt email (fire-and-forget so it doesn't block the response)
       const protocol = request.headers.get("x-forwarded-proto") || "http";

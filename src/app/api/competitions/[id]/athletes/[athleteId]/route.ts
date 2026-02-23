@@ -105,14 +105,16 @@ export async function GET(
       level = levelRecord ?? { id: athlete.level, name: athlete.level }
     }
 
-    const families = athlete.guardians.map((g) => ({
-      id: g.family.id,
-      name: g.family.name,
-      email: g.family.email,
-      primaryContact: g.family.primaryContact,
-      relationship: g.relationship,
-      isPrimary: g.isPrimary,
-    }))
+    const families = athlete.guardians
+      .filter((g) => g.family != null)
+      .map((g) => ({
+        id: g.family!.id,
+        name: g.family!.name,
+        email: g.family!.email,
+        primaryContact: g.family!.primaryContact,
+        relationship: g.relationship,
+        isPrimary: g.isPrimary,
+      }))
 
     // Fetch entries for this athlete in this competition
     const entries = await db.competitionEntry.findMany({

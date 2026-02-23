@@ -6,6 +6,7 @@ import { z } from "zod";
 const createRegistrationSchema = z.object({
   athleteId: z.string(),
   familyId: z.string().optional().nullable(),
+  userId: z.string().optional().nullable(),
   status: z.enum(["REGISTERED", "WAITLISTED", "CANCELLED"]).default("REGISTERED"),
 });
 
@@ -13,6 +14,7 @@ const bulkCreateSchema = z.object({
   registrations: z.array(z.object({
     athleteId: z.string(),
     familyId: z.string().optional().nullable(),
+    userId: z.string().optional().nullable(),
     status: z.enum(["REGISTERED", "WAITLISTED", "CANCELLED"]).default("REGISTERED"),
   })),
 });
@@ -155,18 +157,21 @@ export async function POST(
         const toRegister = newRegistrations.slice(0, availableSpots);
         const toWaitlist = newRegistrations.slice(availableSpots);
 
+        const sessionUserId = session.user.id;
         const result = await db.instanceRegistration.createMany({
           data: [
             ...toRegister.map(r => ({
               programInstanceId: instanceId,
               athleteId: r.athleteId,
-              familyId: r.familyId,
+              familyId: r.familyId ?? undefined,
+              userId: r.userId ?? sessionUserId,
               status: "REGISTERED" as const,
             })),
             ...toWaitlist.map(r => ({
               programInstanceId: instanceId,
               athleteId: r.athleteId,
-              familyId: r.familyId,
+              familyId: r.familyId ?? undefined,
+              userId: r.userId ?? sessionUserId,
               status: "WAITLISTED" as const,
             })),
           ],
@@ -180,11 +185,13 @@ export async function POST(
         }, { status: 201 });
       }
 
+      const sessionUserId = session.user.id;
       const result = await db.instanceRegistration.createMany({
         data: newRegistrations.map(r => ({
           programInstanceId: instanceId,
           athleteId: r.athleteId,
-          familyId: r.familyId,
+          familyId: r.familyId ?? undefined,
+          userId: r.userId ?? sessionUserId,
           status: r.status,
         })),
       });
@@ -225,7 +232,8 @@ export async function POST(
         data: {
           programInstanceId: instanceId,
           athleteId: validated.athleteId,
-          familyId: validated.familyId,
+          familyId: validated.familyId ?? undefined,
+          userId: validated.userId ?? session.user.id,
           status,
         },
         include: {

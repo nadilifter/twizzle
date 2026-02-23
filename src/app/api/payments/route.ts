@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const familyId = searchParams.get("familyId");
+    const userId = searchParams.get("userId");
     const invoiceId = searchParams.get("invoiceId");
     const status = searchParams.get("status");
     const method = searchParams.get("method");
@@ -29,11 +30,22 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    const where = {
-      family: {
-        organizationId: session.user.organizationId,
-      },
-      ...(familyId && { familyId }),
+    const where: Record<string, unknown> = {
+      AND: [
+        {
+          OR: [
+            { family: { organizationId: session.user.organizationId } },
+            { userId: session.user.id },
+          ],
+        },
+        ...(familyId && userId
+          ? [{ OR: [{ familyId }, { userId }] }]
+          : familyId
+            ? [{ familyId }]
+            : userId
+              ? [{ userId }]
+              : []),
+      ],
       ...(invoiceId && { invoiceId }),
       ...(status && { status: status as "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" }),
       ...(method && { method: method as "CARD" | "BANK" | "CASH" | "CHECK" }),
@@ -137,6 +149,7 @@ export async function POST(request: NextRequest) {
       data: {
         invoiceId: validatedData.invoiceId,
         familyId: validatedData.familyId,
+        userId: session.user.id,
         amount: validatedData.amount,
         method: validatedData.method,
         status: "COMPLETED", // For manual payments, mark as completed

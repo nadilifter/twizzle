@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
@@ -10,6 +11,7 @@ const createEnrollmentSchema = z.object({
   endDate: z.string().optional().nullable(),
   status: z.enum(["ACTIVE", "PAUSED", "CANCELLED", "COMPLETED"]).default("ACTIVE"),
   familyId: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 // GET /api/enrollments
@@ -24,10 +26,12 @@ export async function GET(request: NextRequest) {
     const athleteId = searchParams.get("athleteId");
     const programId = searchParams.get("programId");
     const status = searchParams.get("status");
+    const familyId = searchParams.get("familyId");
+    const userId = searchParams.get("userId");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    const where = {
+    const where: Prisma.EnrollmentWhereInput = {
       athlete: {
         is: {
           organizationId: session.user.organizationId,
@@ -37,6 +41,14 @@ export async function GET(request: NextRequest) {
       ...(programId && { programId }),
       ...(status && { status: status as "ACTIVE" | "PAUSED" | "CANCELLED" | "COMPLETED" }),
     };
+
+    if (familyId && userId) {
+      where.OR = [{ familyId }, { userId }];
+    } else if (familyId) {
+      where.familyId = familyId;
+    } else if (userId) {
+      where.userId = userId;
+    }
 
     const [enrollments, total] = await Promise.all([
       db.enrollment.findMany({
@@ -60,7 +72,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      db.enrollment.count({ where: where as Parameters<typeof db.enrollment.count>[0]["where"] }),
+      db.enrollment.count({ where }),
     ]);
 
     return NextResponse.json({
@@ -117,15 +129,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
-    // Determine familyId (payer)
+    // Determine familyId and userId (payer) - support both for Guardian/Ward migration
     let familyId = validatedData.familyId;
+    let userId = validatedData.userId ?? session.user.id;
     if (!familyId) {
       const primary = athlete.guardians.find(g => g.isPrimary) || athlete.guardians[0];
-      familyId = primary?.familyId;
+      familyId = primary?.familyId ?? undefined;
     }
 
-    if (!familyId) {
-      return NextResponse.json({ error: "No family found for athlete" }, { status: 400 });
+    if (!familyId && !userId) {
+      return NextResponse.json({ error: "No family or user found for athlete" }, { status: 400 });
     }
 
     // Verify program belongs to the organization
@@ -163,7 +176,8 @@ export async function POST(request: NextRequest) {
         startDate: new Date(validatedData.startDate),
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
         status: validatedData.status,
-        familyId: familyId,
+        ...(familyId != null ? { familyId } : {}),
+        ...(userId != null ? { userId } : {}),
       },
       include: {
         athlete: true,

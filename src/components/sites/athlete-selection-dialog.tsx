@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { usePathname } from "next/navigation"
-import { Loader2, Plus, User, Calendar, ChevronLeft, AlertCircle } from "lucide-react"
+import { Loader2, Plus, User, Calendar, ChevronLeft, AlertCircle, Shield, Info } from "lucide-react"
 import { toast } from "sonner"
 import { calculateAge, isAgeEligible } from "@/lib/age-utils"
 
@@ -23,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 interface AthleteOption {
   id: string
@@ -31,19 +31,17 @@ interface AthleteOption {
   name: string
   birthDate: string | null
   gender: string | null
+  allowGuardianClaims?: boolean
+  userId?: string | null
 }
 
 interface AthleteSelectionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAthleteSelected: (athlete: { id: string; name: string }) => void
-  /** The slug of the current marketing site */
   slug: string
-  /** Whether the program has an active age restriction */
   hasAgeRestriction?: boolean
-  /** Minimum age allowed (inclusive) */
   minAge?: number | null
-  /** Maximum age allowed (inclusive) */
   maxAge?: number | null
 }
 
@@ -64,18 +62,21 @@ export function AthleteSelectionDialog({
   maxAge,
 }: AthleteSelectionDialogProps) {
   const [athletes, setAthletes] = useState<AthleteOption[]>([])
+  const [hasSelfAthlete, setHasSelfAthlete] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null)
 
   const [newAthlete, setNewAthlete] = useState({
     firstName: "",
     lastName: "",
     birthDate: "",
     gender: "",
+    isSelf: false,
+    allowGuardianClaims: false,
   })
 
-  // Build the age requirement label for display
   const ageRestrictionActive = hasAgeRestriction && (minAge != null || maxAge != null)
   const ageLabel = ageRestrictionActive
     ? minAge != null && maxAge != null
@@ -85,7 +86,6 @@ export function AthleteSelectionDialog({
       : `Up to age ${maxAge}`
     : null
 
-  // Split athletes into eligible and ineligible based on age
   const { eligibleAthletes, ineligibleAthletes } = useMemo(() => {
     if (!ageRestrictionActive) {
       return { eligibleAthletes: athletes, ineligibleAthletes: [] }
@@ -103,7 +103,6 @@ export function AthleteSelectionDialog({
     return { eligibleAthletes: eligible, ineligibleAthletes: ineligible }
   }, [athletes, ageRestrictionActive, minAge, maxAge])
 
-  // Fetch athletes when dialog opens
   useEffect(() => {
     if (open) {
       fetchAthletes()
@@ -117,6 +116,7 @@ export function AthleteSelectionDialog({
       if (response.ok) {
         const data = await response.json()
         setAthletes(data.athletes || [])
+        setHasSelfAthlete(data.hasSelfAthlete ?? false)
       } else {
         console.error("Failed to fetch athletes")
       }
@@ -153,6 +153,7 @@ export function AthleteSelectionDialog({
     }
 
     setIsCreating(true)
+    setDuplicateMessage(null)
     try {
       const response = await fetch(`/api/sites/${slug}/athletes`, {
         method: "POST",
@@ -160,27 +161,46 @@ export function AthleteSelectionDialog({
         body: JSON.stringify(newAthlete),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || "Failed to create athlete")
+        if (data.error === "duplicate_found") {
+          setDuplicateMessage(data.message)
+          return
+        }
+        if (data.claimed) {
+          const displayName = `${data.athlete.firstName} ${data.athlete.lastName}`.trim() || data.athlete.name
+          toast.success(data.message || `${displayName} claimed successfully`)
+          onAthleteSelected({ id: data.athlete.id, name: displayName })
+          onOpenChange(false)
+          resetForm()
+          return
+        }
+        throw new Error(data.error || "Failed to create athlete")
       }
 
-      const data = await response.json()
+      if (data.claimed) {
+        const displayName = `${data.athlete.firstName} ${data.athlete.lastName}`.trim() || data.athlete.name
+        toast.success(data.message || `${displayName} claimed successfully`)
+        onAthleteSelected({ id: data.athlete.id, name: displayName })
+        onOpenChange(false)
+        resetForm()
+        return
+      }
+
       const created = data.athlete
       const displayName = `${created.firstName} ${created.lastName}`.trim() || created.name
       toast.success(`${displayName} added successfully`)
 
-      // Check age eligibility for the newly created athlete
       if (ageRestrictionActive) {
         const age = calculateAge(newAthlete.birthDate)
         if (!isAgeEligible(age, minAge, maxAge)) {
           toast.error(
             `${displayName} does not meet the age requirement (${ageLabel}) for this program`
           )
-          // Refetch so the new athlete appears in the ineligible section
           await fetchAthletes()
           setShowCreateForm(false)
-          setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "" })
+          setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "", isSelf: false, allowGuardianClaims: false })
           return
         }
       }
@@ -198,7 +218,8 @@ export function AthleteSelectionDialog({
 
   const resetForm = () => {
     setShowCreateForm(false)
-    setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "" })
+    setDuplicateMessage(null)
+    setNewAthlete({ firstName: "", lastName: "", birthDate: "", gender: "", isSelf: false, allowGuardianClaims: false })
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -227,8 +248,39 @@ export function AthleteSelectionDialog({
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : showCreateForm ? (
-          /* Create New Athlete Form */
           <div className="space-y-4">
+            {duplicateMessage && (
+              <div className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 rounded-lg">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{duplicateMessage}</span>
+              </div>
+            )}
+
+            {/* "This is me" toggle -- hidden if a self-athlete already exists */}
+            {!hasSelfAthlete && (
+              <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor="is-self" className="text-sm font-medium cursor-pointer">
+                      This athlete is me
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      I am registering myself, not a dependent
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="is-self"
+                  checked={newAthlete.isSelf}
+                  onCheckedChange={(checked) =>
+                    setNewAthlete((prev) => ({ ...prev, isSelf: checked }))
+                  }
+                  disabled={isCreating}
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="athlete-first-name">First Name</Label>
@@ -290,10 +342,38 @@ export function AthleteSelectionDialog({
               </Select>
             </div>
 
+            {/* Guardian claims configuration */}
+            {!newAthlete.isSelf && (
+              <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor="allow-guardian-claims" className="text-sm font-medium cursor-pointer">
+                      Allow other guardians
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Let other guardians find and claim this athlete
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="allow-guardian-claims"
+                  checked={newAthlete.allowGuardianClaims}
+                  onCheckedChange={(checked) =>
+                    setNewAthlete((prev) => ({ ...prev, allowGuardianClaims: checked }))
+                  }
+                  disabled={isCreating}
+                />
+              </div>
+            )}
+
             <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => {
+                  setShowCreateForm(false)
+                  setDuplicateMessage(null)
+                }}
                 disabled={isCreating}
                 className="flex-1"
               >
@@ -306,14 +386,12 @@ export function AthleteSelectionDialog({
                 className="flex-1"
               >
                 {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Athlete
+                {newAthlete.isSelf ? "Register Myself" : "Add Athlete"}
               </Button>
             </div>
           </div>
         ) : (
-          /* Athlete Selection List */
           <div className="space-y-3">
-            {/* Age restriction banner */}
             {ageRestrictionActive && ageLabel && (
               <div className="flex items-center gap-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-3 py-2 rounded-lg">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -323,7 +401,6 @@ export function AthleteSelectionDialog({
 
             {athletes.length > 0 && (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {/* Eligible athletes */}
                 {eligibleAthletes.map((athlete) => {
                   const displayName =
                     `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
@@ -337,6 +414,7 @@ export function AthleteSelectionDialog({
                   const genderLabel = athlete.gender
                     ? GENDER_LABELS[athlete.gender] || athlete.gender
                     : null
+                  const isSelfAthlete = !!athlete.userId
 
                   return (
                     <button
@@ -348,8 +426,13 @@ export function AthleteSelectionDialog({
                         <User className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
+                        <div className="font-medium text-sm truncate flex items-center gap-1.5">
                           {displayName}
+                          {isSelfAthlete && (
+                            <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              You
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                           {birthLabel && (
@@ -365,7 +448,6 @@ export function AthleteSelectionDialog({
                   )
                 })}
 
-                {/* Ineligible athletes */}
                 {ineligibleAthletes.length > 0 && (
                   <>
                     <div className="pt-2 pb-1">

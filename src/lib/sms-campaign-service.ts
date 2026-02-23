@@ -34,6 +34,7 @@ import type {
 
 export interface SmsRecipient {
   familyId: string;
+  userId?: string;
   phone: string;
   name: string;
 }
@@ -47,6 +48,7 @@ export interface SmsTargetingParams {
   targetProgramInstanceId?: string;
   targetMembershipGroupIds?: string[];
   targetFamilyIds?: string[];
+  targetUserIds?: string[];
 }
 
 export interface CreateSmsCampaignParams {
@@ -61,6 +63,7 @@ export interface CreateSmsCampaignParams {
   targetProgramInstanceId?: string;
   targetMembershipGroupIds?: string[];
   targetFamilyIds?: string[];
+  targetUserIds?: string[];
   createdById?: string;
   scheduledAt?: Date;
   sendImmediately?: boolean;
@@ -92,10 +95,26 @@ export async function getExpandedSmsCampaignRecipients(
     targetProgramInstanceId,
     targetMembershipGroupIds,
     targetFamilyIds,
+    targetUserIds,
   } = params;
 
   const recipients: SmsRecipient[] = [];
   const seenPhones = new Set<string>();
+
+  // Helper to add a user (guardian) - phone from User.phone or linked Family
+  const addUser = (user: { id: string; phone: string; name: string; smsOptOut?: boolean }) => {
+    if (user.smsOptOut) return;
+    const normalized = normalizePhoneNumber(user.phone);
+    if (normalized && isValidE164(normalized) && !seenPhones.has(normalized)) {
+      seenPhones.add(normalized);
+      recipients.push({
+        familyId: "",
+        userId: user.id,
+        phone: normalized,
+        name: user.name,
+      });
+    }
+  };
 
   // Helper to add a family if not already added
   const addFamily = (family: { id: string; phone: string; primaryContact: string; smsOptOut?: boolean }) => {
@@ -113,8 +132,7 @@ export async function getExpandedSmsCampaignRecipients(
 
   switch (targetType) {
     case "ALL_USERS": {
-      // Staff/org members - the User model doesn't have phone, so
-      // we look for families linked via userId on the Family model
+      // Staff/org members - resolve via User.phone or Family linked via userId
       const members = await db.organizationMember.findMany({
         where: {
           organizationId,
@@ -126,20 +144,34 @@ export async function getExpandedSmsCampaignRecipients(
               id: true,
               name: true,
               status: true,
+              phone: true,
+              smsOptOut: true,
             },
           },
         },
       });
 
-      // Look up any families linked to these users
-      const userIds = members
+      const activeUserIds = members
         .filter((m) => m.user.status === "ACTIVE")
         .map((m) => m.user.id);
 
-      if (userIds.length > 0) {
+      // Add users with phone directly on User
+      members.forEach((m) => {
+        if (m.user.status === "ACTIVE" && m.user.phone) {
+          addUser({
+            id: m.user.id,
+            phone: m.user.phone,
+            name: m.user.name,
+            smsOptOut: m.user.smsOptOut,
+          });
+        }
+      });
+
+      // Also look up families linked via userId (for users without User.phone)
+      if (activeUserIds.length > 0) {
         const linkedFamilies = await db.family.findMany({
           where: {
-            userId: { in: userIds },
+            userId: { in: activeUserIds },
             organizationId,
             smsOptOut: false,
             phone: { not: "" },
@@ -195,6 +227,14 @@ export async function getExpandedSmsCampaignRecipients(
                       smsOptOut: true,
                     },
                   },
+                  user: {
+                    select: {
+                      id: true,
+                      phone: true,
+                      name: true,
+                      smsOptOut: true,
+                    },
+                  },
                 },
               },
             },
@@ -204,7 +244,16 @@ export async function getExpandedSmsCampaignRecipients(
 
       enrollments.forEach((e) => {
         e.athlete.guardians.forEach((g) => {
-          addFamily(g.family);
+          if (g.userId && g.user?.phone) {
+            addUser({
+              id: g.user.id,
+              phone: g.user.phone,
+              name: g.user.name,
+              smsOptOut: g.user.smsOptOut,
+            });
+          } else if (g.family) {
+            addFamily(g.family);
+          }
         });
       });
       break;
@@ -213,7 +262,7 @@ export async function getExpandedSmsCampaignRecipients(
     case "PROGRAM_ANY_INSTANCE": {
       if (!targetProgramId) break;
 
-      // Families via InstanceRegistration for ANY instance of the given program
+      // Families/guardians via InstanceRegistration for ANY instance of the given program
       const registrations = await db.instanceRegistration.findMany({
         where: {
           programInstance: {
@@ -234,6 +283,14 @@ export async function getExpandedSmsCampaignRecipients(
                       smsOptOut: true,
                     },
                   },
+                  user: {
+                    select: {
+                      id: true,
+                      phone: true,
+                      name: true,
+                      smsOptOut: true,
+                    },
+                  },
                 },
               },
             },
@@ -243,7 +300,16 @@ export async function getExpandedSmsCampaignRecipients(
 
       registrations.forEach((r) => {
         r.athlete.guardians.forEach((g) => {
-          addFamily(g.family);
+          if (g.userId && g.user?.phone) {
+            addUser({
+              id: g.user.id,
+              phone: g.user.phone,
+              name: g.user.name,
+              smsOptOut: g.user.smsOptOut,
+            });
+          } else if (g.family) {
+            addFamily(g.family);
+          }
         });
       });
 
@@ -266,6 +332,14 @@ export async function getExpandedSmsCampaignRecipients(
                       smsOptOut: true,
                     },
                   },
+                  user: {
+                    select: {
+                      id: true,
+                      phone: true,
+                      name: true,
+                      smsOptOut: true,
+                    },
+                  },
                 },
               },
             },
@@ -275,7 +349,16 @@ export async function getExpandedSmsCampaignRecipients(
 
       enrollments.forEach((e) => {
         e.athlete.guardians.forEach((g) => {
-          addFamily(g.family);
+          if (g.userId && g.user?.phone) {
+            addUser({
+              id: g.user.id,
+              phone: g.user.phone,
+              name: g.user.name,
+              smsOptOut: g.user.smsOptOut,
+            });
+          } else if (g.family) {
+            addFamily(g.family);
+          }
         });
       });
       break;
@@ -302,6 +385,14 @@ export async function getExpandedSmsCampaignRecipients(
                       smsOptOut: true,
                     },
                   },
+                  user: {
+                    select: {
+                      id: true,
+                      phone: true,
+                      name: true,
+                      smsOptOut: true,
+                    },
+                  },
                 },
               },
             },
@@ -311,7 +402,16 @@ export async function getExpandedSmsCampaignRecipients(
 
       registrations.forEach((r) => {
         r.athlete.guardians.forEach((g) => {
-          addFamily(g.family);
+          if (g.userId && g.user?.phone) {
+            addUser({
+              id: g.user.id,
+              phone: g.user.phone,
+              name: g.user.name,
+              smsOptOut: g.user.smsOptOut,
+            });
+          } else if (g.family) {
+            addFamily(g.family);
+          }
         });
       });
       break;
@@ -340,6 +440,14 @@ export async function getExpandedSmsCampaignRecipients(
                       smsOptOut: true,
                     },
                   },
+                  user: {
+                    select: {
+                      id: true,
+                      phone: true,
+                      name: true,
+                      smsOptOut: true,
+                    },
+                  },
                 },
               },
             },
@@ -349,30 +457,63 @@ export async function getExpandedSmsCampaignRecipients(
 
       memberships.forEach((m) => {
         m.athlete.guardians.forEach((g) => {
-          addFamily(g.family);
+          if (g.userId && g.user?.phone) {
+            addUser({
+              id: g.user.id,
+              phone: g.user.phone,
+              name: g.user.name,
+              smsOptOut: g.user.smsOptOut,
+            });
+          } else if (g.family) {
+            addFamily(g.family);
+          }
         });
       });
       break;
     }
 
     case "SPECIFIC_USERS": {
-      if (!targetFamilyIds?.length) break;
-
-      const families = await db.family.findMany({
-        where: {
-          id: { in: targetFamilyIds },
-          organizationId,
-          smsOptOut: false,
-          phone: { not: "" },
-        },
-        select: {
-          id: true,
-          phone: true,
-          primaryContact: true,
-        },
-      });
-
-      families.forEach(addFamily);
+      // Direct lookup of hand-picked families and/or guardian users
+      if (targetFamilyIds?.length) {
+        const families = await db.family.findMany({
+          where: {
+            id: { in: targetFamilyIds },
+            organizationId,
+            smsOptOut: false,
+            phone: { not: "" },
+          },
+          select: {
+            id: true,
+            phone: true,
+            primaryContact: true,
+          },
+        });
+        families.forEach(addFamily);
+      }
+      if (targetUserIds?.length) {
+        const users = await db.user.findMany({
+          where: {
+            id: { in: targetUserIds },
+            status: "ACTIVE",
+          },
+          select: {
+            id: true,
+            phone: true,
+            name: true,
+            smsOptOut: true,
+          },
+        });
+        users.forEach((u) => {
+          if (u.phone) {
+            addUser({
+              id: u.id,
+              phone: u.phone,
+              name: u.name,
+              smsOptOut: u.smsOptOut,
+            });
+          }
+        });
+      }
       break;
     }
   }
@@ -396,6 +537,14 @@ export async function getExpandedSmsCampaignRecipients(
                     smsOptOut: true,
                   },
                 },
+                user: {
+                  select: {
+                    id: true,
+                    phone: true,
+                    name: true,
+                    smsOptOut: true,
+                  },
+                },
               },
             },
           },
@@ -408,7 +557,18 @@ export async function getExpandedSmsCampaignRecipients(
 
     attendances.forEach((a) => {
       a.athlete.guardians.forEach((g) => {
-        if (!g.family.smsOptOut && g.family.phone) {
+        if (g.userId && g.user?.phone && !g.user.smsOptOut) {
+          const normalized = normalizePhoneNumber(g.user.phone);
+          if (normalized && isValidE164(normalized) && !eventSeenPhones.has(normalized)) {
+            eventSeenPhones.add(normalized);
+            eventRecipients.push({
+              familyId: "",
+              userId: g.user.id,
+              phone: normalized,
+              name: g.user.name,
+            });
+          }
+        } else if (g.family && !g.family.smsOptOut && g.family.phone) {
           const normalized = normalizePhoneNumber(g.family.phone);
           if (normalized && isValidE164(normalized) && !eventSeenPhones.has(normalized)) {
             eventSeenPhones.add(normalized);
@@ -490,11 +650,12 @@ export async function getSmsCampaignRecipientCount(
 // ============================================
 
 /**
- * Build template context for a specific recipient (family-based)
+ * Build template context for a specific recipient (family-based or user-based)
  */
 async function buildRecipientContext(
   organizationId: string,
-  familyId: string
+  familyId?: string,
+  userId?: string
 ): Promise<Record<string, string>> {
   const context: Record<string, string> = {};
 
@@ -514,6 +675,68 @@ async function buildRecipientContext(
   const now = new Date();
   context.currentDate = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   context.currentYear = now.getFullYear().toString();
+
+  // User-based context (guardian with userId)
+  if (userId && !familyId) {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      include: {
+        athleteGuardians: {
+          include: {
+            athlete: {
+              include: {
+                memberships: {
+                  where: { status: "ACTIVE" },
+                  include: { instance: { include: { group: true } } },
+                  take: 1,
+                },
+                enrollments: {
+                  where: { status: "ACTIVE" },
+                  include: { program: true },
+                  take: 1,
+                },
+              },
+            },
+          },
+          take: 1,
+        },
+      },
+    });
+    if (user) {
+      context.primaryContact = user.name;
+      context.primaryContactFirstName = user.name.split(" ")[0];
+      context.familyEmail = user.email;
+      context.familyPhone = user.phone || "";
+      const athlete = user.athleteGuardians[0]?.athlete;
+      if (athlete) {
+        context.athleteName = athlete.name;
+        const nameParts = athlete.name.split(" ");
+        context.athleteFirstName = nameParts[0];
+        if (nameParts.length > 1) context.athleteLastName = nameParts.slice(1).join(" ");
+        if (athlete.email) context.athleteEmail = athlete.email;
+        if (athlete.level) context.athleteLevel = athlete.level;
+        const membership = athlete.memberships?.[0];
+        if (membership) {
+          context.membershipName = membership.instance.name;
+          context.membershipGroupName = membership.instance.group.name;
+          context.membershipStartDate = membership.startDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+          if (membership.endDate) {
+            context.membershipEndDate = membership.endDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+            const daysRemaining = Math.ceil((membership.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            context.membershipDaysRemaining = daysRemaining.toString();
+          }
+          context.membershipStatus = membership.status;
+          context.membershipPrice = `$${Number(membership.instance.price).toFixed(2)}`;
+        }
+        const enrollment = athlete.enrollments?.[0];
+        if (enrollment) {
+          context.programName = enrollment.program.name;
+          if (enrollment.program.description) context.programDescription = enrollment.program.description;
+        }
+      }
+    }
+    return context;
+  }
 
   // Family context
   if (!familyId) return context;
@@ -656,6 +879,7 @@ export async function createSmsCampaign(
     targetProgramInstanceId,
     targetMembershipGroupIds,
     targetFamilyIds,
+    targetUserIds,
     createdById,
     scheduledAt,
     sendImmediately,
@@ -679,6 +903,7 @@ export async function createSmsCampaign(
     targetProgramInstanceId,
     targetMembershipGroupIds,
     targetFamilyIds,
+    targetUserIds,
   });
 
   if (recipients.length === 0) {
@@ -717,6 +942,7 @@ export async function createSmsCampaign(
       targetProgramInstanceId,
       targetMembershipGroupIds: targetMembershipGroupIds || [],
       targetFamilyIds: targetFamilyIds || [],
+      targetUserIds: targetUserIds || [],
       totalRecipients: recipients.length,
       createdById,
       status: scheduledAt ? "SCHEDULED" : "DRAFT",
@@ -772,6 +998,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
     targetProgramInstanceId: campaign.targetProgramInstanceId ?? undefined,
     targetMembershipGroupIds: campaign.targetMembershipGroupIds,
     targetFamilyIds: campaign.targetFamilyIds,
+    targetUserIds: campaign.targetUserIds,
   });
 
   let sentCount = 0;
@@ -782,7 +1009,9 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
     // Build context for this recipient
     const context = recipient.familyId
       ? await buildRecipientContext(campaign.organizationId, recipient.familyId)
-      : {
+      : recipient.userId
+        ? await buildRecipientContext(campaign.organizationId, undefined, recipient.userId)
+        : {
           organizationName: campaign.organization.name,
           currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
           currentYear: new Date().getFullYear().toString(),

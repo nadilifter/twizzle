@@ -29,6 +29,7 @@ export interface SendSingleSmsParams {
   body: string;
   classification?: SmsClassification;
   familyId?: string;
+  userId?: string;
   staffProfileId?: string;
   campaignId?: string;
 }
@@ -335,6 +336,7 @@ export async function sendSingleSms(
     body,
     classification = "GENERAL",
     familyId,
+    userId,
     staffProfileId,
     campaignId,
   } = params;
@@ -358,7 +360,7 @@ export async function sendSingleSms(
     };
   }
 
-  // Check opt-out status if family is specified
+  // Check opt-out status if family or user is specified
   if (familyId) {
     const family = await db.family.findUnique({
       where: { id: familyId },
@@ -366,6 +368,20 @@ export async function sendSingleSms(
     });
 
     if (family?.smsOptOut) {
+      return {
+        success: false,
+        error: "Recipient has opted out of SMS messages",
+        errorCode: "OPTED_OUT",
+      };
+    }
+  }
+  if (userId) {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { smsOptOut: true },
+    });
+
+    if (user?.smsOptOut) {
       return {
         success: false,
         error: "Recipient has opted out of SMS messages",
@@ -392,6 +408,7 @@ export async function sendSingleSms(
     data: {
       organizationId,
       familyId,
+      userId,
       staffProfileId,
       campaignId,
       to: normalizedPhone,
@@ -490,7 +507,7 @@ async function getCampaignRecipients(
     const familyIds = new Set<string>();
     enrollments.forEach((e) => {
       e.athlete.guardians.forEach((g) => {
-        if (g.family.phone && !g.family.smsOptOut) {
+        if (g.family && g.family.phone && !g.family.smsOptOut && g.familyId) {
           familyIds.add(g.familyId);
         }
       });
@@ -522,7 +539,7 @@ async function getCampaignRecipients(
     const familyIds = new Set<string>();
     attendances.forEach((a) => {
       a.athlete.guardians.forEach((g) => {
-        if (g.family.phone && !g.family.smsOptOut) {
+        if (g.family && g.family.phone && !g.family.smsOptOut && g.familyId) {
           familyIds.add(g.familyId);
         }
       });

@@ -221,7 +221,7 @@ export default async function SuperadminBillingPage() {
                 {payments.slice(0, 10).map((payment) => (
                   <div key={payment.id} className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{payment.family.name}</p>
+                      <p className="font-medium">{payment.family?.name ?? 'N/A'}</p>
                       <p className="text-xs text-muted-foreground">
                         {payment.invoice?.organization.name || 'N/A'} • {payment.method}
                       </p>
@@ -278,7 +278,7 @@ export default async function SuperadminBillingPage() {
                         {invoice.organization.name}
                       </Link>
                     </TableCell>
-                    <TableCell>{invoice.family.name}</TableCell>
+                    <TableCell>{invoice.family?.name ?? 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(invoice.status) as "default" | "destructive" | "secondary" | "outline"}>
                         {invoice.status}

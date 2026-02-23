@@ -446,7 +446,7 @@ async function findExpiringMemberships(
       entities.push({
         entityType: "membership",
         entityId: membership.id,
-        familyId: guardian.family.id,
+        familyId: guardian.family?.id ?? "",
         athleteId: membership.athleteId,
         membershipId: membership.id,
       });
@@ -482,12 +482,14 @@ async function findDueInvoices(
     },
   });
 
-  return invoices.map((invoice) => ({
-    entityType: "invoice",
-    entityId: invoice.id,
-    familyId: invoice.familyId,
-    invoiceId: invoice.id,
-  }));
+  return invoices
+    .filter((invoice) => invoice.familyId != null)
+    .map((invoice) => ({
+      entityType: "invoice",
+      entityId: invoice.id,
+      familyId: invoice.familyId!,
+      invoiceId: invoice.id,
+    }));
 }
 
 /**
@@ -514,11 +516,13 @@ async function findRecentPayments(
     },
   });
 
-  return payments.map((payment) => ({
-    entityType: "payment",
-    entityId: payment.id,
-    familyId: payment.familyId,
-  }));
+  return payments
+    .filter((payment) => payment.familyId != null)
+    .map((payment) => ({
+      entityType: "payment",
+      entityId: payment.id,
+      familyId: payment.familyId!,
+    }));
 }
 
 /**
@@ -571,7 +575,7 @@ async function findUpcomingProgramSessions(
         entities.push({
           entityType: "program_session",
           entityId: event.id,
-          familyId: guardian.family.id,
+          familyId: guardian.family?.id ?? "",
           athleteId: enrollment.athleteId,
           programId: event.programId!,
           eventId: event.id,
@@ -626,7 +630,7 @@ async function findUpcomingEvents(
         entities.push({
           entityType: "event",
           entityId: event.id,
-          familyId: guardian.family.id,
+          familyId: guardian.family?.id ?? "",
           athleteId: attendance.athleteId,
           eventId: event.id,
         });
@@ -675,7 +679,7 @@ async function findBirthdays(organizationId: string): Promise<EntityMatch[]> {
       entities.push({
         entityType: "birthday",
         entityId: athlete.id,
-        familyId: guardian.family.id,
+        familyId: guardian.family?.id ?? "",
         athleteId: athlete.id,
       });
     }
@@ -722,7 +726,7 @@ async function findDueEvaluations(
       entities.push({
         entityType: "evaluation",
         entityId: evaluation.id,
-        familyId: guardian.family.id,
+        familyId: guardian.family?.id ?? "",
         athleteId: evaluation.athleteId,
       });
     }
@@ -768,7 +772,7 @@ async function findRecentSkillAchievements(
       entities.push({
         entityType: "skill_achievement",
         entityId: achievement.id,
-        familyId: guardian.family.id,
+        familyId: guardian.family?.id ?? "",
         athleteId: achievement.athleteId,
       });
     }

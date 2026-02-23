@@ -5,6 +5,7 @@ import { z } from "zod";
 const publicSignWaiverSchema = z.object({
   organizationId: z.string().min(1),
   familyId: z.string().nullish(), // May not exist yet - null from check endpoint, undefined if omitted
+  userId: z.string().nullish(), // Guardian user (preferred over familyId when available)
   athleteId: z.string().nullish(), // The athlete this waiver is being signed for
   email: z.string().email(),
   name: z.string().min(1, "Signer name is required"),
@@ -46,9 +47,10 @@ export async function POST(
       );
     }
 
-    // Find or create family
+    // Resolve familyId and userId - prefer userId when provided (Guardian/Ward migration)
+    const userId = validatedData.userId || null;
     let familyId = validatedData.familyId;
-    if (!familyId) {
+    if (!familyId && !userId) {
       const existingFamily = await db.family.findFirst({
         where: {
           email: validatedData.email,
@@ -81,16 +83,23 @@ export async function POST(
     const athleteId = validatedData.athleteId || null;
 
     const result = await db.$transaction(async (tx) => {
-      // Create signature records per athlete
+      // Create signature records per athlete - use userId or familyId
       for (const sig of validatedData.signatures) {
-        // Check for existing signature for this page + family + athlete
-        const existing = await tx.waiverSignature.findFirst({
-          where: {
-            waiverPageId: sig.waiverPageId,
-            familyId,
-            athleteId,
-          },
-        });
+        const existing = userId
+          ? await tx.waiverSignature.findFirst({
+              where: {
+                waiverPageId: sig.waiverPageId,
+                userId,
+                athleteId,
+              },
+            })
+          : await tx.waiverSignature.findFirst({
+              where: {
+                waiverPageId: sig.waiverPageId,
+                familyId,
+                athleteId,
+              },
+            });
 
         if (existing) {
           await tx.waiverSignature.update({
@@ -110,6 +119,7 @@ export async function POST(
               waiverId,
               waiverPageId: sig.waiverPageId,
               familyId,
+              userId,
               athleteId,
               signatureData: sig.signatureData,
               signedByName: validatedData.name,
@@ -123,19 +133,30 @@ export async function POST(
 
       // Check if ALL pages signed for this athlete
       const totalPages = waiver.pages.length;
-      const signedPages = await tx.waiverSignature.count({
-        where: {
-          waiverId,
-          familyId,
-          athleteId,
-        },
-      });
+      const signedPages = userId
+        ? await tx.waiverSignature.count({
+            where: {
+              waiverId,
+              userId,
+              athleteId,
+            },
+          })
+        : await tx.waiverSignature.count({
+            where: {
+              waiverId,
+              familyId,
+              athleteId,
+            },
+          });
 
       if (signedPages >= totalPages) {
-        // Check for existing acceptance
-        const existingAcceptance = await tx.waiverAcceptance.findFirst({
-          where: { waiverId, familyId, athleteId },
-        });
+        const existingAcceptance = userId
+          ? await tx.waiverAcceptance.findFirst({
+              where: { waiverId, userId, athleteId },
+            })
+          : await tx.waiverAcceptance.findFirst({
+              where: { waiverId, familyId, athleteId },
+            });
 
         if (existingAcceptance) {
           await tx.waiverAcceptance.update({
@@ -144,16 +165,17 @@ export async function POST(
           });
         } else {
           await tx.waiverAcceptance.create({
-            data: { waiverId, familyId, athleteId },
+            data: { waiverId, familyId, userId, athleteId },
           });
         }
 
-        return { allPagesSigned: true, familyId };
+        return { allPagesSigned: true, familyId, userId };
       }
 
       return {
         allPagesSigned: false,
         familyId,
+        userId,
         signedCount: signedPages,
         totalPages,
       };

@@ -194,7 +194,7 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
                 {organization.invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.reference}</TableCell>
-                    <TableCell>{invoice.family.name}</TableCell>
+                    <TableCell>{invoice.family?.name ?? 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(invoice.status) as "default" | "destructive" | "secondary" | "outline"}>
                         {invoice.status}
