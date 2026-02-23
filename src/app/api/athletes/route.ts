@@ -10,7 +10,8 @@ const createAthleteSchema = z.object({
   level: z.string().min(1, "Level is required"),
   status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "GRADUATED"]).default("ACTIVE"),
   birthDate: z.string().optional().nullable(),
-  familyId: z.string().min(1, "Family is required"),
+  guardianUserId: z.string().min(1, "Guardian is required"),
+  familyId: z.string().optional(),
 });
 
 // GET /api/athletes - List athletes for the organization
@@ -81,6 +82,13 @@ export async function GET(request: NextRequest) {
                   primaryContact: true,
                 },
               },
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
             },
           },
           enrollments: {
@@ -127,6 +135,7 @@ export async function GET(request: NextRequest) {
     const transformedAthletes = athletes.map((athlete) => {
       const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
       const family = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown" };
+      const guardianUser = primaryGuardian?.user ?? null;
 
       const programsWithFutureInstances = new Set(
         athlete.enrollments
@@ -141,7 +150,7 @@ export async function GET(request: NextRequest) {
       return {
         ...athlete,
         family,
-        parent: family.primaryContact,
+        parent: guardianUser?.name ?? family.primaryContact,
         activePrograms: programsWithFutureInstances.size,
         activeMemberships: athlete.memberships.length,
         upcomingCompetitions: uniqueCompetitionIds.size,
@@ -193,19 +202,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createAthleteSchema.parse(body);
 
-    // Verify family belongs to the organization
-    const family = await db.family.findFirst({
-      where: {
-        id: validatedData.familyId,
-        organizationId: session.user.organizationId,
-      },
+    // Verify the guardian user exists
+    const guardianUser = await db.user.findUnique({
+      where: { id: validatedData.guardianUserId },
     });
 
-    if (!family) {
+    if (!guardianUser) {
       return NextResponse.json(
-        { error: "Family not found" },
+        { error: "Guardian user not found" },
         { status: 404 }
       );
+    }
+
+    // If familyId provided, verify it belongs to the organization
+    if (validatedData.familyId) {
+      const family = await db.family.findFirst({
+        where: {
+          id: validatedData.familyId,
+          organizationId: session.user.organizationId,
+        },
+      });
+      if (!family) {
+        return NextResponse.json(
+          { error: "Family not found" },
+          { status: 404 }
+        );
+      }
     }
 
     const athlete = await db.athlete.create({
@@ -214,11 +236,12 @@ export async function POST(request: NextRequest) {
         email: validatedData.email ?? null,
         level: validatedData.level,
         status: validatedData.status,
-        // Use parseDateOnly to set noon UTC, avoiding timezone date shifts
+        organizationId: session.user.organizationId,
         birthDate: parseDateOnly(validatedData.birthDate),
         guardians: {
           create: {
-            familyId: validatedData.familyId,
+            userId: validatedData.guardianUserId,
+            familyId: validatedData.familyId ?? null,
             relationship: "Primary",
             isPrimary: true,
           },
@@ -233,6 +256,13 @@ export async function POST(request: NextRequest) {
                 name: true,
                 email: true,
                 primaryContact: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
               },
             },
           },
@@ -260,11 +290,12 @@ export async function POST(request: NextRequest) {
     // Transform to match GET response format
     const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
     const createdFamily = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown" };
+    const guardianUserData = primaryGuardian?.user ?? null;
 
     const transformedAthlete = {
       ...athlete,
       family: createdFamily,
-      parent: createdFamily.primaryContact,
+      parent: guardianUserData?.name ?? createdFamily.primaryContact,
       activePrograms: 0,
       activeMemberships: 0,
       upcomingCompetitions: 0,

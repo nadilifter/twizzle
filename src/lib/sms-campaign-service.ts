@@ -116,23 +116,8 @@ export async function getExpandedSmsCampaignRecipients(
     }
   };
 
-  // Helper to add a family if not already added
-  const addFamily = (family: { id: string; phone: string; primaryContact: string; smsOptOut?: boolean }) => {
-    if (family.smsOptOut) return;
-    const normalized = normalizePhoneNumber(family.phone);
-    if (normalized && isValidE164(normalized) && !seenPhones.has(normalized)) {
-      seenPhones.add(normalized);
-      recipients.push({
-        familyId: family.id,
-        phone: normalized,
-        name: family.primaryContact,
-      });
-    }
-  };
-
   switch (targetType) {
     case "ALL_USERS": {
-      // Staff/org members - resolve via User.phone or Family linked via userId
       const members = await db.organizationMember.findMany({
         where: {
           organizationId,
@@ -151,11 +136,6 @@ export async function getExpandedSmsCampaignRecipients(
         },
       });
 
-      const activeUserIds = members
-        .filter((m) => m.user.status === "ACTIVE")
-        .map((m) => m.user.id);
-
-      // Add users with phone directly on User
       members.forEach((m) => {
         if (m.user.status === "ACTIVE" && m.user.phone) {
           addUser({
@@ -166,43 +146,34 @@ export async function getExpandedSmsCampaignRecipients(
           });
         }
       });
-
-      // Also look up families linked via userId (for users without User.phone)
-      if (activeUserIds.length > 0) {
-        const linkedFamilies = await db.family.findMany({
-          where: {
-            userId: { in: activeUserIds },
-            organizationId,
-            smsOptOut: false,
-            phone: { not: "" },
-          },
-          select: {
-            id: true,
-            phone: true,
-            primaryContact: true,
-          },
-        });
-        linkedFamilies.forEach(addFamily);
-      }
       break;
     }
 
     case "ALL_MEMBERS":
     case "ALL_FAMILIES": {
-      const families = await db.family.findMany({
+      const users = await db.user.findMany({
         where: {
-          organizationId,
           smsOptOut: false,
           phone: { not: "" },
+          athleteGuardians: {
+            some: {
+              athlete: { organizationId },
+            },
+          },
         },
         select: {
           id: true,
           phone: true,
-          primaryContact: true,
+          name: true,
+          smsOptOut: true,
         },
       });
 
-      families.forEach(addFamily);
+      users.forEach((u) => {
+        if (u.phone) {
+          addUser({ id: u.id, phone: u.phone, name: u.name, smsOptOut: u.smsOptOut });
+        }
+      });
       break;
     }
 
@@ -219,14 +190,6 @@ export async function getExpandedSmsCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      phone: true,
-                      primaryContact: true,
-                      smsOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
@@ -244,15 +207,13 @@ export async function getExpandedSmsCampaignRecipients(
 
       enrollments.forEach((e) => {
         e.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.phone) {
+          if (g.user?.phone) {
             addUser({
               id: g.user.id,
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
             });
-          } else if (g.family) {
-            addFamily(g.family);
           }
         });
       });
@@ -275,14 +236,6 @@ export async function getExpandedSmsCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      phone: true,
-                      primaryContact: true,
-                      smsOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
@@ -300,15 +253,13 @@ export async function getExpandedSmsCampaignRecipients(
 
       registrations.forEach((r) => {
         r.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.phone) {
+          if (g.user?.phone) {
             addUser({
               id: g.user.id,
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
             });
-          } else if (g.family) {
-            addFamily(g.family);
           }
         });
       });
@@ -324,14 +275,6 @@ export async function getExpandedSmsCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      phone: true,
-                      primaryContact: true,
-                      smsOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
@@ -349,15 +292,13 @@ export async function getExpandedSmsCampaignRecipients(
 
       enrollments.forEach((e) => {
         e.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.phone) {
+          if (g.user?.phone) {
             addUser({
               id: g.user.id,
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
             });
-          } else if (g.family) {
-            addFamily(g.family);
           }
         });
       });
@@ -377,14 +318,6 @@ export async function getExpandedSmsCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      phone: true,
-                      primaryContact: true,
-                      smsOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
@@ -402,15 +335,13 @@ export async function getExpandedSmsCampaignRecipients(
 
       registrations.forEach((r) => {
         r.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.phone) {
+          if (g.user?.phone) {
             addUser({
               id: g.user.id,
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
             });
-          } else if (g.family) {
-            addFamily(g.family);
           }
         });
       });
@@ -432,14 +363,6 @@ export async function getExpandedSmsCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      phone: true,
-                      primaryContact: true,
-                      smsOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
@@ -457,15 +380,13 @@ export async function getExpandedSmsCampaignRecipients(
 
       memberships.forEach((m) => {
         m.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.phone) {
+          if (g.user?.phone) {
             addUser({
               id: g.user.id,
               phone: g.user.phone,
               name: g.user.name,
               smsOptOut: g.user.smsOptOut,
             });
-          } else if (g.family) {
-            addFamily(g.family);
           }
         });
       });
@@ -473,23 +394,6 @@ export async function getExpandedSmsCampaignRecipients(
     }
 
     case "SPECIFIC_USERS": {
-      // Direct lookup of hand-picked families and/or guardian users
-      if (targetFamilyIds?.length) {
-        const families = await db.family.findMany({
-          where: {
-            id: { in: targetFamilyIds },
-            organizationId,
-            smsOptOut: false,
-            phone: { not: "" },
-          },
-          select: {
-            id: true,
-            phone: true,
-            primaryContact: true,
-          },
-        });
-        families.forEach(addFamily);
-      }
       if (targetUserIds?.length) {
         const users = await db.user.findMany({
           where: {
@@ -529,14 +433,6 @@ export async function getExpandedSmsCampaignRecipients(
           include: {
             guardians: {
               include: {
-                family: {
-                  select: {
-                    id: true,
-                    phone: true,
-                    primaryContact: true,
-                    smsOptOut: true,
-                  },
-                },
                 user: {
                   select: {
                     id: true,
@@ -557,7 +453,7 @@ export async function getExpandedSmsCampaignRecipients(
 
     attendances.forEach((a) => {
       a.athlete.guardians.forEach((g) => {
-        if (g.userId && g.user?.phone && !g.user.smsOptOut) {
+        if (g.user?.phone && !g.user.smsOptOut) {
           const normalized = normalizePhoneNumber(g.user.phone);
           if (normalized && isValidE164(normalized) && !eventSeenPhones.has(normalized)) {
             eventSeenPhones.add(normalized);
@@ -566,16 +462,6 @@ export async function getExpandedSmsCampaignRecipients(
               userId: g.user.id,
               phone: normalized,
               name: g.user.name,
-            });
-          }
-        } else if (g.family && !g.family.smsOptOut && g.family.phone) {
-          const normalized = normalizePhoneNumber(g.family.phone);
-          if (normalized && isValidE164(normalized) && !eventSeenPhones.has(normalized)) {
-            eventSeenPhones.add(normalized);
-            eventRecipients.push({
-              familyId: g.family.id,
-              phone: normalized,
-              name: g.family.primaryContact,
             });
           }
         }
@@ -587,35 +473,39 @@ export async function getExpandedSmsCampaignRecipients(
 
   // Additional filtering by membership status if specified
   if (targetMembershipStatus && recipients.length > 0 && targetType !== "MEMBERSHIP_HOLDERS") {
-    const familyIds = recipients.filter((r) => r.familyId).map((r) => r.familyId);
+    const userIds = recipients.filter((r) => r.userId).map((r) => r.userId!);
 
-    if (familyIds.length === 0) return recipients;
+    if (userIds.length === 0) return recipients;
 
-    const familiesWithMembership = await db.family.findMany({
+    const usersWithGuardians = await db.athleteGuardian.findMany({
       where: {
-        id: { in: familyIds },
+        userId: { in: userIds },
       },
       include: {
-        guardians: {
+        athlete: {
           include: {
-            athlete: {
-              include: {
-                memberships: {
-                  orderBy: { endDate: "desc" },
-                  take: 1,
-                },
-              },
+            memberships: {
+              orderBy: { endDate: "desc" },
+              take: 1,
             },
           },
         },
       },
     });
 
-    const validFamilyIds = new Set<string>();
+    const validUserIds = new Set<string>();
     const now = new Date();
 
-    familiesWithMembership.forEach((family) => {
-      const hasAthleteWithStatus = family.guardians.some((g) => {
+    const guardiansByUserId = new Map<string, typeof usersWithGuardians>();
+    usersWithGuardians.forEach((g) => {
+      if (!g.userId) return;
+      const existing = guardiansByUserId.get(g.userId) || [];
+      existing.push(g);
+      guardiansByUserId.set(g.userId, existing);
+    });
+
+    guardiansByUserId.forEach((guardians, uId) => {
+      const hasAthleteWithStatus = guardians.some((g) => {
         const membership = g.athlete.memberships[0];
         if (!membership) {
           return targetMembershipStatus === "EXPIRED";
@@ -625,11 +515,11 @@ export async function getExpandedSmsCampaignRecipients(
       });
 
       if (hasAthleteWithStatus) {
-        validFamilyIds.add(family.id);
+        validUserIds.add(uId);
       }
     });
 
-    return recipients.filter((r) => !r.familyId || validFamilyIds.has(r.familyId));
+    return recipients.filter((r) => !r.userId || validUserIds.has(r.userId));
   }
 
   return recipients;
@@ -676,8 +566,7 @@ async function buildRecipientContext(
   context.currentDate = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   context.currentYear = now.getFullYear().toString();
 
-  // User-based context (guardian with userId)
-  if (userId && !familyId) {
+  if (userId) {
     const user = await db.user.findUnique({
       where: { id: userId },
       include: {
@@ -703,10 +592,12 @@ async function buildRecipientContext(
       },
     });
     if (user) {
+      context.familyName = user.name;
       context.primaryContact = user.name;
       context.primaryContactFirstName = user.name.split(" ")[0];
       context.familyEmail = user.email;
       context.familyPhone = user.phone || "";
+      context.familyBalance = `$${Number(user.balance).toFixed(2)}`;
       const athlete = user.athleteGuardians[0]?.athlete;
       if (athlete) {
         context.athleteName = athlete.name;
@@ -941,7 +832,7 @@ export async function createSmsCampaign(
       targetMembershipStatus,
       targetProgramInstanceId,
       targetMembershipGroupIds: targetMembershipGroupIds || [],
-      targetFamilyIds: targetFamilyIds || [],
+      targetFamilyIds: [],
       targetUserIds: targetUserIds || [],
       totalRecipients: recipients.length,
       createdById,
@@ -1007,10 +898,10 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
   // Send to each recipient with per-recipient placeholder rendering
   for (const recipient of recipients) {
     // Build context for this recipient
-    const context = recipient.familyId
-      ? await buildRecipientContext(campaign.organizationId, recipient.familyId)
-      : recipient.userId
-        ? await buildRecipientContext(campaign.organizationId, undefined, recipient.userId)
+    const context = recipient.userId
+      ? await buildRecipientContext(campaign.organizationId, undefined, recipient.userId)
+      : recipient.familyId
+        ? await buildRecipientContext(campaign.organizationId, recipient.familyId)
         : {
           organizationName: campaign.organization.name,
           currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
@@ -1028,6 +919,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
       data: {
         organizationId: campaign.organizationId,
         familyId: recipient.familyId || undefined,
+        userId: recipient.userId || undefined,
         campaignId,
         to: recipient.phone,
         from: process.env.TWILIO_PHONE_NUMBER || "",

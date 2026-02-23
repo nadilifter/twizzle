@@ -157,7 +157,7 @@ const data = {
         },
         {
           title: "Guardians",
-          url: "/dashboard/athletes/families",
+          url: "/dashboard/athletes/guardians",
         },
         {
           title: "Memberships",

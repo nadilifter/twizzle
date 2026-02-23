@@ -1,3 +1,9 @@
+/**
+ * @deprecated This entire module is deprecated. Family-based data is being replaced
+ * by User-based guardian relationships via AthleteGuardian. These types are retained
+ * only for backward compatibility with legacy data and will be removed in a future release.
+ */
+
 // Types for Families API - matches Prisma schema and API responses
 
 // Athlete summary for family views

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, User } from "lucide-react"
 import { toast } from "sonner"
-import { useFamilies } from "@/hooks/use-families"
+import { useGuardians } from "@/hooks/use-guardians"
 import { useLevels } from "@/hooks/use-levels"
 import type { AthleteStatus, UpdateAthletePayload } from "@/types/athletes"
 
@@ -23,6 +23,7 @@ interface AthleteData {
   birthDate: string | null
   gender: string | null
   family?: { id: string; name: string } | null
+  guardian?: { id: string; name: string | null; email: string } | null
 }
 
 interface AthleteConfigurationProps {
@@ -39,7 +40,7 @@ const STATUS_OPTIONS: { value: AthleteStatus; label: string }[] = [
 ]
 
 export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteConfigurationProps) {
-  const { families, isLoading: loadingFamilies } = useFamilies()
+  const { guardians, isLoading: loadingGuardians } = useGuardians()
   const { levels: configuredLevels, isLoading: loadingLevels } = useLevels()
 
   const [isSaving, setIsSaving] = useState(false)
@@ -52,7 +53,7 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
     birthDate: athlete.birthDate
       ? new Date(athlete.birthDate).toISOString().split("T")[0]
       : "",
-    familyId: athlete.family?.id || "",
+    guardianUserId: athlete.guardian?.id || "",
   }))
 
   const levelColor = useMemo(() => {
@@ -77,7 +78,7 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
         level: formData.level,
         status: formData.status,
         birthDate: formData.birthDate || null,
-        familyId: formData.familyId || undefined,
+        guardianUserId: formData.guardianUserId || undefined,
       }
 
       if (onUpdated) {
@@ -200,20 +201,20 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
             )}
           </div>
 
-          {/* Family / Guardian */}
+          {/* Guardian User */}
           <div className="space-y-2">
-            <Label htmlFor="config-family">Guardian Family (Legacy)</Label>
+            <Label htmlFor="config-guardian">Guardian</Label>
             <Select
-              value={formData.familyId}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, familyId: value }))}
+              value={formData.guardianUserId}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, guardianUserId: value }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder={loadingFamilies ? "Loading..." : "Select family"} />
+                <SelectValue placeholder={loadingGuardians ? "Loading..." : "Select guardian"} />
               </SelectTrigger>
               <SelectContent>
-                {families.map((family) => (
-                  <SelectItem key={family.id} value={family.id}>
-                    {family.name}
+                {guardians.map((guardian) => (
+                  <SelectItem key={guardian.id} value={guardian.id}>
+                    {guardian.name ?? guardian.email}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -360,21 +360,7 @@ export async function sendSingleSms(
     };
   }
 
-  // Check opt-out status if family or user is specified
-  if (familyId) {
-    const family = await db.family.findUnique({
-      where: { id: familyId },
-      select: { smsOptOut: true },
-    });
-
-    if (family?.smsOptOut) {
-      return {
-        success: false,
-        error: "Recipient has opted out of SMS messages",
-        errorCode: "OPTED_OUT",
-      };
-    }
-  }
+  // Check opt-out status: prefer User, fall back to Family
   if (userId) {
     const user = await db.user.findUnique({
       where: { id: userId },
@@ -382,6 +368,19 @@ export async function sendSingleSms(
     });
 
     if (user?.smsOptOut) {
+      return {
+        success: false,
+        error: "Recipient has opted out of SMS messages",
+        errorCode: "OPTED_OUT",
+      };
+    }
+  } else if (familyId) {
+    const family = await db.family.findUnique({
+      where: { id: familyId },
+      select: { smsOptOut: true },
+    });
+
+    if (family?.smsOptOut) {
       return {
         success: false,
         error: "Recipient has opted out of SMS messages",
@@ -477,26 +476,26 @@ async function getCampaignRecipients(
   targetScope: AnnouncementScope,
   targetProgramId?: string,
   targetEventId?: string
-): Promise<Array<{ familyId: string; phone: string }>> {
-  let whereClause: any = {
-    organizationId,
-    smsOptOut: false,
-    phone: { not: "" },
+): Promise<Array<{ userId?: string; familyId?: string; phone: string }>> {
+  const recipients: Array<{ userId?: string; familyId?: string; phone: string }> = [];
+  const seenPhones = new Set<string>();
+
+  const addUserRecipient = (user: { id: string; phone: string | null; smsOptOut: boolean }) => {
+    if (user.phone && !user.smsOptOut && !seenPhones.has(user.phone)) {
+      seenPhones.add(user.phone);
+      recipients.push({ userId: user.id, phone: user.phone });
+    }
   };
 
   if (targetScope === "PROGRAM" && targetProgramId) {
-    // Get families with athletes enrolled in the program
     const enrollments = await db.enrollment.findMany({
-      where: {
-        programId: targetProgramId,
-        status: "ACTIVE",
-      },
+      where: { programId: targetProgramId, status: "ACTIVE" },
       include: {
         athlete: {
           include: {
             guardians: {
               include: {
-                family: true,
+                user: { select: { id: true, phone: true, smsOptOut: true } },
               },
             },
           },
@@ -504,31 +503,20 @@ async function getCampaignRecipients(
       },
     });
 
-    const familyIds = new Set<string>();
-    enrollments.forEach((e) => {
-      e.athlete.guardians.forEach((g) => {
-        if (g.family && g.family.phone && !g.family.smsOptOut && g.familyId) {
-          familyIds.add(g.familyId);
-        }
-      });
-    });
-
-    whereClause = {
-      ...whereClause,
-      id: { in: Array.from(familyIds) },
-    };
+    for (const e of enrollments) {
+      for (const g of e.athlete.guardians) {
+        if (g.user) addUserRecipient(g.user);
+      }
+    }
   } else if (targetScope === "EVENT" && targetEventId) {
-    // Get families with athletes registered for the event
     const attendances = await db.attendance.findMany({
-      where: {
-        eventId: targetEventId,
-      },
+      where: { eventId: targetEventId },
       include: {
         athlete: {
           include: {
             guardians: {
               include: {
-                family: true,
+                user: { select: { id: true, phone: true, smsOptOut: true } },
               },
             },
           },
@@ -536,30 +524,50 @@ async function getCampaignRecipients(
       },
     });
 
-    const familyIds = new Set<string>();
-    attendances.forEach((a) => {
-      a.athlete.guardians.forEach((g) => {
-        if (g.family && g.family.phone && !g.family.smsOptOut && g.familyId) {
-          familyIds.add(g.familyId);
-        }
-      });
+    for (const a of attendances) {
+      for (const g of a.athlete.guardians) {
+        if (g.user) addUserRecipient(g.user);
+      }
+    }
+  } else {
+    // ALL scope: get all guardian users for this org
+    const guardianLinks = await db.athleteGuardian.findMany({
+      where: {
+        athlete: { organizationId },
+        userId: { not: null },
+      },
+      include: {
+        user: { select: { id: true, phone: true, smsOptOut: true } },
+      },
     });
 
-    whereClause = {
-      ...whereClause,
-      id: { in: Array.from(familyIds) },
-    };
+    for (const link of guardianLinks) {
+      if (link.user) addUserRecipient(link.user);
+    }
   }
 
-  const families = await db.family.findMany({
-    where: whereClause,
-    select: {
-      id: true,
-      phone: true,
-    },
-  });
+  // Legacy fallback: add families that have no user-based guardian with phone
+  if (recipients.length === 0) {
+    let whereClause: any = {
+      organizationId,
+      smsOptOut: false,
+      phone: { not: "" },
+    };
 
-  return families.map((f) => ({ familyId: f.id, phone: f.phone }));
+    const families = await db.family.findMany({
+      where: whereClause,
+      select: { id: true, phone: true },
+    });
+
+    for (const f of families) {
+      if (!seenPhones.has(f.phone)) {
+        seenPhones.add(f.phone);
+        recipients.push({ familyId: f.id, phone: f.phone });
+      }
+    }
+  }
+
+  return recipients;
 }
 
 /**
@@ -681,6 +689,7 @@ export async function executeCampaign(campaignId: string): Promise<void> {
       to: recipient.phone,
       body: campaign.body,
       classification: campaign.classification,
+      userId: recipient.userId,
       familyId: recipient.familyId,
       campaignId,
     });
@@ -814,6 +823,22 @@ export async function handleInboundSms(params: {
       : digitsOnly;
     const phoneVariants = [normalizedFrom, digitsOnly, withoutCountryCode];
 
+    // Update User records (primary)
+    const users = await db.user.findMany({
+      where: { phone: { in: phoneVariants } },
+    });
+
+    for (const user of users) {
+      await db.user.update({
+        where: { id: user.id },
+        data: {
+          smsOptOut: isOptOut,
+          smsOptOutAt: isOptOut ? new Date() : null,
+        },
+      });
+    }
+
+    // Legacy fallback: also update Family records
     const families = await db.family.findMany({
       where: { phone: { in: phoneVariants } },
     });

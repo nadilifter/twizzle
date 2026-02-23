@@ -28,7 +28,8 @@ export default async function ReceiptPage({
     },
     include: {
       lineItems: true,
-      family: true
+      family: true,
+      user: { select: { id: true, name: true, email: true } }
     }
   });
 
@@ -47,7 +48,7 @@ export default async function ReceiptPage({
             <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h1 className="text-3xl font-bold">Order Received</h1>
             <p className="text-muted-foreground mt-2">
-                Thank you, {invoice.family?.primaryContact?.split(' ')[0] ?? 'there'}!
+                Thank you, {invoice.user?.name?.split(' ')[0] ?? invoice.family?.primaryContact?.split(' ')[0] ?? 'there'}!
             </p>
             <p className="text-sm text-muted-foreground">
                 Your order reference is <span className="font-mono text-foreground">{invoice.reference}</span>

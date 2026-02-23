@@ -137,7 +137,7 @@ type TargetType =
 interface ProgramOption { id: string; name: string }
 interface ProgramInstanceOption { id: string; date: string; startTime: string; endTime: string; status: string }
 interface MembershipGroupOption { id: string; name: string }
-interface FamilyOption { id: string; name: string; primaryContact: string; email: string }
+interface GuardianOption { id: string; name: string; email: string }
 
 // ============================================
 // Constants
@@ -150,19 +150,19 @@ const TARGET_TYPE_LABELS: Record<TargetType, string> = {
   PROGRAM_ANY_INSTANCE: "Program Registrants (Any Instance)",
   PROGRAM_SPECIFIC_INSTANCE: "Program Registrants (Specific Instance)",
   MEMBERSHIP_HOLDERS: "Membership Holders",
-  SPECIFIC_USERS: "Specific Families",
-  ALL_FAMILIES: "All Families",
+  SPECIFIC_USERS: "Specific Guardians",
+  ALL_FAMILIES: "All Guardians",
 }
 
 const TARGET_TYPE_DESCRIPTIONS: Record<TargetType, string> = {
   ALL_USERS: "Send to all staff members, coaches, and admins in your organization.",
-  ALL_MEMBERS: "Send to all families in your organization.",
-  ALL_PROGRAM_REGISTRANTS: "Send to families with athletes enrolled in any active program.",
-  PROGRAM_ANY_INSTANCE: "Send to families with athletes registered for any instance of a specific program.",
-  PROGRAM_SPECIFIC_INSTANCE: "Send to families with athletes registered for a specific instance of a program.",
-  MEMBERSHIP_HOLDERS: "Send to families with athletes holding specific membership types.",
-  SPECIFIC_USERS: "Hand-pick specific families to send to.",
-  ALL_FAMILIES: "Send to all families in your organization.",
+  ALL_MEMBERS: "Send to all guardians in your organization.",
+  ALL_PROGRAM_REGISTRANTS: "Send to guardians with athletes enrolled in any active program.",
+  PROGRAM_ANY_INSTANCE: "Send to guardians with athletes registered for any instance of a specific program.",
+  PROGRAM_SPECIFIC_INSTANCE: "Send to guardians with athletes registered for a specific instance of a program.",
+  MEMBERSHIP_HOLDERS: "Send to guardians with athletes holding specific membership types.",
+  SPECIFIC_USERS: "Hand-pick specific guardians to send to.",
+  ALL_FAMILIES: "Send to all guardians in your organization.",
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -195,6 +195,10 @@ const PLACEHOLDER_DEFS: PlaceholderDefinition[] = [
   { key: "familyEmail", label: "Family Email", description: "Primary email for the family", example: "sarah@example.com", category: "family" },
   { key: "familyPhone", label: "Family Phone", description: "Primary phone number", example: "(555) 123-4567", category: "family" },
   { key: "familyBalance", label: "Account Balance", description: "Current account balance", example: "$150.00", category: "family" },
+  { key: "guardianName", label: "Guardian Name", description: "Name of the guardian", example: "Sarah Johnson", category: "guardian" },
+  { key: "guardianEmail", label: "Guardian Email", description: "Email of the guardian", example: "sarah@example.com", category: "guardian" },
+  { key: "guardianPhone", label: "Guardian Phone", description: "Phone of the guardian", example: "(555) 123-4567", category: "guardian" },
+  { key: "guardianBalance", label: "Guardian Balance", description: "Guardian account balance", example: "$150.00", category: "guardian" },
   { key: "membershipName", label: "Membership Name", description: "Name of the membership instance", example: "Annual Membership 2026", category: "membership" },
   { key: "membershipGroupName", label: "Membership Type", description: "Name of the membership type", example: "Annual Membership", category: "membership" },
   { key: "membershipEndDate", label: "Membership End Date", description: "When the membership expires", example: "December 31, 2026", category: "membership" },
@@ -451,15 +455,15 @@ export default function EmailCampaignsPage() {
   const [targetProgramId, setTargetProgramId] = useState("")
   const [targetProgramInstanceId, setTargetProgramInstanceId] = useState("")
   const [targetMembershipGroupIds, setTargetMembershipGroupIds] = useState<string[]>([])
-  const [targetFamilyIds, setTargetFamilyIds] = useState<string[]>([])
+  const [targetUserIds, setTargetUserIds] = useState<string[]>([])
   const [scheduledAt, setScheduledAt] = useState("")
 
   // Options for selectors
   const [programs, setPrograms] = useState<ProgramOption[]>([])
   const [programInstances, setProgramInstances] = useState<ProgramInstanceOption[]>([])
   const [membershipGroups, setMembershipGroups] = useState<MembershipGroupOption[]>([])
-  const [families, setFamilies] = useState<FamilyOption[]>([])
-  const [familySearch, setFamilySearch] = useState("")
+  const [guardians, setGuardians] = useState<GuardianOption[]>([])
+  const [guardianSearch, setGuardianSearch] = useState("")
 
   // Recipient count
   const [recipientCount, setRecipientCount] = useState<number | null>(null)
@@ -544,14 +548,14 @@ export default function EmailCampaignsPage() {
 
   useEffect(() => {
     if (targetType !== "SPECIFIC_USERS") return
-    const params = familySearch ? `?search=${encodeURIComponent(familySearch)}` : ""
-    fetch(`/api/families${params}`)
+    const params = guardianSearch ? `?search=${encodeURIComponent(guardianSearch)}` : ""
+    fetch(`/api/guardians${params}`)
       .then((r) => r.json())
       .then((data) =>
-        setFamilies((data.data || data.families || []).map((f: any) => ({ id: f.id, name: f.name, primaryContact: f.primaryContact, email: f.email })))
+        setGuardians((data.data || data.guardians || []).map((g: any) => ({ id: g.id, name: g.name, email: g.email })))
       )
       .catch(() => {})
-  }, [targetType, familySearch])
+  }, [targetType, guardianSearch])
 
   // Fetch recipient count
   useEffect(() => {
@@ -563,7 +567,7 @@ export default function EmailCampaignsPage() {
         if (targetProgramId) body.targetProgramId = targetProgramId
         if (targetProgramInstanceId) body.targetProgramInstanceId = targetProgramInstanceId
         if (targetMembershipGroupIds.length > 0) body.targetMembershipGroupIds = targetMembershipGroupIds
-        if (targetFamilyIds.length > 0) body.targetFamilyIds = targetFamilyIds
+        if (targetUserIds.length > 0) body.targetUserIds = targetUserIds
         const response = await fetch("/api/email/campaigns/recipients", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -574,7 +578,7 @@ export default function EmailCampaignsPage() {
     }
     const timeout = setTimeout(fetchRecipients, 300)
     return () => clearTimeout(timeout)
-  }, [isComposeOpen, targetType, targetProgramId, targetProgramInstanceId, targetMembershipGroupIds, targetFamilyIds])
+  }, [isComposeOpen, targetType, targetProgramId, targetProgramInstanceId, targetMembershipGroupIds, targetUserIds])
 
   // Fetch preview when entering step 3
   const fetchPreview = useCallback(async () => {
@@ -594,12 +598,12 @@ export default function EmailCampaignsPage() {
           targetProgramId: targetProgramId || undefined,
           targetProgramInstanceId: targetProgramInstanceId || undefined,
           targetMembershipGroupIds: targetMembershipGroupIds.length > 0 ? targetMembershipGroupIds : undefined,
-          targetFamilyIds: targetFamilyIds.length > 0 ? targetFamilyIds : undefined,
+          targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined,
         }),
       })
       if (response.ok) { const data = await response.json(); setPreviewHtml(data.html) }
     } catch {} finally { setIsLoadingPreview(false) }
-  }, [subject, editor, targetType, targetProgramId, targetProgramInstanceId, targetMembershipGroupIds, targetFamilyIds])
+  }, [subject, editor, targetType, targetProgramId, targetProgramInstanceId, targetMembershipGroupIds, targetUserIds])
 
   const emailCurrentStepId = emailStepper.state.current.data.id
 
@@ -614,7 +618,7 @@ export default function EmailCampaignsPage() {
   const resetForm = useCallback(() => {
     setCampaignName(""); setSubject(""); setClassification("GENERAL")
     setTargetType("ALL_MEMBERS"); setTargetProgramId(""); setTargetProgramInstanceId("")
-    setTargetMembershipGroupIds([]); setTargetFamilyIds([]); setScheduledAt("")
+    setTargetMembershipGroupIds([]); setTargetUserIds([]); setScheduledAt("")
     setRecipientCount(null); setPreviewHtml(""); emailStepper.navigation.goTo("campaign"); setHasEditorContent(false)
     editor?.commands.clearContent()
   }, [editor, emailStepper.navigation])
@@ -647,7 +651,7 @@ export default function EmailCampaignsPage() {
           targetProgramId: targetProgramId || undefined,
           targetProgramInstanceId: targetProgramInstanceId || undefined,
           targetMembershipGroupIds: targetMembershipGroupIds.length > 0 ? targetMembershipGroupIds : undefined,
-          targetFamilyIds: targetFamilyIds.length > 0 ? targetFamilyIds : undefined,
+          targetUserIds: targetUserIds.length > 0 ? targetUserIds : undefined,
           sendImmediately: mode === "send",
           scheduledAt: mode === "schedule" ? new Date(scheduledAt).toISOString() : undefined,
         }),
@@ -665,7 +669,7 @@ export default function EmailCampaignsPage() {
         toast.error(data.error || "Failed to save campaign")
       }
     } catch { toast.error("Failed to save campaign") } finally { setter(false) }
-  }, [campaignName, subject, classification, targetType, targetProgramId, targetProgramInstanceId, targetMembershipGroupIds, targetFamilyIds, scheduledAt, getEditorContent, fetchCampaigns])
+  }, [campaignName, subject, classification, targetType, targetProgramId, targetProgramInstanceId, targetMembershipGroupIds, targetUserIds, scheduledAt, getEditorContent, fetchCampaigns])
 
   const handleDeleteCampaign = useCallback(async (id: string) => {
     try {
@@ -964,24 +968,24 @@ export default function EmailCampaignsPage() {
 
                   {targetType === "SPECIFIC_USERS" && (
                     <div className="grid gap-2 mt-2">
-                      <Label>Select Families</Label>
-                      <Input placeholder="Search families..." value={familySearch} onChange={(e) => setFamilySearch(e.target.value)} className="mb-1" />
+                      <Label>Select Guardians</Label>
+                      <Input placeholder="Search guardians..." value={guardianSearch} onChange={(e) => setGuardianSearch(e.target.value)} className="mb-1" />
                       <div className="border rounded-md max-h-[160px] overflow-y-auto">
-                        {families.map((f) => {
-                          const isSelected = targetFamilyIds.includes(f.id)
+                        {guardians.map((g) => {
+                          const isSelected = targetUserIds.includes(g.id)
                           return (
-                            <button key={f.id} type="button"
-                              onClick={() => setTargetFamilyIds((prev) => isSelected ? prev.filter((id) => id !== f.id) : [...prev, f.id])}
+                            <button key={g.id} type="button"
+                              onClick={() => setTargetUserIds((prev) => isSelected ? prev.filter((id) => id !== g.id) : [...prev, g.id])}
                               className={cn("flex items-center justify-between w-full px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors", isSelected && "bg-primary/5")}
                             >
-                              <div><p className="font-medium">{f.name}</p><p className="text-xs text-muted-foreground">{f.email}</p></div>
+                              <div><p className="font-medium">{g.name}</p><p className="text-xs text-muted-foreground">{g.email}</p></div>
                               {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
                             </button>
                           )
                         })}
-                        {families.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">{familySearch ? "No families match your search." : "Loading families..."}</p>}
+                        {guardians.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">{guardianSearch ? "No guardians match your search." : "Loading guardians..."}</p>}
                       </div>
-                      {targetFamilyIds.length > 0 && <p className="text-xs text-muted-foreground">{targetFamilyIds.length} {targetFamilyIds.length === 1 ? "family" : "families"} selected</p>}
+                      {targetUserIds.length > 0 && <p className="text-xs text-muted-foreground">{targetUserIds.length} {targetUserIds.length === 1 ? "guardian" : "guardians"} selected</p>}
                     </div>
                   )}
 

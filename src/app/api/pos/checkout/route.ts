@@ -19,7 +19,8 @@ const checkoutSchema = z.object({
   subtotal: z.number(),
   tax: z.number(),
   total: z.number(),
-  familyId: z.string().optional(), // Optional customer link
+  familyId: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 // POST /api/pos/checkout - Process a POS checkout
@@ -87,30 +88,12 @@ export async function POST(request: NextRequest) {
     });
     const reference = `POS-${String(invoiceCount + 1).padStart(6, "0")}`;
 
-    // Create everything in a transaction
     const result = await db.$transaction(async (tx) => {
-      // For POS, we might not have a family. Create a walk-in family if needed
-      let familyId = validatedData.familyId;
-      
-      if (!familyId) {
-        // Create a "Walk-in Customer" family for this transaction
-        const walkInFamily = await tx.family.create({
-          data: {
-            name: "Walk-in Customer",
-            primaryContact: "POS Sale",
-            email: `pos-sale-${Date.now()}@placeholder.local`,
-            phone: "",
-            organizationId: session.user.organizationId,
-          },
-        });
-        familyId = walkInFamily.id;
-      }
-
-      // Create invoice
       const invoice = await tx.invoice.create({
         data: {
           reference,
-          familyId,
+          familyId: validatedData.familyId || undefined,
+          userId: validatedData.userId || undefined,
           organizationId: session.user.organizationId,
           status: validatedData.paymentMethod === "CASH" ? "PAID" : "DRAFT",
           dueDate: new Date(),
@@ -136,12 +119,12 @@ export async function POST(request: NextRequest) {
         )
       );
 
-      // Create payment record for cash payments
       if (validatedData.paymentMethod === "CASH") {
         await tx.payment.create({
           data: {
             invoiceId: invoice.id,
-            familyId,
+            familyId: validatedData.familyId || undefined,
+            userId: validatedData.userId || undefined,
             amount: validatedData.total,
             method: "CASH",
             status: "COMPLETED",

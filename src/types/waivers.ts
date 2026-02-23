@@ -29,7 +29,10 @@ export interface WaiverSignature {
   id: string;
   waiverId: string;
   waiverPageId: string;
-  familyId: string;
+  /** @deprecated Use userId instead */
+  familyId?: string | null;
+  userId?: string | null;
+  athleteId?: string | null;
   signatureData: string; // Base64 PNG
   signedByName: string;
   signedByEmail: string;
@@ -41,7 +44,10 @@ export interface WaiverSignature {
 export interface WaiverAcceptance {
   id: string;
   waiverId: string;
-  familyId: string;
+  /** @deprecated Use userId instead */
+  familyId?: string | null;
+  userId?: string | null;
+  athleteId?: string | null;
   completedAt: string;
 }
 
@@ -70,7 +76,10 @@ export interface UpdateWaiverPayload {
 
 // Payload for signing waiver pages
 export interface SignWaiverPayload {
-  familyId: string;
+  /** @deprecated Use userId instead */
+  familyId?: string;
+  userId?: string;
+  athleteId?: string;
   signedByName: string;
   signedByEmail: string;
   signatures: Array<{

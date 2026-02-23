@@ -5,7 +5,8 @@ import { z } from "zod";
 
 const createPaymentSchema = z.object({
   invoiceId: z.string().optional().nullable(),
-  familyId: z.string().min(1, "Family is required"),
+  userId: z.string().min(1, "Guardian is required"),
+  familyId: z.string().optional(),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   method: z.enum(["CARD", "BANK", "CASH", "CHECK"]),
   transactionId: z.string().optional(),
@@ -117,25 +118,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createPaymentSchema.parse(body);
 
-    // Verify family
-    const family = await db.family.findFirst({
-      where: {
-        id: validatedData.familyId,
-        organizationId: session.user.organizationId,
-      },
+    const guardianUser = await db.user.findUnique({
+      where: { id: validatedData.userId },
+      select: { id: true },
     });
-
-    if (!family) {
-      return NextResponse.json({ error: "Family not found" }, { status: 404 });
+    if (!guardianUser) {
+      return NextResponse.json({ error: "Guardian not found" }, { status: 404 });
     }
 
-    // Verify invoice if provided
     if (validatedData.invoiceId) {
       const invoice = await db.invoice.findFirst({
         where: {
           id: validatedData.invoiceId,
           organizationId: session.user.organizationId,
-          familyId: validatedData.familyId,
         },
       });
 
@@ -144,15 +139,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create payment (marked as PENDING by default - would be COMPLETED after processing)
     const payment = await db.payment.create({
       data: {
         invoiceId: validatedData.invoiceId,
-        familyId: validatedData.familyId,
-        userId: session.user.id,
+        familyId: validatedData.familyId || undefined,
+        userId: validatedData.userId,
         amount: validatedData.amount,
         method: validatedData.method,
-        status: "COMPLETED", // For manual payments, mark as completed
+        status: "COMPLETED",
         transactionId: validatedData.transactionId,
         processedAt: new Date(),
       },
@@ -162,14 +156,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update family balance
-    await db.family.update({
-      where: { id: validatedData.familyId },
-      data: {
-        balance: {
-          decrement: validatedData.amount,
-        },
-      },
+    await db.user.update({
+      where: { id: validatedData.userId },
+      data: { balance: { decrement: validatedData.amount } },
     });
 
     // Update invoice status if fully paid

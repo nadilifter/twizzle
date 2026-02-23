@@ -57,9 +57,9 @@ function pickSeedFields(raw: Record<string, unknown>) {
  */
 export async function processInvoiceRegistrations(
   metadata: InvoiceMetadata,
-  familyId: string,
   items: CartItem[],
-  userId?: string | null
+  userId?: string | null,
+  familyId?: string | null,
 ) {
   // 1. Competition registrations
   for (const reg of metadata.competitionRegistrations) {
@@ -108,7 +108,7 @@ export async function processInvoiceRegistrations(
       create: {
         programInstanceId: instanceId,
         athleteId,
-        familyId,
+        familyId: familyId || undefined,
         userId: userId || undefined,
         status: "REGISTERED",
       },

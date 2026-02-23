@@ -36,7 +36,6 @@ const competitionInclude = {
           firstName: true,
           lastName: true,
           name: true,
-          familyId: true,
         },
       },
       category: { select: { id: true, resultType: true } },
@@ -53,6 +52,7 @@ const competitionInclude = {
           total: true,
           createdAt: true,
           family: { select: { id: true, name: true, primaryContact: true } },
+          user: { select: { id: true, name: true, email: true } },
         },
       },
     },
@@ -97,30 +97,33 @@ export async function GET(
       return NextResponse.json({ error: "Competition not found" }, { status: 404 })
     }
 
-    // Resolve families from athlete familyId values (no direct relation on Athlete)
-    const familyIds = [
-      ...new Set(
-        competition.entries
-          .map((e) => e.athlete.familyId)
-          .filter((fid): fid is string => fid != null)
-      ),
+    // Resolve guardians via AthleteGuardian -> User
+    const athleteIds = [
+      ...new Set(competition.entries.map((e) => e.athlete.id)),
     ]
-    const families =
-      familyIds.length > 0
-        ? await db.family.findMany({
-            where: { id: { in: familyIds } },
-            select: { id: true, name: true, email: true, primaryContact: true },
+    const guardianLinks =
+      athleteIds.length > 0
+        ? await db.athleteGuardian.findMany({
+            where: { athleteId: { in: athleteIds } },
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { isPrimary: "desc" },
           })
         : []
-    const familyMap = new Map(families.map((f) => [f.id, f]))
+    const guardianMap = new Map<string, { id: string; name: string; email: string }[]>()
+    for (const g of guardianLinks) {
+      if (!g.user) continue
+      const list = guardianMap.get(g.athleteId) ?? []
+      list.push(g.user)
+      guardianMap.set(g.athleteId, list)
+    }
 
     const enrichedEntries = competition.entries.map((entry) => ({
       ...entry,
       athlete: {
         ...entry.athlete,
-        family: entry.athlete.familyId
-          ? familyMap.get(entry.athlete.familyId) ?? null
-          : null,
+        guardians: guardianMap.get(entry.athlete.id) ?? [],
       },
     }))
 

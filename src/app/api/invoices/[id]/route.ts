@@ -126,24 +126,35 @@ export async function PATCH(
       },
     });
 
-    // Update family balance based on status change
     if (newStatus && oldStatus !== newStatus) {
       const amount = Number(invoice.total);
 
-      // If changing to SENT from DRAFT, add to balance
       if (oldStatus === "DRAFT" && newStatus === "SENT") {
-        await db.family.update({
-          where: { id: invoice.familyId },
-          data: { balance: { increment: amount } },
-        });
+        if (invoice.userId) {
+          await db.user.update({
+            where: { id: invoice.userId },
+            data: { balance: { increment: amount } },
+          });
+        } else if (invoice.familyId) {
+          await db.family.update({
+            where: { id: invoice.familyId },
+            data: { balance: { increment: amount } },
+          });
+        }
       }
 
-      // If cancelling a sent invoice, remove from balance
       if ((oldStatus === "SENT" || oldStatus === "OVERDUE") && newStatus === "CANCELLED") {
-        await db.family.update({
-          where: { id: invoice.familyId },
-          data: { balance: { decrement: amount } },
-        });
+        if (invoice.userId) {
+          await db.user.update({
+            where: { id: invoice.userId },
+            data: { balance: { decrement: amount } },
+          });
+        } else if (invoice.familyId) {
+          await db.family.update({
+            where: { id: invoice.familyId },
+            data: { balance: { decrement: amount } },
+          });
+        }
       }
     }
 

@@ -103,6 +103,21 @@ async function main() {
     paymentMethodCount += pmResult.count;
   }
 
+  // Backfill User.balance from Family.balance
+  let balanceCount = 0;
+  const familiesWithBalances = await prisma.family.findMany({
+    where: { userId: { not: null }, balance: { not: 0 } },
+    select: { userId: true, balance: true },
+  });
+
+  for (const family of familiesWithBalances) {
+    await prisma.user.update({
+      where: { id: family.userId! },
+      data: { balance: family.balance },
+    });
+    balanceCount++;
+  }
+
   console.log("Backfill complete:");
   console.log(`  AthleteGuardian: ${guardianCount} records updated`);
   console.log(`  Invoice: ${invoiceCount} records updated`);
@@ -116,6 +131,7 @@ async function main() {
   console.log(`  WaiverSignature: ${waiverSigCount} records updated`);
   console.log(`  WaiverAcceptance: ${waiverAccCount} records updated`);
   console.log(`  PaymentMethod: ${paymentMethodCount} records updated`);
+  console.log(`  User balance: ${balanceCount} records updated`);
 }
 
 main()

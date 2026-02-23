@@ -25,7 +25,6 @@ import type {
   NotificationActionType,
   NotificationRecipientType,
   NotificationLogStatus,
-  Family,
   Athlete,
   User,
   Organization,
@@ -268,34 +267,7 @@ export async function getRecipients(
   const seenEmails = new Set<string>();
   const seenPhones = new Set<string>();
 
-  // Helper to add a family recipient
-  const addFamily = (family: {
-    id: string;
-    email: string;
-    phone: string;
-    primaryContact: string;
-    smsOptOut: boolean;
-    emailOptOut: boolean;
-  }) => {
-    // Only add if we haven't seen this email/phone
-    if (family.email && !seenEmails.has(family.email.toLowerCase())) {
-      seenEmails.add(family.email.toLowerCase());
-    }
-    if (family.phone && !seenPhones.has(family.phone)) {
-      seenPhones.add(family.phone);
-    }
-
-    recipients.push({
-      type: "family",
-      id: family.id,
-      email: family.emailOptOut ? undefined : family.email,
-      phone: family.smsOptOut ? undefined : family.phone,
-      name: family.primaryContact,
-      familyId: family.id,
-    });
-  };
-
-  // Helper to add a user recipient (guardian with userId)
+  // Helper to add a user/guardian recipient
   const addGuardianUser = (user: {
     id: string;
     email: string;
@@ -320,6 +292,32 @@ export async function getRecipients(
     });
   };
 
+  // Legacy helper to add a family recipient (fallback for guardians without userId)
+  const addFamily = (family: {
+    id: string;
+    email: string;
+    phone: string;
+    primaryContact: string;
+    smsOptOut: boolean;
+    emailOptOut: boolean;
+  }) => {
+    if (family.email && !seenEmails.has(family.email.toLowerCase())) {
+      seenEmails.add(family.email.toLowerCase());
+    }
+    if (family.phone && !seenPhones.has(family.phone)) {
+      seenPhones.add(family.phone);
+    }
+
+    recipients.push({
+      type: "family",
+      id: family.id,
+      email: family.emailOptOut ? undefined : family.email,
+      phone: family.smsOptOut ? undefined : family.phone,
+      name: family.primaryContact,
+      familyId: family.id,
+    });
+  };
+
   // Helper to add a user recipient
   const addUser = (user: { id: string; email: string; name: string }) => {
     if (!seenEmails.has(user.email.toLowerCase())) {
@@ -336,10 +334,50 @@ export async function getRecipients(
 
   switch (recipientType) {
     case "ALL_FAMILIES": {
-      const families = await db.family.findMany({
+      // Resolve guardian Users via AthleteGuardian relationships
+      const guardianLinks = await db.athleteGuardian.findMany({
+        where: {
+          athlete: { organizationId },
+          userId: { not: null },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              name: true,
+              smsOptOut: true,
+              emailOptOut: true,
+            },
+          },
+        },
+      });
+
+      for (const link of guardianLinks) {
+        if (link.user?.email) {
+          addGuardianUser({
+            id: link.user.id,
+            email: link.user.email,
+            phone: link.user.phone,
+            name: link.user.name,
+            smsOptOut: link.user.smsOptOut,
+            emailOptOut: link.user.emailOptOut,
+          });
+        }
+      }
+
+      // Legacy fallback: families without userId-based guardians
+      const familiesWithoutUsers = await db.family.findMany({
         where: {
           organizationId,
-          ...(filters.includeInactive ? {} : {}),
+          athletes: {
+            some: {
+              guardians: {
+                none: { userId: { not: null } },
+              },
+            },
+          },
         },
         select: {
           id: true,
@@ -350,7 +388,7 @@ export async function getRecipients(
           emailOptOut: true,
         },
       });
-      families.forEach(addFamily);
+      familiesWithoutUsers.forEach(addFamily);
       break;
     }
 
@@ -627,9 +665,24 @@ export async function getRecipients(
     }
 
     case "CUSTOM": {
-      // For custom, we need to combine filters
-      // If specific athlete/family is in context, use that
-      if (contextData?.familyId) {
+      // For custom, use specific context data
+      if (contextData?.userId) {
+        const user = await db.user.findUnique({
+          where: { id: contextData.userId },
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+            name: true,
+            smsOptOut: true,
+            emailOptOut: true,
+          },
+        });
+        if (user?.email) {
+          addGuardianUser(user);
+        }
+      } else if (contextData?.familyId) {
+        // Legacy fallback
         const family = await db.family.findUnique({
           where: { id: contextData.familyId },
           select: {
@@ -759,8 +812,28 @@ export async function buildTemplateContext(
     }
   }
 
-  // Get family
-  if (data.familyId) {
+  // Get guardian user (primary path for User-based context)
+  if (data.userId) {
+    const user = await db.user.findUnique({
+      where: { id: data.userId },
+    });
+    if (user) {
+      context.guardianName = user.name;
+      context.guardianEmail = user.email;
+      context.guardianPhone = user.phone || undefined;
+      context.guardianBalance = formatCurrency(Number(user.balance));
+      // Backward-compatible aliases
+      context.familyName = context.familyName || user.name;
+      context.primaryContact = context.primaryContact || user.name;
+      context.primaryContactFirstName = context.primaryContactFirstName || user.name.split(" ")[0];
+      context.familyEmail = context.familyEmail || user.email;
+      context.familyPhone = context.familyPhone || user.phone || undefined;
+      context.familyBalance = context.familyBalance || formatCurrency(Number(user.balance));
+    }
+  }
+
+  // Legacy fallback: Get family if no userId context was set
+  if (data.familyId && !context.guardianName) {
     const family = await db.family.findUnique({
       where: { id: data.familyId },
     });
@@ -771,18 +844,11 @@ export async function buildTemplateContext(
       context.familyEmail = family.email;
       context.familyPhone = family.phone;
       context.familyBalance = formatCurrency(Number(family.balance));
-    }
-  }
-
-  // Get guardian user (for userId-based context)
-  if (data.userId) {
-    const user = await db.user.findUnique({
-      where: { id: data.userId },
-    });
-    if (user) {
-      context.guardianName = user.name;
-      context.guardianEmail = user.email;
-      context.guardianPhone = user.phone || undefined;
+      // Also populate guardian aliases from family data
+      context.guardianName = context.guardianName || family.primaryContact;
+      context.guardianEmail = context.guardianEmail || family.email;
+      context.guardianPhone = context.guardianPhone || family.phone;
+      context.guardianBalance = context.guardianBalance || formatCurrency(Number(family.balance));
     }
   }
 
@@ -948,7 +1014,25 @@ export async function executeNotification(
     // Build recipient-specific context
     const context: TemplateContext = { ...baseContext };
     
-    // If this is a family recipient and we don't have family context yet
+    // If this is a user recipient, populate guardian context (and family aliases)
+    if (recipient.userId && !context.guardianName) {
+      const user = await db.user.findUnique({
+        where: { id: recipient.userId },
+      });
+      if (user) {
+        context.guardianName = user.name;
+        context.guardianEmail = user.email;
+        context.guardianPhone = user.phone || undefined;
+        context.guardianBalance = formatCurrency(Number(user.balance));
+        context.familyName = context.familyName || user.name;
+        context.primaryContact = context.primaryContact || user.name;
+        context.primaryContactFirstName = context.primaryContactFirstName || user.name.split(" ")[0];
+        context.familyEmail = context.familyEmail || user.email;
+        context.familyPhone = context.familyPhone || user.phone || undefined;
+        context.familyBalance = context.familyBalance || formatCurrency(Number(user.balance));
+      }
+    }
+    // Legacy fallback: family recipient without userId
     if (recipient.familyId && !context.familyName) {
       const family = await db.family.findUnique({
         where: { id: recipient.familyId },
@@ -960,17 +1044,10 @@ export async function executeNotification(
         context.familyEmail = family.email;
         context.familyPhone = family.phone;
         context.familyBalance = formatCurrency(Number(family.balance));
-      }
-    }
-    // If this is a user recipient and we don't have guardian context yet
-    if (recipient.userId && !context.guardianName) {
-      const user = await db.user.findUnique({
-        where: { id: recipient.userId },
-      });
-      if (user) {
-        context.guardianName = user.name;
-        context.guardianEmail = user.email;
-        context.guardianPhone = user.phone || undefined;
+        context.guardianName = context.guardianName || family.primaryContact;
+        context.guardianEmail = context.guardianEmail || family.email;
+        context.guardianPhone = context.guardianPhone || family.phone;
+        context.guardianBalance = context.guardianBalance || formatCurrency(Number(family.balance));
       }
     }
 

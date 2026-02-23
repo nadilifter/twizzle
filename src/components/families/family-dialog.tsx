@@ -1,3 +1,4 @@
+// @deprecated - Legacy Family dialog. Use Guardian components instead.
 "use client";
 
 import { useState, useEffect } from "react";

@@ -83,8 +83,8 @@ export async function GET(
         level: true,
         guardians: {
           include: {
-            family: {
-              select: { id: true, name: true, email: true, primaryContact: true },
+            user: {
+              select: { id: true, name: true, email: true, phone: true },
             },
           },
           orderBy: { isPrimary: "desc" },
@@ -105,13 +105,13 @@ export async function GET(
       level = levelRecord ?? { id: athlete.level, name: athlete.level }
     }
 
-    const families = athlete.guardians
-      .filter((g) => g.family != null)
+    const guardians = athlete.guardians
+      .filter((g) => g.user != null)
       .map((g) => ({
-        id: g.family!.id,
-        name: g.family!.name,
-        email: g.family!.email,
-        primaryContact: g.family!.primaryContact,
+        id: g.user!.id,
+        name: g.user!.name,
+        email: g.user!.email,
+        phone: g.user!.phone,
         relationship: g.relationship,
         isPrimary: g.isPrimary,
       }))
@@ -357,7 +357,7 @@ export async function GET(
         birthDate: athlete.birthDate,
         gender: athlete.gender,
         level,
-        families,
+        guardians,
       },
       entries: formattedEntries,
       compliance,

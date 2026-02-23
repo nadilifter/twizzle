@@ -52,6 +52,7 @@ export interface TemplateContext {
   guardianName?: string;
   guardianEmail?: string;
   guardianPhone?: string;
+  guardianBalance?: string;
   
   // Membership context
   membershipName?: string;
@@ -231,6 +232,13 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     label: "Guardian Phone",
     description: "Phone number of the guardian user",
     example: "(555) 123-4567",
+    category: "guardian",
+  },
+  {
+    key: "guardianBalance",
+    label: "Guardian Balance",
+    description: "Current account balance of the guardian user",
+    example: "$150.00",
     category: "guardian",
   },
 

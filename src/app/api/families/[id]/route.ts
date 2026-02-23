@@ -1,3 +1,4 @@
+// @deprecated - Legacy Family API. Use /api/guardians instead.
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb } from "@/lib/db";

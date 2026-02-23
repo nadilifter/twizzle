@@ -57,7 +57,6 @@ export async function GET(
             birthDate: true,
             gender: true,
             level: true,
-            familyId: true,
           },
         },
       },
@@ -85,22 +84,26 @@ export async function GET(
 
     const athleteIds = Array.from(athleteMap.keys())
 
-    // Batch-resolve families from familyId values
-    const familyIds = [
-      ...new Set(
-        Array.from(athleteMap.values())
-          .map(({ athlete }) => athlete.familyId)
-          .filter((fid): fid is string => fid != null)
-      ),
-    ]
-    const familyList =
-      familyIds.length > 0
-        ? await db.family.findMany({
-            where: { id: { in: familyIds } },
-            select: { id: true, name: true },
+    // Batch-resolve guardians via AthleteGuardian -> User
+    const guardianLinks =
+      athleteIds.length > 0
+        ? await db.athleteGuardian.findMany({
+            where: { athleteId: { in: athleteIds }, userId: { not: null } },
+            select: {
+              athleteId: true,
+              isPrimary: true,
+              user: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { isPrimary: "desc" },
           })
         : []
-    const familyMap = new Map(familyList.map((f) => [f.id, f]))
+    const guardianMap = new Map<string, { id: string; name: string | null; email: string }[]>()
+    for (const g of guardianLinks) {
+      if (!g.user) continue
+      const list = guardianMap.get(g.athleteId) ?? []
+      list.push(g.user)
+      guardianMap.set(g.athleteId, list)
+    }
 
     // Resolve level names if level restriction is active
     let levelMap = new Map<string, string>()
@@ -201,7 +204,7 @@ export async function GET(
         birthDate: athlete.birthDate,
         gender: athlete.gender,
         level,
-        family: athlete.familyId ? familyMap.get(athlete.familyId) ?? null : null,
+        guardians: guardianMap.get(athlete.id) ?? [],
         eventCount,
         compliance,
       }

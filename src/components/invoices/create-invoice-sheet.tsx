@@ -42,10 +42,9 @@ interface LineItem {
   unitPrice: number
 }
 
-interface Family {
+interface Guardian {
   id: string
   name: string
-  primaryContact: string
   email: string
 }
 
@@ -56,34 +55,32 @@ interface CreateInvoiceSheetProps {
 export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
   const [open, setOpen] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
-  const [loadingFamilies, setLoadingFamilies] = React.useState(false)
+  const [loadingGuardians, setLoadingGuardians] = React.useState(false)
   const [date, setDate] = React.useState<Date>()
   const [items, setItems] = React.useState<LineItem[]>([
     { id: "1", description: "", quantity: 1, unitPrice: 0 },
   ])
 
-  // Form State
-  const [families, setFamilies] = React.useState<Family[]>([])
-  const [selectedFamilyId, setSelectedFamilyId] = React.useState("")
+  const [guardians, setGuardians] = React.useState<Guardian[]>([])
+  const [selectedUserId, setSelectedUserId] = React.useState("")
   const [notes, setNotes] = React.useState("")
   const [status, setStatus] = React.useState<"DRAFT" | "SENT">("DRAFT")
 
-  // Fetch families when sheet opens
   React.useEffect(() => {
-    if (open && families.length === 0) {
-      setLoadingFamilies(true)
-      fetch("/api/families")
+    if (open && guardians.length === 0) {
+      setLoadingGuardians(true)
+      fetch("/api/guardians")
         .then((res) => res.json())
         .then((data) => {
-          setFamilies(data.data || [])
+          setGuardians(data.data || [])
         })
         .catch((err) => {
-          console.error("Error fetching families:", err)
-          toast.error("Failed to load families")
+          console.error("Error fetching guardians:", err)
+          toast.error("Failed to load guardians")
         })
-        .finally(() => setLoadingFamilies(false))
+        .finally(() => setLoadingGuardians(false))
     }
-  }, [open, families.length])
+  }, [open, guardians.length])
 
   const addItem = () => {
     setItems([
@@ -108,7 +105,7 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
   const subtotal = items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0)
 
   const resetForm = () => {
-    setSelectedFamilyId("")
+    setSelectedUserId("")
     setNotes("")
     setStatus("DRAFT")
     setItems([{ id: "1", description: "", quantity: 1, unitPrice: 0 }])
@@ -118,8 +115,8 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedFamilyId) {
-      toast.error("Please select a family")
+    if (!selectedUserId) {
+      toast.error("Please select a guardian")
       return
     }
 
@@ -142,7 +139,7 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          familyId: selectedFamilyId,
+          userId: selectedUserId,
           dueDate: date.toISOString(),
           status,
           notes: notes || undefined,
@@ -188,23 +185,22 @@ export function CreateInvoiceSheet({ onSuccess }: CreateInvoiceSheetProps) {
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-6 py-6">
-          {/* Family Selection */}
           <div className="grid gap-4">
             <h3 className="text-sm font-medium leading-none">Recipient</h3>
             <div className="grid gap-2">
-              <Label htmlFor="family">Family</Label>
+              <Label htmlFor="guardian">Guardian</Label>
               <Select
-                value={selectedFamilyId}
-                onValueChange={setSelectedFamilyId}
-                disabled={loadingFamilies}
+                value={selectedUserId}
+                onValueChange={setSelectedUserId}
+                disabled={loadingGuardians}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingFamilies ? "Loading..." : "Select a family"} />
+                  <SelectValue placeholder={loadingGuardians ? "Loading..." : "Select a guardian"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {families.map((family) => (
-                    <SelectItem key={family.id} value={family.id}>
-                      {family.name} ({family.primaryContact})
+                  {guardians.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name} ({g.email})
                     </SelectItem>
                   ))}
                 </SelectContent>

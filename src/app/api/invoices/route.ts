@@ -14,7 +14,8 @@ const lineItemSchema = z.object({
 });
 
 const createInvoiceSchema = z.object({
-  familyId: z.string().min(1, "Family is required"),
+  userId: z.string().min(1, "Guardian is required"),
+  familyId: z.string().optional(),
   dueDate: z.string().min(1, "Due date is required"),
   status: z.enum(["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED", "PARTIAL"]).default("DRAFT"),
   notes: z.string().optional(),
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { reference: { contains: search, mode: "insensitive" } },
         { family: { name: { contains: search, mode: "insensitive" } } },
+        { user: { name: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -106,6 +108,13 @@ export async function GET(request: NextRequest) {
               name: true,
               email: true,
               primaryContact: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
           lineItems: {
@@ -195,16 +204,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createInvoiceSchema.parse(body);
 
-    // Verify family
-    const family = await db.family.findFirst({
-      where: {
-        id: validatedData.familyId,
-        organizationId: session.user.organizationId,
-      },
+    // Verify guardian user exists
+    const guardianUser = await db.user.findUnique({
+      where: { id: validatedData.userId },
+      select: { id: true },
     });
-
-    if (!family) {
-      return NextResponse.json({ error: "Family not found" }, { status: 404 });
+    if (!guardianUser) {
+      return NextResponse.json({ error: "Guardian not found" }, { status: 404 });
     }
 
     // Generate reference
@@ -219,12 +225,11 @@ export async function POST(request: NextRequest) {
     const subtotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
     const total = subtotal; // Add tax calculation if needed
 
-    // Create invoice with line items
     const invoice = await db.invoice.create({
       data: {
         reference,
-        familyId: validatedData.familyId,
-        userId: session.user.id,
+        familyId: validatedData.familyId || undefined,
+        userId: validatedData.userId,
         status: validatedData.status,
         dueDate: new Date(validatedData.dueDate),
         subtotal,
@@ -256,15 +261,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update family balance if invoice is sent
     if (validatedData.status === "SENT") {
-      await db.family.update({
-        where: { id: validatedData.familyId },
-        data: {
-          balance: {
-            increment: total,
-          },
-        },
+      await db.user.update({
+        where: { id: validatedData.userId },
+        data: { balance: { increment: total } },
       });
     }
 

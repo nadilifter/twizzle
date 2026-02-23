@@ -49,7 +49,7 @@ export async function POST(
 
     // Resolve familyId and userId - prefer userId when provided (Guardian/Ward migration)
     const userId = validatedData.userId || null;
-    let familyId = validatedData.familyId;
+    let familyId = validatedData.familyId || null;
     if (!familyId && !userId) {
       const existingFamily = await db.family.findFirst({
         where: {
@@ -58,22 +58,7 @@ export async function POST(
         },
         select: { id: true },
       });
-
-      if (existingFamily) {
-        familyId = existingFamily.id;
-      } else {
-        // Create a minimal family record
-        const newFamily = await db.family.create({
-          data: {
-            name: validatedData.name,
-            primaryContact: validatedData.name,
-            email: validatedData.email,
-            phone: "",
-            organizationId: validatedData.organizationId,
-          },
-        });
-        familyId = newFamily.id;
-      }
+      familyId = existingFamily?.id || null;
     }
 
     const ipAddress = request.headers.get("x-forwarded-for") ||

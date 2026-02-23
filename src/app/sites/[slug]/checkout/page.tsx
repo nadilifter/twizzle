@@ -118,8 +118,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     const fetchSaved = async () => {
       try {
         const [contactsRes, addressesRes] = await Promise.all([
-          fetch(`/api/sites/${params.slug}/family/contacts`),
-          fetch(`/api/sites/${params.slug}/family/billing-addresses`),
+          fetch(`/api/user/contacts`),
+          fetch(`/api/user/billing-addresses`),
         ])
 
         // Try to restore from sessionStorage first

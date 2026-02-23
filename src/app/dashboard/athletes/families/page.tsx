@@ -1,3 +1,4 @@
+// @deprecated - Legacy Families page. Use /dashboard/athletes/guardians instead.
 "use client"
 
 import * as React from "react"

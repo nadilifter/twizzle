@@ -99,16 +99,15 @@ export async function POST(
         }
       });
 
-      // Find family by email and resolve userId for waiver checks
-      const checkFamily = await db.family.findFirst({
+      const authSession = await getAuthSession();
+      const checkUserId = authSession?.user?.id || null;
+
+      // Legacy fallback: find family by email for waiver checks on older records
+      const checkFamily = checkUserId ? null : await db.family.findFirst({
         where: { email: userDetails.email, organizationId },
         select: { id: true },
       });
 
-      const authSession = await getAuthSession();
-      const checkUserId = authSession?.user?.id || null;
-
-      // Check each athlete's waivers individually
       for (const item of programItems) {
         const pId = item.details?.programId || item.referenceId;
         const athleteId = item.athleteId || item.details?.athleteId;
@@ -123,12 +122,11 @@ export async function POST(
           );
         }
 
-        // Check acceptances for this specific athlete (by family OR user)
         const acceptances = await db.waiverAcceptance.findMany({
           where: {
             OR: [
-              ...(checkFamily ? [{ familyId: checkFamily.id }] : []),
               ...(checkUserId ? [{ userId: checkUserId }] : []),
+              ...(checkFamily ? [{ familyId: checkFamily.id }] : []),
             ],
             waiverId: { in: requiredWaiverIds },
             athleteId: athleteId || null,
@@ -339,16 +337,21 @@ export async function POST(
 
           // Waiver requirement check
           if (instance.group.hasWaiverRestriction && instance.group.waiverRequirements.length > 0) {
-            const checkFamily = await db.family.findFirst({
+            const mAuthSession = await getAuthSession();
+            const mCheckUserId = mAuthSession?.user?.id || null;
+            const mCheckFamily = mCheckUserId ? null : await db.family.findFirst({
               where: { email: userDetails.email, organizationId },
               select: { id: true },
             });
 
-            if (checkFamily) {
+            if (mCheckUserId || mCheckFamily) {
               const requiredWaiverIds = instance.group.waiverRequirements.map((wr) => wr.waiverId);
               const acceptances = await db.waiverAcceptance.findMany({
                 where: {
-                  familyId: checkFamily.id,
+                  OR: [
+                    ...(mCheckUserId ? [{ userId: mCheckUserId }] : []),
+                    ...(mCheckFamily ? [{ familyId: mCheckFamily.id }] : []),
+                  ],
                   waiverId: { in: requiredWaiverIds },
                   athleteId: athleteId || null,
                 },
@@ -508,12 +511,14 @@ export async function POST(
 
         // Waiver verification for competition
         if (competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0) {
-          const checkFamily = await db.family.findFirst({
+          const cAuthSession = await getAuthSession();
+          const cCheckUserId = cAuthSession?.user?.id || null;
+          const cCheckFamily = cCheckUserId ? null : await db.family.findFirst({
             where: { email: userDetails.email, organizationId },
             select: { id: true },
           });
 
-          if (!checkFamily) {
+          if (!cCheckUserId && !cCheckFamily) {
             return NextResponse.json(
               { error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.` },
               { status: 400 }
@@ -522,7 +527,10 @@ export async function POST(
 
           const acceptances = await db.waiverAcceptance.findMany({
             where: {
-              familyId: checkFamily.id,
+              OR: [
+                ...(cCheckUserId ? [{ userId: cCheckUserId }] : []),
+                ...(cCheckFamily ? [{ familyId: cCheckFamily.id }] : []),
+              ],
               waiverId: { in: competition.waiverRequirementIds },
               athleteId: athleteId || null,
             },
@@ -651,14 +659,13 @@ export async function POST(
 
     if (contactId) {
       if (editingContact) {
-        // User is editing the saved contact — use form data and update the saved record
         resolvedContact = {
           firstName: userDetails.firstName,
           lastName: userDetails.lastName,
           email: userDetails.email,
           phone: userDetails.phone,
         };
-        await db.familyContact.update({
+        await db.userContact.update({
           where: { id: contactId },
           data: {
             firstName: userDetails.firstName,
@@ -668,8 +675,7 @@ export async function POST(
           },
         });
       } else {
-        // Use the saved contact data as-is
-        const savedContact = await db.familyContact.findUnique({ where: { id: contactId } });
+        const savedContact = await db.userContact.findUnique({ where: { id: contactId } });
         if (savedContact) {
           resolvedContact = {
             firstName: savedContact.firstName,
@@ -691,14 +697,13 @@ export async function POST(
 
     if (billingAddressId) {
       if (editingAddress) {
-        // User is editing the saved address — use form data and update the saved record
         resolvedAddress = {
           street: userDetails.address || "",
           city: userDetails.city || "",
           stateProvince: userDetails.stateProvince || "",
           postalCode: userDetails.postalCode || "",
         };
-        await db.familyBillingAddress.update({
+        await db.userBillingAddress.update({
           where: { id: billingAddressId },
           data: {
             street: userDetails.address || "",
@@ -708,8 +713,7 @@ export async function POST(
           },
         });
       } else {
-        // Use the saved address data as-is
-        const savedAddress = await db.familyBillingAddress.findUnique({ where: { id: billingAddressId } });
+        const savedAddress = await db.userBillingAddress.findUnique({ where: { id: billingAddressId } });
         if (savedAddress) {
           resolvedAddress = {
             street: savedAddress.street,
@@ -721,89 +725,17 @@ export async function POST(
       }
     }
 
-    // Resolve the authenticated user for Guardian/Ward system
+    // Resolve the authenticated user
     const checkoutAuthSession = await getAuthSession();
     const checkoutUserId = checkoutAuthSession?.user?.id || null;
 
-    let family = await db.family.findFirst({
-        where: {
-            organizationId,
-            email: resolvedContact.email
-        }
+    // Look up existing Family for backward compatibility (do NOT create new ones)
+    const legacyFamily = await db.family.findFirst({
+      where: { organizationId, email: resolvedContact.email },
+      select: { id: true },
     });
 
-    if (!family) {
-        family = await db.family.create({
-            data: {
-                name: `${resolvedContact.lastName} Family`,
-                primaryContact: `${resolvedContact.firstName} ${resolvedContact.lastName}`,
-                email: resolvedContact.email,
-                phone: resolvedContact.phone,
-                address: [resolvedAddress.street, resolvedAddress.city, resolvedAddress.stateProvince, resolvedAddress.postalCode].filter(Boolean).join(", "),
-                organizationId,
-                userId: checkoutUserId,
-            }
-        });
-    } else {
-        await db.family.update({
-            where: { id: family.id },
-            data: {
-                address: [resolvedAddress.street, resolvedAddress.city, resolvedAddress.stateProvince, resolvedAddress.postalCode].filter(Boolean).join(", "),
-                phone: resolvedContact.phone || family.phone,
-                ...(checkoutUserId && !family.userId ? { userId: checkoutUserId } : {}),
-            },
-        });
-    }
-
-    // Save new contact to family profile if not using a saved one
-    if (!contactId && resolvedContact.firstName && resolvedContact.email) {
-      const existingContact = await db.familyContact.findFirst({
-        where: { familyId: family.id, email: resolvedContact.email },
-      });
-      if (!existingContact) {
-        const hasAnyContacts = await db.familyContact.count({ where: { familyId: family.id } });
-        await db.familyContact.create({
-          data: {
-            familyId: family.id,
-            firstName: resolvedContact.firstName,
-            lastName: resolvedContact.lastName,
-            email: resolvedContact.email,
-            phone: resolvedContact.phone,
-            relationship: "Parent",
-            isPrimary: hasAnyContacts === 0,
-          },
-        });
-      }
-    }
-
-    // Save new billing address to family profile if not using a saved one
-    if (!billingAddressId && resolvedAddress.street) {
-      const existingAddress = await db.familyBillingAddress.findFirst({
-        where: {
-          familyId: family.id,
-          street: resolvedAddress.street,
-          city: resolvedAddress.city,
-          postalCode: resolvedAddress.postalCode,
-        },
-      });
-      if (!existingAddress) {
-        const hasAnyAddresses = await db.familyBillingAddress.count({ where: { familyId: family.id } });
-        await db.familyBillingAddress.create({
-          data: {
-            familyId: family.id,
-            label: "Home",
-            street: resolvedAddress.street,
-            city: resolvedAddress.city,
-            stateProvince: resolvedAddress.stateProvince || null,
-            postalCode: resolvedAddress.postalCode,
-            country: "US",
-            isPrimary: hasAnyAddresses === 0,
-          },
-        });
-      }
-    }
-
-    // Guardian/Ward: also save contacts and addresses to User profile
+    // Save contacts and addresses to the User profile
     if (checkoutUserId) {
       if (!contactId && resolvedContact.firstName && resolvedContact.email) {
         const existingUserContact = await db.userContact.findFirst({
@@ -877,7 +809,7 @@ export async function POST(
     const invoice = await db.invoice.create({
         data: {
             reference: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            familyId: family.id,
+            familyId: legacyFamily?.id ?? undefined,
             userId: checkoutUserId,
             organizationId,
             subtotal,
@@ -918,7 +850,7 @@ export async function POST(
         data: { status: "PAID" },
       });
 
-      await processInvoiceRegistrations(invoiceMetadata, family.id, items, checkoutUserId);
+      await processInvoiceRegistrations(invoiceMetadata, items, checkoutUserId, legacyFamily?.id);
 
       // Send receipt email (fire-and-forget so it doesn't block the response)
       const protocol = request.headers.get("x-forwarded-proto") || "http";

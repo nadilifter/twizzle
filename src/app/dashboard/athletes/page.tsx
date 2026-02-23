@@ -96,7 +96,7 @@ import { DataTableViewOptions } from "@/components/data-table/data-table-view-op
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAthletes } from "@/hooks/use-athletes"
-import { useFamilies } from "@/hooks/use-families"
+import { useGuardians } from "@/hooks/use-guardians"
 import { useLevels } from "@/hooks/use-levels"
 import type { AthleteWithRelations, CreateAthletePayload, UpdateAthletePayload, AthleteStatus } from "@/types/athletes"
 
@@ -135,7 +135,7 @@ export default function AthletesPage() {
     lastName: "",
     birthDate: "",
     level: "",
-    familyId: "",
+    guardianUserId: "",
     parentEmail: "",
   })
 
@@ -153,8 +153,8 @@ export default function AthletesPage() {
     clearError,
   } = useAthletes()
 
-  // Fetch families for the dropdown
-  const { families, isLoading: isFamiliesLoading } = useFamilies()
+  // Fetch guardians for the dropdown
+  const { guardians, isLoading: isGuardiansLoading } = useGuardians()
 
   // Fetch configured levels for dropdowns
   const { levels: configuredLevels, isLoading: isLevelsLoading } = useLevels()
@@ -196,11 +196,12 @@ export default function AthletesPage() {
 
   // Handle contact parent - opens email client
   const handleContactParent = React.useCallback((athlete: AthleteWithRelations) => {
-    const email = athlete.family?.email
+    const guardianUser = athlete.guardians?.[0]?.user
+    const email = guardianUser?.email ?? athlete.family?.email
     if (email) {
       window.location.href = `mailto:${email}?subject=Regarding ${athlete.name}`
     } else {
-      toast.error("No email address available for this family")
+      toast.error("No email address available for this guardian")
     }
   }, [])
 
@@ -336,9 +337,19 @@ export default function AthletesPage() {
     }] : []),
     {
       id: "parent",
-      accessorFn: (row) => row.family?.primaryContact ?? row.parent ?? "",
+      accessorFn: (row) => row.guardians?.[0]?.user?.name ?? row.family?.primaryContact ?? row.parent ?? "",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Parent/Guardian" />,
-      cell: ({ row }) => row.original.family?.primaryContact ?? row.original.parent ?? "N/A",
+      cell: ({ row }) => {
+        const guardian = row.original.guardians?.[0]
+        const name = guardian?.user?.name ?? row.original.family?.primaryContact ?? row.original.parent
+        const email = guardian?.user?.email
+        return (
+          <div className="flex flex-col">
+            <span>{name ?? "N/A"}</span>
+            {email && <span className="text-xs text-muted-foreground">{email}</span>}
+          </div>
+        )
+      },
     },
     {
       id: "actions",
@@ -431,7 +442,7 @@ export default function AthletesPage() {
   const handleAddAthlete = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!newAthlete.firstName || !newAthlete.lastName || !newAthlete.level || !newAthlete.familyId) {
+    if (!newAthlete.firstName || !newAthlete.lastName || !newAthlete.level || !newAthlete.guardianUserId) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -439,7 +450,7 @@ export default function AthletesPage() {
     const payload: CreateAthletePayload = {
       name: `${newAthlete.firstName} ${newAthlete.lastName}`,
       level: newAthlete.level,
-      familyId: newAthlete.familyId,
+      guardianUserId: newAthlete.guardianUserId,
       birthDate: newAthlete.birthDate || null,
       status: "ACTIVE" as AthleteStatus,
     }
@@ -454,7 +465,7 @@ export default function AthletesPage() {
         lastName: "",
         birthDate: "",
         level: "",
-        familyId: "",
+        guardianUserId: "",
         parentEmail: "",
       })
     } else {
@@ -533,18 +544,18 @@ export default function AthletesPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="family">Family *</Label>
+                      <Label htmlFor="guardian">Guardian *</Label>
                       <Select 
-                        value={newAthlete.familyId}
-                        onValueChange={(value) => setNewAthlete(prev => ({ ...prev, familyId: value }))}
+                        value={newAthlete.guardianUserId}
+                        onValueChange={(value) => setNewAthlete(prev => ({ ...prev, guardianUserId: value }))}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={isFamiliesLoading ? "Loading..." : "Select family"} />
+                          <SelectValue placeholder={isGuardiansLoading ? "Loading..." : "Select guardian"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {families.map((family) => (
-                            <SelectItem key={family.id} value={family.id}>
-                              {family.name}
+                          {guardians.map((guardian) => (
+                            <SelectItem key={guardian.id} value={guardian.id}>
+                              {guardian.name ?? guardian.email}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -790,6 +801,9 @@ export default function AthletesPage() {
                 gender: selectedAthlete.gender ?? null,
                 family: selectedAthlete.family
                   ? { id: selectedAthlete.family.id, name: selectedAthlete.family.name }
+                  : null,
+                guardian: selectedAthlete.guardians?.[0]?.user
+                  ? { id: selectedAthlete.guardians[0].user.id, name: selectedAthlete.guardians[0].user.name, email: selectedAthlete.guardians[0].user.email }
                   : null,
               }}
               onClose={() => {

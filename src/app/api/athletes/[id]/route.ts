@@ -31,6 +31,7 @@ const updateAthleteSchema = z.object({
   level: z.string().min(1).optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "GRADUATED"]).optional(),
   birthDate: z.string().optional().nullable(),
+  guardianUserId: z.string().optional(),
   familyId: z.string().optional(),
 });
 
@@ -63,6 +64,13 @@ export async function GET(
             family: {
               include: {
                 paymentMethods: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
               },
             },
           },
@@ -452,23 +460,18 @@ export async function PATCH(
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
-    // If changing family, verify new family belongs to org and update guardians
-    if (validatedData.familyId) {
-      const family = await db.family.findFirst({
-        where: {
-          id: validatedData.familyId,
-          organizationId: session.user.organizationId,
-        },
+    // If changing guardian user, verify the user exists and update/create AthleteGuardian
+    if (validatedData.guardianUserId) {
+      const guardianUser = await db.user.findUnique({
+        where: { id: validatedData.guardianUserId },
       });
-      if (!family) {
-        return NextResponse.json({ error: "Family not found" }, { status: 404 });
+      if (!guardianUser) {
+        return NextResponse.json({ error: "Guardian user not found" }, { status: 404 });
       }
 
-      // Check if this family is already a guardian
-      const existingGuardian = existing.guardians.find(g => g.familyId === validatedData.familyId);
-      
+      const existingGuardian = existing.guardians.find(g => g.userId === validatedData.guardianUserId);
+
       if (existingGuardian) {
-        // Set as primary, unset others
         await db.$transaction([
           db.athleteGuardian.updateMany({
             where: { athleteId: id, isPrimary: true },
@@ -480,33 +483,71 @@ export async function PATCH(
           }),
         ]);
       } else {
-        // Update the current primary to the new family (replace it)
-        // Or add as new primary?
-        // "Edit Athlete" usually means correcting the record.
-        // If we want to ADD a family, we should probably have a separate UI.
-        // For now, let's assume we are replacing the primary guardian link.
         const currentPrimary = existing.guardians.find(g => g.isPrimary) || existing.guardians[0];
         if (currentPrimary) {
-           await db.athleteGuardian.update({
-             where: { id: currentPrimary.id },
-             data: { familyId: validatedData.familyId },
-           });
+          await db.athleteGuardian.update({
+            where: { id: currentPrimary.id },
+            data: { userId: validatedData.guardianUserId },
+          });
         } else {
-           // Create new if none exists
-           await db.athleteGuardian.create({
-             data: {
-               athleteId: id,
-               familyId: validatedData.familyId,
-               isPrimary: true,
-               relationship: "Primary",
-             }
-           });
+          await db.athleteGuardian.create({
+            data: {
+              athleteId: id,
+              userId: validatedData.guardianUserId,
+              isPrimary: true,
+              relationship: "Primary",
+            },
+          });
+        }
+      }
+    }
+
+    // Backward compat: if familyId provided (without guardianUserId), update via legacy path
+    if (validatedData.familyId && !validatedData.guardianUserId) {
+      const family = await db.family.findFirst({
+        where: {
+          id: validatedData.familyId,
+          organizationId: session.user.organizationId,
+        },
+      });
+      if (!family) {
+        return NextResponse.json({ error: "Family not found" }, { status: 404 });
+      }
+
+      const existingGuardian = existing.guardians.find(g => g.familyId === validatedData.familyId);
+      if (existingGuardian) {
+        await db.$transaction([
+          db.athleteGuardian.updateMany({
+            where: { athleteId: id, isPrimary: true },
+            data: { isPrimary: false },
+          }),
+          db.athleteGuardian.update({
+            where: { id: existingGuardian.id },
+            data: { isPrimary: true },
+          }),
+        ]);
+      } else {
+        const currentPrimary = existing.guardians.find(g => g.isPrimary) || existing.guardians[0];
+        if (currentPrimary) {
+          await db.athleteGuardian.update({
+            where: { id: currentPrimary.id },
+            data: { familyId: validatedData.familyId },
+          });
+        } else {
+          await db.athleteGuardian.create({
+            data: {
+              athleteId: id,
+              familyId: validatedData.familyId,
+              isPrimary: true,
+              relationship: "Primary",
+            },
+          });
         }
       }
     }
 
     // Handle birthDate separately to use noon UTC for date-only fields
-    const { birthDate, familyId, ...otherData } = validatedData;
+    const { birthDate, familyId, guardianUserId, ...otherData } = validatedData;
     const athlete = await db.athlete.update({
       where: { id },
       data: {
@@ -520,6 +561,13 @@ export async function PATCH(
         guardians: {
           include: {
             family: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
         },
         enrollments: {
@@ -537,6 +585,7 @@ export async function PATCH(
     return NextResponse.json({
       ...athlete,
       family,
+      parent: primaryGuardian?.user?.name ?? family.primaryContact,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
         targetMembershipStatus: validatedData.targetMembershipStatus,
         targetProgramInstanceId: validatedData.targetProgramInstanceId,
         targetMembershipGroupIds: validatedData.targetMembershipGroupIds || [],
-        targetFamilyIds: validatedData.targetFamilyIds || [],
+        targetFamilyIds: [],
         totalRecipients: recipients.length,
         createdById: session.user.id,
         status: validatedData.scheduledAt ? "SCHEDULED" : "DRAFT",

@@ -297,28 +297,11 @@ export async function POST(
       }
     }
 
-    // Find or create a Family for backwards compatibility
-    let family = await db.family.findFirst({
+    // Look up existing Family for backward compatibility (do NOT create new ones)
+    const legacyFamily = await db.family.findFirst({
       where: { email: userEmail, organizationId },
+      select: { id: true },
     });
-
-    if (!family) {
-      family = await db.family.create({
-        data: {
-          name: `${lastName} Family`,
-          primaryContact: userName,
-          email: userEmail,
-          phone: "",
-          organizationId,
-          userId,
-        },
-      });
-    } else if (!family.userId) {
-      await db.family.update({
-        where: { id: family.id },
-        data: { userId },
-      });
-    }
 
     const athlete = await db.athlete.create({
       data: {
@@ -334,7 +317,7 @@ export async function POST(
         allowGuardianClaims: allowGuardianClaims ?? false,
         guardians: {
           create: {
-            familyId: family.id,
+            familyId: legacyFamily?.id ?? undefined,
             userId,
             relationship: isSelf ? "Self" : "Parent",
             isPrimary: true,

@@ -88,29 +88,33 @@ export async function GET(
             lastName: true,
             birthDate: true,
             gender: true,
-            familyId: true,
           },
         },
       },
       orderBy: { createdAt: "asc" },
     })
 
-    // Batch-resolve family names
-    const familyIds = [
-      ...new Set(
-        entries
-          .map((e) => e.athlete.familyId)
-          .filter((fid): fid is string => fid != null)
-      ),
-    ]
-    const families =
-      familyIds.length > 0
-        ? await db.family.findMany({
-            where: { id: { in: familyIds } },
-            select: { id: true, name: true },
+    // Batch-resolve guardians via AthleteGuardian -> User
+    const athleteIds = [...new Set(entries.map((e) => e.athlete.id))]
+    const guardianLinks =
+      athleteIds.length > 0
+        ? await db.athleteGuardian.findMany({
+            where: { athleteId: { in: athleteIds }, userId: { not: null } },
+            select: {
+              athleteId: true,
+              isPrimary: true,
+              user: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { isPrimary: "desc" },
           })
         : []
-    const familyMap = new Map(families.map((f) => [f.id, f]))
+    const guardianMap = new Map<string, { id: string; name: string | null; email: string }[]>()
+    for (const g of guardianLinks) {
+      if (!g.user) continue
+      const list = guardianMap.get(g.athleteId) ?? []
+      list.push(g.user)
+      guardianMap.set(g.athleteId, list)
+    }
 
     const resultType = (category.resultType ?? "TIME") as ResultType
 
@@ -135,9 +139,7 @@ export async function GET(
           lastName: entry.athlete.lastName,
           gender: entry.athlete.gender,
           birthDate: entry.athlete.birthDate?.toISOString() ?? null,
-          family: entry.athlete.familyId
-            ? familyMap.get(entry.athlete.familyId) ?? null
-            : null,
+          guardians: guardianMap.get(entry.athlete.id) ?? [],
         },
         seedMark: formatSeedMarkForDisplay(seedFields, resultType),
         seedValue: seedValueForComparison(seedFields, resultType),

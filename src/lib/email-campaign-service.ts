@@ -394,20 +394,8 @@ export async function getExpandedCampaignRecipients(
   const recipients: EmailRecipient[] = [];
   const seenEmails = new Set<string>();
 
-  // Helper to add a family if not already added
-  const addFamily = (family: { id: string; email: string; primaryContact: string }) => {
-    if (family.email && !seenEmails.has(family.email.toLowerCase())) {
-      seenEmails.add(family.email.toLowerCase());
-      recipients.push({
-        familyId: family.id,
-        email: family.email,
-        name: family.primaryContact,
-      });
-    }
-  };
-
-  // Helper to add a user (org member or guardian) directly
-  const addUser = (user: { id: string; email: string; name: string }) => {
+  const addUser = (user: { id: string; email: string; name: string; emailOptOut?: boolean }) => {
+    if (user.emailOptOut) return;
     if (user.email && !seenEmails.has(user.email.toLowerCase())) {
       seenEmails.add(user.email.toLowerCase());
       recipients.push({
@@ -421,7 +409,6 @@ export async function getExpandedCampaignRecipients(
 
   switch (targetType) {
     case "ALL_USERS": {
-      // Staff/org members (OrganizationMember → User)
       const members = await db.organizationMember.findMany({
         where: {
           organizationId,
@@ -434,6 +421,7 @@ export async function getExpandedCampaignRecipients(
               email: true,
               name: true,
               status: true,
+              emailOptOut: true,
             },
           },
         },
@@ -441,7 +429,7 @@ export async function getExpandedCampaignRecipients(
 
       members.forEach((m) => {
         if (m.user.status === "ACTIVE") {
-          addUser({ id: m.user.id, email: m.user.email, name: m.user.name });
+          addUser({ id: m.user.id, email: m.user.email, name: m.user.name, emailOptOut: m.user.emailOptOut });
         }
       });
       break;
@@ -449,21 +437,27 @@ export async function getExpandedCampaignRecipients(
 
     case "ALL_MEMBERS":
     case "ALL_FAMILIES": {
-      // All families in organization (not opted out)
-      const families = await db.family.findMany({
+      const users = await db.user.findMany({
         where: {
-          organizationId,
           emailOptOut: false,
           email: { not: "" },
+          athleteGuardians: {
+            some: {
+              athlete: { organizationId },
+            },
+          },
         },
         select: {
           id: true,
           email: true,
-          primaryContact: true,
+          name: true,
+          emailOptOut: true,
         },
       });
 
-      families.forEach(addFamily);
+      users.forEach((u) => {
+        addUser({ id: u.id, email: u.email, name: u.name, emailOptOut: u.emailOptOut });
+      });
       break;
     }
 
@@ -481,19 +475,12 @@ export async function getExpandedCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      email: true,
-                      primaryContact: true,
-                      emailOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
                       email: true,
                       name: true,
+                      emailOptOut: true,
                     },
                   },
                 },
@@ -505,10 +492,8 @@ export async function getExpandedCampaignRecipients(
 
       enrollments.forEach((e) => {
         e.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name });
-          } else if (g.family && !g.family.emailOptOut) {
-            addFamily(g.family);
+          if (g.user?.email) {
+            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
           }
         });
       });
@@ -531,19 +516,12 @@ export async function getExpandedCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      email: true,
-                      primaryContact: true,
-                      emailOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
                       email: true,
                       name: true,
+                      emailOptOut: true,
                     },
                   },
                 },
@@ -555,10 +533,8 @@ export async function getExpandedCampaignRecipients(
 
       registrations.forEach((r) => {
         r.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name });
-          } else if (g.family && !g.family.emailOptOut) {
-            addFamily(g.family);
+          if (g.user?.email) {
+            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
           }
         });
       });
@@ -574,19 +550,12 @@ export async function getExpandedCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      email: true,
-                      primaryContact: true,
-                      emailOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
                       email: true,
                       name: true,
+                      emailOptOut: true,
                     },
                   },
                 },
@@ -598,10 +567,8 @@ export async function getExpandedCampaignRecipients(
 
       enrollments.forEach((e) => {
         e.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name });
-          } else if (g.family && !g.family.emailOptOut) {
-            addFamily(g.family);
+          if (g.user?.email) {
+            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
           }
         });
       });
@@ -622,19 +589,12 @@ export async function getExpandedCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      email: true,
-                      primaryContact: true,
-                      emailOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
                       email: true,
                       name: true,
+                      emailOptOut: true,
                     },
                   },
                 },
@@ -646,10 +606,8 @@ export async function getExpandedCampaignRecipients(
 
       registrations.forEach((r) => {
         r.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name });
-          } else if (g.family && !g.family.emailOptOut) {
-            addFamily(g.family);
+          if (g.user?.email) {
+            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
           }
         });
       });
@@ -672,19 +630,12 @@ export async function getExpandedCampaignRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      email: true,
-                      primaryContact: true,
-                      emailOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
                       email: true,
                       name: true,
+                      emailOptOut: true,
                     },
                   },
                 },
@@ -696,10 +647,8 @@ export async function getExpandedCampaignRecipients(
 
       memberships.forEach((m) => {
         m.athlete.guardians.forEach((g) => {
-          if (g.userId && g.user?.email) {
-            addUser({ id: g.user.id, email: g.user.email, name: g.user.name });
-          } else if (g.family && !g.family.emailOptOut) {
-            addFamily(g.family);
+          if (g.user?.email) {
+            addUser({ id: g.user.id, email: g.user.email, name: g.user.name, emailOptOut: g.user.emailOptOut });
           }
         });
       });
@@ -707,23 +656,6 @@ export async function getExpandedCampaignRecipients(
     }
 
     case "SPECIFIC_USERS": {
-      // Direct lookup of hand-picked families and/or guardian users
-      if (targetFamilyIds?.length) {
-        const families = await db.family.findMany({
-          where: {
-            id: { in: targetFamilyIds },
-            organizationId,
-            emailOptOut: false,
-            email: { not: "" },
-          },
-          select: {
-            id: true,
-            email: true,
-            primaryContact: true,
-          },
-        });
-        families.forEach(addFamily);
-      }
       if (targetUserIds?.length) {
         const users = await db.user.findMany({
           where: {
@@ -734,10 +666,11 @@ export async function getExpandedCampaignRecipients(
             id: true,
             email: true,
             name: true,
+            emailOptOut: true,
           },
         });
         users.forEach((u) => {
-          if (u.email) addUser({ id: u.id, email: u.email, name: u.name });
+          if (u.email) addUser({ id: u.id, email: u.email, name: u.name, emailOptOut: u.emailOptOut });
         });
       }
       break;
@@ -755,19 +688,12 @@ export async function getExpandedCampaignRecipients(
           include: {
             guardians: {
               include: {
-                family: {
-                  select: {
-                    id: true,
-                    email: true,
-                    primaryContact: true,
-                    emailOptOut: true,
-                  },
-                },
                 user: {
                   select: {
                     id: true,
                     email: true,
                     name: true,
+                    emailOptOut: true,
                   },
                 },
               },
@@ -777,26 +703,18 @@ export async function getExpandedCampaignRecipients(
       },
     });
 
-    // Clear and rebuild recipients for event targeting
     const eventRecipients: EmailRecipient[] = [];
     const eventSeenEmails = new Set<string>();
 
     attendances.forEach((a) => {
       a.athlete.guardians.forEach((g) => {
-        if (g.userId && g.user?.email && !eventSeenEmails.has(g.user.email.toLowerCase())) {
+        if (g.user?.email && !g.user.emailOptOut && !eventSeenEmails.has(g.user.email.toLowerCase())) {
           eventSeenEmails.add(g.user.email.toLowerCase());
           eventRecipients.push({
             familyId: "",
             userId: g.user.id,
             email: g.user.email,
             name: g.user.name,
-          });
-        } else if (g.family && !g.family.emailOptOut && g.family.email && !eventSeenEmails.has(g.family.email.toLowerCase())) {
-          eventSeenEmails.add(g.family.email.toLowerCase());
-          eventRecipients.push({
-            familyId: g.family.id,
-            email: g.family.email,
-            name: g.family.primaryContact,
           });
         }
       });
@@ -807,35 +725,39 @@ export async function getExpandedCampaignRecipients(
 
   // Additional filtering by membership status if specified
   if (targetMembershipStatus && recipients.length > 0 && targetType !== "MEMBERSHIP_HOLDERS") {
-    const familyIds = recipients.filter((r) => r.familyId).map((r) => r.familyId);
+    const userIds = recipients.filter((r) => r.userId).map((r) => r.userId!);
 
-    if (familyIds.length === 0) return recipients;
+    if (userIds.length === 0) return recipients;
 
-    const familiesWithMembership = await db.family.findMany({
+    const usersWithGuardians = await db.athleteGuardian.findMany({
       where: {
-        id: { in: familyIds },
+        userId: { in: userIds },
       },
       include: {
-        guardians: {
+        athlete: {
           include: {
-            athlete: {
-              include: {
-                memberships: {
-                  orderBy: { endDate: "desc" },
-                  take: 1,
-                },
-              },
+            memberships: {
+              orderBy: { endDate: "desc" },
+              take: 1,
             },
           },
         },
       },
     });
 
-    const validFamilyIds = new Set<string>();
+    const validUserIds = new Set<string>();
     const now = new Date();
 
-    familiesWithMembership.forEach((family) => {
-      const hasAthleteWithStatus = family.guardians.some((g) => {
+    const guardiansByUserId = new Map<string, typeof usersWithGuardians>();
+    usersWithGuardians.forEach((g) => {
+      if (!g.userId) return;
+      const existing = guardiansByUserId.get(g.userId) || [];
+      existing.push(g);
+      guardiansByUserId.set(g.userId, existing);
+    });
+
+    guardiansByUserId.forEach((guardians, uId) => {
+      const hasAthleteWithStatus = guardians.some((g) => {
         const membership = g.athlete.memberships[0];
         if (!membership) {
           return targetMembershipStatus === "EXPIRED";
@@ -845,11 +767,11 @@ export async function getExpandedCampaignRecipients(
       });
 
       if (hasAthleteWithStatus) {
-        validFamilyIds.add(family.id);
+        validUserIds.add(uId);
       }
     });
 
-    return recipients.filter((r) => !r.familyId || validFamilyIds.has(r.familyId));
+    return recipients.filter((r) => !r.userId || validUserIds.has(r.userId));
   }
 
   return recipients;
@@ -886,8 +808,21 @@ export async function sendSingleEmail(
     };
   }
 
-  // Check opt-out status if family is specified
-  if (familyId) {
+  // Check opt-out status
+  if (userId) {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { emailOptOut: true },
+    });
+
+    if (user?.emailOptOut) {
+      return {
+        success: false,
+        error: "Recipient has opted out of marketing emails",
+        errorCode: "OPTED_OUT",
+      };
+    }
+  } else if (familyId) {
     const family = await db.family.findUnique({
       where: { id: familyId },
       select: { emailOptOut: true },
@@ -1091,8 +1026,7 @@ async function buildRecipientContext(
   context.currentDate = now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   context.currentYear = now.getFullYear().toString();
 
-  // User-based context (guardian with userId)
-  if (userId && !familyId) {
+  if (userId) {
     const user = await db.user.findUnique({
       where: { id: userId },
       include: {
@@ -1118,9 +1052,12 @@ async function buildRecipientContext(
       },
     });
     if (user) {
+      context.familyName = user.name;
       context.primaryContact = user.name;
       context.primaryContactFirstName = user.name.split(" ")[0];
       context.familyEmail = user.email;
+      context.familyPhone = user.phone || "";
+      context.familyBalance = `$${Number(user.balance).toFixed(2)}`;
       const athlete = user.athleteGuardians[0]?.athlete;
       if (athlete) {
         context.athleteName = athlete.name;
@@ -1280,10 +1217,10 @@ export async function executeEmailCampaign(campaignId: string): Promise<void> {
   // Send to each recipient with per-recipient placeholder rendering
   for (const recipient of recipients) {
     // Build context for this recipient
-    const context = recipient.familyId
-      ? await buildRecipientContext(campaign.organizationId, recipient.familyId)
-      : recipient.userId
-        ? await buildRecipientContext(campaign.organizationId, undefined, recipient.userId)
+    const context = recipient.userId
+      ? await buildRecipientContext(campaign.organizationId, undefined, recipient.userId)
+      : recipient.familyId
+        ? await buildRecipientContext(campaign.organizationId, recipient.familyId)
         : {
             organizationName: campaign.organization.name,
             currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
@@ -1434,15 +1371,25 @@ export async function handleEmailBounce(
     });
   }
 
-  // If permanent bounce, opt out the family
-  if (bounceType === "Permanent" && message.familyId) {
-    await db.family.update({
-      where: { id: message.familyId },
-      data: {
-        emailOptOut: true,
-        emailOptOutAt: new Date(),
-      },
-    });
+  // If permanent bounce, opt out the user (or legacy family)
+  if (bounceType === "Permanent") {
+    if (message.userId) {
+      await db.user.update({
+        where: { id: message.userId },
+        data: {
+          emailOptOut: true,
+          emailOptOutAt: new Date(),
+        },
+      });
+    } else if (message.familyId) {
+      await db.family.update({
+        where: { id: message.familyId },
+        data: {
+          emailOptOut: true,
+          emailOptOutAt: new Date(),
+        },
+      });
+    }
   }
 }
 
@@ -1479,8 +1426,16 @@ export async function handleEmailComplaint(sesMessageId: string): Promise<void> 
     });
   }
 
-  // Opt out the family on complaint
-  if (message.familyId) {
+  // Opt out the user (or legacy family) on complaint
+  if (message.userId) {
+    await db.user.update({
+      where: { id: message.userId },
+      data: {
+        emailOptOut: true,
+        emailOptOutAt: new Date(),
+      },
+    });
+  } else if (message.familyId) {
     await db.family.update({
       where: { id: message.familyId },
       data: {
@@ -1572,12 +1527,25 @@ export async function handleEmailClick(sesMessageId: string): Promise<void> {
 /**
  * Handle unsubscribe request
  */
-export async function handleUnsubscribe(familyId: string): Promise<void> {
-  await db.family.update({
-    where: { id: familyId },
-    data: {
-      emailOptOut: true,
-      emailOptOutAt: new Date(),
-    },
-  });
+export async function handleUnsubscribe(
+  identifier: string,
+  type: "user" | "family" = "family"
+): Promise<void> {
+  if (type === "user") {
+    await db.user.update({
+      where: { id: identifier },
+      data: {
+        emailOptOut: true,
+        emailOptOutAt: new Date(),
+      },
+    });
+  } else {
+    await db.family.update({
+      where: { id: identifier },
+      data: {
+        emailOptOut: true,
+        emailOptOutAt: new Date(),
+      },
+    });
+  }
 }

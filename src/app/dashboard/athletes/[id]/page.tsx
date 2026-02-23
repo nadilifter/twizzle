@@ -264,6 +264,7 @@ export default function AthleteProfilePage() {
   }
 
   const age = calculateAge(athlete.birthDate)
+  const primaryGuardianUser = (athlete as any).guardians?.[0]?.user as { id: string; name: string | null; email: string } | null
   const levelInfo = (athlete as any).levelInfo as { id: string; name: string; color: string | null } | null
   const memberships = ((athlete as any).memberships ?? []) as AthleteMembershipSummary[]
   const waivers = ((athlete as any).waivers ?? []) as AthleteWaiverSummary[]
@@ -322,14 +323,18 @@ export default function AthleteProfilePage() {
               {athlete.email && (
                 <>
                   <span className="truncate max-w-[200px]">{athlete.email}</span>
-                  {athlete.family && <span className="text-border">·</span>}
+                  {(primaryGuardianUser || athlete.family) && <span className="text-border">·</span>}
                 </>
               )}
-              {athlete.family && (
+              {primaryGuardianUser ? (
+                <span className="truncate max-w-[200px]">
+                  {primaryGuardianUser.name ?? primaryGuardianUser.email}
+                </span>
+              ) : athlete.family ? (
                 <span className="truncate max-w-[200px]">
                   {athlete.family.name}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -353,6 +358,9 @@ export default function AthleteProfilePage() {
               birthDate: athlete.birthDate,
               gender: athlete.gender ?? null,
               family: athlete.family ? { id: athlete.family.id, name: athlete.family.name } : null,
+              guardian: primaryGuardianUser
+                ? { id: primaryGuardianUser.id, name: primaryGuardianUser.name, email: primaryGuardianUser.email }
+                : null,
             }}
             onClose={() => setIsEditOpen(false)}
             onUpdated={async (data) => {
