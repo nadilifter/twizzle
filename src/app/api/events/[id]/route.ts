@@ -173,7 +173,16 @@ export async function PATCH(
     const event = await db.event.update({
       where: { id },
       data: {
-        ...validatedData,
+        title: validatedData.title,
+        startTime: validatedData.startTime,
+        endTime: validatedData.endTime,
+        type: validatedData.type,
+        description: validatedData.description,
+        meetingLink: validatedData.meetingLink,
+        location: validatedData.location ?? undefined,
+        details: validatedData.details ?? undefined,
+        programId: validatedData.programId,
+        coachId: validatedData.coachId,
         date: validatedData.date ? new Date(validatedData.date) : undefined,
       },
       include: {

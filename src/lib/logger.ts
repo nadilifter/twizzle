@@ -117,10 +117,19 @@ function outputLog(level: LogLevel, entry: LogEntry): void {
   }
 }
 
+interface Logger {
+  debug(message: string, context?: LogContext): void;
+  info(message: string, context?: LogContext): void;
+  warn(message: string, context?: LogContext): void;
+  error(message: string, context?: LogContext): void;
+  exception(message: string, error: Error, context?: LogContext): void;
+  child(baseContext: LogContext): Logger;
+}
+
 /**
  * Main logger object with methods for each log level
  */
-export const logger = {
+export const logger: Logger = {
   /**
    * Debug level - detailed information for debugging
    * Only output in development or when LOG_LEVEL=debug

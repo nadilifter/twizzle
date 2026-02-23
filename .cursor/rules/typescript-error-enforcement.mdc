@@ -1,0 +1,51 @@
+---
+description: Enforce zero TypeScript errors — detect, fix, and prevent type errors in every change
+globs: "**/*.ts,**/*.tsx"
+alwaysApply: false
+---
+
+# TypeScript Error Enforcement
+
+This project has strict TypeScript checking enabled. You MUST NOT introduce or propagate TypeScript errors.
+
+## Mandatory Workflow
+
+1. **Before editing**: Run `ReadLints` on the file to see its current state.
+2. **After editing**: Run `ReadLints` again on every file you modified.
+3. **If errors exist**: Fix ALL TypeScript errors in that file before moving on — including pre-existing ones revealed by your change.
+4. **Never leave a file with more TypeScript errors than it had when you started.**
+
+## Rules
+
+- Never use `// @ts-ignore`, `// @ts-expect-error`, or `as any` to silence type errors. Fix the root cause.
+- Never add `skipLibCheck`, `noCheck`, or weaken `strict` mode in `tsconfig.json`.
+- Never set `typescript.ignoreBuildErrors: true` in `next.config.mjs` (it is a legacy escape hatch being removed).
+- If a Prisma query fails type checking, the schema has likely changed — update the query to match the actual model fields and relations, don't cast around it.
+- If a Zod error uses `.errors`, change it to `.issues` (Zod v4 API).
+- Treat `null` and `undefined` as distinct — never assign `null` where `undefined` is expected or vice versa without explicit conversion.
+
+## Common Fixes
+
+### Prisma relation filtering (use `is:` wrapper)
+```typescript
+// BAD — bare nested object
+where: { athlete: { organizationId: orgId } }
+
+// GOOD — explicit relation filter
+where: { athlete: { is: { organizationId: orgId } } }
+```
+
+### Prisma create with organizationId
+```typescript
+// BAD — missing required FK
+await scopedDb.model.create({ data: { name } })
+
+// GOOD — include the FK even with scopedDb
+await scopedDb.model.create({ data: { name, organizationId } })
+```
+
+### Passing query params to api.get
+```typescript
+// The api.get function accepts `object` — custom param interfaces work directly.
+const response = await api.get<Response>("/api/endpoint", queryParams);
+```

@@ -21,7 +21,7 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
 /**
  * Build URL with query parameters
  */
-function buildUrl(endpoint: string, params?: Record<string, unknown>): string {
+function buildUrl(endpoint: string, params?: object): string {
   const url = new URL(endpoint, window.location.origin);
   
   if (params) {
@@ -74,7 +74,7 @@ async function apiFetch<T>(
     return {} as T;
   }
 
-  return isJson ? response.json() : response.text();
+  return isJson ? response.json() : (response.text() as Promise<T>);
 }
 
 /**
@@ -84,7 +84,7 @@ export const api = {
   /**
    * GET request
    */
-  get<T>(endpoint: string, params?: Record<string, unknown>): Promise<T> {
+  get<T>(endpoint: string, params?: object): Promise<T> {
     const url = buildUrl(endpoint, params);
     return apiFetch<T>(url, { method: "GET" });
   },

@@ -67,7 +67,6 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               level: true,
-              group: true,
               guardians: {
                 take: 1,
                 include: {

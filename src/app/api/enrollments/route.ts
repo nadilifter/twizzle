@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     const where = {
       athlete: {
-        family: {
+        is: {
           organizationId: session.user.organizationId,
         },
       },
@@ -47,12 +47,6 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               level: true,
-              family: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
             },
           },
           program: {
@@ -66,7 +60,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      db.enrollment.count({ where }),
+      db.enrollment.count({ where: where as Parameters<typeof db.enrollment.count>[0]["where"] }),
     ]);
 
     return NextResponse.json({

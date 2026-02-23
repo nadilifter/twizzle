@@ -53,7 +53,7 @@ export function useCoachAthletes(options: UseCoachAthletesOptions = {}): UseCoac
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const currentParamsRef = useRef({ search, limit, offset });
+  const currentParamsRef = useRef<{ search?: string; limit?: number; offset?: number }>({ search, limit, offset });
 
   const fetchAthletes = useCallback(async (params?: { search?: string; limit?: number; offset?: number }) => {
     const queryParams = params ?? currentParamsRef.current;

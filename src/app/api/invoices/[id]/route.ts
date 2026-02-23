@@ -29,8 +29,12 @@ export async function GET(
       include: {
         family: {
           include: {
-            athletes: {
-              select: { id: true, name: true },
+            guardians: {
+              include: {
+                athlete: {
+                  select: { id: true, name: true },
+                },
+              },
             },
             paymentMethods: true,
           },

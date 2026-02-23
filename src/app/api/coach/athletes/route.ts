@@ -86,7 +86,6 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true,
             level: true,
-            group: true,
             status: true,
             avatar: true,
           },

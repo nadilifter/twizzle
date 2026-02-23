@@ -127,9 +127,7 @@ export async function POST(request: NextRequest) {
     const scopedDb = getScopedDb(session.user.organizationId);
 
     const family = await scopedDb.family.create({
-      data: {
-        ...validatedData,
-      },
+      data: validatedData,
     });
 
     return NextResponse.json({

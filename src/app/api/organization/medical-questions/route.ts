@@ -206,7 +206,10 @@ export async function PATCH(request: NextRequest) {
 
     const question = await db.customMedicalQuestion.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...updateData,
+        options: updateData.options ?? undefined,
+      },
     });
 
     return NextResponse.json(question);

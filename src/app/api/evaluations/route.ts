@@ -389,7 +389,7 @@ export async function POST(request: NextRequest) {
         templateId: validatedData.templateId,
         programId: validatedData.programId,
         date: new Date(validatedData.date),
-        levelId: levelId || null,
+        levelId: levelId ?? undefined,
         overallScore: validatedData.overallScore || 0,
         status: validatedData.status || "PENDING",
         notes: validatedData.notes,

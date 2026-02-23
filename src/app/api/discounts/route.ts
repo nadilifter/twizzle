@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         validTo: validatedData.validTo ? new Date(validatedData.validTo) : null,
         userScope: validatedData.userScope,
         productScope: validatedData.productScope,
-        usageLimit: validatedData.usageLimit,
+        usageLimit: validatedData.usageLimit ?? undefined,
         status: validatedData.status,
       },
     });

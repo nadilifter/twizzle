@@ -43,7 +43,6 @@ export async function GET(
                 name: true,
                 email: true,
                 level: true,
-                group: true,
                 status: true,
                 avatar: true,
                 birthDate: true,

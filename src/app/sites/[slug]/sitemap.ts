@@ -19,7 +19,7 @@ export default async function sitemap({
       organization: { 
         include: { 
           programs: { 
-            where: { isActive: true },
+            where: { status: "ACTIVE" },
             select: { id: true, updatedAt: true }
           } 
         } 
