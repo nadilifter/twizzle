@@ -689,7 +689,7 @@ async function findDueEvaluations(
   const evaluations = await db.evaluation.findMany({
     where: {
       athlete: { organizationAthletes: { some: { organizationId } } },
-      completedAt: null,
+      status: { in: ["PENDING", "IN_PROGRESS"] },
       createdAt: {
         gte: startDate,
         lte: endDate,
@@ -736,8 +736,8 @@ async function findRecentSkillAchievements(
   const achievements = await db.athleteSkillProgress.findMany({
     where: {
       athlete: { organizationAthletes: { some: { organizationId } } },
-      status: "ACHIEVED",
-      achievedAt: {
+      bestStatus: "SUCCEEDED",
+      firstSucceededAt: {
         gte: startDate,
         lte: endDate,
       },

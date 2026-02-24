@@ -291,7 +291,7 @@ export default function CoachEvaluationsPage() {
         };
       });
 
-      const response = await api.put(`/api/evaluations/${selectedEvaluation.id}`, {
+      const response = await api.put<EvaluationWithRelations>(`/api/evaluations/${selectedEvaluation.id}`, {
         status: overallStatus,
         overallScore,
         notes: overallNotes || undefined,
@@ -475,7 +475,7 @@ export default function CoachEvaluationsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {evaluation.template?.name || evaluation.level}
+                            {evaluation.template?.name || (typeof evaluation.level === 'object' ? evaluation.level?.name : evaluation.level)}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1 text-muted-foreground">
@@ -624,7 +624,7 @@ export default function CoachEvaluationsPage() {
           <SheetHeader>
             <SheetTitle>Record Evaluation Results</SheetTitle>
             <SheetDescription>
-              {selectedEvaluation?.athlete.name} - {selectedEvaluation?.template?.name || selectedEvaluation?.level}
+              {selectedEvaluation?.athlete.name} - {selectedEvaluation?.template?.name || (typeof selectedEvaluation?.level === 'object' ? selectedEvaluation?.level?.name : selectedEvaluation?.level)}
             </SheetDescription>
           </SheetHeader>
           
@@ -787,7 +787,7 @@ export default function CoachEvaluationsPage() {
           <SheetHeader>
             <SheetTitle>Evaluation Results</SheetTitle>
             <SheetDescription>
-              {viewEvaluation?.athlete.name} - {viewEvaluation?.template?.name || viewEvaluation?.level}
+              {viewEvaluation?.athlete.name} - {viewEvaluation?.template?.name || (typeof viewEvaluation?.level === 'object' ? viewEvaluation?.level?.name : viewEvaluation?.level)}
             </SheetDescription>
           </SheetHeader>
           

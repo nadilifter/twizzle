@@ -303,7 +303,7 @@ export default function AthleteEvaluationsPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold">
-                            {evaluation.template?.name || evaluation.level}
+                            {evaluation.template?.name || (typeof evaluation.level === 'object' ? evaluation.level?.name : evaluation.level)}
                           </h3>
                           {getStatusBadge(evaluation.status)}
                         </div>
@@ -362,7 +362,7 @@ export default function AthleteEvaluationsPage() {
                         <div>
                           <div className="flex items-center gap-3 mb-1">
                             <h3 className="font-semibold">
-                              {evaluation.template?.name || evaluation.level}
+                              {evaluation.template?.name || (typeof evaluation.level === 'object' ? evaluation.level?.name : evaluation.level)}
                             </h3>
                             {getStatusBadge(evaluation.status)}
                           </div>
@@ -399,7 +399,7 @@ export default function AthleteEvaluationsPage() {
         <SheetContent className="sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>
-              {viewEvaluation?.template?.name || viewEvaluation?.level}
+              {viewEvaluation?.template?.name || (typeof viewEvaluation?.level === 'object' ? viewEvaluation?.level?.name : viewEvaluation?.level)}
             </SheetTitle>
             <SheetDescription>
               {viewEvaluation && format(new Date(viewEvaluation.date), "MMMM d, yyyy")}

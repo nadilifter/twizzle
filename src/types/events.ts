@@ -54,6 +54,7 @@ export interface EventDetail extends EventWithRelations {
   attendances: {
     id: string;
     status: string;
+    checkedIn: string | null;
     athlete: {
       id: string;
       name: string;

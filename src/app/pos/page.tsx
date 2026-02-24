@@ -130,6 +130,8 @@ function POSPageContent() {
       name: product.name,
       price: Number(product.price),
       quantity: 1,
+      athleteId: "",
+      athleteName: "Walk-in",
       details: {
         sku: product.sku,
         category: product.category,

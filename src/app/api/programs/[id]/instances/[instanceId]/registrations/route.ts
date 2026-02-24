@@ -59,7 +59,7 @@ export async function GET(
             name: true,
             email: true,
             avatar: true,
-            dateOfBirth: true,
+            birthDate: true,
           },
         },
       },
