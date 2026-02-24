@@ -32,7 +32,9 @@ export async function GET(request: NextRequest) {
     const where: Prisma.EnrollmentWhereInput = {
       athlete: {
         is: {
-          organizationId: session.user.organizationId,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
         },
       },
       ...(athleteId && { athleteId }),
@@ -52,7 +54,6 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              level: true,
             },
           },
           program: {

@@ -516,7 +516,7 @@ async function getCampaignRecipients(
     // ALL scope: get all guardian users for this org
     const guardianLinks = await db.athleteGuardian.findMany({
       where: {
-        athlete: { organizationId },
+        athlete: { organizationAthletes: { some: { organizationId } } },
         userId: { not: null },
       },
       include: {

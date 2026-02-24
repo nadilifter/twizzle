@@ -56,7 +56,10 @@ export async function GET(
             lastName: true,
             birthDate: true,
             gender: true,
-            level: true,
+            organizationAthletes: {
+              where: { organizationId },
+              select: { level: true },
+            },
           },
         },
       },
@@ -191,10 +194,11 @@ export async function GET(
           : "incomplete"
       }
 
+      const orgLevel = athlete.organizationAthletes?.[0]?.level ?? null;
       let level: { id: string; name: string } | null = null
-      if (athlete.level) {
-        const name = levelMap.get(athlete.level)
-        level = name ? { id: athlete.level, name } : { id: athlete.level, name: athlete.level }
+      if (orgLevel && orgLevel !== "Unassigned") {
+        const name = levelMap.get(orgLevel)
+        level = name ? { id: orgLevel, name } : { id: orgLevel, name: orgLevel }
       }
 
       return {

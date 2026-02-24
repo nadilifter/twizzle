@@ -41,7 +41,7 @@ export async function GET(
             name: true, 
             slug: true,
             _count: {
-              select: { athletes: true, members: true, events: true }
+              select: { organizationAthletes: true, members: true, events: true }
             }
           }
         },

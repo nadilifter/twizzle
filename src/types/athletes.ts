@@ -4,7 +4,8 @@ export type AthleteStatus = "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED";
 
 export type GenderDeclaration = "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
 
-// Base athlete type from database
+// Base athlete type from database (global fields)
+// level, status, customId come from OrganizationAthlete but are flattened into API responses
 export interface Athlete {
   id: string;
   name: string; // Deprecated: use firstName + lastName
@@ -17,7 +18,6 @@ export interface Athlete {
   birthDate: string | null;
   gender: GenderDeclaration | null;
   customId: string | null;
-  organizationId: string | null;
   createdAt: string;
   updatedAt: string;
 }

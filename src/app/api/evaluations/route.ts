@@ -142,7 +142,9 @@ export async function GET(request: NextRequest) {
     // Build where clause - check organization via athlete's organization or guardians
     const where = {
       athlete: {
-        organizationId: session.user.organizationId,
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
+        },
       },
       ...(athleteId && { athleteId }),
       ...(coachId && { coachId }),
@@ -166,7 +168,6 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              level: true,
               avatar: true,
             },
           },
@@ -385,7 +386,6 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            level: true,
             avatar: true,
           },
         },
@@ -451,7 +451,6 @@ export async function POST(request: NextRequest) {
                 select: {
                   id: true,
                   name: true,
-                  level: true,
                   avatar: true,
                 },
               },

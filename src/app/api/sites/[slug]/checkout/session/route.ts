@@ -283,7 +283,10 @@ export async function POST(
               id: true,
               gender: true,
               birthDate: true,
-              level: true,
+              organizationAthletes: {
+                where: { organizationId },
+                select: { level: true },
+              },
             },
           });
 
@@ -318,7 +321,8 @@ export async function POST(
           // Level restriction
           if (instance.group.hasLevelRestriction && instance.group.levelRequirements.length > 0) {
             const allowedLevelIds = instance.group.levelRequirements.map((lr) => lr.levelId);
-            if (!athlete.level || !allowedLevelIds.some((lid) => athlete.level === lid)) {
+            const mAthleteLevel = athlete.organizationAthletes[0]?.level ?? null;
+            if (!mAthleteLevel || !allowedLevelIds.some((lid) => mAthleteLevel === lid)) {
               return NextResponse.json(
                 { error: `Athlete "${athleteLabel}" does not meet the level requirement for "${item.name}".` },
                 { status: 400 }
@@ -432,7 +436,10 @@ export async function POST(
             id: true,
             birthDate: true,
             gender: true,
-            level: true,
+            organizationAthletes: {
+              where: { organizationId },
+              select: { level: true },
+            },
             memberships: {
               where: { status: "ACTIVE" },
               select: { membershipInstanceId: true },
@@ -460,7 +467,8 @@ export async function POST(
         }
 
         if (competition.hasLevelRestriction && competition.levelRequirementIds.length > 0) {
-          if (!athlete.level || !competition.levelRequirementIds.includes(athlete.level)) {
+          const cAthleteLevel = athlete.organizationAthletes[0]?.level ?? null;
+          if (!cAthleteLevel || !competition.levelRequirementIds.includes(cAthleteLevel)) {
             return NextResponse.json(
               { error: `Athlete "${athleteLabel}" does not meet the level requirement for "${competition.name}".` },
               { status: 400 }

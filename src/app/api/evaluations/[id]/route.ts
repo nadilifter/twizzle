@@ -129,7 +129,9 @@ export async function GET(
       where: {
         id,
         athlete: {
-          organizationId: session.user.organizationId,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
         },
       },
       include: {
@@ -137,7 +139,6 @@ export async function GET(
           select: {
             id: true,
             name: true,
-            level: true,
             avatar: true,
             birthDate: true,
           },
@@ -232,7 +233,9 @@ export async function PUT(
       where: {
         id,
         athlete: {
-          organizationId: session.user.organizationId,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
         },
       },
       include: {
@@ -324,7 +327,6 @@ export async function PUT(
             select: {
               id: true,
               name: true,
-              level: true,
               avatar: true,
             },
           },
@@ -425,7 +427,6 @@ export async function PUT(
               select: {
                 id: true,
                 name: true,
-                level: true,
                 avatar: true,
               },
             },
@@ -522,7 +523,9 @@ export async function DELETE(
       where: {
         id,
         athlete: {
-          organizationId: session.user.organizationId,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
         },
       },
     });

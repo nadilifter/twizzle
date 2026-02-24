@@ -64,7 +64,7 @@ export async function POST(
       return NextResponse.json({ error: "Competition not found" }, { status: 404 });
     }
 
-    // Fetch the athlete
+    // Fetch the athlete with org-specific level
     const athlete = await db.athlete.findUnique({
       where: { id: athleteId },
       select: {
@@ -73,7 +73,10 @@ export async function POST(
         lastName: true,
         birthDate: true,
         gender: true,
-        level: true,
+        organizationAthletes: {
+          where: { organizationId: config.organizationId },
+          select: { level: true },
+        },
         memberships: {
           where: { status: "ACTIVE" },
           select: { membershipInstanceId: true },
@@ -85,6 +88,7 @@ export async function POST(
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
+    const athleteLevel = athlete.organizationAthletes[0]?.level ?? null;
     const age = calculateAge(athlete.birthDate);
     const reasons: string[] = [];
 
@@ -103,7 +107,7 @@ export async function POST(
 
     // 2. Check competition-level level restriction
     if (competition.hasLevelRestriction && competition.levelRequirementIds.length > 0) {
-      if (!athlete.level || !competition.levelRequirementIds.includes(athlete.level)) {
+      if (!athleteLevel || !competition.levelRequirementIds.includes(athleteLevel)) {
         reasons.push("Athlete does not meet the level requirement for this competition");
       }
     }
@@ -166,7 +170,7 @@ export async function POST(
           // Check level restriction
           if (group.hasLevelRestriction && group.levelRequirements.length > 0) {
             const allowedLevelIds = group.levelRequirements.map((lr) => lr.levelId);
-            if (!athlete.level || !allowedLevelIds.includes(athlete.level)) continue;
+            if (!athleteLevel || !allowedLevelIds.includes(athleteLevel)) continue;
           }
 
           availableMemberships.push({

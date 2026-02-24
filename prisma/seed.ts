@@ -911,30 +911,42 @@ async function main() {
   // ============================================
   console.log("\n🏃 Creating athletes...");
   await Promise.all([
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-1` }, update: {}, create: { id: `${ORG1_ID}-ath-1`, firstName: "Emily", lastName: "Anderson", name: "Emily Anderson", email: "emily.a@email.com", level: "Bronze", status: "ACTIVE", birthDate: new Date("2016-03-15"), gender: "FEMALE", organizationId: ORG1_ID, customId: "SGA-001", medicalDetails: { allergies: ["peanuts"], conditions: [], emergencyContact: { name: "Michelle Anderson", phone: "(555) 101-1001" } } } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-2` }, update: {}, create: { id: `${ORG1_ID}-ath-2`, firstName: "Sophie", lastName: "Anderson", name: "Sophie Anderson", email: "sophie.a@email.com", level: "Silver", status: "ACTIVE", birthDate: new Date("2014-07-22"), gender: "FEMALE", organizationId: ORG1_ID, customId: "SGA-002" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-3` }, update: {}, create: { id: `${ORG1_ID}-ath-3`, firstName: "Olivia", lastName: "Baker", name: "Olivia Baker", level: "Competitive", status: "ACTIVE", birthDate: new Date("2013-11-08"), gender: "FEMALE", organizationId: ORG1_ID, customId: "SGA-003" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-4` }, update: {}, create: { id: `${ORG1_ID}-ath-4`, firstName: "Lily", lastName: "Chen", name: "Lily Chen", level: "Bronze", status: "ACTIVE", birthDate: new Date("2017-01-30"), gender: "FEMALE", organizationId: ORG1_ID, customId: "SGA-004" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-5` }, update: {}, create: { id: `${ORG1_ID}-ath-5`, firstName: "Mia", lastName: "Chen", name: "Mia Chen", level: "Gold", status: "ACTIVE", birthDate: new Date("2012-09-14"), gender: "FEMALE", organizationId: ORG1_ID, customId: "SGA-005" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-6` }, update: {}, create: { id: `${ORG1_ID}-ath-6`, firstName: "Grace", lastName: "Davis", name: "Grace Davis", level: "Competitive", status: "ACTIVE", birthDate: new Date("2011-05-20"), gender: "FEMALE", organizationId: ORG1_ID, customId: "SGA-006" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-7` }, update: {}, create: { id: `${ORG1_ID}-ath-7`, firstName: "Ava", lastName: "Evans", name: "Ava Evans", level: "Silver", status: "TRIAL", birthDate: new Date("2015-12-03"), gender: "FEMALE", organizationId: ORG1_ID, customId: "SGA-007" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-8` }, update: {}, create: { id: `${ORG1_ID}-ath-8`, firstName: "Hannah", lastName: "Evans", name: "Hannah Evans", level: "Preschool", status: "ACTIVE", birthDate: new Date("2019-08-11"), gender: "FEMALE", organizationId: ORG1_ID, customId: "SGA-008" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-1` }, update: {}, create: { id: `${ORG2_ID}-ath-1`, firstName: "Jake", lastName: "Foster", name: "Jake Foster", email: "jake.f@email.com", level: "Beginner", status: "ACTIVE", birthDate: new Date("2014-04-18"), gender: "MALE", organizationId: ORG2_ID, customId: "MSC-001" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-2` }, update: {}, create: { id: `${ORG2_ID}-ath-2`, firstName: "Ethan", lastName: "Foster", name: "Ethan Foster", level: "Intermediate", status: "ACTIVE", birthDate: new Date("2010-10-25"), gender: "MALE", organizationId: ORG2_ID, customId: "MSC-002" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-3` }, update: {}, create: { id: `${ORG2_ID}-ath-3`, firstName: "Sofia", lastName: "Garcia", name: "Sofia Garcia", level: "Beginner", status: "ACTIVE", birthDate: new Date("2016-06-12"), gender: "FEMALE", organizationId: ORG2_ID, customId: "MSC-003" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-4` }, update: {}, create: { id: `${ORG2_ID}-ath-4`, firstName: "Lucas", lastName: "Garcia", name: "Lucas Garcia", level: "Advanced", status: "ACTIVE", birthDate: new Date("2011-02-28"), gender: "MALE", organizationId: ORG2_ID, customId: "MSC-004" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-5` }, update: {}, create: { id: `${ORG2_ID}-ath-5`, firstName: "Chloe", lastName: "Harris", name: "Chloe Harris", level: "Beginner", status: "INACTIVE", birthDate: new Date("2015-09-07"), gender: "FEMALE", organizationId: ORG2_ID, customId: "MSC-005" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-6` }, update: {}, create: { id: `${ORG2_ID}-ath-6`, firstName: "Noah", lastName: "Irving", name: "Noah Irving", level: "Intermediate", status: "ACTIVE", birthDate: new Date("2012-11-19"), gender: "MALE", organizationId: ORG2_ID, customId: "MSC-006" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-1` }, update: {}, create: { id: `${ORG1_ID}-ath-1`, firstName: "Emily", lastName: "Anderson", name: "Emily Anderson", email: "emily.a@email.com", birthDate: new Date("2016-03-15"), gender: "FEMALE", medicalDetails: { allergies: ["peanuts"], conditions: [], emergencyContact: { name: "Michelle Anderson", phone: "(555) 101-1001" } } } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-2` }, update: {}, create: { id: `${ORG1_ID}-ath-2`, firstName: "Sophie", lastName: "Anderson", name: "Sophie Anderson", email: "sophie.a@email.com", birthDate: new Date("2014-07-22"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-3` }, update: {}, create: { id: `${ORG1_ID}-ath-3`, firstName: "Olivia", lastName: "Baker", name: "Olivia Baker", birthDate: new Date("2013-11-08"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-4` }, update: {}, create: { id: `${ORG1_ID}-ath-4`, firstName: "Lily", lastName: "Chen", name: "Lily Chen", birthDate: new Date("2017-01-30"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-5` }, update: {}, create: { id: `${ORG1_ID}-ath-5`, firstName: "Mia", lastName: "Chen", name: "Mia Chen", birthDate: new Date("2012-09-14"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-6` }, update: {}, create: { id: `${ORG1_ID}-ath-6`, firstName: "Grace", lastName: "Davis", name: "Grace Davis", birthDate: new Date("2011-05-20"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-7` }, update: {}, create: { id: `${ORG1_ID}-ath-7`, firstName: "Ava", lastName: "Evans", name: "Ava Evans", birthDate: new Date("2015-12-03"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-8` }, update: {}, create: { id: `${ORG1_ID}-ath-8`, firstName: "Hannah", lastName: "Evans", name: "Hannah Evans", birthDate: new Date("2019-08-11"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-1` }, update: {}, create: { id: `${ORG2_ID}-ath-1`, firstName: "Jake", lastName: "Foster", name: "Jake Foster", email: "jake.f@email.com", birthDate: new Date("2014-04-18"), gender: "MALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-2` }, update: {}, create: { id: `${ORG2_ID}-ath-2`, firstName: "Ethan", lastName: "Foster", name: "Ethan Foster", birthDate: new Date("2010-10-25"), gender: "MALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-3` }, update: {}, create: { id: `${ORG2_ID}-ath-3`, firstName: "Sofia", lastName: "Garcia", name: "Sofia Garcia", birthDate: new Date("2016-06-12"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-4` }, update: {}, create: { id: `${ORG2_ID}-ath-4`, firstName: "Lucas", lastName: "Garcia", name: "Lucas Garcia", birthDate: new Date("2011-02-28"), gender: "MALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-5` }, update: {}, create: { id: `${ORG2_ID}-ath-5`, firstName: "Chloe", lastName: "Harris", name: "Chloe Harris", birthDate: new Date("2015-09-07"), gender: "FEMALE" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-6` }, update: {}, create: { id: `${ORG2_ID}-ath-6`, firstName: "Noah", lastName: "Irving", name: "Noah Irving", birthDate: new Date("2012-11-19"), gender: "MALE" } }),
   ]);
   console.log("  ✓ Created 14 athletes");
 
   // ============================================
-  // ORGANIZATION-ATHLETE LINKS
+  // ORGANIZATION-ATHLETE LINKS (with org-specific level, status, customId)
   // ============================================
   console.log("\n🔗 Creating organization-athlete links...");
   const orgAthleteData = [
-    ...Array.from({ length: 8 }, (_, i) => ({ organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-${i + 1}` })),
-    ...Array.from({ length: 6 }, (_, i) => ({ organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-${i + 1}` })),
+    { organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-1`, level: "Bronze", status: "ACTIVE" as const, customId: "SGA-001" },
+    { organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-2`, level: "Silver", status: "ACTIVE" as const, customId: "SGA-002" },
+    { organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-3`, level: "Competitive", status: "ACTIVE" as const, customId: "SGA-003" },
+    { organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-4`, level: "Bronze", status: "ACTIVE" as const, customId: "SGA-004" },
+    { organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-5`, level: "Gold", status: "ACTIVE" as const, customId: "SGA-005" },
+    { organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-6`, level: "Competitive", status: "ACTIVE" as const, customId: "SGA-006" },
+    { organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-7`, level: "Silver", status: "TRIAL" as const, customId: "SGA-007" },
+    { organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-8`, level: "Preschool", status: "ACTIVE" as const, customId: "SGA-008" },
+    { organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-1`, level: "Beginner", status: "ACTIVE" as const, customId: "MSC-001" },
+    { organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-2`, level: "Intermediate", status: "ACTIVE" as const, customId: "MSC-002" },
+    { organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-3`, level: "Beginner", status: "ACTIVE" as const, customId: "MSC-003" },
+    { organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-4`, level: "Advanced", status: "ACTIVE" as const, customId: "MSC-004" },
+    { organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-5`, level: "Beginner", status: "INACTIVE" as const, customId: "MSC-005" },
+    { organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-6`, level: "Intermediate", status: "ACTIVE" as const, customId: "MSC-006" },
   ];
   for (const oa of orgAthleteData) {
     await prisma.organizationAthlete.upsert({

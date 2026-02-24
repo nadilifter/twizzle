@@ -51,7 +51,6 @@ export async function GET(
                 id: true,
                 name: true,
                 avatar: true,
-                level: true,
               },
             },
           },

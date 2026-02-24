@@ -23,7 +23,7 @@ export async function GET() {
         organization: {
           select: {
             _count: {
-              select: { athletes: true, members: true, events: true }
+              select: { organizationAthletes: true, members: true, events: true }
             }
           }
         }
@@ -119,13 +119,13 @@ export async function PATCH(request: NextRequest) {
       where: { id: session.user.organizationId },
       select: {
         _count: {
-          select: { athletes: true, members: true, events: true }
+          select: { organizationAthletes: true, members: true, events: true }
         }
       }
     })
 
     if (orgCounts) {
-      const { athletes, members, events } = orgCounts._count
+      const { organizationAthletes: athletes, members, events } = orgCounts._count
       
       if (newPlan.maxAthletes && athletes > newPlan.maxAthletes) {
         return NextResponse.json(

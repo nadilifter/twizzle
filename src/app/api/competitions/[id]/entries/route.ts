@@ -53,7 +53,7 @@ export async function GET(
       },
       include: {
         athlete: {
-          select: { id: true, firstName: true, lastName: true, name: true, level: true, birthDate: true, gender: true },
+          select: { id: true, firstName: true, lastName: true, name: true, birthDate: true, gender: true },
         },
         category: {
           include: {

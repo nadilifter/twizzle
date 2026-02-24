@@ -56,7 +56,9 @@ export async function GET(request: NextRequest) {
     // Build organization scope filter
     const orgScope = {
       athlete: {
-        organizationId,
+        organizationAthletes: {
+          some: { organizationId },
+        },
       },
     };
 

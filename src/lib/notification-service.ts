@@ -306,7 +306,7 @@ export async function getRecipients(
       // Resolve guardian Users via AthleteGuardian relationships
       const guardianLinks = await db.athleteGuardian.findMany({
         where: {
-          athlete: { organizationId },
+          athlete: { organizationAthletes: { some: { organizationId } } },
           userId: { not: null },
         },
         include: {
@@ -448,7 +448,7 @@ export async function getRecipients(
                 },
               }
             : {}),
-          athlete: { organizationId },
+          athlete: { organizationAthletes: { some: { organizationId } } },
         },
         include: {
           athlete: {
@@ -618,6 +618,11 @@ export async function buildTemplateContext(
   if (data.athleteId) {
     const athlete = await db.athlete.findUnique({
       where: { id: data.athleteId },
+      include: {
+        organizationAthletes: organizationId
+          ? { where: { organizationId }, select: { level: true } }
+          : { select: { level: true }, take: 1 },
+      },
     });
     if (athlete) {
       context.athleteName = athlete.name;
@@ -625,7 +630,8 @@ export async function buildTemplateContext(
       context.athleteFirstName = nameParts[0];
       context.athleteLastName = nameParts.slice(1).join(" ") || undefined;
       context.athleteEmail = athlete.email || undefined;
-      context.athleteLevel = athlete.level || undefined;
+      const orgAthleteLevel = athlete.organizationAthletes[0]?.level;
+      context.athleteLevel = orgAthleteLevel || undefined;
       
       if (athlete.birthDate) {
         context.athleteBirthDate = formatDate(athlete.birthDate);

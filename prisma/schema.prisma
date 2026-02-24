@@ -56,8 +56,6 @@ model Organization {
   payouts          Payout[]
   recurringCharges RecurringCharge[]
 
-  // Athletes (Direct relation for easier querying)
-  athletes Athlete[]
 
   // Platform Subscription
   subscription OrganizationSubscription?
@@ -351,15 +349,10 @@ model Athlete {
   firstName String             @default("")
   lastName  String             @default("")
   email     String?
-  level     String
-  status    AthleteStatus      @default(ACTIVE)
   avatar    String?
   birthDate DateTime?
   gender    GenderDeclaration?
 
-  // New fields for refactor
-  customId       String? // Club-specific ID (e.g. Member ID)
-  organizationId String? // Direct organization link
   medicalDetails Json? // { allergies: [], conditions: [], emergencyContact: {} }
 
   // Guardian/Ward system
@@ -370,7 +363,6 @@ model Athlete {
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization     Organization?          @relation(fields: [organizationId], references: [id])
   selfUser         User?                  @relation("SelfAthlete", fields: [userId], references: [id], onDelete: SetNull)
   enrollments      Enrollment[]
   attendances      Attendance[]
@@ -426,10 +418,14 @@ model AthleteGuardian {
 }
 
 model OrganizationAthlete {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
   athleteId      String
-  createdAt      DateTime @default(now())
+  level          String        @default("Unassigned")
+  status         AthleteStatus @default(ACTIVE)
+  customId       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   athlete      Athlete      @relation(fields: [athleteId], references: [id], onDelete: Cascade)

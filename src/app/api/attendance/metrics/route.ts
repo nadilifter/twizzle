@@ -79,7 +79,15 @@ export async function GET(request: NextRequest) {
       if (athleteIds.length > 0) {
         const athletes = await db.athlete.findMany({
           where: { id: { in: athleteIds } },
-          select: { id: true, name: true, level: true },
+          select: {
+            id: true,
+            name: true,
+            organizationAthletes: {
+              where: { organizationId: session.user.organizationId },
+              select: { level: true },
+              take: 1,
+            },
+          },
         });
 
         const athleteMap = new Map(athletes.map(a => [a.id, a]));
@@ -100,7 +108,7 @@ export async function GET(request: NextRequest) {
             return {
               id: athleteId,
               name: athlete?.name || "Unknown",
-              level: athlete?.level || null,
+              level: athlete?.organizationAthletes?.[0]?.level || null,
               total,
               present,
               absent,

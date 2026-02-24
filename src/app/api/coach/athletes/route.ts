@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         programId: { in: programIds },
         status: "ACTIVE",
         athlete: {
-          organizationId,
+          organizationAthletes: { some: { organizationId } },
           ...(search && {
             OR: [
               { name: { contains: search, mode: "insensitive" as const } },
@@ -85,8 +85,6 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             email: true,
-            level: true,
-            status: true,
             avatar: true,
           },
         },
@@ -124,7 +122,7 @@ export async function GET(request: NextRequest) {
         programId: { in: programIds },
         status: "ACTIVE",
         athlete: {
-          organizationId,
+          organizationAthletes: { some: { organizationId } },
           ...(search && {
             OR: [
               { name: { contains: search, mode: "insensitive" as const } },

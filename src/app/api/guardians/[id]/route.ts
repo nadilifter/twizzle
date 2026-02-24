@@ -45,8 +45,6 @@ export async function GET(
                 lastName: true,
                 birthDate: true,
                 gender: true,
-                level: true,
-                status: true,
               },
             },
           },

@@ -80,7 +80,10 @@ export async function GET(
         lastName: true,
         birthDate: true,
         gender: true,
-        level: true,
+        organizationAthletes: {
+          where: { organizationId },
+          select: { level: true },
+        },
         guardians: {
           include: {
             user: {
@@ -95,14 +98,15 @@ export async function GET(
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 })
     }
 
-    // Resolve level name
+    // Resolve level name from org-specific data
+    const orgAthleteLevel = athlete.organizationAthletes[0]?.level ?? null;
     let level: { id: string; name: string } | null = null
-    if (athlete.level) {
+    if (orgAthleteLevel && orgAthleteLevel !== "Unassigned") {
       const levelRecord = await db.level.findFirst({
-        where: { id: athlete.level, organizationId },
+        where: { id: orgAthleteLevel, organizationId },
         select: { id: true, name: true },
       })
-      level = levelRecord ?? { id: athlete.level, name: athlete.level }
+      level = levelRecord ?? { id: orgAthleteLevel, name: orgAthleteLevel }
     }
 
     const guardians = athlete.guardians

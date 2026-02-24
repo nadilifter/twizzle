@@ -417,7 +417,7 @@ async function findExpiringMemberships(
 ): Promise<EntityMatch[]> {
   const memberships = await db.athleteMembership.findMany({
     where: {
-      athlete: { organizationId },
+      athlete: { organizationAthletes: { some: { organizationId } } },
       endDate: {
         gte: startDate,
         lte: endDate,
@@ -642,9 +642,8 @@ async function findBirthdays(organizationId: string): Promise<EntityMatch[]> {
   // Find athletes whose birth month and day match today
   const athletes = await db.athlete.findMany({
     where: {
-      organizationAthletes: { some: { organizationId } },
+      organizationAthletes: { some: { organizationId, status: "ACTIVE" } },
       birthDate: { not: null },
-      status: "ACTIVE",
     },
     include: {
       guardians: {
@@ -689,7 +688,7 @@ async function findDueEvaluations(
 ): Promise<EntityMatch[]> {
   const evaluations = await db.evaluation.findMany({
     where: {
-      athlete: { organizationId },
+      athlete: { organizationAthletes: { some: { organizationId } } },
       completedAt: null,
       createdAt: {
         gte: startDate,
@@ -736,7 +735,7 @@ async function findRecentSkillAchievements(
 ): Promise<EntityMatch[]> {
   const achievements = await db.athleteSkillProgress.findMany({
     where: {
-      athlete: { organizationId },
+      athlete: { organizationAthletes: { some: { organizationId } } },
       status: "ACHIEVED",
       achievedAt: {
         gte: startDate,

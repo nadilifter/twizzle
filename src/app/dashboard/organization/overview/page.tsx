@@ -40,7 +40,7 @@ interface OrgDetails {
   createdAt: string
   _count: {
     members: number
-    athletes: number
+    organizationAthletes: number
     programs: number
   }
   subscription: {
@@ -202,7 +202,7 @@ export default function OrganizationOverviewPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orgDetails._count.athletes}</div>
+            <div className="text-2xl font-bold">{orgDetails._count.organizationAthletes}</div>
             <p className="text-xs text-muted-foreground">Registered athletes</p>
           </CardContent>
         </Card>

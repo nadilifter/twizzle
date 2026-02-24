@@ -80,17 +80,13 @@ export async function GET(
       },
     });
 
-    // Get organization's custom questions for context
-    const athlete = await db.athlete.findUnique({
-      where: { id: athleteId },
-      select: { organizationId: true },
-    });
-
+    // Get organization's custom questions for context (using admin's org)
+    const organizationId = session.user.organizationId;
     let customQuestions: any[] = [];
-    if (athlete?.organizationId) {
+    if (organizationId) {
       customQuestions = await db.customMedicalQuestion.findMany({
         where: {
-          organizationId: athlete.organizationId,
+          organizationId,
           isActive: true,
         },
         orderBy: { displayOrder: "asc" },
@@ -99,9 +95,9 @@ export async function GET(
 
     // Get organization's medical config
     let medicalConfig = null;
-    if (athlete?.organizationId) {
+    if (organizationId) {
       medicalConfig = await db.medicalFormConfig.findUnique({
-        where: { organizationId: athlete.organizationId },
+        where: { organizationId },
       });
     }
 

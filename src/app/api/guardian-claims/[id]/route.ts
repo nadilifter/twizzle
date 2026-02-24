@@ -38,7 +38,9 @@ export async function PATCH(
         athlete: {
           select: {
             id: true,
-            organizationId: true,
+            organizationAthletes: {
+              select: { organizationId: true },
+            },
             guardians: {
               where: { isPrimary: true, userId: { not: null } },
               select: { userId: true },
@@ -62,24 +64,27 @@ export async function PATCH(
       );
     }
 
-    // Authorization: must be primary guardian or org admin
+    // Authorization: must be primary guardian or org admin of any linked org
     const userId = session.user.id;
     const isPrimaryGuardian = claim.athlete.guardians.some(
       (g) => g.userId === userId
     );
 
     let isOrgAdmin = false;
-    if (claim.athlete.organizationId) {
+    for (const oa of claim.athlete.organizationAthletes) {
       const membership = await db.organizationMember.findUnique({
         where: {
           organizationId_userId: {
-            organizationId: claim.athlete.organizationId,
+            organizationId: oa.organizationId,
             userId,
           },
         },
         select: { role: true },
       });
-      isOrgAdmin = membership?.role === "ADMIN";
+      if (membership?.role === "ADMIN") {
+        isOrgAdmin = true;
+        break;
+      }
     }
 
     if (!isPrimaryGuardian && !isOrgAdmin) {
@@ -108,22 +113,6 @@ export async function PATCH(
           },
         }),
       ]);
-
-      if (claim.athlete.organizationId) {
-        await db.organizationAthlete.upsert({
-          where: {
-            organizationId_athleteId: {
-              organizationId: claim.athlete.organizationId,
-              athleteId: claim.athleteId,
-            },
-          },
-          update: {},
-          create: {
-            organizationId: claim.athlete.organizationId,
-            athleteId: claim.athleteId,
-          },
-        });
-      }
 
       return NextResponse.json({
         success: true,

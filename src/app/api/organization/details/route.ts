@@ -31,7 +31,7 @@ export async function GET() {
         _count: {
           select: {
             members: true,
-            athletes: true,
+            organizationAthletes: true,
             programs: true,
           },
         },

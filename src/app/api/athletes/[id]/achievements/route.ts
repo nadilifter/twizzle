@@ -31,8 +31,11 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        level: true,
         avatar: true,
+        organizationAthletes: {
+          where: { organizationId: session.user.organizationId },
+          select: { level: true },
+        },
       },
     });
 

@@ -438,7 +438,7 @@ export async function getExpandedCampaignRecipients(
           email: { not: "" },
           athleteGuardians: {
             some: {
-              athlete: { organizationId },
+              athlete: { organizationAthletes: { some: { organizationId } } },
             },
           },
         },
@@ -462,7 +462,7 @@ export async function getExpandedCampaignRecipients(
         where: {
           status: "ACTIVE",
           athlete: {
-            organizationId,
+            organizationAthletes: { some: { organizationId } },
           },
         },
         include: {
@@ -1012,6 +1012,10 @@ async function buildRecipientContext(
           include: {
             athlete: {
               include: {
+                organizationAthletes: {
+                  where: { organizationId },
+                  select: { level: true },
+                },
                 memberships: {
                   where: { status: "ACTIVE" },
                   include: { instance: { include: { group: true } } },
@@ -1042,7 +1046,8 @@ async function buildRecipientContext(
         context.athleteFirstName = nameParts[0];
         if (nameParts.length > 1) context.athleteLastName = nameParts.slice(1).join(" ");
         if (athlete.email) context.athleteEmail = athlete.email;
-        if (athlete.level) context.athleteLevel = athlete.level;
+        const oaLevel = athlete.organizationAthletes?.[0]?.level;
+        if (oaLevel) context.athleteLevel = oaLevel;
         const membership = athlete.memberships?.[0];
         if (membership) {
           context.membershipName = membership.instance.name;

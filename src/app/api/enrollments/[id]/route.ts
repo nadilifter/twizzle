@@ -13,12 +13,14 @@ async function getOrgEnrollment(enrollmentId: string, organizationId: string) {
     where: {
       id: enrollmentId,
       athlete: {
-        organizationId,
+        organizationAthletes: {
+          some: { organizationId },
+        },
       },
     },
     include: {
       athlete: {
-        select: { id: true, name: true, level: true },
+        select: { id: true, name: true },
       },
       program: true,
     },
@@ -94,7 +96,7 @@ export async function PATCH(
       },
       include: {
         athlete: {
-          select: { id: true, name: true, level: true },
+          select: { id: true, name: true },
         },
         program: true,
       },

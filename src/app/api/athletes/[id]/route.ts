@@ -54,6 +54,10 @@ export async function GET(
         },
       },
       include: {
+        organizationAthletes: {
+          where: { organizationId: session.user.organizationId },
+          select: { level: true, status: true, customId: true },
+        },
         guardians: {
           include: {
             user: {
@@ -255,17 +259,19 @@ export async function GET(
       where: { athleteId: id },
     });
 
-    // Resolve level name and color
+    // Resolve level name and color from OrganizationAthlete
+    const orgAthlete = athlete.organizationAthletes[0];
+    const athleteLevel = orgAthlete?.level;
     let levelInfo: { id: string; name: string; color: string | null } | null = null;
-    if (athlete.level) {
+    if (athleteLevel && athleteLevel !== "Unassigned") {
       const levelRecord = await db.level.findFirst({
         where: {
           organizationId: session.user.organizationId,
-          OR: [{ id: athlete.level }, { name: athlete.level }],
+          OR: [{ id: athleteLevel }, { name: athleteLevel }],
         },
         select: { id: true, name: true, color: true },
       });
-      levelInfo = levelRecord ?? { id: athlete.level, name: athlete.level, color: null };
+      levelInfo = levelRecord ?? { id: athleteLevel, name: athleteLevel, color: null };
     }
 
     const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
@@ -366,8 +372,12 @@ export async function GET(
       createdAt: reg.createdAt.toISOString(),
     }))
 
+    const { organizationAthletes: _oa, ...athleteRest } = athlete;
     return NextResponse.json({
-      ...athlete,
+      ...athleteRest,
+      level: orgAthlete?.level ?? "Unassigned",
+      status: orgAthlete?.status ?? "ACTIVE",
+      customId: orgAthlete?.customId ?? null,
       levelInfo,
       memberships,
       waivers,
@@ -485,17 +495,33 @@ export async function PATCH(
       }
     }
 
-    const { birthDate, guardianUserId, ...otherData } = validatedData;
+    const { birthDate, guardianUserId, level, status, ...otherData } = validatedData;
+
+    // Update org-specific fields on OrganizationAthlete
+    const orgAthleteUpdate: Record<string, unknown> = {};
+    if (level !== undefined) orgAthleteUpdate.level = level;
+    if (status !== undefined) orgAthleteUpdate.status = status;
+
+    if (Object.keys(orgAthleteUpdate).length > 0 && session.user.organizationId) {
+      await db.organizationAthlete.updateMany({
+        where: { athleteId: id, organizationId: session.user.organizationId },
+        data: orgAthleteUpdate,
+      });
+    }
+
     const athlete = await db.athlete.update({
       where: { id },
       data: {
         ...otherData,
-        // Only update birthDate if explicitly provided (null to clear, string to set)
         ...(birthDate !== undefined && {
           birthDate: birthDate === null ? null : parseDateOnly(birthDate),
         }),
       },
       include: {
+        organizationAthletes: {
+          where: { organizationId: session.user.organizationId },
+          select: { level: true, status: true, customId: true },
+        },
         guardians: {
           include: {
             user: {
@@ -516,9 +542,14 @@ export async function PATCH(
     });
 
     const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
+    const updatedOrgAthlete = athlete.organizationAthletes[0];
+    const { organizationAthletes: _oa2, ...updatedRest } = athlete;
 
     return NextResponse.json({
-      ...athlete,
+      ...updatedRest,
+      level: updatedOrgAthlete?.level ?? "Unassigned",
+      status: updatedOrgAthlete?.status ?? "ACTIVE",
+      customId: updatedOrgAthlete?.customId ?? null,
       parent: primaryGuardian?.user?.name ?? "Unknown",
     });
   } catch (error) {

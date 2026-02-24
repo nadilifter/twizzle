@@ -66,7 +66,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
           invoices: true,
           programs: true,
           events: true,
-          athletes: true,
+          organizationAthletes: true,
         }
       },
       members: {

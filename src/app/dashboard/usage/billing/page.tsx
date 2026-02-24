@@ -47,7 +47,7 @@ export default async function BillingPage() {
       _count: {
         select: {
           invoices: true,
-          athletes: true,
+          organizationAthletes: true,
           members: true,
           programs: true,
           events: true,
@@ -248,7 +248,7 @@ export default async function BillingPage() {
                   isPopular: p.isPopular,
                 }))}
                 currentUsage={{
-                  athletes: organization._count.athletes,
+                  athletes: organization._count.organizationAthletes,
                   users: organization._count.members,
                   programs: organization._count.programs,
                   events: organization._count.events,
@@ -271,7 +271,7 @@ export default async function BillingPage() {
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-medium">Athletes</span>
               <div className="text-right">
-                <span className="text-2xl font-bold">{organization._count.athletes}</span>
+                <span className="text-2xl font-bold">{organization._count.organizationAthletes}</span>
                 <span className="text-sm text-muted-foreground"> / {currentPlan?.maxAthletes ?? "∞"}</span>
               </div>
             </div>
@@ -655,7 +655,7 @@ export default async function BillingPage() {
                           isPopular: plan.isPopular,
                         }]}
                         currentUsage={{
-                          athletes: organization._count.athletes,
+                          athletes: organization._count.organizationAthletes,
                           users: organization._count.members,
                           programs: organization._count.programs,
                           events: organization._count.events,

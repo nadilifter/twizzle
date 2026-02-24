@@ -35,6 +35,8 @@ export async function GET(
 
     const userId = session.user.id;
 
+    const organizationId = config.organizationId;
+
     // Find ALL athletes the user is a guardian of (no org filter)
     const userGuardianLinks = await db.athleteGuardian.findMany({
       where: { userId },
@@ -47,9 +49,12 @@ export async function GET(
             name: true,
             birthDate: true,
             gender: true,
-            status: true,
             allowGuardianClaims: true,
             userId: true,
+            organizationAthletes: {
+              where: { organizationId },
+              select: { status: true },
+            },
           },
         },
       },
@@ -65,14 +70,17 @@ export async function GET(
         name: true,
         birthDate: true,
         gender: true,
-        status: true,
         allowGuardianClaims: true,
         userId: true,
+        organizationAthletes: {
+          where: { organizationId },
+          select: { status: true },
+        },
       },
     });
 
-    // Deduplicate athletes from all sources
-    const athleteMap = new Map<string, (typeof userGuardianLinks)[0]["athlete"]>();
+    type AthleteResult = (typeof userGuardianLinks)[0]["athlete"];
+    const athleteMap = new Map<string, AthleteResult>();
     for (const link of userGuardianLinks) {
       athleteMap.set(link.athlete.id, link.athlete);
     }
@@ -80,9 +88,16 @@ export async function GET(
       athleteMap.set(selfAthlete.id, selfAthlete);
     }
 
-    const athletes = Array.from(athleteMap.values()).filter(
-      (a) => a.status === "ACTIVE" || a.status === "TRIAL"
-    );
+    // Filter by org-specific status; if no org link yet, include (they haven't registered at this org)
+    const athletes = Array.from(athleteMap.values()).filter((a) => {
+      const orgLink = a.organizationAthletes[0];
+      if (!orgLink) return true;
+      return orgLink.status === "ACTIVE" || orgLink.status === "TRIAL";
+    }).map((a) => {
+      const { organizationAthletes, ...rest } = a;
+      const orgLink = organizationAthletes[0];
+      return { ...rest, status: orgLink?.status ?? "ACTIVE" };
+    });
 
     const hasSelfAthlete = selfAthlete != null;
 
@@ -165,7 +180,7 @@ export async function POST(
         firstName: { equals: firstName, mode: "insensitive" },
         lastName: { equals: lastName, mode: "insensitive" },
         birthDate: { gte: startOfDay, lte: endOfDay },
-        organizationId,
+        organizationAthletes: { some: { organizationId } },
       },
       select: {
         id: true,
@@ -174,7 +189,6 @@ export async function POST(
         name: true,
         birthDate: true,
         gender: true,
-        status: true,
         allowGuardianClaims: true,
         userId: true,
         guardians: {
@@ -264,7 +278,6 @@ export async function POST(
         name: true,
         birthDate: true,
         gender: true,
-        status: true,
         allowGuardianClaims: true,
         userId: true,
       },
@@ -295,11 +308,8 @@ export async function POST(
         firstName,
         lastName,
         name: `${firstName} ${lastName}`,
-        level: "Unassigned",
         birthDate: parsedBirthDate,
         gender,
-        status: "ACTIVE",
-        organizationId,
         userId: isSelf ? userId : undefined,
         allowGuardianClaims: allowGuardianClaims ?? false,
         guardians: {
@@ -310,7 +320,11 @@ export async function POST(
           },
         },
         organizationAthletes: {
-          create: { organizationId },
+          create: {
+            organizationId,
+            level: "Unassigned",
+            status: "ACTIVE",
+          },
         },
       },
       select: {
@@ -320,13 +334,20 @@ export async function POST(
         name: true,
         birthDate: true,
         gender: true,
-        status: true,
         allowGuardianClaims: true,
         userId: true,
+        organizationAthletes: {
+          where: { organizationId },
+          select: { status: true },
+        },
       },
     });
 
-    return NextResponse.json({ athlete }, { status: 201 });
+    const { organizationAthletes: _oa, ...athleteRest } = athlete;
+    const orgLink = athlete.organizationAthletes[0];
+    return NextResponse.json({
+      athlete: { ...athleteRest, status: orgLink?.status ?? "ACTIVE" },
+    }, { status: 201 });
   } catch (error) {
     console.error("Create athlete error:", error);
     return NextResponse.json(

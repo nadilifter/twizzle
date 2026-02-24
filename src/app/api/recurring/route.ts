@@ -71,7 +71,6 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              level: true,
             },
           },
           paymentMethod: {

@@ -606,30 +606,40 @@ async function main() {
   // ============================================
   console.log("\n🏃 Creating athletes...");
   await Promise.all([
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-1` }, update: {}, create: { id: `${ORG1_ID}-ath-1`, name: "Emily Anderson", email: "emily.a@email.com", level: "Bronze", status: "ACTIVE", birthDate: new Date("2016-03-15"), organizationId: ORG1_ID, customId: "SGA-001", medicalDetails: { allergies: ["peanuts"], conditions: [], emergencyContact: { name: "Michelle Anderson", phone: "(555) 101-1001" } } } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-2` }, update: {}, create: { id: `${ORG1_ID}-ath-2`, name: "Sophie Anderson", email: "sophie.a@email.com", level: "Silver", status: "ACTIVE", birthDate: new Date("2014-07-22"), organizationId: ORG1_ID, customId: "SGA-002" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-3` }, update: {}, create: { id: `${ORG1_ID}-ath-3`, name: "Olivia Baker", level: "Competitive", status: "ACTIVE", birthDate: new Date("2013-11-08"), organizationId: ORG1_ID, customId: "SGA-003" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-4` }, update: {}, create: { id: `${ORG1_ID}-ath-4`, name: "Lily Chen", level: "Bronze", status: "ACTIVE", birthDate: new Date("2017-01-30"), organizationId: ORG1_ID, customId: "SGA-004" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-5` }, update: {}, create: { id: `${ORG1_ID}-ath-5`, name: "Mia Chen", level: "Gold", status: "ACTIVE", birthDate: new Date("2012-09-14"), organizationId: ORG1_ID, customId: "SGA-005" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-6` }, update: {}, create: { id: `${ORG1_ID}-ath-6`, name: "Grace Davis", level: "Competitive", status: "ACTIVE", birthDate: new Date("2011-05-20"), organizationId: ORG1_ID, customId: "SGA-006" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-7` }, update: {}, create: { id: `${ORG1_ID}-ath-7`, name: "Ava Evans", level: "Silver", status: "TRIAL", birthDate: new Date("2015-12-03"), organizationId: ORG1_ID, customId: "SGA-007" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-8` }, update: {}, create: { id: `${ORG1_ID}-ath-8`, name: "Hannah Evans", level: "Preschool", status: "ACTIVE", birthDate: new Date("2019-08-11"), organizationId: ORG1_ID, customId: "SGA-008" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-1` }, update: {}, create: { id: `${ORG2_ID}-ath-1`, name: "Jake Foster", email: "jake.f@email.com", level: "Beginner", status: "ACTIVE", birthDate: new Date("2014-04-18"), organizationId: ORG2_ID, customId: "MSC-001" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-2` }, update: {}, create: { id: `${ORG2_ID}-ath-2`, name: "Ethan Foster", level: "Intermediate", status: "ACTIVE", birthDate: new Date("2010-10-25"), organizationId: ORG2_ID, customId: "MSC-002" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-3` }, update: {}, create: { id: `${ORG2_ID}-ath-3`, name: "Sofia Garcia", level: "Beginner", status: "ACTIVE", birthDate: new Date("2016-06-12"), organizationId: ORG2_ID, customId: "MSC-003" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-4` }, update: {}, create: { id: `${ORG2_ID}-ath-4`, name: "Lucas Garcia", level: "Advanced", status: "ACTIVE", birthDate: new Date("2011-02-28"), organizationId: ORG2_ID, customId: "MSC-004" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-5` }, update: {}, create: { id: `${ORG2_ID}-ath-5`, name: "Chloe Harris", level: "Beginner", status: "INACTIVE", birthDate: new Date("2015-09-07"), organizationId: ORG2_ID, customId: "MSC-005" } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-6` }, update: {}, create: { id: `${ORG2_ID}-ath-6`, name: "Noah Irving", level: "Intermediate", status: "ACTIVE", birthDate: new Date("2012-11-19"), organizationId: ORG2_ID, customId: "MSC-006" } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-1` }, update: {}, create: { id: `${ORG1_ID}-ath-1`, name: "Emily Anderson", email: "emily.a@email.com", birthDate: new Date("2016-03-15"), medicalDetails: { allergies: ["peanuts"], conditions: [], emergencyContact: { name: "Michelle Anderson", phone: "(555) 101-1001" } } } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-2` }, update: {}, create: { id: `${ORG1_ID}-ath-2`, name: "Sophie Anderson", email: "sophie.a@email.com", birthDate: new Date("2014-07-22") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-3` }, update: {}, create: { id: `${ORG1_ID}-ath-3`, name: "Olivia Baker", birthDate: new Date("2013-11-08") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-4` }, update: {}, create: { id: `${ORG1_ID}-ath-4`, name: "Lily Chen", birthDate: new Date("2017-01-30") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-5` }, update: {}, create: { id: `${ORG1_ID}-ath-5`, name: "Mia Chen", birthDate: new Date("2012-09-14") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-6` }, update: {}, create: { id: `${ORG1_ID}-ath-6`, name: "Grace Davis", birthDate: new Date("2011-05-20") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-7` }, update: {}, create: { id: `${ORG1_ID}-ath-7`, name: "Ava Evans", birthDate: new Date("2015-12-03") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-8` }, update: {}, create: { id: `${ORG1_ID}-ath-8`, name: "Hannah Evans", birthDate: new Date("2019-08-11") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-1` }, update: {}, create: { id: `${ORG2_ID}-ath-1`, name: "Jake Foster", email: "jake.f@email.com", birthDate: new Date("2014-04-18") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-2` }, update: {}, create: { id: `${ORG2_ID}-ath-2`, name: "Ethan Foster", birthDate: new Date("2010-10-25") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-3` }, update: {}, create: { id: `${ORG2_ID}-ath-3`, name: "Sofia Garcia", birthDate: new Date("2016-06-12") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-4` }, update: {}, create: { id: `${ORG2_ID}-ath-4`, name: "Lucas Garcia", birthDate: new Date("2011-02-28") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-5` }, update: {}, create: { id: `${ORG2_ID}-ath-5`, name: "Chloe Harris", birthDate: new Date("2015-09-07") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-6` }, update: {}, create: { id: `${ORG2_ID}-ath-6`, name: "Noah Irving", birthDate: new Date("2012-11-19") } }),
   ]);
   console.log("  ✓ Created 14 athletes");
 
   // ============================================
-  // ORGANIZATION-ATHLETE LINKS
+  // ORGANIZATION-ATHLETE LINKS (with org-specific level, status, customId)
   // ============================================
   console.log("\n🔗 Creating organization-athlete links...");
+  const org1Levels = ["Bronze", "Silver", "Competitive", "Bronze", "Gold", "Competitive", "Silver", "Preschool"];
+  const org1Statuses: ("ACTIVE" | "TRIAL")[] = ["ACTIVE", "ACTIVE", "ACTIVE", "ACTIVE", "ACTIVE", "ACTIVE", "TRIAL", "ACTIVE"];
+  const org2Levels = ["Beginner", "Intermediate", "Beginner", "Advanced", "Beginner", "Intermediate"];
+  const org2Statuses: ("ACTIVE" | "INACTIVE")[] = ["ACTIVE", "ACTIVE", "ACTIVE", "ACTIVE", "INACTIVE", "ACTIVE"];
   const orgAthleteData = [
-    ...Array.from({ length: 8 }, (_, i) => ({ organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-${i + 1}` })),
-    ...Array.from({ length: 6 }, (_, i) => ({ organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-${i + 1}` })),
+    ...Array.from({ length: 8 }, (_, i) => ({
+      organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-${i + 1}`,
+      level: org1Levels[i], status: org1Statuses[i], customId: `SGA-00${i + 1}`,
+    })),
+    ...Array.from({ length: 6 }, (_, i) => ({
+      organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-${i + 1}`,
+      level: org2Levels[i], status: org2Statuses[i], customId: `MSC-00${i + 1}`,
+    })),
   ];
   for (const oa of orgAthleteData) {
     await prisma.organizationAthlete.upsert({

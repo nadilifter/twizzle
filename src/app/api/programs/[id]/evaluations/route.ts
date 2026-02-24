@@ -56,7 +56,6 @@ export async function GET(
             select: {
               id: true,
               name: true,
-              level: true,
               avatar: true,
             },
           },
@@ -263,7 +262,6 @@ export async function POST(
               select: {
                 id: true,
                 name: true,
-                level: true,
               },
             },
           },

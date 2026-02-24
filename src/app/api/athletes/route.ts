@@ -39,9 +39,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
+    const orgId = session.user.organizationId;
+    const orgAthleteFilter: Record<string, unknown> = { organizationId: orgId };
+    if (status) orgAthleteFilter.status = status as "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED";
+    if (level) orgAthleteFilter.level = level;
+
     const where = {
       organizationAthletes: {
-        some: { organizationId: session.user.organizationId },
+        some: orgAthleteFilter,
       },
       ...(search && {
         OR: [
@@ -49,8 +54,6 @@ export async function GET(request: NextRequest) {
           { email: { contains: search, mode: "insensitive" as const } },
         ],
       }),
-      ...(status && { status: status as "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED" }),
-      ...(level && { level }),
     };
 
     const now = new Date();
@@ -59,6 +62,10 @@ export async function GET(request: NextRequest) {
       db.athlete.findMany({
         where,
         include: {
+          organizationAthletes: {
+            where: { organizationId: orgId },
+            select: { level: true, status: true, customId: true },
+          },
           guardians: {
             include: {
               user: {
@@ -114,6 +121,7 @@ export async function GET(request: NextRequest) {
     const transformedAthletes = athletes.map((athlete) => {
       const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
       const guardianUser = primaryGuardian?.user ?? null;
+      const orgAthlete = athlete.organizationAthletes[0];
 
       const programsWithFutureInstances = new Set(
         athlete.enrollments
@@ -124,9 +132,13 @@ export async function GET(request: NextRequest) {
       const uniqueCompetitionIds = new Set(
         athlete.competitionEntries.map((e) => e.competitionId)
       );
-      
+
+      const { organizationAthletes: _oa, ...rest } = athlete;
       return {
-        ...athlete,
+        ...rest,
+        level: orgAthlete?.level ?? "Unassigned",
+        status: orgAthlete?.status ?? "ACTIVE",
+        customId: orgAthlete?.customId ?? null,
         parent: guardianUser?.name ?? "Unknown",
         activePrograms: programsWithFutureInstances.size,
         activeMemberships: athlete.memberships.length,
@@ -195,9 +207,6 @@ export async function POST(request: NextRequest) {
       data: {
         name: validatedData.name,
         email: validatedData.email ?? null,
-        level: validatedData.level,
-        status: validatedData.status,
-        organizationId: session.user.organizationId,
         birthDate: parseDateOnly(validatedData.birthDate),
         guardians: {
           create: {
@@ -209,10 +218,16 @@ export async function POST(request: NextRequest) {
         organizationAthletes: {
           create: {
             organizationId: session.user.organizationId!,
+            level: validatedData.level,
+            status: validatedData.status,
           },
         },
       },
       include: {
+        organizationAthletes: {
+          where: { organizationId: session.user.organizationId },
+          select: { level: true, status: true, customId: true },
+        },
         guardians: {
           include: {
             user: {
@@ -246,9 +261,14 @@ export async function POST(request: NextRequest) {
 
     const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
     const guardianUserData = primaryGuardian?.user ?? null;
+    const orgAthlete = athlete.organizationAthletes[0];
 
+    const { organizationAthletes: _oa, ...athleteRest } = athlete;
     const transformedAthlete = {
-      ...athlete,
+      ...athleteRest,
+      level: orgAthlete?.level ?? "Unassigned",
+      status: orgAthlete?.status ?? "ACTIVE",
+      customId: orgAthlete?.customId ?? null,
       parent: guardianUserData?.name ?? "Unknown",
       activePrograms: 0,
       activeMemberships: 0,
