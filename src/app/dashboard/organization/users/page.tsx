@@ -615,7 +615,7 @@ export default function UsersPage() {
                                   id={`perm-${perm.id}`}
                                   checked={isChecked}
                                   onCheckedChange={() => togglePermission(perm.id)}
-                                  disabled={selectedPermissions.includes("*") && perm.id !== "*"}
+                                  disabled={selectedPermissions.includes("*")}
                                 />
                               </div>
                             )

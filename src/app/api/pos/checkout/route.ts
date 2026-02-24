@@ -9,7 +9,7 @@ const cartItemSchema = z.object({
   name: z.string(),
   price: z.number(),
   quantity: z.number().int().positive(),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.string(), z.any()).optional(),
 });
 
 const checkoutSchema = z.object({

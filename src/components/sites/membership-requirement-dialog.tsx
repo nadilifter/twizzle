@@ -23,9 +23,9 @@ import { AlertTriangle, CreditCard, Check } from "lucide-react"
 interface RequiredMembership {
   id: string
   name: string
-  price: number | string
+  price: number
   billingInterval: string
-  group?: {
+  group: {
     id: string
     name: string
   }
@@ -55,8 +55,8 @@ export function MembershipRequirementDialog({
   const selectedMembership = requiredMemberships.find(m => m.id === selectedMembershipId)
   const isSingleOption = requiredMemberships.length === 1
   
-  const formatPrice = (price: number | string, interval: string) => {
-    const numPrice = typeof price === "string" ? parseFloat(price) : price
+  const formatPrice = (price: number, interval: string) => {
+    const numPrice = price
     const formattedPrice = numPrice.toLocaleString("en-US", {
       style: "currency",
       currency: "USD",

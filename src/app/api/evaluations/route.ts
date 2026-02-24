@@ -332,7 +332,7 @@ export async function POST(request: NextRequest) {
       
       // Use template's level if level not provided
       if (!levelId) {
-        levelId = template.levelId;
+        levelId = template.levelId ?? undefined;
       }
     }
 

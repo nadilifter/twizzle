@@ -273,7 +273,7 @@ export async function PATCH(
     return NextResponse.json(updated)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.errors?.[0]?.message || "Validation error"
+      const message = error.issues?.[0]?.message || "Validation error"
       return NextResponse.json({ error: message }, { status: 400 })
     }
     console.error("Error updating template:", error)

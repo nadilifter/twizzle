@@ -13,7 +13,7 @@ const createTransactionSchema = z.object({
   method: z.string().optional(),
   description: z.string().optional(),
   paymentId: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // GET /api/transactions - List transactions with filters

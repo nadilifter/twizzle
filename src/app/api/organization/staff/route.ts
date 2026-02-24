@@ -140,9 +140,9 @@ export async function POST(request: NextRequest) {
         title: validatedData.title ?? null,
         hourlyRate: validatedData.hourlyRate ?? null,
         hireDate: validatedData.hireDate ? new Date(validatedData.hireDate) : null,
-        certifications: validatedData.certifications ?? null,
+        certifications: validatedData.certifications ?? undefined,
         phone: validatedData.phone ?? null,
-        emergencyContact: validatedData.emergencyContact ?? null,
+        emergencyContact: validatedData.emergencyContact ?? undefined,
       },
       include: {
         user: {

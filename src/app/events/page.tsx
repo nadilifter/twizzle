@@ -7,7 +7,6 @@ import {
   Clock, 
   MapPin, 
   Users, 
-  CheckCircle2, 
   ArrowRight,
   ScanLine,
   Loader2,
@@ -31,17 +30,11 @@ export default function EventsPortalPage() {
   const stats = useMemo(() => {
     const totalEvents = events.length
     const totalRegistered = events.reduce((sum, event) => 
-      sum + (event._count?.attendances || event.attendances?.length || 0), 0
+      sum + (event.attendanceCount || 0), 0
     )
-    const totalCheckedIn = events.reduce((sum, event) => {
-      if (event.attendances) {
-        return sum + event.attendances.filter(a => a.status === "PRESENT" || a.status === "LATE").length
-      }
-      return sum
-    }, 0)
     const totalCapacity = events.reduce((sum, event) => sum + (event.capacity || 0), 0)
     
-    return { totalEvents, totalRegistered, totalCheckedIn, totalCapacity }
+    return { totalEvents, totalRegistered, totalCapacity }
   }, [events])
 
   // Sort events by start time
@@ -95,12 +88,6 @@ export default function EventsPortalPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{stats.totalCheckedIn}</div>
-            <div className="text-sm text-muted-foreground">Checked In</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
             <div className="text-2xl font-bold text-amber-600">
               {stats.totalCapacity > 0 ? stats.totalCapacity : "∞"}
             </div>
@@ -121,10 +108,7 @@ export default function EventsPortalPage() {
       ) : (
         <div className="space-y-4">
           {sortedEvents.map((event) => {
-            const registered = event._count?.attendances || event.attendances?.length || 0
-            const checkedIn = event.attendances?.filter(
-              a => a.status === "PRESENT" || a.status === "LATE"
-            ).length || 0
+            const registered = event.attendanceCount || 0
             const capacityText = event.capacity ? `${registered}/${event.capacity}` : registered
             
             return (
@@ -168,10 +152,7 @@ export default function EventsPortalPage() {
                             <Users className="h-4 w-4" />
                             {capacityText} registered
                           </div>
-                          <div className="flex items-center gap-1">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            {checkedIn} checked in
-                          </div>
+                          
                         </div>
                       </div>
                       

@@ -156,7 +156,7 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
         </div>
         <div className="space-y-2">
           <Label className="text-lg font-semibold">Status</Label>
-          <Select value={status} onValueChange={setStatus}>
+          <Select value={status} onValueChange={(v) => setStatus(v as "ACTIVE" | "ARCHIVED" | "DRAFT")}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

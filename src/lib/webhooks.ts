@@ -72,7 +72,7 @@ export function verifyAdyenSignature(
       Buffer.from(expectedSignature)
     );
   } catch (error) {
-    logger.error('[WEBHOOK] Adyen signature verification failed', { error });
+    logger.error('[WEBHOOK] Adyen signature verification failed', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -109,7 +109,7 @@ export function verifyTwilioSignature(
       Buffer.from(expectedSignature)
     );
   } catch (error) {
-    logger.error('[WEBHOOK] Twilio signature verification failed', { error });
+    logger.error('[WEBHOOK] Twilio signature verification failed', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }
@@ -163,7 +163,7 @@ export function verifyStripeSignature(
       Buffer.from(computedSignature)
     );
   } catch (error) {
-    logger.error('[WEBHOOK] Stripe signature verification failed', { error });
+    logger.error('[WEBHOOK] Stripe signature verification failed', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }

@@ -200,7 +200,7 @@ export function ChatHeaderButton({
   ...props
 }: ChatHeaderButtonProps) {
   return (
-    <Button variant="ghost" size="icon-sm" className={cn(className)} {...props}>
+    <Button variant="ghost" size="icon" className={cn("h-8 w-8", className)} {...props}>
       {children}
     </Button>
   );

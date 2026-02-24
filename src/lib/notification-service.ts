@@ -1096,7 +1096,7 @@ export async function createNotificationRule(data: {
       recipientConfig: {
         create: {
           recipientType: data.recipientConfig.recipientType,
-          filters: data.recipientConfig.filters || {},
+          filters: JSON.parse(JSON.stringify(data.recipientConfig.filters || {})),
           ccEmails: data.recipientConfig.ccEmails || [],
         },
       },
@@ -1183,7 +1183,7 @@ export async function updateNotificationRule(
       where: { id: currentRule.recipientConfig.id },
       data: {
         recipientType: data.recipientConfig.recipientType,
-        filters: data.recipientConfig.filters,
+        filters: data.recipientConfig.filters ? JSON.parse(JSON.stringify(data.recipientConfig.filters)) : undefined,
         ccEmails: data.recipientConfig.ccEmails,
       },
     });

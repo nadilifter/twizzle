@@ -162,6 +162,7 @@ export async function POST(request: NextRequest) {
 
     const discount = await scopedDb.discount.create({
       data: {
+        organizationId: session.user.organizationId,
         name: validatedData.name,
         code: validatedData.code,
         type: validatedData.type,

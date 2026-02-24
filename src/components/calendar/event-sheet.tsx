@@ -98,7 +98,7 @@ export function EventSheet({ event, open, onOpenChange }: EventSheetProps) {
   const startTimeStr = formatTime(event.startTime);
   const endTimeStr = formatTime(event.endTime);
   const timezone = event.timezone || "GMT+7 Pontianak";
-  const meetingCode = getMeetingCode(event.meetingLink);
+  const meetingCode = getMeetingCode(event.meetingLink ?? undefined);
 
   const organizer = event.participants[0] || "user1";
   const organizerName = getParticipantName(organizer);

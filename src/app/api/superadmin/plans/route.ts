@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(plan, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.errors?.[0]?.message || "Validation error"
+      const message = error.issues?.[0]?.message || "Validation error"
       return NextResponse.json(
         { error: message },
         { status: 400 }

@@ -42,7 +42,7 @@ export async function GET(
           },
         },
         facility: {
-          select: { id: true, name: true, address: true, city: true, stateProvince: true },
+          select: { id: true, name: true, street: true, city: true, stateProvince: true },
         },
         registrations: {
           include: {

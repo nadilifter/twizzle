@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
 
     const product = await scopedDb.product.create({
       data: {
+        organizationId: session.user.organizationId,
         name: validatedData.name,
         description: validatedData.description,
         sku: validatedData.sku,
