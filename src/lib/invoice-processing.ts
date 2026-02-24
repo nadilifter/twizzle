@@ -51,6 +51,7 @@ function pickSeedFields(raw: Record<string, unknown>) {
 /**
  * Process all registrations from a paid invoice.
  * Creates CompetitionEntry, InstanceRegistration, and AthleteMembership records.
+ * Also ensures OrganizationAthlete links exist for each athlete being registered.
  *
  * Can be called directly with the metadata object (for $0 checkout) or
  * by parsing invoice.notes (for webhook-based flows).
@@ -59,7 +60,7 @@ export async function processInvoiceRegistrations(
   metadata: InvoiceMetadata,
   items: CartItem[],
   userId?: string | null,
-  familyId?: string | null,
+  organizationId?: string | null,
 ) {
   // 1. Competition registrations
   for (const reg of metadata.competitionRegistrations) {
@@ -108,7 +109,6 @@ export async function processInvoiceRegistrations(
       create: {
         programInstanceId: instanceId,
         athleteId,
-        familyId: familyId || undefined,
         userId: userId || undefined,
         status: "REGISTERED",
       },
@@ -135,6 +135,31 @@ export async function processInvoiceRegistrations(
           startDate: new Date(),
           status: "ACTIVE",
         },
+      });
+    }
+  }
+
+  // 4. Ensure OrganizationAthlete links exist for every athlete in this checkout
+  if (organizationId) {
+    const allAthleteIds = new Set<string>();
+    for (const item of items) {
+      if (item.athleteId) allAthleteIds.add(item.athleteId);
+      if (item.details?.athleteId) allAthleteIds.add(item.details.athleteId);
+    }
+    for (const reg of metadata.competitionRegistrations) {
+      if (reg.athleteId) allAthleteIds.add(reg.athleteId);
+    }
+    for (const purchase of metadata.membershipPurchases) {
+      if (purchase.athleteId) allAthleteIds.add(purchase.athleteId);
+    }
+
+    for (const athleteId of allAthleteIds) {
+      await db.organizationAthlete.upsert({
+        where: {
+          organizationId_athleteId: { organizationId, athleteId },
+        },
+        update: {},
+        create: { organizationId, athleteId },
       });
     }
   }

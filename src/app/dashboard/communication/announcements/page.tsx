@@ -54,7 +54,7 @@ interface Announcement {
   id: string
   title: string
   content: string
-  targetScope: "ALL" | "PROGRAM" | "EVENT" | "FAMILY"
+  targetScope: "ALL" | "PROGRAM" | "EVENT" | "GUARDIAN"
   priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
   publishedAt: string | null
@@ -86,7 +86,7 @@ export default function AnnouncementsPage() {
   
   // Form State
   const [title, setTitle] = useState("")
-  const [targetScope, setTargetScope] = useState<"ALL" | "PROGRAM" | "EVENT" | "FAMILY">("ALL")
+  const [targetScope, setTargetScope] = useState<"ALL" | "PROGRAM" | "EVENT" | "GUARDIAN">("ALL")
   const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "URGENT">("NORMAL")
   const [status, setStatus] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("DRAFT")
 
@@ -295,7 +295,7 @@ export default function AnnouncementsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">All Members</SelectItem>
-                      <SelectItem value="FAMILY">Families</SelectItem>
+                      <SelectItem value="GUARDIAN">Guardians</SelectItem>
                       <SelectItem value="PROGRAM">Program</SelectItem>
                       {eventsEnabled && <SelectItem value="EVENT">Event</SelectItem>}
                     </SelectContent>

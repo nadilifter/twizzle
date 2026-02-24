@@ -197,7 +197,7 @@ export default function AthletesPage() {
   // Handle contact parent - opens email client
   const handleContactParent = React.useCallback((athlete: AthleteWithRelations) => {
     const guardianUser = athlete.guardians?.[0]?.user
-    const email = guardianUser?.email ?? athlete.family?.email
+    const email = guardianUser?.email
     if (email) {
       window.location.href = `mailto:${email}?subject=Regarding ${athlete.name}`
     } else {
@@ -337,11 +337,11 @@ export default function AthletesPage() {
     }] : []),
     {
       id: "parent",
-      accessorFn: (row) => row.guardians?.[0]?.user?.name ?? row.family?.primaryContact ?? row.parent ?? "",
+      accessorFn: (row) => row.guardians?.[0]?.user?.name ?? row.parent ?? "",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Parent/Guardian" />,
       cell: ({ row }) => {
         const guardian = row.original.guardians?.[0]
-        const name = guardian?.user?.name ?? row.original.family?.primaryContact ?? row.original.parent
+        const name = guardian?.user?.name ?? row.original.parent
         const email = guardian?.user?.email
         return (
           <div className="flex flex-col">
@@ -799,9 +799,6 @@ export default function AthletesPage() {
                 status: selectedAthlete.status as "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED",
                 birthDate: selectedAthlete.birthDate,
                 gender: selectedAthlete.gender ?? null,
-                family: selectedAthlete.family
-                  ? { id: selectedAthlete.family.id, name: selectedAthlete.family.name }
-                  : null,
                 guardian: selectedAthlete.guardians?.[0]?.user
                   ? { id: selectedAthlete.guardians[0].user.id, name: selectedAthlete.guardians[0].user.name, email: selectedAthlete.guardians[0].user.email }
                   : null,

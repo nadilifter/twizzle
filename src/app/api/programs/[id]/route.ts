@@ -188,12 +188,6 @@ export async function GET(
                 id: true,
                 reference: true,
                 status: true,
-                family: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
               },
             },
           },

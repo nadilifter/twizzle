@@ -88,7 +88,7 @@ interface CompetitionLineItem {
     status: string
     total: string | number
     createdAt: string
-    family: { id: string; name: string; primaryContact: string } | null
+    user: { id: string; name: string; email: string } | null
   }
 }
 
@@ -122,8 +122,6 @@ interface CompetitionDetail {
       firstName: string | null
       lastName: string | null
       name: string | null
-      familyId: string | null
-      family: { id: string; name: string; email: string; primaryContact: string } | null
     }
   }[]
   lineItems: CompetitionLineItem[]
@@ -163,7 +161,6 @@ interface CompetitionResult {
 interface LatestRegistration {
   athleteId: string
   athleteName: string
-  familyName: string | null
   registeredAt: string
 }
 
@@ -175,7 +172,6 @@ function getLatestRegistrations(competition: CompetitionDetail): LatestRegistrat
     seen.set(athlete.id, {
       athleteId: athlete.id,
       athleteName: [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") || athlete.name || "Unknown athlete",
-      familyName: athlete.family?.name ?? null,
       registeredAt: entry.createdAt,
     })
   }
@@ -701,7 +697,7 @@ export default function CompetitionProfilePage() {
                               <TableCell>
                                 <p className="font-medium">{item.description}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {item.invoice?.family?.name ?? "N/A"} &middot; {format(new Date(item.createdAt), "MM/dd/yyyy")}
+                                  {item.invoice?.user?.name ?? "N/A"} &middot; {format(new Date(item.createdAt), "MM/dd/yyyy")}
                                 </p>
                               </TableCell>
                               <TableCell>
@@ -768,7 +764,6 @@ export default function CompetitionProfilePage() {
                               <div>
                                 <p className="text-sm font-medium">{reg.athleteName}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {reg.familyName && <>{reg.familyName} &middot; </>}
                                   {format(new Date(reg.registeredAt), "MMM d, yyyy")}
                                 </p>
                               </div>

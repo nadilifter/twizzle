@@ -128,24 +128,9 @@ export async function GET(
     const evaluation = await db.evaluation.findFirst({
       where: {
         id,
-        OR: [
-          {
-            athlete: {
-              organizationId: session.user.organizationId,
-            },
-          },
-          {
-            athlete: {
-              guardians: {
-                some: {
-                  family: {
-                    organizationId: session.user.organizationId,
-                  },
-                },
-              },
-            },
-          },
-        ],
+        athlete: {
+          organizationId: session.user.organizationId,
+        },
       },
       include: {
         athlete: {
@@ -246,24 +231,9 @@ export async function PUT(
     const existingEvaluation = await db.evaluation.findFirst({
       where: {
         id,
-        OR: [
-          {
-            athlete: {
-              organizationId: session.user.organizationId,
-            },
-          },
-          {
-            athlete: {
-              guardians: {
-                some: {
-                  family: {
-                    organizationId: session.user.organizationId,
-                  },
-                },
-              },
-            },
-          },
-        ],
+        athlete: {
+          organizationId: session.user.organizationId,
+        },
       },
       include: {
         skillRatings: true,
@@ -551,24 +521,9 @@ export async function DELETE(
     const existingEvaluation = await db.evaluation.findFirst({
       where: {
         id,
-        OR: [
-          {
-            athlete: {
-              organizationId: session.user.organizationId,
-            },
-          },
-          {
-            athlete: {
-              guardians: {
-                some: {
-                  family: {
-                    organizationId: session.user.organizationId,
-                  },
-                },
-              },
-            },
-          },
-        ],
+        athlete: {
+          organizationId: session.user.organizationId,
+        },
       },
     });
 

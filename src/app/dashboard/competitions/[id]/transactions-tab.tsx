@@ -44,7 +44,7 @@ interface CompetitionLineItem {
     status: string
     total: string | number
     createdAt: string
-    family: { id: string; name: string; primaryContact: string } | null
+    user: { id: string; name: string; email: string } | null
   }
 }
 
@@ -81,18 +81,18 @@ const columns: ColumnDef<CompetitionLineItem>[] = [
     ),
   },
   {
-    id: "family",
-    accessorFn: (row) => row.invoice.family?.name ?? "",
+    id: "guardian",
+    accessorFn: (row) => row.invoice.user?.name ?? "",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Family" />
+      <DataTableColumnHeader column={column} title="Guardian" />
     ),
     cell: ({ row }) => {
-      const family = row.original.invoice.family
-      if (!family) return <span className="text-muted-foreground">-</span>
+      const user = row.original.invoice.user
+      if (!user) return <span className="text-muted-foreground">-</span>
       return (
         <div>
-          <p className="font-medium">{family.name}</p>
-          <p className="text-xs text-muted-foreground">{family.primaryContact}</p>
+          <p className="font-medium">{user.name}</p>
+          <p className="text-xs text-muted-foreground">{user.email}</p>
         </div>
       )
     },
@@ -199,7 +199,7 @@ export function TransactionsTab({ lineItems }: TransactionsTabProps) {
             <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium">No Transactions Yet</h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-              Transactions will appear here once families register and pay for events in this competition.
+              Transactions will appear here once athletes register and pay for events in this competition.
             </p>
           </div>
         ) : (

@@ -30,7 +30,6 @@ export interface SendSingleEmailParams {
   htmlBody: string;
   textBody?: string;
   classification?: EmailClassification;
-  familyId?: string;
   userId?: string;
   campaignId?: string;
 }
@@ -91,7 +90,6 @@ export interface EmailUsageStats {
 }
 
 export interface EmailRecipient {
-  familyId: string;
   userId?: string;
   email: string;
   name: string;
@@ -342,7 +340,6 @@ export interface ExpandedTargetingParams {
   targetMembershipStatus?: "ACTIVE" | "EXPIRED";
   targetProgramInstanceId?: string;
   targetMembershipGroupIds?: string[];
-  targetFamilyIds?: string[];
   targetUserIds?: string[];
 }
 
@@ -361,7 +358,7 @@ export async function getCampaignRecipients(
     ALL: "ALL_MEMBERS",
     PROGRAM: "PROGRAM_ANY_INSTANCE",
     EVENT: "ALL_MEMBERS", // Events will be handled via legacy path
-    FAMILY: "ALL_FAMILIES",
+    GUARDIAN: "ALL_GUARDIANS",
   };
 
   return getExpandedCampaignRecipients({
@@ -387,7 +384,6 @@ export async function getExpandedCampaignRecipients(
     targetMembershipStatus,
     targetProgramInstanceId,
     targetMembershipGroupIds,
-    targetFamilyIds,
     targetUserIds,
   } = params;
 
@@ -399,7 +395,6 @@ export async function getExpandedCampaignRecipients(
     if (user.email && !seenEmails.has(user.email.toLowerCase())) {
       seenEmails.add(user.email.toLowerCase());
       recipients.push({
-        familyId: "",
         userId: user.id,
         email: user.email,
         name: user.name,
@@ -436,7 +431,7 @@ export async function getExpandedCampaignRecipients(
     }
 
     case "ALL_MEMBERS":
-    case "ALL_FAMILIES": {
+    case "ALL_GUARDIANS": {
       const users = await db.user.findMany({
         where: {
           emailOptOut: false,
@@ -711,7 +706,6 @@ export async function getExpandedCampaignRecipients(
         if (g.user?.email && !g.user.emailOptOut && !eventSeenEmails.has(g.user.email.toLowerCase())) {
           eventSeenEmails.add(g.user.email.toLowerCase());
           eventRecipients.push({
-            familyId: "",
             userId: g.user.id,
             email: g.user.email,
             name: g.user.name,
@@ -794,7 +788,6 @@ export async function sendSingleEmail(
     htmlBody,
     textBody,
     classification = "GENERAL",
-    familyId,
     userId,
     campaignId,
   } = params;
@@ -816,19 +809,6 @@ export async function sendSingleEmail(
     });
 
     if (user?.emailOptOut) {
-      return {
-        success: false,
-        error: "Recipient has opted out of marketing emails",
-        errorCode: "OPTED_OUT",
-      };
-    }
-  } else if (familyId) {
-    const family = await db.family.findUnique({
-      where: { id: familyId },
-      select: { emailOptOut: true },
-    });
-
-    if (family?.emailOptOut) {
       return {
         success: false,
         error: "Recipient has opted out of marketing emails",
@@ -859,7 +839,6 @@ export async function sendSingleEmail(
   const emailMessage = await db.emailMessage.create({
     data: {
       organizationId,
-      familyId,
       userId,
       campaignId,
       to,
@@ -1000,11 +979,10 @@ export async function createEmailCampaign(
 }
 
 /**
- * Build template context for a specific recipient (family-based or user-based)
+ * Build template context for a specific recipient
  */
 async function buildRecipientContext(
   organizationId: string,
-  familyId?: string,
   userId?: string
 ): Promise<Record<string, string>> {
   const context: Record<string, string> = {};
@@ -1052,12 +1030,11 @@ async function buildRecipientContext(
       },
     });
     if (user) {
-      context.familyName = user.name;
-      context.primaryContact = user.name;
-      context.primaryContactFirstName = user.name.split(" ")[0];
-      context.familyEmail = user.email;
-      context.familyPhone = user.phone || "";
-      context.familyBalance = `$${Number(user.balance).toFixed(2)}`;
+      context.guardianName = user.name;
+      context.guardianFirstName = user.name.split(" ")[0];
+      context.guardianEmail = user.email;
+      context.guardianPhone = user.phone || "";
+      context.guardianBalance = `$${Number(user.balance).toFixed(2)}`;
       const athlete = user.athleteGuardians[0]?.athlete;
       if (athlete) {
         context.athleteName = athlete.name;
@@ -1087,77 +1064,6 @@ async function buildRecipientContext(
       }
     }
     return context;
-  }
-
-  // Family context
-  if (!familyId) return context;
-
-  const family = await db.family.findUnique({
-    where: { id: familyId },
-    include: {
-      guardians: {
-        include: {
-          athlete: {
-            include: {
-              memberships: {
-                where: { status: "ACTIVE" },
-                include: { instance: { include: { group: true } } },
-                take: 1,
-              },
-              enrollments: {
-                where: { status: "ACTIVE" },
-                include: { program: true },
-                take: 1,
-              },
-            },
-          },
-        },
-        take: 1, // Get primary athlete for context
-      },
-    },
-  });
-
-  if (family) {
-    context.familyName = family.name;
-    context.primaryContact = family.primaryContact;
-    context.primaryContactFirstName = family.primaryContact.split(" ")[0];
-    context.familyEmail = family.email;
-    context.familyPhone = family.phone;
-    context.familyBalance = `$${Number(family.balance).toFixed(2)}`;
-
-    // Athlete context from first guardian's athlete
-    const athlete = family.guardians[0]?.athlete;
-    if (athlete) {
-      context.athleteName = athlete.name;
-      const nameParts = athlete.name.split(" ");
-      context.athleteFirstName = nameParts[0];
-      if (nameParts.length > 1) context.athleteLastName = nameParts.slice(1).join(" ");
-      if (athlete.email) context.athleteEmail = athlete.email;
-      if (athlete.level) context.athleteLevel = athlete.level;
-      
-
-      // Membership context
-      const membership = athlete.memberships[0];
-      if (membership) {
-        context.membershipName = membership.instance.name;
-        context.membershipGroupName = membership.instance.group.name;
-        context.membershipStartDate = membership.startDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-        if (membership.endDate) {
-          context.membershipEndDate = membership.endDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-          const daysRemaining = Math.ceil((membership.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          context.membershipDaysRemaining = daysRemaining.toString();
-        }
-        context.membershipStatus = membership.status;
-        context.membershipPrice = `$${Number(membership.instance.price).toFixed(2)}`;
-      }
-
-      // Program context
-      const enrollment = athlete.enrollments[0];
-      if (enrollment) {
-        context.programName = enrollment.program.name;
-        if (enrollment.program.description) context.programDescription = enrollment.program.description;
-      }
-    }
   }
 
   return context;
@@ -1207,7 +1113,6 @@ export async function executeEmailCampaign(campaignId: string): Promise<void> {
     targetMembershipStatus: campaign.targetMembershipStatus as "ACTIVE" | "EXPIRED" | undefined,
     targetProgramInstanceId: campaign.targetProgramInstanceId ?? undefined,
     targetMembershipGroupIds: campaign.targetMembershipGroupIds,
-    targetFamilyIds: campaign.targetFamilyIds,
     targetUserIds: campaign.targetUserIds,
   });
 
@@ -1216,12 +1121,9 @@ export async function executeEmailCampaign(campaignId: string): Promise<void> {
 
   // Send to each recipient with per-recipient placeholder rendering
   for (const recipient of recipients) {
-    // Build context for this recipient
     const context = recipient.userId
-      ? await buildRecipientContext(campaign.organizationId, undefined, recipient.userId)
-      : recipient.familyId
-        ? await buildRecipientContext(campaign.organizationId, recipient.familyId)
-        : {
+      ? await buildRecipientContext(campaign.organizationId, recipient.userId)
+      : {
             organizationName: campaign.organization.name,
             currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
             currentYear: new Date().getFullYear().toString(),
@@ -1241,7 +1143,6 @@ export async function executeEmailCampaign(campaignId: string): Promise<void> {
       htmlBody: personalizedHtml,
       textBody: personalizedText,
       classification: campaign.classification,
-      familyId: recipient.familyId || undefined,
       userId: recipient.userId,
       campaignId,
     });
@@ -1371,25 +1272,14 @@ export async function handleEmailBounce(
     });
   }
 
-  // If permanent bounce, opt out the user (or legacy family)
-  if (bounceType === "Permanent") {
-    if (message.userId) {
-      await db.user.update({
-        where: { id: message.userId },
-        data: {
-          emailOptOut: true,
-          emailOptOutAt: new Date(),
-        },
-      });
-    } else if (message.familyId) {
-      await db.family.update({
-        where: { id: message.familyId },
-        data: {
-          emailOptOut: true,
-          emailOptOutAt: new Date(),
-        },
-      });
-    }
+  if (bounceType === "Permanent" && message.userId) {
+    await db.user.update({
+      where: { id: message.userId },
+      data: {
+        emailOptOut: true,
+        emailOptOutAt: new Date(),
+      },
+    });
   }
 }
 
@@ -1426,18 +1316,9 @@ export async function handleEmailComplaint(sesMessageId: string): Promise<void> 
     });
   }
 
-  // Opt out the user (or legacy family) on complaint
   if (message.userId) {
     await db.user.update({
       where: { id: message.userId },
-      data: {
-        emailOptOut: true,
-        emailOptOutAt: new Date(),
-      },
-    });
-  } else if (message.familyId) {
-    await db.family.update({
-      where: { id: message.familyId },
       data: {
         emailOptOut: true,
         emailOptOutAt: new Date(),
@@ -1529,23 +1410,12 @@ export async function handleEmailClick(sesMessageId: string): Promise<void> {
  */
 export async function handleUnsubscribe(
   identifier: string,
-  type: "user" | "family" = "family"
 ): Promise<void> {
-  if (type === "user") {
-    await db.user.update({
-      where: { id: identifier },
-      data: {
-        emailOptOut: true,
-        emailOptOutAt: new Date(),
-      },
-    });
-  } else {
-    await db.family.update({
-      where: { id: identifier },
-      data: {
-        emailOptOut: true,
-        emailOptOutAt: new Date(),
-      },
-    });
-  }
+  await db.user.update({
+    where: { id: identifier },
+    data: {
+      emailOptOut: true,
+      emailOptOutAt: new Date(),
+    },
+  });
 }

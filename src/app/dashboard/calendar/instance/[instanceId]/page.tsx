@@ -114,7 +114,7 @@ interface Registration {
     birthDate: string | null;
     avatar: string | null;
   };
-  family: {
+  user: {
     id: string;
     name: string;
   } | null;
@@ -520,7 +520,7 @@ export default function InstanceDetailPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Athlete</TableHead>
-                      <TableHead>Family</TableHead>
+                      <TableHead>Guardian</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Registered</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -532,7 +532,7 @@ export default function InstanceDetailPage() {
                         <TableCell className="font-medium">
                           {reg.athlete.name}
                         </TableCell>
-                        <TableCell>{reg.family?.name || "-"}</TableCell>
+                        <TableCell>{reg.user?.name || "-"}</TableCell>
                         <TableCell>{getStatusBadge(reg.status)}</TableCell>
                         <TableCell>
                           {format(parseISO(reg.createdAt), "MMM d, yyyy")}

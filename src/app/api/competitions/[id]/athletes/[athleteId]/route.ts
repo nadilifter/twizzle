@@ -73,7 +73,7 @@ export async function GET(
     }
 
     const athlete = await db.athlete.findFirst({
-      where: { id: athleteId, organizationId },
+      where: { id: athleteId, organizationAthletes: { some: { organizationId } } },
       select: {
         id: true,
         firstName: true,

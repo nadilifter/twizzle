@@ -32,7 +32,6 @@ const updateAthleteSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "GRADUATED"]).optional(),
   birthDate: z.string().optional().nullable(),
   guardianUserId: z.string().optional(),
-  familyId: z.string().optional(),
 });
 
 // GET /api/athletes/[id]
@@ -50,22 +49,13 @@ export async function GET(
     const athlete = await db.athlete.findFirst({
       where: {
         id,
-        guardians: {
-          some: {
-            family: {
-              organizationId: session.user.organizationId,
-            },
-          },
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
         },
       },
       include: {
         guardians: {
           include: {
-            family: {
-              include: {
-                paymentMethods: true,
-              },
-            },
             user: {
               select: {
                 id: true,
@@ -278,9 +268,7 @@ export async function GET(
       levelInfo = levelRecord ?? { id: athlete.level, name: athlete.level, color: null };
     }
 
-    // Transform for frontend
     const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
-    const family = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown", phone: "", address: null, balance: 0, paymentMethods: [] };
 
     // Build unified registrations timeline
     type RegistrationItem = {
@@ -380,7 +368,6 @@ export async function GET(
 
     return NextResponse.json({
       ...athlete,
-      family,
       levelInfo,
       memberships,
       waivers,
@@ -443,12 +430,8 @@ export async function PATCH(
     const existing = await db.athlete.findFirst({
       where: {
         id,
-        guardians: {
-          some: {
-            family: {
-              organizationId: session.user.organizationId,
-            },
-          },
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
         },
       },
       include: {
@@ -502,52 +485,7 @@ export async function PATCH(
       }
     }
 
-    // Backward compat: if familyId provided (without guardianUserId), update via legacy path
-    if (validatedData.familyId && !validatedData.guardianUserId) {
-      const family = await db.family.findFirst({
-        where: {
-          id: validatedData.familyId,
-          organizationId: session.user.organizationId,
-        },
-      });
-      if (!family) {
-        return NextResponse.json({ error: "Family not found" }, { status: 404 });
-      }
-
-      const existingGuardian = existing.guardians.find(g => g.familyId === validatedData.familyId);
-      if (existingGuardian) {
-        await db.$transaction([
-          db.athleteGuardian.updateMany({
-            where: { athleteId: id, isPrimary: true },
-            data: { isPrimary: false },
-          }),
-          db.athleteGuardian.update({
-            where: { id: existingGuardian.id },
-            data: { isPrimary: true },
-          }),
-        ]);
-      } else {
-        const currentPrimary = existing.guardians.find(g => g.isPrimary) || existing.guardians[0];
-        if (currentPrimary) {
-          await db.athleteGuardian.update({
-            where: { id: currentPrimary.id },
-            data: { familyId: validatedData.familyId },
-          });
-        } else {
-          await db.athleteGuardian.create({
-            data: {
-              athleteId: id,
-              familyId: validatedData.familyId,
-              isPrimary: true,
-              relationship: "Primary",
-            },
-          });
-        }
-      }
-    }
-
-    // Handle birthDate separately to use noon UTC for date-only fields
-    const { birthDate, familyId, guardianUserId, ...otherData } = validatedData;
+    const { birthDate, guardianUserId, ...otherData } = validatedData;
     const athlete = await db.athlete.update({
       where: { id },
       data: {
@@ -560,7 +498,6 @@ export async function PATCH(
       include: {
         guardians: {
           include: {
-            family: true,
             user: {
               select: {
                 id: true,
@@ -578,14 +515,11 @@ export async function PATCH(
       },
     });
 
-    // Transform for frontend
     const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) || athlete.guardians[0];
-    const family = primaryGuardian?.family || { id: "", name: "Unknown", email: "", primaryContact: "Unknown" };
 
     return NextResponse.json({
       ...athlete,
-      family,
-      parent: primaryGuardian?.user?.name ?? family.primaryContact,
+      parent: primaryGuardian?.user?.name ?? "Unknown",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -629,12 +563,8 @@ export async function DELETE(
     const existing = await db.athlete.findFirst({
       where: {
         id,
-        guardians: {
-          some: {
-            family: {
-              organizationId: session.user.organizationId,
-            },
-          },
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
         },
       },
     });

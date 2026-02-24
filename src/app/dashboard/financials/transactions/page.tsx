@@ -33,7 +33,7 @@ interface Transaction {
   payment?: {
     id: string
     amount: number
-    family?: {
+    user?: {
       id: string
       name: string
     }
@@ -203,7 +203,7 @@ export default function TransactionsPage() {
                       {format(new Date(trx.createdAt), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {trx.description || trx.payment?.family?.name || "Payment"}
+                      {trx.description || trx.payment?.user?.name || "Payment"}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {trx.pspReference}

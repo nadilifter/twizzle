@@ -108,7 +108,7 @@ type TargetType =
   | "PROGRAM_SPECIFIC_INSTANCE"
   | "MEMBERSHIP_HOLDERS"
   | "SPECIFIC_USERS"
-  | "ALL_FAMILIES"
+  | "ALL_GUARDIANS"
 
 interface ProgramOption { id: string; name: string }
 interface ProgramInstanceOption { id: string; date: string; startTime: string; endTime: string; status: string }
@@ -127,7 +127,7 @@ const TARGET_TYPE_LABELS: Record<TargetType, string> = {
   PROGRAM_SPECIFIC_INSTANCE: "Program Registrants (Specific Instance)",
   MEMBERSHIP_HOLDERS: "Membership Holders",
   SPECIFIC_USERS: "Specific Guardians",
-  ALL_FAMILIES: "All Guardians",
+  ALL_GUARDIANS: "All Guardians",
 }
 
 const TARGET_TYPE_DESCRIPTIONS: Record<TargetType, string> = {
@@ -138,7 +138,7 @@ const TARGET_TYPE_DESCRIPTIONS: Record<TargetType, string> = {
   PROGRAM_SPECIFIC_INSTANCE: "Send to guardians with athletes registered for a specific instance of a program.",
   MEMBERSHIP_HOLDERS: "Send to guardians with athletes holding specific membership types.",
   SPECIFIC_USERS: "Hand-pick specific guardians to send to.",
-  ALL_FAMILIES: "Send to all guardians in your organization.",
+  ALL_GUARDIANS: "Send to all guardians in your organization.",
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -170,11 +170,8 @@ interface PlaceholderDef {
 const PLACEHOLDER_DEFS: PlaceholderDef[] = [
   { key: "athleteName", label: "Athlete Name", description: "Full name of the athlete", example: "Emma Johnson", category: "athlete" },
   { key: "athleteFirstName", label: "Athlete First Name", description: "First name of the athlete", example: "Emma", category: "athlete" },
-  { key: "familyName", label: "Family Name", description: "Name of the family/account", example: "Johnson Family", category: "family" },
-  { key: "primaryContact", label: "Primary Contact", description: "Full name of the primary contact", example: "Sarah Johnson", category: "family" },
-  { key: "primaryContactFirstName", label: "First Name", description: "First name of the primary contact", example: "Sarah", category: "family" },
-  { key: "familyBalance", label: "Account Balance", description: "Current account balance", example: "$150.00", category: "family" },
   { key: "guardianName", label: "Guardian Name", description: "Name of the guardian", example: "Sarah Johnson", category: "guardian" },
+  { key: "guardianFirstName", label: "Guardian First Name", description: "First name of the guardian", example: "Sarah", category: "guardian" },
   { key: "guardianPhone", label: "Guardian Phone", description: "Phone of the guardian", example: "(555) 123-4567", category: "guardian" },
   { key: "guardianBalance", label: "Guardian Balance", description: "Guardian account balance", example: "$150.00", category: "guardian" },
   { key: "membershipName", label: "Membership Name", description: "Name of the membership instance", example: "Annual Membership 2026", category: "membership" },
@@ -188,7 +185,7 @@ const PLACEHOLDER_DEFS: PlaceholderDef[] = [
 ]
 
 const QUICK_PLACEHOLDERS = [
-  "primaryContactFirstName",
+  "guardianFirstName",
   "athleteFirstName",
   "organizationName",
   "programName",
@@ -862,7 +859,7 @@ export default function SmsCampaignsPage() {
                   </div>
                   <Textarea
                     ref={textareaRef}
-                    placeholder="Type your message here... Use placeholders like {{primaryContactFirstName}} for personalization."
+                    placeholder="Type your message here... Use placeholders like {{guardianFirstName}} for personalization."
                     value={messageBody}
                     onChange={(e) => setMessageBody(e.target.value)}
                     rows={8}

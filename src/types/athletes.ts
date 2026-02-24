@@ -18,8 +18,6 @@ export interface Athlete {
   gender: GenderDeclaration | null;
   customId: string | null;
   organizationId: string | null;
-  // familyId is deprecated/removed in schema, but may be present in older API responses or forms
-  familyId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,7 +31,6 @@ export interface GuardianUserSummary {
 export interface AthleteGuardian {
   id: string;
   athleteId: string;
-  familyId?: string | null;
   userId?: string | null;
   relationship: string | null;
   isPrimary: boolean;
@@ -71,13 +68,6 @@ export interface EnrollmentWithProgram {
 // Athlete with related data for list views
 export interface AthleteWithRelations extends Athlete {
   guardians: AthleteGuardian[];
-  /** @deprecated Legacy family data; prefer guardians[].user */
-  family?: {
-    id: string;
-    name: string;
-    email: string;
-    primaryContact: string;
-  } | null;
   enrollments: EnrollmentWithProgram[];
   _count: {
     attendances: number;
@@ -172,24 +162,12 @@ export interface LineItemWithInvoice {
 // Payment method details
 export interface PaymentMethod {
   id: string;
-  familyId: string;
+  userId: string;
   type: "CARD" | "BANK";
   last4: string;
   expiry: string | null;
   brand: string | null;
   isDefault: boolean;
-}
-
-/** @deprecated Use guardian User data instead. Retained for legacy invoice/payment views. */
-export interface FamilyWithPaymentMethods {
-  id: string;
-  name: string;
-  email: string;
-  primaryContact: string;
-  phone: string;
-  address: string | null;
-  balance: number;
-  paymentMethods: PaymentMethod[];
 }
 
 // Membership summary for athlete profile
@@ -285,7 +263,7 @@ export interface EventRegistrationSummary {
 
 // Full athlete detail for profile page
 export interface AthleteDetail extends Athlete {
-  family?: FamilyWithPaymentMethods | null;
+  guardians: AthleteGuardian[];
   enrollments: EnrollmentWithProgram[];
   attendances: AttendanceWithEvent[];
   evaluations: Evaluation[];
@@ -314,7 +292,6 @@ export interface CreateAthletePayload {
   status?: AthleteStatus;
   birthDate?: string | null;
   guardianUserId: string;
-  familyId?: string;
 }
 
 export interface UpdateAthletePayload {
@@ -324,7 +301,6 @@ export interface UpdateAthletePayload {
   status?: AthleteStatus;
   birthDate?: string | null;
   guardianUserId?: string;
-  familyId?: string;
 }
 
 // Query parameters for filtering athletes
@@ -332,7 +308,6 @@ export interface AthletesQueryParams {
   search?: string;
   status?: AthleteStatus;
   level?: string;
-  familyId?: string;
   limit?: number;
   offset?: number;
 }

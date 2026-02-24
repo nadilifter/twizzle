@@ -47,7 +47,6 @@ export default async function BillingPage() {
       _count: {
         select: {
           invoices: true,
-          families: true,
           athletes: true,
           members: true,
           programs: true,
@@ -298,9 +297,9 @@ export default async function BillingPage() {
               </div>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium">Families</span>
+              <span className="text-sm font-medium">Guardians</span>
               <div className="text-right">
-                <span className="text-2xl font-bold">{organization._count.families}</span>
+                <span className="text-2xl font-bold">{organization._count.members}</span>
                 <span className="text-sm text-muted-foreground"> / ∞</span>
               </div>
             </div>

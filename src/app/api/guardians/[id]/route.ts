@@ -31,7 +31,11 @@ export async function GET(
           orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
         },
         athleteGuardians: {
-          where: { athlete: { organizationId } },
+          where: {
+            athlete: {
+              organizationAthletes: { some: { organizationId } },
+            },
+          },
           include: {
             athlete: {
               select: {

@@ -14,7 +14,6 @@ if (process.env.NODE_ENV !== "production") {
 
 // Models that have a direct organizationId field
 const TENANT_MODELS = [
-  "Family",
   "Program",
   "Event",
   "Invoice",

@@ -33,18 +33,17 @@ const createCampaignSchema = z.object({
       "PROGRAM_SPECIFIC_INSTANCE",
       "MEMBERSHIP_HOLDERS",
       "SPECIFIC_USERS",
-      "ALL_FAMILIES",
+      "ALL_GUARDIANS",
     ])
     .default("ALL_MEMBERS"),
   // Legacy targeting (backward compat)
-  targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "FAMILY"]).optional(),
+  targetScope: z.enum(["ALL", "PROGRAM", "EVENT"]).optional(),
   targetProgramId: z.string().optional(),
   targetEventId: z.string().optional(),
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
   // New targeting fields
   targetProgramInstanceId: z.string().optional(),
   targetMembershipGroupIds: z.array(z.string()).optional(),
-  targetFamilyIds: z.array(z.string()).optional(),
   scheduledAt: z.string().datetime().optional(),
   sendImmediately: z.boolean().optional().default(false),
 });
@@ -188,16 +187,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (
-      validatedData.targetType === "SPECIFIC_USERS" &&
-      (!validatedData.targetFamilyIds || validatedData.targetFamilyIds.length === 0)
-    ) {
-      return NextResponse.json(
-        { error: "At least one family must be selected for user-specific campaigns" },
-        { status: 400 }
-      );
-    }
-
     // Get organization branding for the email template
     const branding = await getOrganizationBranding(session.user.organizationId);
 
@@ -216,8 +205,8 @@ export async function POST(request: NextRequest) {
       PROGRAM_ANY_INSTANCE: "PROGRAM",
       PROGRAM_SPECIFIC_INSTANCE: "PROGRAM",
       MEMBERSHIP_HOLDERS: "ALL",
-      SPECIFIC_USERS: "FAMILY",
-      ALL_FAMILIES: "FAMILY",
+      SPECIFIC_USERS: "ALL",
+      ALL_GUARDIANS: "ALL",
     };
 
     // Get recipients using expanded targeting
@@ -229,7 +218,6 @@ export async function POST(request: NextRequest) {
       targetMembershipStatus: validatedData.targetMembershipStatus,
       targetProgramInstanceId: validatedData.targetProgramInstanceId,
       targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
-      targetFamilyIds: validatedData.targetFamilyIds,
     });
 
     if (recipients.length === 0) {
@@ -264,7 +252,6 @@ export async function POST(request: NextRequest) {
         targetMembershipStatus: validatedData.targetMembershipStatus,
         targetProgramInstanceId: validatedData.targetProgramInstanceId,
         targetMembershipGroupIds: validatedData.targetMembershipGroupIds || [],
-        targetFamilyIds: [],
         totalRecipients: recipients.length,
         createdById: session.user.id,
         status: validatedData.scheduledAt ? "SCHEDULED" : "DRAFT",

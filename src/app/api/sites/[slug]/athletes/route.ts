@@ -5,8 +5,9 @@ import { getAuthSession } from "@/lib/auth";
 /**
  * GET /api/sites/[slug]/athletes
  *
- * Fetch athletes associated with the signed-in user for this organization.
- * Uses both User-based guardian links (new) and Family-based links (legacy).
+ * Fetch ALL athletes associated with the signed-in user (across all orgs).
+ * Athletes are global identities — the user sees every athlete they are a
+ * guardian of or are themselves, regardless of which org created the athlete.
  */
 export async function GET(
   request: NextRequest,
@@ -34,12 +35,9 @@ export async function GET(
 
     const userId = session.user.id;
 
-    // Find athletes via User-based AthleteGuardian links
+    // Find ALL athletes the user is a guardian of (no org filter)
     const userGuardianLinks = await db.athleteGuardian.findMany({
-      where: {
-        userId,
-        athlete: { organizationId: config.organizationId },
-      },
+      where: { userId },
       include: {
         athlete: {
           select: {
@@ -57,12 +55,9 @@ export async function GET(
       },
     });
 
-    // Also find self-athletes
-    const selfAthletes = await db.athlete.findMany({
-      where: {
-        userId,
-        organizationId: config.organizationId,
-      },
+    // Also find the user's self-athlete (global singleton)
+    const selfAthlete = await db.athlete.findUnique({
+      where: { userId },
       select: {
         id: true,
         firstName: true,
@@ -76,63 +71,19 @@ export async function GET(
       },
     });
 
-    // Legacy: also check Family-based links for backwards compatibility
-    const families = await db.family.findMany({
-      where: {
-        email: session.user.email,
-        organizationId: config.organizationId,
-      },
-      select: { id: true },
-    });
-
-    const familyIds = families.map((f) => f.id);
-    let familyGuardianLinks: typeof userGuardianLinks = [];
-    if (familyIds.length > 0) {
-      familyGuardianLinks = await db.athleteGuardian.findMany({
-        where: {
-          familyId: { in: familyIds },
-          athlete: { organizationId: config.organizationId },
-        },
-        include: {
-          athlete: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              name: true,
-              birthDate: true,
-              gender: true,
-              status: true,
-              allowGuardianClaims: true,
-              userId: true,
-            },
-          },
-        },
-      });
-    }
-
     // Deduplicate athletes from all sources
     const athleteMap = new Map<string, (typeof userGuardianLinks)[0]["athlete"]>();
     for (const link of userGuardianLinks) {
       athleteMap.set(link.athlete.id, link.athlete);
     }
-    for (const a of selfAthletes) {
-      athleteMap.set(a.id, a);
-    }
-    for (const link of familyGuardianLinks) {
-      if (!athleteMap.has(link.athlete.id)) {
-        athleteMap.set(link.athlete.id, link.athlete);
-      }
+    if (selfAthlete) {
+      athleteMap.set(selfAthlete.id, selfAthlete);
     }
 
     const athletes = Array.from(athleteMap.values()).filter(
       (a) => a.status === "ACTIVE" || a.status === "TRIAL"
     );
 
-    const selfAthlete = await db.athlete.findUnique({
-      where: { userId },
-      select: { id: true },
-    });
     const hasSelfAthlete = selfAthlete != null;
 
     return NextResponse.json({ athletes, hasSelfAthlete });
@@ -270,6 +221,15 @@ export async function POST(
           });
         }
 
+        // Ensure OrganizationAthlete link exists
+        await db.organizationAthlete.upsert({
+          where: {
+            organizationId_athleteId: { organizationId, athleteId: existingAthlete.id },
+          },
+          update: {},
+          create: { organizationId, athleteId: existingAthlete.id },
+        });
+
         return NextResponse.json({
           athlete: existingAthlete,
           claimed: true,
@@ -285,6 +245,39 @@ export async function POST(
       }
     }
 
+    // Cross-org duplicate detection: check if the user already has a matching
+    // athlete from ANY org (prevents creating the same person twice)
+    const userExistingAthlete = await db.athlete.findFirst({
+      where: {
+        firstName: { equals: firstName, mode: "insensitive" },
+        lastName: { equals: lastName, mode: "insensitive" },
+        birthDate: { gte: startOfDay, lte: endOfDay },
+        OR: [
+          { guardians: { some: { userId } } },
+          { userId },
+        ],
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        birthDate: true,
+        gender: true,
+        status: true,
+        allowGuardianClaims: true,
+        userId: true,
+      },
+    });
+
+    if (userExistingAthlete) {
+      return NextResponse.json({
+        athlete: userExistingAthlete,
+        claimed: false,
+        message: "You already have this athlete in your account.",
+      }, { status: 200 });
+    }
+
     if (isSelf) {
       const existingSelfAthlete = await db.athlete.findUnique({
         where: { userId },
@@ -296,12 +289,6 @@ export async function POST(
         );
       }
     }
-
-    // Look up existing Family for backward compatibility (do NOT create new ones)
-    const legacyFamily = await db.family.findFirst({
-      where: { email: userEmail, organizationId },
-      select: { id: true },
-    });
 
     const athlete = await db.athlete.create({
       data: {
@@ -317,11 +304,13 @@ export async function POST(
         allowGuardianClaims: allowGuardianClaims ?? false,
         guardians: {
           create: {
-            familyId: legacyFamily?.id ?? undefined,
             userId,
             relationship: isSelf ? "Self" : "Parent",
             isPrimary: true,
           },
+        },
+        organizationAthletes: {
+          create: { organizationId },
         },
       },
       select: {

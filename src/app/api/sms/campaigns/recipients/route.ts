@@ -13,14 +13,13 @@ const recipientsQuerySchema = z.object({
     "PROGRAM_SPECIFIC_INSTANCE",
     "MEMBERSHIP_HOLDERS",
     "SPECIFIC_USERS",
-    "ALL_FAMILIES",
+    "ALL_GUARDIANS",
   ]),
   targetProgramId: z.string().optional(),
   targetEventId: z.string().optional(),
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
   targetProgramInstanceId: z.string().optional(),
   targetMembershipGroupIds: z.array(z.string()).optional(),
-  targetFamilyIds: z.array(z.string()).optional(),
 });
 
 /**
@@ -56,7 +55,6 @@ export async function POST(request: NextRequest) {
       targetMembershipStatus: validatedData.targetMembershipStatus,
       targetProgramInstanceId: validatedData.targetProgramInstanceId,
       targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
-      targetFamilyIds: validatedData.targetFamilyIds,
     });
 
     return NextResponse.json({

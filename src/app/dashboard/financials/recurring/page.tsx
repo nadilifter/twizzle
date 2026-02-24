@@ -66,7 +66,7 @@ interface RecurringCharge {
   lastChargedAt: string | null
   status: "ACTIVE" | "PAUSED" | "CANCELLED" | "FAILED"
   failureCount: number
-  family: {
+  user: {
     id: string
     name: string
     email: string
@@ -294,7 +294,7 @@ export default function RecurringBillingPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Family / Athlete</TableHead>
+              <TableHead>Guardian / Athlete</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Next Charge</TableHead>
               <TableHead>Payment Method</TableHead>
@@ -324,7 +324,7 @@ export default function RecurringBillingPage() {
                 <TableRow key={charge.id}>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-medium">{charge.family.name}</span>
+                      <span className="font-medium">{charge.user.name}</span>
                       {charge.athlete && (
                         <span className="text-xs text-muted-foreground">{charge.athlete.name}</span>
                       )}

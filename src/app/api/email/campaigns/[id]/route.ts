@@ -16,7 +16,7 @@ const updateCampaignSchema = z.object({
   classification: z
     .enum(["GENERAL", "PROGRAM_UPDATE", "EVENT_UPDATE", "MEMBERSHIP", "BILLING", "NEWSLETTER"])
     .optional(),
-  targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "FAMILY"]).optional(),
+  targetScope: z.enum(["ALL", "PROGRAM", "EVENT"]).optional(),
   targetProgramId: z.string().nullable().optional(),
   targetEventId: z.string().nullable().optional(),
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).nullable().optional(),
@@ -64,12 +64,6 @@ export async function GET(
             clickedAt: true,
             bouncedAt: true,
             errorMessage: true,
-            family: {
-              select: {
-                id: true,
-                primaryContact: true,
-              },
-            },
           },
         },
         _count: {

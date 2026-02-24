@@ -39,14 +39,6 @@ export async function GET(
             dateOfBirth: true,
           },
         },
-        family: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
         programInstance: {
           select: {
             id: true,
@@ -133,9 +125,6 @@ export async function PATCH(
               email: true,
               avatar: true,
             },
-          },
-          family: {
-            select: { id: true, name: true },
           },
         },
       });

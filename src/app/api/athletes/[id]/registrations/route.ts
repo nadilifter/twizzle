@@ -33,9 +33,7 @@ export async function GET(
         id: true,
         userId: true,
         guardians: {
-          where: {
-            OR: [{ userId }, { family: { email: session.user.email ?? "" } }],
-          },
+          where: { userId },
           select: {
             id: true,
             shareRegistrations: true,

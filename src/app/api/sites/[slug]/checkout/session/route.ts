@@ -102,12 +102,6 @@ export async function POST(
       const authSession = await getAuthSession();
       const checkUserId = authSession?.user?.id || null;
 
-      // Legacy fallback: find family by email for waiver checks on older records
-      const checkFamily = checkUserId ? null : await db.family.findFirst({
-        where: { email: userDetails.email, organizationId },
-        select: { id: true },
-      });
-
       for (const item of programItems) {
         const pId = item.details?.programId || item.referenceId;
         const athleteId = item.athleteId || item.details?.athleteId;
@@ -115,7 +109,7 @@ export async function POST(
 
         if (requiredWaiverIds.length === 0) continue;
 
-        if (!checkFamily && !checkUserId) {
+        if (!checkUserId) {
           return NextResponse.json(
             { error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.` },
             { status: 400 }
@@ -124,10 +118,7 @@ export async function POST(
 
         const acceptances = await db.waiverAcceptance.findMany({
           where: {
-            OR: [
-              ...(checkUserId ? [{ userId: checkUserId }] : []),
-              ...(checkFamily ? [{ familyId: checkFamily.id }] : []),
-            ],
+            userId: checkUserId,
             waiverId: { in: requiredWaiverIds },
             athleteId: athleteId || null,
           },
@@ -339,19 +330,12 @@ export async function POST(
           if (instance.group.hasWaiverRestriction && instance.group.waiverRequirements.length > 0) {
             const mAuthSession = await getAuthSession();
             const mCheckUserId = mAuthSession?.user?.id || null;
-            const mCheckFamily = mCheckUserId ? null : await db.family.findFirst({
-              where: { email: userDetails.email, organizationId },
-              select: { id: true },
-            });
 
-            if (mCheckUserId || mCheckFamily) {
+            if (mCheckUserId) {
               const requiredWaiverIds = instance.group.waiverRequirements.map((wr) => wr.waiverId);
               const acceptances = await db.waiverAcceptance.findMany({
                 where: {
-                  OR: [
-                    ...(mCheckUserId ? [{ userId: mCheckUserId }] : []),
-                    ...(mCheckFamily ? [{ familyId: mCheckFamily.id }] : []),
-                  ],
+                  userId: mCheckUserId,
                   waiverId: { in: requiredWaiverIds },
                   athleteId: athleteId || null,
                 },
@@ -513,12 +497,8 @@ export async function POST(
         if (competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0) {
           const cAuthSession = await getAuthSession();
           const cCheckUserId = cAuthSession?.user?.id || null;
-          const cCheckFamily = cCheckUserId ? null : await db.family.findFirst({
-            where: { email: userDetails.email, organizationId },
-            select: { id: true },
-          });
 
-          if (!cCheckUserId && !cCheckFamily) {
+          if (!cCheckUserId) {
             return NextResponse.json(
               { error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.` },
               { status: 400 }
@@ -527,10 +507,7 @@ export async function POST(
 
           const acceptances = await db.waiverAcceptance.findMany({
             where: {
-              OR: [
-                ...(cCheckUserId ? [{ userId: cCheckUserId }] : []),
-                ...(cCheckFamily ? [{ familyId: cCheckFamily.id }] : []),
-              ],
+              userId: cCheckUserId,
               waiverId: { in: competition.waiverRequirementIds },
               athleteId: athleteId || null,
             },
@@ -648,8 +625,8 @@ export async function POST(
     const tax = subtotal * taxRate;
     const total = subtotal + tax;
 
-    // 4. Find or Create Family/User
-    // Resolve contact details: use saved contact if contactId provided, else use form data
+    // 4. Resolve User Contact and Billing Address
+    // Use saved contact if contactId provided, else use form data
     let resolvedContact = {
       firstName: userDetails.firstName,
       lastName: userDetails.lastName,
@@ -729,12 +706,6 @@ export async function POST(
     const checkoutAuthSession = await getAuthSession();
     const checkoutUserId = checkoutAuthSession?.user?.id || null;
 
-    // Look up existing Family for backward compatibility (do NOT create new ones)
-    const legacyFamily = await db.family.findFirst({
-      where: { organizationId, email: resolvedContact.email },
-      select: { id: true },
-    });
-
     // Save contacts and addresses to the User profile
     if (checkoutUserId) {
       if (!contactId && resolvedContact.firstName && resolvedContact.email) {
@@ -809,7 +780,6 @@ export async function POST(
     const invoice = await db.invoice.create({
         data: {
             reference: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            familyId: legacyFamily?.id ?? undefined,
             userId: checkoutUserId,
             organizationId,
             subtotal,
@@ -850,7 +820,7 @@ export async function POST(
         data: { status: "PAID" },
       });
 
-      await processInvoiceRegistrations(invoiceMetadata, items, checkoutUserId, legacyFamily?.id);
+      await processInvoiceRegistrations(invoiceMetadata, items, checkoutUserId, organizationId);
 
       // Send receipt email (fire-and-forget so it doesn't block the response)
       const protocol = request.headers.get("x-forwarded-proto") || "http";

@@ -36,7 +36,7 @@ export async function POST(
     }
 
     const athlete = await db.athlete.findFirst({
-      where: { id: athleteId, organizationId: config.organizationId },
+      where: { id: athleteId, organizationAthletes: { some: { organizationId: config.organizationId } } },
       select: {
         id: true,
         firstName: true,
@@ -73,6 +73,14 @@ export async function POST(
           relationship: relationship || "Guardian",
           isPrimary: false,
         },
+      });
+
+      await db.organizationAthlete.upsert({
+        where: {
+          organizationId_athleteId: { organizationId: config.organizationId, athleteId },
+        },
+        update: {},
+        create: { organizationId: config.organizationId, athleteId },
       });
 
       return NextResponse.json({

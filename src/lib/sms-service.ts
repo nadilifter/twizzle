@@ -28,7 +28,6 @@ export interface SendSingleSmsParams {
   to: string;
   body: string;
   classification?: SmsClassification;
-  familyId?: string;
   userId?: string;
   staffProfileId?: string;
   campaignId?: string;
@@ -335,7 +334,6 @@ export async function sendSingleSms(
     to,
     body,
     classification = "GENERAL",
-    familyId,
     userId,
     staffProfileId,
     campaignId,
@@ -360,7 +358,6 @@ export async function sendSingleSms(
     };
   }
 
-  // Check opt-out status: prefer User, fall back to Family
   if (userId) {
     const user = await db.user.findUnique({
       where: { id: userId },
@@ -368,19 +365,6 @@ export async function sendSingleSms(
     });
 
     if (user?.smsOptOut) {
-      return {
-        success: false,
-        error: "Recipient has opted out of SMS messages",
-        errorCode: "OPTED_OUT",
-      };
-    }
-  } else if (familyId) {
-    const family = await db.family.findUnique({
-      where: { id: familyId },
-      select: { smsOptOut: true },
-    });
-
-    if (family?.smsOptOut) {
       return {
         success: false,
         error: "Recipient has opted out of SMS messages",
@@ -406,7 +390,6 @@ export async function sendSingleSms(
   const smsMessage = await db.smsMessage.create({
     data: {
       organizationId,
-      familyId,
       userId,
       staffProfileId,
       campaignId,
@@ -476,8 +459,8 @@ async function getCampaignRecipients(
   targetScope: AnnouncementScope,
   targetProgramId?: string,
   targetEventId?: string
-): Promise<Array<{ userId?: string; familyId?: string; phone: string }>> {
-  const recipients: Array<{ userId?: string; familyId?: string; phone: string }> = [];
+): Promise<Array<{ userId?: string; phone: string }>> {
+  const recipients: Array<{ userId?: string; phone: string }> = [];
   const seenPhones = new Set<string>();
 
   const addUserRecipient = (user: { id: string; phone: string | null; smsOptOut: boolean }) => {
@@ -543,27 +526,6 @@ async function getCampaignRecipients(
 
     for (const link of guardianLinks) {
       if (link.user) addUserRecipient(link.user);
-    }
-  }
-
-  // Legacy fallback: add families that have no user-based guardian with phone
-  if (recipients.length === 0) {
-    let whereClause: any = {
-      organizationId,
-      smsOptOut: false,
-      phone: { not: "" },
-    };
-
-    const families = await db.family.findMany({
-      where: whereClause,
-      select: { id: true, phone: true },
-    });
-
-    for (const f of families) {
-      if (!seenPhones.has(f.phone)) {
-        seenPhones.add(f.phone);
-        recipients.push({ familyId: f.id, phone: f.phone });
-      }
     }
   }
 
@@ -690,7 +652,6 @@ export async function executeCampaign(campaignId: string): Promise<void> {
       body: campaign.body,
       classification: campaign.classification,
       userId: recipient.userId,
-      familyId: recipient.familyId,
       campaignId,
     });
 
@@ -838,20 +799,6 @@ export async function handleInboundSms(params: {
       });
     }
 
-    // Legacy fallback: also update Family records
-    const families = await db.family.findMany({
-      where: { phone: { in: phoneVariants } },
-    });
-
-    for (const family of families) {
-      await db.family.update({
-        where: { id: family.id },
-        data: {
-          smsOptOut: isOptOut,
-          smsOptOutAt: isOptOut ? new Date() : null,
-        },
-      });
-    }
   }
 
   // Route ALL inbound messages to conversations

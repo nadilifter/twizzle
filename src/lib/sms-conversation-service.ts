@@ -13,8 +13,8 @@ import type { SmsConversationStatus } from "@prisma/client";
 /**
  * SMS Conversation Service
  *
- * Handles two-way SMS conversations between admin users and families.
- * - Conversation threading (one thread per family)
+ * Handles two-way SMS conversations between admin users and guardian users.
+ * - Conversation threading (one thread per user)
  * - Inbound message routing
  * - Outbound message sending within conversations
  * - Conversation lifecycle (open, close, archive)
@@ -27,9 +27,9 @@ import type { SmsConversationStatus } from "@prisma/client";
 
 export interface ConversationListItem {
   id: string;
-  familyId: string;
-  familyName: string;
-  primaryContact: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
   phoneNumber: string;
   status: SmsConversationStatus;
   lastMessageAt: Date | null;
@@ -61,24 +61,22 @@ export interface SendConversationMessageResult {
 // ============================================
 
 /**
- * Get or create a conversation for a family
+ * Get or create a conversation for a user
  */
 export async function getOrCreateConversation(
   organizationId: string,
-  familyId: string
+  userId: string
 ): Promise<string> {
-  // Try to find existing
   const existing = await db.smsConversation.findUnique({
     where: {
-      organizationId_familyId: {
+      organizationId_userId: {
         organizationId,
-        familyId,
+        userId,
       },
     },
   });
 
   if (existing) {
-    // Reopen if closed/archived
     if (existing.status !== "OPEN") {
       await db.smsConversation.update({
         where: { id: existing.id },
@@ -88,26 +86,24 @@ export async function getOrCreateConversation(
     return existing.id;
   }
 
-  // Get family phone
-  const family = await db.family.findUnique({
-    where: { id: familyId },
+  const user = await db.user.findUnique({
+    where: { id: userId },
     select: { phone: true },
   });
 
-  if (!family?.phone) {
-    throw new Error("Family has no phone number");
+  if (!user?.phone) {
+    throw new Error("User has no phone number");
   }
 
-  const normalized = normalizePhoneNumber(family.phone);
+  const normalized = normalizePhoneNumber(user.phone);
   if (!isValidE164(normalized)) {
-    throw new Error("Family has invalid phone number");
+    throw new Error("User has invalid phone number");
   }
 
-  // Create new conversation
   const conversation = await db.smsConversation.create({
     data: {
       organizationId,
-      familyId,
+      userId,
       phoneNumber: normalized,
       status: "OPEN",
     },
@@ -139,8 +135,8 @@ export async function listConversations(
 
   if (search) {
     where.OR = [
-      { family: { name: { contains: search, mode: "insensitive" } } },
-      { family: { primaryContact: { contains: search, mode: "insensitive" } } },
+      { user: { name: { contains: search, mode: "insensitive" } } },
+      { user: { email: { contains: search, mode: "insensitive" } } },
       { phoneNumber: { contains: search } },
     ];
   }
@@ -149,10 +145,10 @@ export async function listConversations(
     db.smsConversation.findMany({
       where,
       include: {
-        family: {
+        user: {
           select: {
             name: true,
-            primaryContact: true,
+            email: true,
           },
         },
       },
@@ -169,9 +165,9 @@ export async function listConversations(
   return {
     conversations: conversations.map((c) => ({
       id: c.id,
-      familyId: c.familyId,
-      familyName: c.family.name,
-      primaryContact: c.family.primaryContact,
+      userId: c.userId ?? "",
+      userName: c.user?.name ?? "",
+      userEmail: c.user?.email ?? "",
       phoneNumber: c.phoneNumber,
       status: c.status,
       lastMessageAt: c.lastMessageAt,
@@ -224,21 +220,20 @@ export async function getConversationMessages(
 }
 
 /**
- * Get a single conversation with family details
+ * Get a single conversation with user details
  */
 export async function getConversation(conversationId: string) {
   return db.smsConversation.findUnique({
     where: { id: conversationId },
     include: {
-      family: {
+      user: {
         select: {
           id: true,
           name: true,
-          primaryContact: true,
-          phone: true,
           email: true,
+          phone: true,
           smsOptOut: true,
-          guardians: {
+          athleteGuardians: {
             include: {
               athlete: {
                 select: {
@@ -268,27 +263,23 @@ export async function sendConversationMessage(
   body: string,
   senderId?: string
 ): Promise<SendConversationMessageResult> {
-  // Get conversation
   const conversation = await db.smsConversation.findUnique({
     where: { id: conversationId },
-    include: { family: { select: { smsOptOut: true } } },
+    include: { user: { select: { smsOptOut: true } } },
   });
 
   if (!conversation) {
     return { success: false, error: "Conversation not found" };
   }
 
-  // Check opt-out
-  if (conversation.family?.smsOptOut) {
+  if (conversation.user?.smsOptOut) {
     return { success: false, error: "Recipient has opted out of SMS messages" };
   }
 
-  // Check Twilio
   if (!isTwilioConfigured()) {
     return { success: false, error: "SMS service is not configured" };
   }
 
-  // Check usage limits
   const limits = await checkUsageLimits(conversation.organizationId);
   if (!limits.allowed) {
     return { success: false, error: limits.error || "SMS limit reached" };
@@ -296,11 +287,10 @@ export async function sendConversationMessage(
 
   const segments = calculateSegments(body);
 
-  // Create message record
   const smsMessage = await db.smsMessage.create({
     data: {
       organizationId: conversation.organizationId,
-      familyId: conversation.familyId,
+      userId: conversation.userId,
       conversationId,
       to: conversation.phoneNumber,
       from: process.env.TWILIO_PHONE_NUMBER || "",
@@ -312,7 +302,6 @@ export async function sendConversationMessage(
     },
   });
 
-  // Send via Twilio
   const result = await sendSms({
     to: conversation.phoneNumber,
     body,
@@ -329,7 +318,6 @@ export async function sendConversationMessage(
       },
     });
 
-    // Update conversation
     await db.smsConversation.update({
       where: { id: conversationId },
       data: {
@@ -393,8 +381,8 @@ export async function updateConversationStatus(
  * Called from the Twilio webhook handler.
  *
  * Multi-tenant routing strategy:
- * 1. Look up family by phone number
- * 2. If multiple orgs have the same family phone, use the `To` number to match
+ * 1. Look up users by phone number
+ * 2. If multiple orgs have the same user phone, use the `To` number to match
  * 3. Fall back to most recent outbound message to that phone
  */
 export async function routeInboundMessage(params: {
@@ -407,19 +395,18 @@ export async function routeInboundMessage(params: {
   const normalizedFrom = normalizePhoneNumber(from);
 
   // Build phone variants for flexible matching
-  // Family phone may be stored as "8188086543", "(818) 808-6543", "+18188086543", etc.
-  const digitsOnly = normalizedFrom.replace(/\D/g, ""); // e.g. "18188086543"
+  const digitsOnly = normalizedFrom.replace(/\D/g, "");
   const withoutCountryCode = digitsOnly.startsWith("1") && digitsOnly.length === 11
-    ? digitsOnly.substring(1) // e.g. "8188086543"
+    ? digitsOnly.substring(1)
     : digitsOnly;
   const phoneVariants = [
-    normalizedFrom,        // +18188086543
-    digitsOnly,            // 18188086543
-    withoutCountryCode,    // 8188086543
+    normalizedFrom,
+    digitsOnly,
+    withoutCountryCode,
   ];
 
-  // Find families with this phone number (match any stored format)
-  const families = await db.family.findMany({
+  // Find users with this phone number (match any stored format)
+  const users = await db.user.findMany({
     where: { phone: { in: phoneVariants } },
     select: {
       id: true,
@@ -428,8 +415,8 @@ export async function routeInboundMessage(params: {
     },
   });
 
-  if (families.length === 0) {
-    // No matching family -- try to find by recent outbound messages
+  if (users.length === 0) {
+    // No matching user -- try to find by recent outbound messages
     const recentOutbound = await db.smsMessage.findFirst({
       where: {
         to: { in: phoneVariants },
@@ -438,21 +425,20 @@ export async function routeInboundMessage(params: {
       orderBy: { createdAt: "desc" },
       select: {
         organizationId: true,
-        familyId: true,
+        userId: true,
       },
     });
 
-    if (recentOutbound?.familyId) {
-      // Get or create conversation so the message is properly threaded
+    if (recentOutbound?.userId) {
       const conversationId = await getOrCreateConversation(
         recentOutbound.organizationId,
-        recentOutbound.familyId
+        recentOutbound.userId
       );
 
       await db.smsMessage.create({
         data: {
           organizationId: recentOutbound.organizationId,
-          familyId: recentOutbound.familyId,
+          userId: recentOutbound.userId,
           conversationId,
           to,
           from: normalizedFrom,
@@ -465,7 +451,6 @@ export async function routeInboundMessage(params: {
         },
       });
 
-      // Update conversation
       await db.smsConversation.update({
         where: { id: conversationId },
         data: {
@@ -476,23 +461,22 @@ export async function routeInboundMessage(params: {
         },
       });
     }
-    // If no match at all, the message is dropped (unknown sender)
     return;
   }
 
-  // Route to each matching family's conversation
-  for (const family of families) {
-    // Get or create conversation
+  // Route to each matching user's conversation
+  for (const user of users) {
+    if (!user.organizationId) continue;
+
     const conversationId = await getOrCreateConversation(
-      family.organizationId,
-      family.id
+      user.organizationId,
+      user.id
     );
 
-    // Create message record
     await db.smsMessage.create({
       data: {
-        organizationId: family.organizationId,
-        familyId: family.id,
+        organizationId: user.organizationId,
+        userId: user.id,
         conversationId,
         to,
         from: normalizedFrom,
@@ -505,7 +489,6 @@ export async function routeInboundMessage(params: {
       },
     });
 
-    // Update conversation
     await db.smsConversation.update({
       where: { id: conversationId },
       data: {

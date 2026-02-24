@@ -132,8 +132,6 @@ export interface InstanceRegistration {
   id: string;
   programInstanceId: string;
   athleteId: string;
-  /** @deprecated Use userId instead */
-  familyId?: string | null;
   userId?: string | null;
   status: RegistrationStatus;
   createdAt: string;
@@ -146,11 +144,6 @@ export interface InstanceRegistration {
     name: string;
     avatar: string | null;
   };
-  /** @deprecated Use user instead */
-  family?: {
-    id: string;
-    name: string;
-  } | null;
   user?: {
     id: string;
     name: string | null;

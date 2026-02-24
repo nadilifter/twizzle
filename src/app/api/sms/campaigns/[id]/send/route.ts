@@ -68,7 +68,6 @@ export async function POST(
       targetMembershipStatus: campaign.targetMembershipStatus as "ACTIVE" | "EXPIRED" | undefined,
       targetProgramInstanceId: campaign.targetProgramInstanceId ?? undefined,
       targetMembershipGroupIds: campaign.targetMembershipGroupIds,
-      targetFamilyIds: campaign.targetFamilyIds,
     });
 
     if (recipients.length === 0) {

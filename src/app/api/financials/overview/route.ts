@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       // Revenue this month (from completed payments)
       db.payment.aggregate({
         where: {
-          family: { organizationId },
+          invoice: { organizationId },
           status: "COMPLETED",
           processedAt: { gte: currentMonth },
         },
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       // Revenue last month
       db.payment.aggregate({
         where: {
-          family: { organizationId },
+          invoice: { organizationId },
           status: "COMPLETED",
           processedAt: {
             gte: lastMonth,
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     // Get revenue by month using Prisma instead of raw SQL
     const paymentsForChart = await db.payment.findMany({
       where: {
-        family: { organizationId },
+        invoice: { organizationId },
         status: "COMPLETED",
         processedAt: { gte: sixMonthsAgo },
       },

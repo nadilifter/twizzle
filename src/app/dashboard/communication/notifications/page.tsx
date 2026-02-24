@@ -73,7 +73,7 @@ type TriggerType =
 type TimingUnit = "MINUTES" | "HOURS" | "DAYS" | "WEEKS" | "MONTHS"
 type TimingDirection = "BEFORE" | "AFTER" | "AT"
 type ActionType = "ANNOUNCEMENT" | "EMAIL" | "SMS"
-type RecipientType = "ALL_FAMILIES" | "ALL_ATHLETES" | "PROGRAM_MEMBERS" | "MEMBERSHIP_HOLDERS" | "INTERNAL_USERS" | "CUSTOM"
+type RecipientType = "ALL_GUARDIANS" | "ALL_ATHLETES" | "PROGRAM_MEMBERS" | "MEMBERSHIP_HOLDERS" | "INTERNAL_USERS" | "CUSTOM"
 
 interface NotificationTemplate {
   id: string
@@ -156,7 +156,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
 }
 
 const RECIPIENT_LABELS: Record<RecipientType, string> = {
-  ALL_FAMILIES: "All Families",
+  ALL_GUARDIANS: "All Guardians",
   ALL_ATHLETES: "All Athletes",
   PROGRAM_MEMBERS: "Program Members",
   MEMBERSHIP_HOLDERS: "Membership Holders",
@@ -183,7 +183,7 @@ export default function NotificationsPage() {
   const [timingUnit, setTimingUnit] = useState<TimingUnit>("DAYS")
   const [timingDirection, setTimingDirection] = useState<TimingDirection>("BEFORE")
   const [actionType, setActionType] = useState<ActionType>("EMAIL")
-  const [recipientType, setRecipientType] = useState<RecipientType>("ALL_FAMILIES")
+  const [recipientType, setRecipientType] = useState<RecipientType>("ALL_GUARDIANS")
   const [templateSubject, setTemplateSubject] = useState("")
   const [templateBody, setTemplateBody] = useState("")
   const [templateSmsBody, setTemplateSmsBody] = useState("")
@@ -232,7 +232,7 @@ export default function NotificationsPage() {
     setTimingUnit("DAYS")
     setTimingDirection("BEFORE")
     setActionType("EMAIL")
-    setRecipientType("ALL_FAMILIES")
+    setRecipientType("ALL_GUARDIANS")
     setTemplateSubject("")
     setTemplateBody("")
     setTemplateSmsBody("")
@@ -249,7 +249,7 @@ export default function NotificationsPage() {
       setTimingUnit(rule.timingUnit)
       setTimingDirection(rule.timingDirection)
       setActionType(rule.actionType)
-      setRecipientType(rule.recipientConfig?.recipientType || "ALL_FAMILIES")
+      setRecipientType(rule.recipientConfig?.recipientType || "ALL_GUARDIANS")
       setTemplateSubject(rule.template?.subject || "")
       setTemplateBody(rule.template?.body || "")
       setTemplateSmsBody(rule.template?.smsBody || "")
@@ -479,7 +479,7 @@ export default function NotificationsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">
-                        {RECIPIENT_LABELS[rule.recipientConfig?.recipientType || "ALL_FAMILIES"]}
+                        {RECIPIENT_LABELS[rule.recipientConfig?.recipientType || "ALL_GUARDIANS"]}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -787,10 +787,10 @@ export default function NotificationsPage() {
               <div className="rounded-md bg-muted p-4">
                 <h4 className="font-medium text-sm mb-2">Recipient Description</h4>
                 <p className="text-sm text-muted-foreground">
-                  {recipientType === "ALL_FAMILIES" && "All families in your organization will receive this notification."}
-                  {recipientType === "ALL_ATHLETES" && "All families with athletes will receive this notification on behalf of their athletes."}
-                  {recipientType === "PROGRAM_MEMBERS" && "Only families with athletes enrolled in specific programs will receive this notification."}
-                  {recipientType === "MEMBERSHIP_HOLDERS" && "Only families with athletes who hold specific memberships will receive this notification."}
+                  {recipientType === "ALL_GUARDIANS" && "All guardians in your organization will receive this notification."}
+                  {recipientType === "ALL_ATHLETES" && "All guardians with athletes will receive this notification on behalf of their athletes."}
+                  {recipientType === "PROGRAM_MEMBERS" && "Only guardians with athletes enrolled in specific programs will receive this notification."}
+                  {recipientType === "MEMBERSHIP_HOLDERS" && "Only guardians with athletes who hold specific memberships will receive this notification."}
                   {recipientType === "INTERNAL_USERS" && "Only staff members, coaches, and administrators will receive this notification."}
                   {recipientType === "CUSTOM" && "Custom filter to target specific subsets of recipients."}
                 </p>

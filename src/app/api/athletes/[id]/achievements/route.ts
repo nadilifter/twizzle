@@ -20,22 +20,13 @@ export async function GET(
     const templateId = searchParams.get("templateId");
     const earnedOnly = searchParams.get("earnedOnly") === "true";
 
-    // Verify athlete belongs to organization
+    // Verify athlete is visible to this organization
     const athlete = await db.athlete.findFirst({
       where: {
         id: athleteId,
-        OR: [
-          { organizationId: session.user.organizationId },
-          {
-            guardians: {
-              some: {
-                family: {
-                  organizationId: session.user.organizationId,
-                },
-              },
-            },
-          },
-        ],
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
+        },
       },
       select: {
         id: true,

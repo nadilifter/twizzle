@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
               guardians: {
                 take: 1,
                 include: {
-                  family: {
+                  user: {
                     select: {
                       id: true,
                       name: true,
@@ -202,22 +202,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Event not found" }, { status: 404 });
       }
 
-      // Verify athlete belongs to organization
+      // Verify athlete is visible to this organization
       const athlete = await db.athlete.findFirst({
         where: {
           id: validatedData.athleteId,
-          OR: [
-            { organizationId: session.user.organizationId },
-            {
-              guardians: {
-                some: {
-                  family: {
-                    organizationId: session.user.organizationId,
-                  },
-                },
-              },
-            },
-          ],
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
         },
       });
 

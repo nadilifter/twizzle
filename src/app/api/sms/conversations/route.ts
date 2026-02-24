@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 }
 
 const createConversationSchema = z.object({
-  familyId: z.string().min(1, "Family ID is required"),
+  userId: z.string().min(1, "User ID is required"),
 });
 
 // POST /api/sms/conversations - Start a new conversation
@@ -65,30 +65,29 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { familyId } = createConversationSchema.parse(body);
+    const { userId } = createConversationSchema.parse(body);
 
-    // Verify family belongs to org
-    const family = await db.family.findFirst({
+    const user = await db.user.findFirst({
       where: {
-        id: familyId,
+        id: userId,
         organizationId: session.user.organizationId,
       },
     });
 
-    if (!family) {
-      return NextResponse.json({ error: "Family not found" }, { status: 404 });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (!family.phone) {
+    if (!user.phone) {
       return NextResponse.json(
-        { error: "Family does not have a phone number" },
+        { error: "User does not have a phone number" },
         { status: 400 }
       );
     }
 
     const conversationId = await getOrCreateConversation(
       session.user.organizationId,
-      familyId
+      userId
     );
 
     return NextResponse.json({

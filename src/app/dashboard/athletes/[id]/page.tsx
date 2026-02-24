@@ -323,16 +323,12 @@ export default function AthleteProfilePage() {
               {athlete.email && (
                 <>
                   <span className="truncate max-w-[200px]">{athlete.email}</span>
-                  {(primaryGuardianUser || athlete.family) && <span className="text-border">·</span>}
+                  {primaryGuardianUser && <span className="text-border">·</span>}
                 </>
               )}
               {primaryGuardianUser ? (
                 <span className="truncate max-w-[200px]">
                   {primaryGuardianUser.name ?? primaryGuardianUser.email}
-                </span>
-              ) : athlete.family ? (
-                <span className="truncate max-w-[200px]">
-                  {athlete.family.name}
                 </span>
               ) : null}
             </div>
@@ -357,7 +353,6 @@ export default function AthleteProfilePage() {
               status: athlete.status as "ACTIVE" | "INACTIVE" | "TRIAL" | "GRADUATED",
               birthDate: athlete.birthDate,
               gender: athlete.gender ?? null,
-              family: athlete.family ? { id: athlete.family.id, name: athlete.family.name } : null,
               guardian: primaryGuardianUser
                 ? { id: primaryGuardianUser.id, name: primaryGuardianUser.name, email: primaryGuardianUser.email }
                 : null,

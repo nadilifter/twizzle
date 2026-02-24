@@ -27,11 +27,10 @@ import { toast } from "sonner"
 interface Invoice {
   id: string
   reference: string
-  family: {
+  user: {
     id: string
     name: string
     email: string
-    primaryContact: string
   }
   lineItems: Array<{
     id: string
@@ -135,7 +134,7 @@ export default function InvoicesPage() {
 
   const handleResendEmail = async (invoice: Invoice) => {
     // In a real implementation, this would trigger an email
-    toast.success(`Email sent to ${invoice.family.email}`)
+    toast.success(`Email sent to ${invoice.user.email}`)
   }
 
   const handleViewReceipt = (invoice: Invoice) => {
@@ -231,7 +230,7 @@ export default function InvoicesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
-                  <TableHead>Recipient</TableHead>
+                  <TableHead>Guardian</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead>Status</TableHead>
@@ -245,9 +244,9 @@ export default function InvoicesPage() {
                     <TableCell className="font-medium">{invoice.reference}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span>{invoice.family.primaryContact}</span>
+                        <span>{invoice.user.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {invoice.family.name}
+                          {invoice.user.email}
                         </span>
                       </div>
                     </TableCell>

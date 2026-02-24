@@ -43,34 +43,12 @@ export async function PATCH(
     const { shareRegistrations, shareFinancials, allowGuardianClaims } =
       parsed.data;
 
-    // Find the current user's guardian link (user-based or family-based)
-    const userGuardianLink = await db.athleteGuardian.findFirst({
+    const guardianLink = await db.athleteGuardian.findFirst({
       where: {
         athleteId,
         userId: session.user.id,
       },
     });
-
-    const familyIds = session.user.email
-      ? (
-          await db.family.findMany({
-            where: { email: session.user.email },
-            select: { id: true },
-          })
-        ).map((f) => f.id)
-      : [];
-
-    const familyGuardianLink =
-      familyIds.length > 0
-        ? await db.athleteGuardian.findFirst({
-            where: {
-              athleteId,
-              familyId: { in: familyIds },
-            },
-          })
-        : null;
-
-    const guardianLink = userGuardianLink ?? familyGuardianLink;
 
     if (!guardianLink) {
       return NextResponse.json(

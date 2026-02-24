@@ -69,9 +69,8 @@ import {
 
 interface Conversation {
   id: string
-  familyId: string
-  familyName: string
-  primaryContact: string
+  userId: string
+  userName: string
   phoneNumber: string
   status: "OPEN" | "CLOSED" | "ARCHIVED"
   lastMessageAt: string | null
@@ -92,10 +91,10 @@ interface Message {
   errorMessage: string | null
 }
 
-interface FamilyOption {
+interface GuardianOption {
   id: string
   name: string
-  primaryContact: string
+  email: string
   phone: string
 }
 
@@ -171,14 +170,14 @@ function ConversationSidebar({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-sm font-medium truncate">{conv.primaryContact}</span>
+                      <span className="text-sm font-medium truncate">{conv.userName}</span>
                       {conv.unreadCount > 0 && (
                         <Badge variant="default" className="h-5 min-w-[20px] px-1.5 text-[10px]">
                           {conv.unreadCount}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{conv.familyName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{conv.userName}</p>
                     {conv.lastMessageBody && (
                       <p className="text-xs text-muted-foreground truncate mt-0.5">
                         {conv.lastMessageBody.substring(0, 60)}
@@ -249,8 +248,8 @@ export default function SmsConversationsPage() {
 
   // New conversation dialog
   const [isNewConvOpen, setIsNewConvOpen] = useState(false)
-  const [familySearch, setFamilySearch] = useState("")
-  const [familyOptions, setFamilyOptions] = useState<FamilyOption[]>([])
+  const [guardianSearch, setGuardianSearch] = useState("")
+  const [guardianOptions, setGuardianOptions] = useState<GuardianOption[]>([])
   const [isCreatingConv, setIsCreatingConv] = useState(false)
 
   // Polling ref
@@ -338,26 +337,26 @@ export default function SmsConversationsPage() {
     }
   }, [selectedConversationId, fetchMessages, fetchConversationDetail])
 
-  // Fetch families for new conversation dialog
+  // Fetch guardians for new conversation dialog
   useEffect(() => {
     if (!isNewConvOpen) return
-    const params = familySearch ? `?search=${encodeURIComponent(familySearch)}` : ""
-    fetch(`/api/families${params}`)
+    const params = guardianSearch ? `?search=${encodeURIComponent(guardianSearch)}` : ""
+    fetch(`/api/guardians${params}`)
       .then((r) => r.json())
       .then((data) =>
-        setFamilyOptions(
-          (data.data || data.families || [])
-            .filter((f: any) => f.phone)
-            .map((f: any) => ({
-              id: f.id,
-              name: f.name,
-              primaryContact: f.primaryContact,
-              phone: f.phone,
+        setGuardianOptions(
+          (data.data || data.guardians || [])
+            .filter((u: any) => u.phone)
+            .map((u: any) => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              phone: u.phone,
             }))
         )
       )
       .catch(() => {})
-  }, [isNewConvOpen, familySearch])
+  }, [isNewConvOpen, guardianSearch])
 
   // ============================================
   // Actions
@@ -394,13 +393,13 @@ export default function SmsConversationsPage() {
     }
   }, [newMessage, selectedConversationId, isSending, fetchMessages, fetchConversations])
 
-  const handleStartConversation = useCallback(async (familyId: string) => {
+  const handleStartConversation = useCallback(async (userId: string) => {
     setIsCreatingConv(true)
     try {
       const response = await fetch("/api/sms/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ familyId }),
+        body: JSON.stringify({ userId }),
       })
 
       if (response.ok) {
@@ -480,20 +479,20 @@ export default function SmsConversationsPage() {
                 <ChatHeader className="border-b px-4">
                   <ChatHeaderAddon>
                     <ChatHeaderAvatar
-                      fallback={selectedConversation ? getInitials(selectedConversation.primaryContact) : "?"}
+                      fallback={selectedConversation ? getInitials(selectedConversation.userName) : "?"}
                     />
                   </ChatHeaderAddon>
                   <ChatHeaderMain>
                     <div className="flex flex-col">
                       <span className="font-medium text-sm">
-                        {selectedConversation?.primaryContact || "Loading..."}
+                        {selectedConversation?.userName || "Loading..."}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {selectedConversation?.familyName}
+                        {selectedConversation?.userName}
                         {selectedConversation?.phoneNumber && ` · ${selectedConversation.phoneNumber}`}
                       </span>
                     </div>
-                    {conversationDetail?.family?.smsOptOut && (
+                    {conversationDetail?.user?.smsOptOut && (
                       <Badge variant="destructive" className="ml-2 text-[10px]">Opted Out</Badge>
                     )}
                     {selectedConversation?.status === "CLOSED" && (
@@ -616,7 +615,7 @@ export default function SmsConversationsPage() {
                 </ChatMessages>
 
                 {/* Toolbar */}
-                {conversationDetail?.family?.smsOptOut ? (
+                {conversationDetail?.user?.smsOptOut ? (
                   <div className="sticky bottom-0 p-3 bg-background border-t">
                     <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
                       <AlertTriangle className="h-4 w-4" />
@@ -660,30 +659,30 @@ export default function SmsConversationsPage() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>New Conversation</DialogTitle>
-            <DialogDescription>Search for a family to start a text conversation.</DialogDescription>
+            <DialogDescription>Search for a guardian to start a text conversation.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search families by name..."
+                placeholder="Search guardians by name..."
                 className="pl-8"
-                value={familySearch}
-                onChange={(e) => setFamilySearch(e.target.value)}
+                value={guardianSearch}
+                onChange={(e) => setGuardianSearch(e.target.value)}
                 autoFocus
               />
             </div>
             <div className="border rounded-md max-h-[300px] overflow-y-auto">
-              {familyOptions.length === 0 ? (
+              {guardianOptions.length === 0 ? (
                 <div className="text-center py-8 text-sm text-muted-foreground">
-                  {familySearch ? "No families found." : "Type to search for families..."}
+                  {guardianSearch ? "No guardians found." : "Type to search for guardians..."}
                 </div>
               ) : (
                 <div className="divide-y">
-                  {familyOptions.map((family) => (
+                  {guardianOptions.map((guardian) => (
                     <button
-                      key={family.id}
-                      onClick={() => handleStartConversation(family.id)}
+                      key={guardian.id}
+                      onClick={() => handleStartConversation(guardian.id)}
                       disabled={isCreatingConv}
                       className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex items-center gap-3"
                     >
@@ -691,12 +690,12 @@ export default function SmsConversationsPage() {
                         <User className="h-4 w-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{family.name}</p>
-                        <p className="text-xs text-muted-foreground">{family.primaryContact}</p>
+                        <p className="text-sm font-medium">{guardian.name}</p>
+                        <p className="text-xs text-muted-foreground">{guardian.email}</p>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                         <Phone className="h-3 w-3" />
-                        {family.phone}
+                        {guardian.phone}
                       </div>
                     </button>
                   ))}

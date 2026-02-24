@@ -83,11 +83,11 @@ interface AthleteDetail {
     birthDate: string | null
     gender: string | null
     level: { id: string; name: string } | null
-    families: {
+    guardians: {
       id: string
       name: string
       email: string
-      primaryContact: string
+      phone: string | null
       relationship: string | null
       isPrimary: boolean
     }[]
@@ -233,7 +233,7 @@ export default function CompetitionAthleteDetailPage() {
 
   const { athlete, entries, compliance, requirements } = data
   const age = calculateAge(athlete.birthDate)
-  const primaryFamily = athlete.families.find((f) => f.isPrimary) ?? athlete.families[0]
+  const primaryGuardian = athlete.guardians.find((g) => g.isPrimary) ?? athlete.guardians[0]
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -285,14 +285,14 @@ export default function CompetitionAthleteDetailPage() {
                     </span>
                   </div>
                 )}
-                {primaryFamily && (
+                {primaryGuardian && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Users className="h-4 w-4 shrink-0" />
                     <span className="truncate">
-                      {primaryFamily.name}
-                      {primaryFamily.primaryContact && (
+                      {primaryGuardian.name}
+                      {primaryGuardian.email && (
                         <span className="text-xs ml-1">
-                          ({primaryFamily.primaryContact})
+                          ({primaryGuardian.email})
                         </span>
                       )}
                     </span>

@@ -22,18 +22,9 @@ export async function GET(
     const athlete = await db.athlete.findFirst({
       where: {
         id: athleteId,
-        OR: [
-          { organizationId: session.user.organizationId },
-          {
-            guardians: {
-              some: {
-                family: {
-                  organizationId: session.user.organizationId,
-                },
-              },
-            },
-          },
-        ],
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
+        },
       },
     });
 

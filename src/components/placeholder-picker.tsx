@@ -34,7 +34,7 @@ interface PlaceholderPickerProps {
 
 const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   athlete: { label: "Athlete", icon: User },
-  family: { label: "Family", icon: Users },
+  guardian: { label: "Guardian", icon: Users },
   membership: { label: "Membership", icon: CreditCard },
   program: { label: "Program", icon: BookOpen },
   event: { label: "Event", icon: Calendar },
@@ -45,7 +45,7 @@ const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ComponentType
 
 export function PlaceholderPicker({ editor, placeholders, className }: PlaceholderPickerProps) {
   const [search, setSearch] = useState("")
-  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set(["family", "athlete"]))
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set(["guardian", "athlete"]))
 
   const filteredByCategory = useMemo(() => {
     const filtered = search
@@ -84,7 +84,7 @@ export function PlaceholderPicker({ editor, placeholders, className }: Placehold
     editor.chain().focus().insertPlaceholder(key).run()
   }
 
-  const categoryOrder = ["family", "athlete", "program", "event", "membership", "payment", "organization", "date"]
+  const categoryOrder = ["guardian", "athlete", "program", "event", "membership", "payment", "organization", "date"]
 
   return (
     <div className={className}>

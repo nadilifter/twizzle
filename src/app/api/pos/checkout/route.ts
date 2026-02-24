@@ -19,7 +19,6 @@ const checkoutSchema = z.object({
   subtotal: z.number(),
   tax: z.number(),
   total: z.number(),
-  familyId: z.string().optional(),
   userId: z.string().optional(),
 });
 
@@ -92,7 +91,6 @@ export async function POST(request: NextRequest) {
       const invoice = await tx.invoice.create({
         data: {
           reference,
-          familyId: validatedData.familyId || undefined,
           userId: validatedData.userId || undefined,
           organizationId: session.user.organizationId,
           status: validatedData.paymentMethod === "CASH" ? "PAID" : "DRAFT",
@@ -123,7 +121,6 @@ export async function POST(request: NextRequest) {
         await tx.payment.create({
           data: {
             invoiceId: invoice.id,
-            familyId: validatedData.familyId || undefined,
             userId: validatedData.userId || undefined,
             amount: validatedData.total,
             method: "CASH",

@@ -20,7 +20,7 @@ import {
 import { Loader2, Plus, Pencil, Trash2, Star, MapPin, User } from "lucide-react"
 import { toast } from "sonner"
 
-interface FamilyContact {
+interface UserContact {
   id: string
   firstName: string
   lastName: string
@@ -30,7 +30,7 @@ interface FamilyContact {
   isPrimary: boolean
 }
 
-interface FamilyBillingAddress {
+interface UserBillingAddress {
   id: string
   label: string | null
   street: string
@@ -62,19 +62,19 @@ export default function AccountPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
 
-  const [contacts, setContacts] = useState<FamilyContact[]>([])
-  const [addresses, setAddresses] = useState<FamilyBillingAddress[]>([])
+  const [contacts, setContacts] = useState<UserContact[]>([])
+  const [addresses, setAddresses] = useState<UserBillingAddress[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Contact form state
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
-  const [editingContact, setEditingContact] = useState<FamilyContact | null>(null)
+  const [editingContact, setEditingContact] = useState<UserContact | null>(null)
   const [contactForm, setContactForm] = useState(emptyContact)
   const [isSavingContact, setIsSavingContact] = useState(false)
 
   // Address form state
   const [addressDialogOpen, setAddressDialogOpen] = useState(false)
-  const [editingAddress, setEditingAddress] = useState<FamilyBillingAddress | null>(null)
+  const [editingAddress, setEditingAddress] = useState<UserBillingAddress | null>(null)
   const [addressForm, setAddressForm] = useState(emptyAddress)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
 
@@ -92,8 +92,8 @@ export default function AccountPage() {
       setIsLoading(true)
       try {
         const [contactsRes, addressesRes] = await Promise.all([
-          fetch(`/api/sites/${slug}/family/contacts`),
-          fetch(`/api/sites/${slug}/family/billing-addresses`),
+          fetch(`/api/user/contacts`),
+          fetch(`/api/user/billing-addresses`),
         ])
         if (contactsRes.ok) {
           const data = await contactsRes.json()
@@ -120,7 +120,7 @@ export default function AccountPage() {
     setContactDialogOpen(true)
   }
 
-  const openEditContact = (contact: FamilyContact) => {
+  const openEditContact = (contact: UserContact) => {
     setEditingContact(contact)
     setContactForm({
       firstName: contact.firstName,
@@ -140,7 +140,7 @@ export default function AccountPage() {
     setIsSavingContact(true)
     try {
       if (editingContact) {
-        const res = await fetch(`/api/sites/${slug}/family/contacts/${editingContact.id}`, {
+        const res = await fetch(`/api/user/contacts/${editingContact.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(contactForm),
@@ -150,7 +150,7 @@ export default function AccountPage() {
         setContacts((prev) => prev.map((c) => (c.id === contact.id ? contact : c)))
         toast.success("Contact updated")
       } else {
-        const res = await fetch(`/api/sites/${slug}/family/contacts`, {
+        const res = await fetch(`/api/user/contacts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...contactForm, isPrimary: contacts.length === 0 }),
@@ -170,7 +170,7 @@ export default function AccountPage() {
 
   const deleteContact = async (contactId: string) => {
     try {
-      const res = await fetch(`/api/sites/${slug}/family/contacts/${contactId}`, { method: "DELETE" })
+      const res = await fetch(`/api/user/contacts/${contactId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to delete")
       setContacts((prev) => prev.filter((c) => c.id !== contactId))
       toast.success("Contact removed")
@@ -181,7 +181,7 @@ export default function AccountPage() {
 
   const setPrimaryContact = async (contactId: string) => {
     try {
-      const res = await fetch(`/api/sites/${slug}/family/contacts/${contactId}`, {
+      const res = await fetch(`/api/user/contacts/${contactId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isPrimary: true }),
@@ -204,7 +204,7 @@ export default function AccountPage() {
     setAddressDialogOpen(true)
   }
 
-  const openEditAddress = (address: FamilyBillingAddress) => {
+  const openEditAddress = (address: UserBillingAddress) => {
     setEditingAddress(address)
     setAddressForm({
       label: address.label || "",
@@ -224,7 +224,7 @@ export default function AccountPage() {
     setIsSavingAddress(true)
     try {
       if (editingAddress) {
-        const res = await fetch(`/api/sites/${slug}/family/billing-addresses/${editingAddress.id}`, {
+        const res = await fetch(`/api/user/billing-addresses/${editingAddress.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(addressForm),
@@ -234,7 +234,7 @@ export default function AccountPage() {
         setAddresses((prev) => prev.map((a) => (a.id === address.id ? address : a)))
         toast.success("Address updated")
       } else {
-        const res = await fetch(`/api/sites/${slug}/family/billing-addresses`, {
+        const res = await fetch(`/api/user/billing-addresses`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...addressForm, isPrimary: addresses.length === 0 }),
@@ -254,7 +254,7 @@ export default function AccountPage() {
 
   const deleteAddress = async (addressId: string) => {
     try {
-      const res = await fetch(`/api/sites/${slug}/family/billing-addresses/${addressId}`, { method: "DELETE" })
+      const res = await fetch(`/api/user/billing-addresses/${addressId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to delete")
       setAddresses((prev) => prev.filter((a) => a.id !== addressId))
       toast.success("Address removed")
@@ -265,7 +265,7 @@ export default function AccountPage() {
 
   const setPrimaryAddress = async (addressId: string) => {
     try {
-      const res = await fetch(`/api/sites/${slug}/family/billing-addresses/${addressId}`, {
+      const res = await fetch(`/api/user/billing-addresses/${addressId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isPrimary: true }),
@@ -316,7 +316,7 @@ export default function AccountPage() {
                 <DialogDescription>
                   {editingContact
                     ? "Update this contact's information."
-                    : "Add a new contact who can register athletes for your family."}
+                    : "Add a new contact who can register athletes."}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">

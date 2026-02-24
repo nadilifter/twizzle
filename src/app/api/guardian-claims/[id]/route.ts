@@ -109,6 +109,22 @@ export async function PATCH(
         }),
       ]);
 
+      if (claim.athlete.organizationId) {
+        await db.organizationAthlete.upsert({
+          where: {
+            organizationId_athleteId: {
+              organizationId: claim.athlete.organizationId,
+              athleteId: claim.athleteId,
+            },
+          },
+          update: {},
+          create: {
+            organizationId: claim.athlete.organizationId,
+            athleteId: claim.athleteId,
+          },
+        });
+      }
+
       return NextResponse.json({
         success: true,
         message: "Guardian claim approved.",

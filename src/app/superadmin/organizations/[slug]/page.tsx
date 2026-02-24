@@ -66,7 +66,6 @@ export default async function OrganizationDetailPage({ params }: Props) {
           invoices: true,
           programs: true,
           events: true,
-          families: true,
           athletes: true,
         }
       },
@@ -204,8 +203,8 @@ export default async function OrganizationDetailPage({ params }: Props) {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{organization._count.families}</div>
-            <p className="text-xs text-muted-foreground">Registered families</p>
+            <div className="text-2xl font-bold">{organization._count.members}</div>
+            <p className="text-xs text-muted-foreground">Registered guardians</p>
           </CardContent>
         </Card>
       </div>

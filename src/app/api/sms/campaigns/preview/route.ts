@@ -21,7 +21,7 @@ const previewSchema = z.object({
       "PROGRAM_SPECIFIC_INSTANCE",
       "MEMBERSHIP_HOLDERS",
       "SPECIFIC_USERS",
-      "ALL_FAMILIES",
+      "ALL_GUARDIANS",
     ])
     .optional(),
   targetProgramId: z.string().optional(),
@@ -29,7 +29,6 @@ const previewSchema = z.object({
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
   targetProgramInstanceId: z.string().optional(),
   targetMembershipGroupIds: z.array(z.string()).optional(),
-  targetFamilyIds: z.array(z.string()).optional(),
 });
 
 // POST /api/sms/campaigns/preview - Preview an SMS campaign
@@ -68,7 +67,6 @@ export async function POST(request: NextRequest) {
         targetMembershipStatus: validatedData.targetMembershipStatus,
         targetProgramInstanceId: validatedData.targetProgramInstanceId,
         targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
-        targetFamilyIds: validatedData.targetFamilyIds,
       });
       recipientCount = recipients.length;
     }

@@ -29,15 +29,6 @@ export async function GET(
         organizationId: session.user.organizationId,
       },
       include: {
-        family: {
-          select: {
-            id: true,
-            name: true,
-            primaryContact: true,
-            email: true,
-            phone: true,
-          },
-        },
         campaign: {
           select: {
             id: true,

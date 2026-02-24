@@ -58,7 +58,6 @@ interface EntryAthlete {
   lastName: string | null
   gender: string | null
   birthDate: string | null
-  family: { id: string; name: string } | null
 }
 
 interface EventEntry {

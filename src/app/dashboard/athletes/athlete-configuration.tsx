@@ -22,7 +22,6 @@ interface AthleteData {
   status: AthleteStatus
   birthDate: string | null
   gender: string | null
-  family?: { id: string; name: string } | null
   guardian?: { id: string; name: string | null; email: string } | null
 }
 

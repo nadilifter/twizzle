@@ -28,7 +28,7 @@ const createCampaignSchema = z.object({
       "PROGRAM_SPECIFIC_INSTANCE",
       "MEMBERSHIP_HOLDERS",
       "SPECIFIC_USERS",
-      "ALL_FAMILIES",
+      "ALL_GUARDIANS",
     ])
     .default("ALL_MEMBERS"),
   targetProgramId: z.string().optional(),
@@ -36,7 +36,6 @@ const createCampaignSchema = z.object({
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
   targetProgramInstanceId: z.string().optional(),
   targetMembershipGroupIds: z.array(z.string()).optional(),
-  targetFamilyIds: z.array(z.string()).optional(),
   scheduledAt: z.string().datetime().optional(),
   sendImmediately: z.boolean().optional().default(false),
 });
@@ -181,16 +180,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (
-      validatedData.targetType === "SPECIFIC_USERS" &&
-      (!validatedData.targetFamilyIds || validatedData.targetFamilyIds.length === 0)
-    ) {
-      return NextResponse.json(
-        { error: "At least one family must be selected for user-specific campaigns" },
-        { status: 400 }
-      );
-    }
-
     const result = await createSmsCampaign({
       organizationId: session.user.organizationId,
       name: validatedData.name,
@@ -202,7 +191,6 @@ export async function POST(request: NextRequest) {
       targetMembershipStatus: validatedData.targetMembershipStatus,
       targetProgramInstanceId: validatedData.targetProgramInstanceId,
       targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
-      targetFamilyIds: validatedData.targetFamilyIds,
       createdById: session.user.id,
       scheduledAt: validatedData.scheduledAt
         ? new Date(validatedData.scheduledAt)

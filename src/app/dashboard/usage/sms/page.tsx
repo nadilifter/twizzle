@@ -39,10 +39,10 @@ interface SmsMessage {
   errorCode: string | null
   errorMessage: string | null
   createdAt: string
-  family: {
+  user: {
     id: string
     name: string
-    primaryContact: string
+    email: string
   } | null
   campaign: {
     id: string
@@ -86,7 +86,7 @@ function transformToTableMessage(msg: SmsMessage, index: number): Message {
     id: index + 1,
     content: msg.body,
     classification: msg.classification.charAt(0) + msg.classification.slice(1).toLowerCase(),
-    audience: msg.family?.name || msg.campaign?.name || "Individual",
+    audience: msg.user?.name || msg.campaign?.name || "Individual",
     recipient: msg.to, // Show the actual phone number
     status: msg.twilioStatus, // Show Twilio delivery status
     sent: 1,

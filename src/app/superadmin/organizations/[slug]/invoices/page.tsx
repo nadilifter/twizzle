@@ -45,7 +45,6 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
     include: {
       invoices: {
         include: {
-          family: true,
           user: { select: { id: true, name: true, email: true } },
           _count: {
             select: { lineItems: true, payments: true }
@@ -195,7 +194,7 @@ export default async function OrganizationInvoicesPage({ params }: Props) {
                 {organization.invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.reference}</TableCell>
-                    <TableCell>{invoice.user?.name ?? invoice.family?.name ?? 'N/A'}</TableCell>
+                    <TableCell>{invoice.user?.name ?? 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(invoice.status) as "default" | "destructive" | "secondary" | "outline"}>
                         {invoice.status}

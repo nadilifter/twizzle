@@ -51,7 +51,6 @@ const competitionInclude = {
           status: true,
           total: true,
           createdAt: true,
-          family: { select: { id: true, name: true, primaryContact: true } },
           user: { select: { id: true, name: true, email: true } },
         },
       },

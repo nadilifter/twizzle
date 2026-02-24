@@ -49,12 +49,6 @@ export async function GET(
                 avatar: true,
               },
             },
-            family: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
           },
           orderBy: [
             { status: "asc" },

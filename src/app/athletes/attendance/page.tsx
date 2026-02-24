@@ -33,12 +33,6 @@ interface Athlete {
   }>;
 }
 
-interface Family {
-  id: string;
-  name: string;
-  athletes: Athlete[];
-}
-
 const statusConfig: Record<AttendanceStatus, { color: string; bgColor: string; icon: React.ReactNode; label: string }> = {
   REGISTERED: { color: "text-gray-700", bgColor: "bg-gray-100", icon: <AlertCircle className="h-3 w-3" />, label: "Registered" },
   PRESENT: { color: "text-green-700", bgColor: "bg-green-100", icon: <Check className="h-3 w-3" />, label: "Present" },
@@ -48,7 +42,7 @@ const statusConfig: Record<AttendanceStatus, { color: string; bgColor: string; i
 };
 
 export default function AthleteAttendancePage() {
-  const [family, setFamily] = useState<Family | null>(null);
+  const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [attendances, setAttendances] = useState<AttendanceWithRelations[]>([]);
   const [programs, setPrograms] = useState<Array<{ id: string; name: string }>>([]);
@@ -61,17 +55,14 @@ export default function AthleteAttendancePage() {
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
   const [activeView, setActiveView] = useState<"list" | "calendar">("list");
 
-  // Fetch family and athletes
   useEffect(() => {
-    async function fetchFamilyData() {
+    async function fetchAthleteData() {
       setIsLoading(true);
       try {
-        // Get the user's family via their ID
         const response = await api.get<{ data: any[] }>("/api/athletes", {});
         
         if (response.data.length > 0) {
-          // Group athletes by their family (using first family for now)
-          const athletes = response.data.map((athlete: any) => ({
+          const fetched: Athlete[] = response.data.map((athlete: any) => ({
             id: athlete.id,
             name: athlete.name,
             level: athlete.level,
@@ -79,22 +70,11 @@ export default function AthleteAttendancePage() {
             enrollments: athlete.enrollments,
           }));
           
-          const familyData = response.data[0]?.guardians?.[0]?.family;
-          
-          setFamily({
-            id: familyData?.id || "family",
-            name: familyData?.name || "My Family",
-            athletes,
-          });
-          
-          // Auto-select first athlete
-          if (athletes.length > 0) {
-            setSelectedAthleteId(athletes[0].id);
-          }
+          setAthletes(fetched);
+          setSelectedAthleteId(fetched[0].id);
 
-          // Extract unique programs from enrollments
           const programSet = new Map<string, { id: string; name: string }>();
-          athletes.forEach((athlete: Athlete) => {
+          fetched.forEach((athlete) => {
             athlete.enrollments?.forEach(enrollment => {
               if (enrollment.program && !programSet.has(enrollment.program.id)) {
                 programSet.set(enrollment.program.id, enrollment.program);
@@ -104,13 +84,13 @@ export default function AthleteAttendancePage() {
           setPrograms(Array.from(programSet.values()));
         }
       } catch (error) {
-        console.error("Error fetching family data:", error);
+        console.error("Error fetching athlete data:", error);
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchFamilyData();
+    fetchAthleteData();
   }, []);
 
   // Fetch attendance when athlete or date range changes
@@ -164,8 +144,8 @@ export default function AthleteAttendancePage() {
 
   // Get selected athlete
   const selectedAthlete = useMemo(() => {
-    return family?.athletes.find(a => a.id === selectedAthleteId);
-  }, [family, selectedAthleteId]);
+    return athletes.find(a => a.id === selectedAthleteId);
+  }, [athletes, selectedAthleteId]);
 
   if (isLoading) {
     return (
@@ -175,7 +155,7 @@ export default function AthleteAttendancePage() {
     );
   }
 
-  if (!family || family.athletes.length === 0) {
+  if (athletes.length === 0) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
@@ -198,9 +178,9 @@ export default function AthleteAttendancePage() {
       </div>
 
       {/* Athlete Selector */}
-      {family.athletes.length > 1 && (
+      {athletes.length > 1 && (
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {family.athletes.map((athlete) => (
+          {athletes.map((athlete) => (
             <button
               key={athlete.id}
               onClick={() => setSelectedAthleteId(athlete.id)}

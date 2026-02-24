@@ -23,7 +23,6 @@ export async function GET(
 
     const { id: athleteId } = await params;
 
-    // Verify current user is a guardian of this athlete (user-based or family-based)
     const userGuardianLink = await db.athleteGuardian.findFirst({
       where: {
         athleteId,
@@ -31,26 +30,7 @@ export async function GET(
       },
     });
 
-    const familyIds = session.user.email
-      ? (
-          await db.family.findMany({
-            where: { email: session.user.email },
-            select: { id: true },
-          })
-        ).map((f) => f.id)
-      : [];
-
-    const familyGuardianLink =
-      familyIds.length > 0
-        ? await db.athleteGuardian.findFirst({
-            where: {
-              athleteId,
-              familyId: { in: familyIds },
-            },
-          })
-        : null;
-
-    if (!userGuardianLink && !familyGuardianLink) {
+    if (!userGuardianLink) {
       return NextResponse.json(
         { error: "Access denied: You are not a guardian of this athlete" },
         { status: 403 }

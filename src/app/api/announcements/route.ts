@@ -6,7 +6,7 @@ import { z } from "zod";
 const createAnnouncementSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.string().min(1, "Content is required"),
-  targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "FAMILY"]).default("ALL"),
+  targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "GUARDIAN"]).default("ALL"),
   targetProgramId: z.string().optional().nullable(),
   targetEventId: z.string().optional().nullable(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         ],
       }),
       ...(status && { status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" }),
-      ...(targetScope && { targetScope: targetScope as "ALL" | "PROGRAM" | "EVENT" | "FAMILY" }),
+      ...(targetScope && { targetScope: targetScope as "ALL" | "PROGRAM" | "EVENT" | "GUARDIAN" }),
     };
 
     const [announcements, total] = await Promise.all([

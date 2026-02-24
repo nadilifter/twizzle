@@ -201,7 +201,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         }
       } catch (err) {
         // Silently fail -- user can still fill in manually
-        console.error("Failed to fetch saved family data:", err)
+        console.error("Failed to fetch saved data:", err)
       } finally {
         formDataInitialized.current = true
       }
@@ -276,7 +276,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [isLoadingWaiver, setIsLoadingWaiver] = useState(false)
   const [isSigningWaiver, setIsSigningWaiver] = useState(false)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
-  const [familyId, setFamilyId] = useState<string | null>(null)
   const [signAllMode, setSignAllMode] = useState(false)
   const signaturePadRef = useRef<SignaturePadRef>(null)
   const [signatureEmpty, setSignatureEmpty] = useState(true)
@@ -370,7 +369,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         }
 
         const checkData = await checkResponse.json()
-        setFamilyId(checkData.familyId)
 
         // Update local signed set with server data (per athlete)
         if (!signedWaiverIdsRef.current.has(athlete.athleteId)) {
@@ -583,7 +581,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           organizationId: organizationIdRef.current,
-          familyId,
           athleteId: currentAthlete?.athleteId || null,
           email: formData.email,
           name: `${formData.firstName} ${formData.lastName}`,
@@ -596,7 +593,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       }
 
       const result = await response.json()
-      setFamilyId(result.familyId)
 
       if (result.allPagesSigned || signAllMode) {
         // This waiver is complete - move to next waiver or check medical/payment

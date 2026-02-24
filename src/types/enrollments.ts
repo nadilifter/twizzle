@@ -18,10 +18,13 @@ export interface EnrollmentWithRelations extends Enrollment {
     id: string;
     name: string;
     level: string;
-    family: {
-      id: string;
-      name: string;
-    };
+    guardians?: Array<{
+      user?: {
+        id: string;
+        name: string | null;
+        email: string;
+      } | null;
+    }>;
   };
   program: {
     id: string;

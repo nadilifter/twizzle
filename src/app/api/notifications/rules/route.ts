@@ -43,13 +43,13 @@ const createRuleSchema = z.object({
   }),
   recipientConfig: z.object({
     recipientType: z.enum([
-      "ALL_FAMILIES",
+      "ALL_GUARDIANS",
       "ALL_ATHLETES",
       "PROGRAM_MEMBERS",
       "MEMBERSHIP_HOLDERS",
       "INTERNAL_USERS",
       "CUSTOM",
-    ]).default("ALL_FAMILIES"),
+    ]).default("ALL_GUARDIANS"),
     filters: z.object({
       programIds: z.array(z.string()).optional(),
       membershipGroupIds: z.array(z.string()).optional(),

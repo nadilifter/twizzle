@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
     const guardianLinks = await db.athleteGuardian.findMany({
       where: {
         userId: { not: null },
-        athlete: { organizationId },
+        athlete: {
+          organizationAthletes: { some: { organizationId } },
+        },
       },
       select: { userId: true },
       distinct: ["userId"],
@@ -55,7 +57,11 @@ export async function GET(request: NextRequest) {
           balance: true,
           status: true,
           athleteGuardians: {
-            where: { athlete: { organizationId } },
+            where: {
+              athlete: {
+                organizationAthletes: { some: { organizationId } },
+              },
+            },
             select: {
               athlete: { select: { id: true, name: true, status: true } },
               isPrimary: true,

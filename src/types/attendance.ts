@@ -19,10 +19,13 @@ export interface AttendanceWithRelations extends Attendance {
     name: string;
     avatar?: string | null;
     level?: string;
-    family?: {
-      id: string;
-      name: string;
-    };
+    guardians?: Array<{
+      user?: {
+        id: string;
+        name: string | null;
+        email: string;
+      } | null;
+    }>;
   };
   event: {
     id: string;

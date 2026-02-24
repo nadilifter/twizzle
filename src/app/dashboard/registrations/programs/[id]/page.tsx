@@ -87,7 +87,7 @@ interface Registration {
         email: string | null;
         avatar: string | null;
     };
-    family: {
+    user: {
         id: string;
         name: string;
     } | null;
@@ -520,7 +520,7 @@ export default function ProgramDetailPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Athlete</TableHead>
-                                        <TableHead>Family</TableHead>
+                                        <TableHead>Guardian</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
@@ -542,7 +542,7 @@ export default function ProgramDetailPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                {reg.family?.name || "-"}
+                                                {reg.user?.name || "-"}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge 

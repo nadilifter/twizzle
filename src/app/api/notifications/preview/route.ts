@@ -36,7 +36,6 @@ const previewSchema = z.object({
   ]).optional(),
   // Optional context IDs for real data preview
   athleteId: z.string().optional(),
-  familyId: z.string().optional(),
   membershipId: z.string().optional(),
   programId: z.string().optional(),
   eventId: z.string().optional(),
@@ -67,7 +66,6 @@ export async function POST(request: NextRequest) {
     // Determine preview type
     const hasContextData =
       validatedData.athleteId ||
-      validatedData.familyId ||
       validatedData.membershipId ||
       validatedData.programId ||
       validatedData.eventId ||
@@ -79,7 +77,6 @@ export async function POST(request: NextRequest) {
       // Render with real data
       const context = await buildTemplateContext(session.user.organizationId, {
         athleteId: validatedData.athleteId,
-        familyId: validatedData.familyId,
         membershipId: validatedData.membershipId,
         programId: validatedData.programId,
         eventId: validatedData.eventId,

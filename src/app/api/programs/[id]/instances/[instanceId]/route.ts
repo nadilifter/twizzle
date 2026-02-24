@@ -54,9 +54,6 @@ export async function GET(
                 level: true,
               },
             },
-            family: {
-              select: { id: true, name: true },
-            },
           },
           orderBy: { createdAt: "asc" },
         },

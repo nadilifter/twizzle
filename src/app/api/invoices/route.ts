@@ -15,7 +15,6 @@ const lineItemSchema = z.object({
 
 const createInvoiceSchema = z.object({
   userId: z.string().min(1, "Guardian is required"),
-  familyId: z.string().optional(),
   dueDate: z.string().min(1, "Due date is required"),
   status: z.enum(["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED", "PARTIAL"]).default("DRAFT"),
   notes: z.string().optional(),
@@ -47,7 +46,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status");
-    const familyId = searchParams.get("familyId");
     const userId = searchParams.get("userId");
     const programId = searchParams.get("programId");
     const athleteId = searchParams.get("athleteId");
@@ -64,7 +62,6 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { reference: { contains: search, mode: "insensitive" } },
-        { family: { name: { contains: search, mode: "insensitive" } } },
         { user: { name: { contains: search, mode: "insensitive" } } },
       ];
     }
@@ -73,11 +70,7 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    if (familyId && userId) {
-      where.OR = [{ familyId }, { userId }];
-    } else if (familyId) {
-      where.familyId = familyId;
-    } else if (userId) {
+    if (userId) {
       where.userId = userId;
     }
 
@@ -102,14 +95,6 @@ export async function GET(request: NextRequest) {
       db.invoice.findMany({
         where,
         include: {
-          family: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              primaryContact: true,
-            },
-          },
           user: {
             select: {
               id: true,
@@ -228,7 +213,6 @@ export async function POST(request: NextRequest) {
     const invoice = await db.invoice.create({
       data: {
         reference,
-        familyId: validatedData.familyId || undefined,
         userId: validatedData.userId,
         status: validatedData.status,
         dueDate: new Date(validatedData.dueDate),
@@ -250,7 +234,6 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        family: true,
         lineItems: {
           include: {
             program: true,

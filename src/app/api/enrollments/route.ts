@@ -10,7 +10,6 @@ const createEnrollmentSchema = z.object({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional().nullable(),
   status: z.enum(["ACTIVE", "PAUSED", "CANCELLED", "COMPLETED"]).default("ACTIVE"),
-  familyId: z.string().optional(),
   userId: z.string().optional(),
 });
 
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest) {
     const athleteId = searchParams.get("athleteId");
     const programId = searchParams.get("programId");
     const status = searchParams.get("status");
-    const familyId = searchParams.get("familyId");
     const userId = searchParams.get("userId");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
@@ -42,11 +40,7 @@ export async function GET(request: NextRequest) {
       ...(status && { status: status as "ACTIVE" | "PAUSED" | "CANCELLED" | "COMPLETED" }),
     };
 
-    if (familyId && userId) {
-      where.OR = [{ familyId }, { userId }];
-    } else if (familyId) {
-      where.familyId = familyId;
-    } else if (userId) {
+    if (userId) {
       where.userId = userId;
     }
 
@@ -108,20 +102,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createEnrollmentSchema.parse(body);
 
-    // Verify athlete belongs to the organization
+    // Verify athlete is visible to this organization
     const athlete = await db.athlete.findFirst({
       where: {
         id: validatedData.athleteId,
-        guardians: {
-          some: {
-            family: {
-              organizationId: session.user.organizationId,
-            },
-          },
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
         },
-      },
-      include: {
-        guardians: true,
       },
     });
 
@@ -129,17 +116,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
-    // Determine familyId and userId (payer) - support both for Guardian/Ward migration
-    let familyId = validatedData.familyId;
-    let userId = validatedData.userId ?? session.user.id;
-    if (!familyId) {
-      const primary = athlete.guardians.find(g => g.isPrimary) || athlete.guardians[0];
-      familyId = primary?.familyId ?? undefined;
-    }
-
-    if (!familyId && !userId) {
-      return NextResponse.json({ error: "No family or user found for athlete" }, { status: 400 });
-    }
+    const userId = validatedData.userId ?? session.user.id;
 
     // Verify program belongs to the organization
     const program = await db.program.findFirst({
@@ -176,13 +153,11 @@ export async function POST(request: NextRequest) {
         startDate: new Date(validatedData.startDate),
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
         status: validatedData.status,
-        ...(familyId != null ? { familyId } : {}),
         ...(userId != null ? { userId } : {}),
       },
       include: {
         athlete: true,
         program: true,
-        family: true,
       },
     });
 

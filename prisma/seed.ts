@@ -892,23 +892,19 @@ async function main() {
   console.log(`  ✓ Created ${facilityAssignmentData.length} facility assignments`);
 
   // ============================================
-  // FAMILIES
+  // GUARDIAN / PARENT USERS
   // ============================================
-  console.log("\n👨‍👩‍👧‍👦 Creating families...");
-  const org1Families = await Promise.all([
-    prisma.family.upsert({ where: { id: `${ORG1_ID}-fam-1` }, update: {}, create: { id: `${ORG1_ID}-fam-1`, name: "Anderson Family", primaryContact: "Michelle Anderson", email: "anderson.family@email.com", phone: "(555) 101-1001", address: "123 Oak Street, Sunnyvale, CA 94086", balance: 0, organizationId: ORG1_ID } }),
-    prisma.family.upsert({ where: { id: `${ORG1_ID}-fam-2` }, update: {}, create: { id: `${ORG1_ID}-fam-2`, name: "Baker Family", primaryContact: "Thomas Baker", email: "baker.family@email.com", phone: "(555) 102-1002", address: "456 Maple Ave, Sunnyvale, CA 94086", balance: 150.00, organizationId: ORG1_ID } }),
-    prisma.family.upsert({ where: { id: `${ORG1_ID}-fam-3` }, update: {}, create: { id: `${ORG1_ID}-fam-3`, name: "Chen Family", primaryContact: "Lisa Chen", email: "chen.family@email.com", phone: "(555) 103-1003", address: "789 Pine Road, Mountain View, CA 94040", balance: -25.00, organizationId: ORG1_ID } }),
-    prisma.family.upsert({ where: { id: `${ORG1_ID}-fam-4` }, update: {}, create: { id: `${ORG1_ID}-fam-4`, name: "Davis Family", primaryContact: "Marcus Davis", email: "davis.family@email.com", phone: "(555) 104-1004", address: "321 Cedar Lane, Palo Alto, CA 94301", balance: 0, organizationId: ORG1_ID } }),
-    prisma.family.upsert({ where: { id: `${ORG1_ID}-fam-5` }, update: {}, create: { id: `${ORG1_ID}-fam-5`, name: "Evans Family", primaryContact: "Nancy Evans", email: "evans.family@email.com", phone: "(555) 105-1005", address: "654 Birch Court, Los Altos, CA 94022", balance: 75.50, organizationId: ORG1_ID } }),
-  ]);
-  const org2Families = await Promise.all([
-    prisma.family.upsert({ where: { id: `${ORG2_ID}-fam-1` }, update: {}, create: { id: `${ORG2_ID}-fam-1`, name: "Foster Family", primaryContact: "Karen Foster", email: "foster.family@email.com", phone: "(555) 201-2001", address: "111 First Street, San Jose, CA 95110", balance: 0, organizationId: ORG2_ID } }),
-    prisma.family.upsert({ where: { id: `${ORG2_ID}-fam-2` }, update: {}, create: { id: `${ORG2_ID}-fam-2`, name: "Garcia Family", primaryContact: "Carlos Garcia", email: "garcia.family@email.com", phone: "(555) 202-2002", address: "222 Second Ave, San Jose, CA 95112", balance: 200.00, organizationId: ORG2_ID } }),
-    prisma.family.upsert({ where: { id: `${ORG2_ID}-fam-3` }, update: {}, create: { id: `${ORG2_ID}-fam-3`, name: "Harris Family", primaryContact: "Patricia Harris", email: "harris.family@email.com", phone: "(555) 203-2003", address: "333 Third Blvd, Campbell, CA 95008", balance: 0, organizationId: ORG2_ID } }),
-    prisma.family.upsert({ where: { id: `${ORG2_ID}-fam-4` }, update: {}, create: { id: `${ORG2_ID}-fam-4`, name: "Irving Family", primaryContact: "John Irving", email: "irving.family@email.com", phone: "(555) 204-2004", address: "444 Fourth Way, Cupertino, CA 95014", balance: -50.00, organizationId: ORG2_ID } }),
-  ]);
-  console.log(`  ✓ Created ${org1Families.length + org2Families.length} families`);
+  console.log("\n👨‍👩‍👧‍👦 Creating guardian users...");
+  const org1Parent1 = await prisma.user.upsert({ where: { email: "michelle.anderson@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-1`, email: "michelle.anderson@email.com", name: "Michelle Anderson", passwordHash: hashedPassword, phone: "(555) 101-1001", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 0 } });
+  const org1Parent2 = await prisma.user.upsert({ where: { email: "thomas.baker@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-2`, email: "thomas.baker@email.com", name: "Thomas Baker", passwordHash: hashedPassword, phone: "(555) 102-1002", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 150.00 } });
+  const org1Parent3 = await prisma.user.upsert({ where: { email: "lisa.chen@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-3`, email: "lisa.chen@email.com", name: "Lisa Chen", passwordHash: hashedPassword, phone: "(555) 103-1003", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: -25.00 } });
+  const org1Parent4 = await prisma.user.upsert({ where: { email: "marcus.davis@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-4`, email: "marcus.davis@email.com", name: "Marcus Davis", passwordHash: hashedPassword, phone: "(555) 104-1004", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 0 } });
+  const org1Parent5 = await prisma.user.upsert({ where: { email: "nancy.evans@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-5`, email: "nancy.evans@email.com", name: "Nancy Evans", passwordHash: hashedPassword, phone: "(555) 105-1005", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 75.50 } });
+  const org2Parent1 = await prisma.user.upsert({ where: { email: "karen.foster@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-1`, email: "karen.foster@email.com", name: "Karen Foster", passwordHash: hashedPassword, phone: "(555) 201-2001", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 0 } });
+  const org2Parent2 = await prisma.user.upsert({ where: { email: "carlos.garcia@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-2`, email: "carlos.garcia@email.com", name: "Carlos Garcia", passwordHash: hashedPassword, phone: "(555) 202-2002", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 200.00 } });
+  const org2Parent3 = await prisma.user.upsert({ where: { email: "patricia.harris@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-3`, email: "patricia.harris@email.com", name: "Patricia Harris", passwordHash: hashedPassword, phone: "(555) 203-2003", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 0 } });
+  const org2Parent4 = await prisma.user.upsert({ where: { email: "john.irving@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-4`, email: "john.irving@email.com", name: "John Irving", passwordHash: hashedPassword, phone: "(555) 204-2004", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: -50.00 } });
+  console.log("  ✓ Created 9 guardian users");
 
   // ============================================
   // ATHLETES
@@ -933,28 +929,45 @@ async function main() {
   console.log("  ✓ Created 14 athletes");
 
   // ============================================
+  // ORGANIZATION-ATHLETE LINKS
+  // ============================================
+  console.log("\n🔗 Creating organization-athlete links...");
+  const orgAthleteData = [
+    ...Array.from({ length: 8 }, (_, i) => ({ organizationId: ORG1_ID, athleteId: `${ORG1_ID}-ath-${i + 1}` })),
+    ...Array.from({ length: 6 }, (_, i) => ({ organizationId: ORG2_ID, athleteId: `${ORG2_ID}-ath-${i + 1}` })),
+  ];
+  for (const oa of orgAthleteData) {
+    await prisma.organizationAthlete.upsert({
+      where: { organizationId_athleteId: { organizationId: oa.organizationId, athleteId: oa.athleteId } },
+      update: {},
+      create: oa,
+    });
+  }
+  console.log(`  ✓ Created ${orgAthleteData.length} organization-athlete links`);
+
+  // ============================================
   // ATHLETE GUARDIANS
   // ============================================
   console.log("\n👪 Creating athlete-guardian relationships...");
   const guardianData = [
-    { athleteId: `${ORG1_ID}-ath-1`, familyId: `${ORG1_ID}-fam-1`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG1_ID}-ath-2`, familyId: `${ORG1_ID}-fam-1`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG1_ID}-ath-3`, familyId: `${ORG1_ID}-fam-2`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG1_ID}-ath-4`, familyId: `${ORG1_ID}-fam-3`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG1_ID}-ath-5`, familyId: `${ORG1_ID}-fam-3`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG1_ID}-ath-6`, familyId: `${ORG1_ID}-fam-4`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG1_ID}-ath-7`, familyId: `${ORG1_ID}-fam-5`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG1_ID}-ath-8`, familyId: `${ORG1_ID}-fam-5`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG2_ID}-ath-1`, familyId: `${ORG2_ID}-fam-1`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG2_ID}-ath-2`, familyId: `${ORG2_ID}-fam-1`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG2_ID}-ath-3`, familyId: `${ORG2_ID}-fam-2`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG2_ID}-ath-4`, familyId: `${ORG2_ID}-fam-2`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG2_ID}-ath-5`, familyId: `${ORG2_ID}-fam-3`, relationship: "Parent", isPrimary: true },
-    { athleteId: `${ORG2_ID}-ath-6`, familyId: `${ORG2_ID}-fam-4`, relationship: "Guardian", isPrimary: true },
+    { athleteId: `${ORG1_ID}-ath-1`, userId: org1Parent1.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG1_ID}-ath-2`, userId: org1Parent1.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG1_ID}-ath-3`, userId: org1Parent2.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG1_ID}-ath-4`, userId: org1Parent3.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG1_ID}-ath-5`, userId: org1Parent3.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG1_ID}-ath-6`, userId: org1Parent4.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG1_ID}-ath-7`, userId: org1Parent5.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG1_ID}-ath-8`, userId: org1Parent5.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG2_ID}-ath-1`, userId: org2Parent1.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG2_ID}-ath-2`, userId: org2Parent1.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG2_ID}-ath-3`, userId: org2Parent2.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG2_ID}-ath-4`, userId: org2Parent2.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG2_ID}-ath-5`, userId: org2Parent3.id, relationship: "Parent", isPrimary: true },
+    { athleteId: `${ORG2_ID}-ath-6`, userId: org2Parent4.id, relationship: "Guardian", isPrimary: true },
   ];
   for (const g of guardianData) {
     await prisma.athleteGuardian.upsert({
-      where: { athleteId_familyId: { athleteId: g.athleteId, familyId: g.familyId } },
+      where: { athleteId_userId: { athleteId: g.athleteId, userId: g.userId } },
       update: {}, create: g,
     });
   }
@@ -965,12 +978,12 @@ async function main() {
   // ============================================
   console.log("\n💳 Creating payment methods...");
   const paymentMethodData = [
-    { id: `${ORG1_ID}-pm-1`, familyId: `${ORG1_ID}-fam-1`, type: "CARD" as const, last4: "4242", expiry: "12/27", brand: "Visa", isDefault: true },
-    { id: `${ORG1_ID}-pm-2`, familyId: `${ORG1_ID}-fam-2`, type: "CARD" as const, last4: "5555", expiry: "08/26", brand: "Mastercard", isDefault: true },
-    { id: `${ORG1_ID}-pm-3`, familyId: `${ORG1_ID}-fam-3`, type: "BANK" as const, last4: "6789", expiry: null, brand: null, isDefault: true },
-    { id: `${ORG1_ID}-pm-4`, familyId: `${ORG1_ID}-fam-4`, type: "CARD" as const, last4: "1234", expiry: "03/28", brand: "Amex", isDefault: true },
-    { id: `${ORG2_ID}-pm-1`, familyId: `${ORG2_ID}-fam-1`, type: "CARD" as const, last4: "9876", expiry: "06/27", brand: "Visa", isDefault: true },
-    { id: `${ORG2_ID}-pm-2`, familyId: `${ORG2_ID}-fam-2`, type: "CARD" as const, last4: "3456", expiry: "11/26", brand: "Discover", isDefault: true },
+    { id: `${ORG1_ID}-pm-1`, userId: org1Parent1.id, type: "CARD" as const, last4: "4242", expiry: "12/27", brand: "Visa", isDefault: true },
+    { id: `${ORG1_ID}-pm-2`, userId: org1Parent2.id, type: "CARD" as const, last4: "5555", expiry: "08/26", brand: "Mastercard", isDefault: true },
+    { id: `${ORG1_ID}-pm-3`, userId: org1Parent3.id, type: "BANK" as const, last4: "6789", expiry: null, brand: null, isDefault: true },
+    { id: `${ORG1_ID}-pm-4`, userId: org1Parent4.id, type: "CARD" as const, last4: "1234", expiry: "03/28", brand: "Amex", isDefault: true },
+    { id: `${ORG2_ID}-pm-1`, userId: org2Parent1.id, type: "CARD" as const, last4: "9876", expiry: "06/27", brand: "Visa", isDefault: true },
+    { id: `${ORG2_ID}-pm-2`, userId: org2Parent2.id, type: "CARD" as const, last4: "3456", expiry: "11/26", brand: "Discover", isDefault: true },
   ];
   for (const pm of paymentMethodData) {
     await prisma.paymentMethod.upsert({ where: { id: pm.id }, update: {}, create: pm });
@@ -1502,11 +1515,13 @@ async function main() {
     i => i.programId === `${ORG2_ID}-prog-fitness` && i.status === "SCHEDULED"
   ).slice(0, 5);
 
+  const org1ParentIds = [org1Parent1.id, org1Parent1.id, org1Parent2.id, org1Parent3.id, org1Parent3.id, org1Parent4.id, org1Parent5.id, org1Parent5.id];
+  const org2ParentIds = [org2Parent1.id, org2Parent1.id, org2Parent2.id, org2Parent2.id, org2Parent3.id, org2Parent4.id];
   const instanceRegistrations: Array<{
     id: string;
     programInstanceId: string;
     athleteId: string;
-    familyId: string | null;
+    userId: string | null;
     status: string;
   }> = [];
 
@@ -1520,7 +1535,7 @@ async function main() {
         id: `${instance.id}-reg-${a}`,
         programInstanceId: instance.id,
         athleteId: `${ORG1_ID}-ath-${athleteIndex}`,
-        familyId: `${ORG1_ID}-fam-${Math.ceil(athleteIndex / 2)}`,
+        userId: org1ParentIds[athleteIndex - 1] ?? org1Parent1.id,
         status: "REGISTERED",
       });
     }
@@ -1536,7 +1551,7 @@ async function main() {
         id: `${instance.id}-reg-${a}`,
         programInstanceId: instance.id,
         athleteId: `${ORG2_ID}-ath-${athleteIndex}`,
-        familyId: `${ORG2_ID}-fam-${Math.ceil(athleteIndex / 2)}`,
+        userId: org2ParentIds[athleteIndex - 1] ?? org2Parent1.id,
         status: "REGISTERED",
       });
     }
@@ -1552,7 +1567,7 @@ async function main() {
       });
       regsCreated++;
     } catch (e) {
-      // Skip if athlete/family doesn't exist or duplicates
+      // Skip if athlete/user doesn't exist or duplicates
     }
   }
   console.log(`  ✓ Created ${regsCreated} instance registrations`);
@@ -1612,7 +1627,7 @@ async function main() {
   // ============================================
   console.log("\n💰 Creating bulk discounts...");
   const bulkDiscountData = [
-    // Org1 family discounts
+    // Org1 sibling discounts
     { id: `${ORG1_ID}-discount-1`, programId: `${ORG1_ID}-prog-rec-bronze`, type: "FAMILY_SIBLING" as const, minQuantity: 2, discountType: "PERCENTAGE" as const, discountValue: 10, description: "2nd child 10% off" },
     { id: `${ORG1_ID}-discount-2`, programId: `${ORG1_ID}-prog-rec-bronze`, type: "FAMILY_SIBLING" as const, minQuantity: 3, discountType: "PERCENTAGE" as const, discountValue: 15, description: "3rd child 15% off" },
     { id: `${ORG1_ID}-discount-3`, programId: `${ORG1_ID}-prog-rec-silver`, type: "FAMILY_SIBLING" as const, minQuantity: 2, discountType: "PERCENTAGE" as const, discountValue: 10, description: "Sibling discount" },
@@ -1689,13 +1704,13 @@ async function main() {
   // ============================================
   console.log("\n📝 Creating enrollments...");
   const enrollmentData = [
-    { id: `${ORG1_ID}-enr-1`, athleteId: `${ORG1_ID}-ath-1`, programId: `${ORG1_ID}-prog-rec-bronze`, familyId: `${ORG1_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
-    { id: `${ORG1_ID}-enr-2`, athleteId: `${ORG1_ID}-ath-2`, programId: `${ORG1_ID}-prog-rec-silver`, familyId: `${ORG1_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
-    { id: `${ORG1_ID}-enr-3`, athleteId: `${ORG1_ID}-ath-3`, programId: `${ORG1_ID}-prog-jo`, familyId: `${ORG1_ID}-fam-2`, startDate: daysAgo(120), status: "ACTIVE" as const },
-    { id: `${ORG1_ID}-enr-4`, athleteId: `${ORG1_ID}-ath-4`, programId: `${ORG1_ID}-prog-rec-bronze`, familyId: `${ORG1_ID}-fam-3`, startDate: daysAgo(30), status: "ACTIVE" as const },
-    { id: `${ORG2_ID}-enr-1`, athleteId: `${ORG2_ID}-ath-1`, programId: `${ORG2_ID}-prog-soccer`, familyId: `${ORG2_ID}-fam-1`, startDate: daysAgo(30), status: "ACTIVE" as const },
-    { id: `${ORG2_ID}-enr-2`, athleteId: `${ORG2_ID}-ath-2`, programId: `${ORG2_ID}-prog-basketball`, familyId: `${ORG2_ID}-fam-1`, startDate: daysAgo(60), status: "ACTIVE" as const },
-    { id: `${ORG2_ID}-enr-3`, athleteId: `${ORG2_ID}-ath-4`, programId: `${ORG2_ID}-prog-swim`, familyId: `${ORG2_ID}-fam-2`, startDate: daysAgo(90), status: "ACTIVE" as const },
+    { id: `${ORG1_ID}-enr-1`, athleteId: `${ORG1_ID}-ath-1`, programId: `${ORG1_ID}-prog-rec-bronze`, userId: org1Parent1.id, startDate: daysAgo(60), status: "ACTIVE" as const },
+    { id: `${ORG1_ID}-enr-2`, athleteId: `${ORG1_ID}-ath-2`, programId: `${ORG1_ID}-prog-rec-silver`, userId: org1Parent1.id, startDate: daysAgo(60), status: "ACTIVE" as const },
+    { id: `${ORG1_ID}-enr-3`, athleteId: `${ORG1_ID}-ath-3`, programId: `${ORG1_ID}-prog-jo`, userId: org1Parent2.id, startDate: daysAgo(120), status: "ACTIVE" as const },
+    { id: `${ORG1_ID}-enr-4`, athleteId: `${ORG1_ID}-ath-4`, programId: `${ORG1_ID}-prog-rec-bronze`, userId: org1Parent3.id, startDate: daysAgo(30), status: "ACTIVE" as const },
+    { id: `${ORG2_ID}-enr-1`, athleteId: `${ORG2_ID}-ath-1`, programId: `${ORG2_ID}-prog-soccer`, userId: org2Parent1.id, startDate: daysAgo(30), status: "ACTIVE" as const },
+    { id: `${ORG2_ID}-enr-2`, athleteId: `${ORG2_ID}-ath-2`, programId: `${ORG2_ID}-prog-basketball`, userId: org2Parent1.id, startDate: daysAgo(60), status: "ACTIVE" as const },
+    { id: `${ORG2_ID}-enr-3`, athleteId: `${ORG2_ID}-ath-4`, programId: `${ORG2_ID}-prog-swim`, userId: org2Parent2.id, startDate: daysAgo(90), status: "ACTIVE" as const },
   ];
   for (const enr of enrollmentData) {
     await prisma.enrollment.upsert({ where: { id: enr.id }, update: {}, create: enr });
@@ -1868,7 +1883,7 @@ async function main() {
   await prisma.invoice.upsert({
     where: { id: `${ORG1_ID}-inv-1` }, update: {},
     create: {
-      id: `${ORG1_ID}-inv-1`, reference: "SGA-2026-0001", familyId: `${ORG1_ID}-fam-1`, status: "PAID",
+      id: `${ORG1_ID}-inv-1`, reference: "SGA-2026-0001", userId: org1Parent1.id, status: "PAID",
       dueDate: daysAgo(15), subtotal: 200, tax: 18, total: 218, notes: "January tuition", organizationId: ORG1_ID,
       lineItems: { create: [
         { description: "Bronze Monthly - Emily", quantity: 1, unitPrice: 85, total: 85, programId: `${ORG1_ID}-prog-rec-bronze`, athleteId: `${ORG1_ID}-ath-1` },
@@ -1879,7 +1894,7 @@ async function main() {
   await prisma.invoice.upsert({
     where: { id: `${ORG1_ID}-inv-2` }, update: {},
     create: {
-      id: `${ORG1_ID}-inv-2`, reference: "SGA-2026-0002", familyId: `${ORG1_ID}-fam-2`, status: "SENT",
+      id: `${ORG1_ID}-inv-2`, reference: "SGA-2026-0002", userId: org1Parent2.id, status: "SENT",
       dueDate: daysFromNow(15), subtotal: 200, tax: 18, total: 218, organizationId: ORG1_ID,
       lineItems: { create: [
         { description: "JO Team Monthly - Olivia", quantity: 1, unitPrice: 200, total: 200, programId: `${ORG1_ID}-prog-jo`, athleteId: `${ORG1_ID}-ath-3` },
@@ -1889,7 +1904,7 @@ async function main() {
   await prisma.invoice.upsert({
     where: { id: `${ORG1_ID}-inv-3` }, update: {},
     create: {
-      id: `${ORG1_ID}-inv-3`, reference: "SGA-2026-0003", familyId: `${ORG1_ID}-fam-3`, status: "OVERDUE",
+      id: `${ORG1_ID}-inv-3`, reference: "SGA-2026-0003", userId: org1Parent3.id, status: "OVERDUE",
       dueDate: daysAgo(10), subtotal: 85, tax: 7.65, total: 92.65, organizationId: ORG1_ID,
       lineItems: { create: [
         { description: "Bronze Monthly - Lily", quantity: 1, unitPrice: 85, total: 85, programId: `${ORG1_ID}-prog-rec-bronze`, athleteId: `${ORG1_ID}-ath-4` },
@@ -1899,7 +1914,7 @@ async function main() {
   await prisma.invoice.upsert({
     where: { id: `${ORG2_ID}-inv-1` }, update: {},
     create: {
-      id: `${ORG2_ID}-inv-1`, reference: "MSC-2026-0001", familyId: `${ORG2_ID}-fam-1`, status: "PAID",
+      id: `${ORG2_ID}-inv-1`, reference: "MSC-2026-0001", userId: org2Parent1.id, status: "PAID",
       dueDate: daysAgo(5), subtotal: 270, tax: 24.30, total: 294.30, organizationId: ORG2_ID,
       lineItems: { create: [
         { description: "Soccer Season - Jake", quantity: 1, unitPrice: 175, total: 175, programId: `${ORG2_ID}-prog-soccer`, athleteId: `${ORG2_ID}-ath-1` },
@@ -1910,7 +1925,7 @@ async function main() {
   await prisma.invoice.upsert({
     where: { id: `${ORG2_ID}-inv-2` }, update: {},
     create: {
-      id: `${ORG2_ID}-inv-2`, reference: "MSC-2026-0002", familyId: `${ORG2_ID}-fam-2`, status: "PARTIAL",
+      id: `${ORG2_ID}-inv-2`, reference: "MSC-2026-0002", userId: org2Parent2.id, status: "PARTIAL",
       dueDate: daysAgo(2), subtotal: 1200, tax: 108, total: 1308, organizationId: ORG2_ID,
       lineItems: { create: [
         { description: "Swim Team Annual - Lucas", quantity: 1, unitPrice: 1200, total: 1200, programId: `${ORG2_ID}-prog-swim`, athleteId: `${ORG2_ID}-ath-4` },
@@ -1924,9 +1939,9 @@ async function main() {
   // ============================================
   console.log("\n💰 Creating payments...");
   const paymentData = [
-    { id: `${ORG1_ID}-pay-1`, invoiceId: `${ORG1_ID}-inv-1`, familyId: `${ORG1_ID}-fam-1`, amount: 218, method: "CARD" as const, status: "COMPLETED" as const, transactionId: "txn_seed_001", processedAt: daysAgo(20) },
-    { id: `${ORG2_ID}-pay-1`, invoiceId: `${ORG2_ID}-inv-1`, familyId: `${ORG2_ID}-fam-1`, amount: 294.30, method: "CARD" as const, status: "COMPLETED" as const, transactionId: "txn_seed_002", processedAt: daysAgo(7) },
-    { id: `${ORG2_ID}-pay-2`, invoiceId: `${ORG2_ID}-inv-2`, familyId: `${ORG2_ID}-fam-2`, amount: 600, method: "BANK" as const, status: "COMPLETED" as const, transactionId: "txn_seed_003", processedAt: daysAgo(3) },
+    { id: `${ORG1_ID}-pay-1`, invoiceId: `${ORG1_ID}-inv-1`, userId: org1Parent1.id, amount: 218, method: "CARD" as const, status: "COMPLETED" as const, transactionId: "txn_seed_001", processedAt: daysAgo(20) },
+    { id: `${ORG2_ID}-pay-1`, invoiceId: `${ORG2_ID}-inv-1`, userId: org2Parent1.id, amount: 294.30, method: "CARD" as const, status: "COMPLETED" as const, transactionId: "txn_seed_002", processedAt: daysAgo(7) },
+    { id: `${ORG2_ID}-pay-2`, invoiceId: `${ORG2_ID}-inv-2`, userId: org2Parent2.id, amount: 600, method: "BANK" as const, status: "COMPLETED" as const, transactionId: "txn_seed_003", processedAt: daysAgo(3) },
   ];
   for (const pay of paymentData) {
     await prisma.payment.upsert({ where: { id: pay.id }, update: {}, create: pay });
@@ -1938,7 +1953,7 @@ async function main() {
   // ============================================
   console.log("\n🏷️ Creating discounts...");
   const discountData = [
-    { id: `${ORG1_ID}-disc-1`, name: "New Family Welcome", code: "WELCOME15", type: "PERCENTAGE" as const, amount: 15, validFrom: daysAgo(90), validTo: daysFromNow(90), userScope: "NEW_USERS" as const, productScope: "ALL" as const, status: "ACTIVE" as const, organizationId: ORG1_ID },
+    { id: `${ORG1_ID}-disc-1`, name: "New Member Welcome", code: "WELCOME15", type: "PERCENTAGE" as const, amount: 15, validFrom: daysAgo(90), validTo: daysFromNow(90), userScope: "NEW_USERS" as const, productScope: "ALL" as const, status: "ACTIVE" as const, organizationId: ORG1_ID },
     { id: `${ORG1_ID}-disc-2`, name: "Sibling Discount", code: "SIBLING10", type: "PERCENTAGE" as const, amount: 10, validFrom: daysAgo(365), userScope: "MEMBERS" as const, productScope: "MEMBERSHIP" as const, status: "ACTIVE" as const, organizationId: ORG1_ID },
     { id: `${ORG2_ID}-disc-1`, name: "Multi-Sport Bundle", code: "MULTISPORT20", type: "PERCENTAGE" as const, amount: 20, validFrom: daysAgo(60), userScope: "MEMBERS" as const, productScope: "MEMBERSHIP" as const, status: "ACTIVE" as const, organizationId: ORG2_ID },
   ];
@@ -1972,9 +1987,9 @@ async function main() {
   // ============================================
   console.log("\n📒 Creating ledger entries...");
   const ledgerData = [
-    { id: `${ORG1_ID}-le-1`, date: daysAgo(20), description: "Anderson Family - January tuition", glCodeId: `${ORG1_ID}-gl-1`, reference: "SGA-2026-0001", credit: 218, status: "POSTED" as const, organizationId: ORG1_ID },
+    { id: `${ORG1_ID}-le-1`, date: daysAgo(20), description: "Michelle Anderson - January tuition", glCodeId: `${ORG1_ID}-gl-1`, reference: "SGA-2026-0001", credit: 218, status: "POSTED" as const, organizationId: ORG1_ID },
     { id: `${ORG1_ID}-le-2`, date: daysAgo(15), description: "Monthly coach salary", glCodeId: `${ORG1_ID}-gl-2`, debit: 3500, status: "POSTED" as const, organizationId: ORG1_ID },
-    { id: `${ORG2_ID}-le-1`, date: daysAgo(7), description: "Foster Family - Program fees", glCodeId: `${ORG2_ID}-gl-1`, reference: "MSC-2026-0001", credit: 294.30, status: "POSTED" as const, organizationId: ORG2_ID },
+    { id: `${ORG2_ID}-le-1`, date: daysAgo(7), description: "Karen Foster - Program fees", glCodeId: `${ORG2_ID}-gl-1`, reference: "MSC-2026-0001", credit: 294.30, status: "POSTED" as const, organizationId: ORG2_ID },
   ];
   for (const le of ledgerData) {
     await prisma.ledgerEntry.upsert({ where: { id: le.id }, update: {}, create: le });
@@ -4005,7 +4020,7 @@ async function main() {
       actionType: "EMAIL",
       isSystem: true,
       subject: "Payment Reminder - {{invoiceReference}}",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 This is a friendly reminder that payment of {{invoiceAmount}} for {{invoiceDescription}} is due on {{dueDate}}.
 
@@ -4020,7 +4035,7 @@ If you have already made this payment, please disregard this notice.
 Thank you,
 {{organizationName}}`,
       smsBody: `{{organizationName}}: Payment of {{invoiceAmount}} ({{invoiceReference}}) is due {{dueDate}}. Pay now: {{paymentUrl}}`,
-      recipientType: "ALL_FAMILIES",
+      recipientType: "ALL_GUARDIANS",
     },
     {
       id: `${ORG1_ID}-notif-payment-urgent`,
@@ -4034,7 +4049,7 @@ Thank you,
       actionType: "EMAIL",
       isSystem: true,
       subject: "URGENT: Payment Overdue - {{invoiceReference}}",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 This is an urgent reminder that payment of {{invoiceAmount}} for {{invoiceDescription}} is now overdue.
 
@@ -4049,7 +4064,7 @@ If you need to discuss payment options, please contact us at {{organizationEmail
 Thank you,
 {{organizationName}}`,
       smsBody: `URGENT from {{organizationName}}: Payment of {{invoiceAmount}} is overdue. Please pay now: {{paymentUrl}}`,
-      recipientType: "ALL_FAMILIES",
+      recipientType: "ALL_GUARDIANS",
     },
     {
       id: `${ORG1_ID}-notif-membership-warning`,
@@ -4063,7 +4078,7 @@ Thank you,
       actionType: "EMAIL",
       isSystem: true,
       subject: "Your Membership is Expiring Soon - {{athleteName}}",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 This is a reminder that {{athleteName}}'s {{membershipName}} will expire on {{membershipEndDate}}.
 
@@ -4093,7 +4108,7 @@ Thank you for being part of the Sunrise Gymnastics family!
       actionType: "EMAIL",
       isSystem: true,
       subject: "URGENT: Membership Expired - {{athleteName}}",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 This is an urgent notice that {{athleteName}}'s {{membershipName}} has expired.
 
@@ -4122,7 +4137,7 @@ Thank you,
       actionType: "EMAIL",
       isSystem: true,
       subject: "Reminder: {{programName}} Tomorrow - {{eventDate}}",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 This is a reminder that {{athleteName}} has {{programName}} tomorrow.
 
@@ -4151,7 +4166,7 @@ See you at the gym!
       actionType: "EMAIL",
       isSystem: false,
       subject: "Happy Birthday, {{athleteFirstName}}! 🎂",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 Happy Birthday to {{athleteName}}! 🎉
 
@@ -4163,7 +4178,7 @@ Best wishes,
 The Sunrise Gymnastics Team
 {{organizationName}}`,
       smsBody: `🎂 Happy Birthday, {{athleteFirstName}}! From your friends at {{organizationName}}!`,
-      recipientType: "ALL_FAMILIES",
+      recipientType: "ALL_GUARDIANS",
     },
   ];
 
@@ -4186,7 +4201,7 @@ The Sunrise Gymnastics Team
       actionType: "EMAIL",
       isSystem: true,
       subject: "Payment Reminder - {{invoiceReference}}",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 This is a friendly reminder that payment of {{invoiceAmount}} is due on {{dueDate}}.
 
@@ -4201,7 +4216,7 @@ Questions? Contact us at {{organizationEmail}}.
 Thanks,
 {{organizationName}}`,
       smsBody: `Metro Sports: Payment of {{invoiceAmount}} due {{dueDate}}. Pay now: {{paymentUrl}}`,
-      recipientType: "ALL_FAMILIES",
+      recipientType: "ALL_GUARDIANS",
     },
     {
       id: `${ORG2_ID}-notif-payment-urgent`,
@@ -4215,7 +4230,7 @@ Thanks,
       actionType: "SMS",
       isSystem: true,
       subject: "URGENT: Payment Overdue",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 Your payment of {{invoiceAmount}} is now overdue. Please pay immediately to continue participating in programs.
 
@@ -4225,7 +4240,7 @@ Contact {{organizationEmail}} for questions.
 
 {{organizationName}}`,
       smsBody: `URGENT Metro Sports: Payment of {{invoiceAmount}} overdue. Pay now to avoid service interruption: {{paymentUrl}}`,
-      recipientType: "ALL_FAMILIES",
+      recipientType: "ALL_GUARDIANS",
     },
     {
       id: `${ORG2_ID}-notif-membership-warning`,
@@ -4239,7 +4254,7 @@ Contact {{organizationEmail}} for questions.
       actionType: "EMAIL",
       isSystem: true,
       subject: "Membership Expiring - {{athleteName}}",
-      body: `Hi {{primaryContactFirstName}},
+      body: `Hi {{guardianFirstName}},
 
 {{athleteName}}'s membership at Metro Sports is expiring on {{membershipEndDate}}.
 
@@ -4265,7 +4280,7 @@ Best,
       actionType: "SMS",
       isSystem: true,
       subject: "Membership Expired - Action Required",
-      body: `Hi {{primaryContactFirstName}},
+      body: `Hi {{guardianFirstName}},
 
 {{athleteName}}'s membership has expired. Please renew to continue participation.
 
@@ -4287,7 +4302,7 @@ Contact us at {{organizationEmail}}.
       actionType: "SMS",
       isSystem: true,
       subject: "{{programName}} Tomorrow",
-      body: `Hi {{primaryContactFirstName}},
+      body: `Hi {{guardianFirstName}},
 
 Reminder: {{athleteFirstName}} has {{programName}} tomorrow at {{eventTime}}.
 
@@ -4311,7 +4326,7 @@ See you there!
       actionType: "EMAIL",
       isSystem: false,
       subject: "Registration Opens Soon: {{eventName}}",
-      body: `Dear {{primaryContact}},
+      body: `Dear {{guardianName}},
 
 We're excited to announce that registration for {{eventName}} opens in 2 days!
 
@@ -4325,7 +4340,7 @@ Visit {{websiteUrl}} to register.
 See you at Metro Sports!
 {{organizationName}}`,
       smsBody: `Metro Sports: {{eventName}} registration opens {{eventDate}}! Register early at {{websiteUrl}}`,
-      recipientType: "ALL_FAMILIES",
+      recipientType: "ALL_GUARDIANS",
     },
   ];
 

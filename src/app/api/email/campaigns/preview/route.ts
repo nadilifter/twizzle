@@ -14,7 +14,7 @@ const previewSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
   htmlBody: z.string().min(1, "Email body is required"),
   // Legacy targeting
-  targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "FAMILY"]).optional(),
+  targetScope: z.enum(["ALL", "PROGRAM", "EVENT"]).optional(),
   // New expanded targeting
   targetType: z
     .enum([
@@ -25,7 +25,7 @@ const previewSchema = z.object({
       "PROGRAM_SPECIFIC_INSTANCE",
       "MEMBERSHIP_HOLDERS",
       "SPECIFIC_USERS",
-      "ALL_FAMILIES",
+      "ALL_GUARDIANS",
     ])
     .optional(),
   targetProgramId: z.string().optional(),
@@ -33,7 +33,6 @@ const previewSchema = z.object({
   targetMembershipStatus: z.enum(["ACTIVE", "EXPIRED"]).optional(),
   targetProgramInstanceId: z.string().optional(),
   targetMembershipGroupIds: z.array(z.string()).optional(),
-  targetFamilyIds: z.array(z.string()).optional(),
 });
 
 // POST /api/email/campaigns/preview - Preview an email campaign
@@ -82,7 +81,6 @@ export async function POST(request: NextRequest) {
         targetMembershipStatus: validatedData.targetMembershipStatus,
         targetProgramInstanceId: validatedData.targetProgramInstanceId,
         targetMembershipGroupIds: validatedData.targetMembershipGroupIds,
-        targetFamilyIds: validatedData.targetFamilyIds,
       });
       recipientCount = recipients.length;
     } else if (validatedData.targetScope) {

@@ -56,20 +56,7 @@ export async function GET(request: NextRequest) {
     // Build organization scope filter
     const orgScope = {
       athlete: {
-        OR: [
-          // Athletes directly linked to organization
-          { organizationId },
-          // Athletes linked via guardians -> families -> organization
-          {
-            guardians: {
-              some: {
-                family: {
-                  organizationId,
-                },
-              },
-            },
-          },
-        ],
+        organizationId,
       },
     };
 

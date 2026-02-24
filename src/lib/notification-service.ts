@@ -44,27 +44,23 @@ export interface RecipientFilters {
 }
 
 export interface NotificationRecipient {
-  type: "family" | "athlete" | "user";
+  type: "athlete" | "user";
   id: string;
   email?: string;
   phone?: string;
   name: string;
-  familyId?: string;
   athleteId?: string;
   userId?: string;
 }
 
 export interface ExecuteNotificationParams {
   ruleId: string;
-  // Optional context data for specific triggers
   athleteId?: string;
-  familyId?: string;
   userId?: string;
   membershipId?: string;
   programId?: string;
   eventId?: string;
   invoiceId?: string;
-  // Override recipients (for testing or manual triggers)
   recipientOverride?: NotificationRecipient[];
 }
 
@@ -115,7 +111,7 @@ const SYSTEM_RULES: Array<{
     timingUnit: "DAYS",
     timingDirection: "BEFORE",
     actionType: "EMAIL",
-    recipientType: "ALL_FAMILIES",
+    recipientType: "ALL_GUARDIANS",
   },
   {
     triggerType: "PAYMENT_OVERDUE",
@@ -125,7 +121,7 @@ const SYSTEM_RULES: Array<{
     timingUnit: "DAYS",
     timingDirection: "AFTER",
     actionType: "EMAIL",
-    recipientType: "ALL_FAMILIES",
+    recipientType: "ALL_GUARDIANS",
   },
   {
     triggerType: "MEMBERSHIP_EXPIRY",
@@ -257,7 +253,6 @@ export async function getRecipients(
   filters: RecipientFilters = {},
   contextData?: {
     athleteId?: string;
-    familyId?: string;
     userId?: string;
     programId?: string;
     eventId?: string;
@@ -292,32 +287,6 @@ export async function getRecipients(
     });
   };
 
-  // Legacy helper to add a family recipient (fallback for guardians without userId)
-  const addFamily = (family: {
-    id: string;
-    email: string;
-    phone: string;
-    primaryContact: string;
-    smsOptOut: boolean;
-    emailOptOut: boolean;
-  }) => {
-    if (family.email && !seenEmails.has(family.email.toLowerCase())) {
-      seenEmails.add(family.email.toLowerCase());
-    }
-    if (family.phone && !seenPhones.has(family.phone)) {
-      seenPhones.add(family.phone);
-    }
-
-    recipients.push({
-      type: "family",
-      id: family.id,
-      email: family.emailOptOut ? undefined : family.email,
-      phone: family.smsOptOut ? undefined : family.phone,
-      name: family.primaryContact,
-      familyId: family.id,
-    });
-  };
-
   // Helper to add a user recipient
   const addUser = (user: { id: string; email: string; name: string }) => {
     if (!seenEmails.has(user.email.toLowerCase())) {
@@ -333,7 +302,7 @@ export async function getRecipients(
   };
 
   switch (recipientType) {
-    case "ALL_FAMILIES": {
+    case "ALL_GUARDIANS": {
       // Resolve guardian Users via AthleteGuardian relationships
       const guardianLinks = await db.athleteGuardian.findMany({
         where: {
@@ -366,37 +335,13 @@ export async function getRecipients(
           });
         }
       }
-
-      // Legacy fallback: families without userId-based guardians
-      const familiesWithoutUsers = await db.family.findMany({
-        where: {
-          organizationId,
-          athletes: {
-            some: {
-              guardians: {
-                none: { userId: { not: null } },
-              },
-            },
-          },
-        },
-        select: {
-          id: true,
-          email: true,
-          phone: true,
-          primaryContact: true,
-          smsOptOut: true,
-          emailOptOut: true,
-        },
-      });
-      familiesWithoutUsers.forEach(addFamily);
       break;
     }
 
     case "ALL_ATHLETES": {
-      // Get families and guardian users of all athletes
       const athletes = await db.athlete.findMany({
         where: {
-          organizationId,
+          organizationAthletes: { some: { organizationId } },
           ...(filters.athleteStatuses?.length
             ? { status: { in: filters.athleteStatuses as any } }
             : {}),
@@ -404,16 +349,6 @@ export async function getRecipients(
         include: {
           guardians: {
             include: {
-              family: {
-                select: {
-                  id: true,
-                  email: true,
-                  phone: true,
-                  primaryContact: true,
-                  smsOptOut: true,
-                  emailOptOut: true,
-                },
-              },
               user: {
                 select: {
                   id: true,
@@ -440,8 +375,6 @@ export async function getRecipients(
               smsOptOut: guardian.user.smsOptOut,
               emailOptOut: guardian.user.emailOptOut,
             });
-          } else if (guardian.family) {
-            addFamily(guardian.family);
           }
         }
       }
@@ -456,113 +389,45 @@ export async function getRecipients(
           ? [contextData.programId]
           : [];
 
-      if (programIds.length === 0) {
-        // If no programs specified, get all active enrollments
-        const enrollments = await db.enrollment.findMany({
-          where: {
-            program: { organizationId },
-            status: "ACTIVE",
-          },
-          include: {
-            athlete: {
-              include: {
-                guardians: {
-                  include: {
-                    family: {
-                      select: {
-                        id: true,
-                        email: true,
-                        phone: true,
-                        primaryContact: true,
-                        smsOptOut: true,
-                        emailOptOut: true,
-                      },
-                    },
-                    user: {
-                      select: {
-                        id: true,
-                        email: true,
-                        phone: true,
-                        name: true,
-                        smsOptOut: true,
-                        emailOptOut: true,
-                      },
+      const enrollmentWhere = programIds.length === 0
+        ? { program: { organizationId }, status: "ACTIVE" as const }
+        : { programId: { in: programIds }, status: "ACTIVE" as const };
+
+      const enrollments = await db.enrollment.findMany({
+        where: enrollmentWhere,
+        include: {
+          athlete: {
+            include: {
+              guardians: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      email: true,
+                      phone: true,
+                      name: true,
+                      smsOptOut: true,
+                      emailOptOut: true,
                     },
                   },
                 },
               },
             },
           },
-        });
+        },
+      });
 
-        for (const enrollment of enrollments) {
-          for (const guardian of enrollment.athlete.guardians) {
-            if (guardian.userId && guardian.user?.email) {
-              addGuardianUser({
-                id: guardian.user.id,
-                email: guardian.user.email,
-                phone: guardian.user.phone,
-                name: guardian.user.name,
-                smsOptOut: guardian.user.smsOptOut,
-                emailOptOut: guardian.user.emailOptOut,
-              });
-            } else if (guardian.family) {
-              addFamily(guardian.family);
-            }
-          }
-        }
-      } else {
-        const enrollments = await db.enrollment.findMany({
-          where: {
-            programId: { in: programIds },
-            status: "ACTIVE",
-          },
-          include: {
-            athlete: {
-              include: {
-                guardians: {
-                  include: {
-                    family: {
-                      select: {
-                        id: true,
-                        email: true,
-                        phone: true,
-                        primaryContact: true,
-                        smsOptOut: true,
-                        emailOptOut: true,
-                      },
-                    },
-                    user: {
-                      select: {
-                        id: true,
-                        email: true,
-                        phone: true,
-                        name: true,
-                        smsOptOut: true,
-                        emailOptOut: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        for (const enrollment of enrollments) {
-          for (const guardian of enrollment.athlete.guardians) {
-            if (guardian.userId && guardian.user?.email) {
-              addGuardianUser({
-                id: guardian.user.id,
-                email: guardian.user.email,
-                phone: guardian.user.phone,
-                name: guardian.user.name,
-                smsOptOut: guardian.user.smsOptOut,
-                emailOptOut: guardian.user.emailOptOut,
-              });
-            } else if (guardian.family) {
-              addFamily(guardian.family);
-            }
+      for (const enrollment of enrollments) {
+        for (const guardian of enrollment.athlete.guardians) {
+          if (guardian.userId && guardian.user?.email) {
+            addGuardianUser({
+              id: guardian.user.id,
+              email: guardian.user.email,
+              phone: guardian.user.phone,
+              name: guardian.user.name,
+              smsOptOut: guardian.user.smsOptOut,
+              emailOptOut: guardian.user.emailOptOut,
+            });
           }
         }
       }
@@ -570,7 +435,6 @@ export async function getRecipients(
     }
 
     case "MEMBERSHIP_HOLDERS": {
-      // Get families of athletes with specific memberships
       const membershipGroupIds = filters.membershipGroupIds || [];
       const membershipStatuses = filters.membershipStatuses || ["ACTIVE"];
 
@@ -591,16 +455,6 @@ export async function getRecipients(
             include: {
               guardians: {
                 include: {
-                  family: {
-                    select: {
-                      id: true,
-                      email: true,
-                      phone: true,
-                      primaryContact: true,
-                      smsOptOut: true,
-                      emailOptOut: true,
-                    },
-                  },
                   user: {
                     select: {
                       id: true,
@@ -629,8 +483,6 @@ export async function getRecipients(
               smsOptOut: guardian.user.smsOptOut,
               emailOptOut: guardian.user.emailOptOut,
             });
-          } else if (guardian.family) {
-            addFamily(guardian.family);
           }
         }
       }
@@ -665,7 +517,6 @@ export async function getRecipients(
     }
 
     case "CUSTOM": {
-      // For custom, use specific context data
       if (contextData?.userId) {
         const user = await db.user.findUnique({
           where: { id: contextData.userId },
@@ -681,38 +532,12 @@ export async function getRecipients(
         if (user?.email) {
           addGuardianUser(user);
         }
-      } else if (contextData?.familyId) {
-        // Legacy fallback
-        const family = await db.family.findUnique({
-          where: { id: contextData.familyId },
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            primaryContact: true,
-            smsOptOut: true,
-            emailOptOut: true,
-          },
-        });
-        if (family) {
-          addFamily(family);
-        }
       } else if (contextData?.athleteId) {
         const athlete = await db.athlete.findUnique({
           where: { id: contextData.athleteId },
           include: {
             guardians: {
               include: {
-                family: {
-                  select: {
-                    id: true,
-                    email: true,
-                    phone: true,
-                    primaryContact: true,
-                    smsOptOut: true,
-                    emailOptOut: true,
-                  },
-                },
                 user: {
                   select: {
                     id: true,
@@ -738,8 +563,6 @@ export async function getRecipients(
                 smsOptOut: guardian.user.smsOptOut,
                 emailOptOut: guardian.user.emailOptOut,
               });
-            } else if (guardian.family) {
-              addFamily(guardian.family);
             }
           }
         }
@@ -762,7 +585,6 @@ export async function buildTemplateContext(
   organizationId: string,
   data: {
     athleteId?: string;
-    familyId?: string;
     userId?: string;
     membershipId?: string;
     programId?: string;
@@ -819,36 +641,10 @@ export async function buildTemplateContext(
     });
     if (user) {
       context.guardianName = user.name;
+      context.guardianFirstName = user.name.split(" ")[0];
       context.guardianEmail = user.email;
       context.guardianPhone = user.phone || undefined;
       context.guardianBalance = formatCurrency(Number(user.balance));
-      // Backward-compatible aliases
-      context.familyName = context.familyName || user.name;
-      context.primaryContact = context.primaryContact || user.name;
-      context.primaryContactFirstName = context.primaryContactFirstName || user.name.split(" ")[0];
-      context.familyEmail = context.familyEmail || user.email;
-      context.familyPhone = context.familyPhone || user.phone || undefined;
-      context.familyBalance = context.familyBalance || formatCurrency(Number(user.balance));
-    }
-  }
-
-  // Legacy fallback: Get family if no userId context was set
-  if (data.familyId && !context.guardianName) {
-    const family = await db.family.findUnique({
-      where: { id: data.familyId },
-    });
-    if (family) {
-      context.familyName = family.name;
-      context.primaryContact = family.primaryContact;
-      context.primaryContactFirstName = family.primaryContact.split(" ")[0];
-      context.familyEmail = family.email;
-      context.familyPhone = family.phone;
-      context.familyBalance = formatCurrency(Number(family.balance));
-      // Also populate guardian aliases from family data
-      context.guardianName = context.guardianName || family.primaryContact;
-      context.guardianEmail = context.guardianEmail || family.email;
-      context.guardianPhone = context.guardianPhone || family.phone;
-      context.guardianBalance = context.guardianBalance || formatCurrency(Number(family.balance));
     }
   }
 
@@ -982,11 +778,10 @@ export async function executeNotification(
   // Get recipients
   const recipients = params.recipientOverride || await getRecipients(
     rule.organizationId,
-    rule.recipientConfig?.recipientType || "ALL_FAMILIES",
+    rule.recipientConfig?.recipientType || "ALL_GUARDIANS",
     (rule.recipientConfig?.filters as RecipientFilters) || {},
     {
       athleteId: params.athleteId,
-      familyId: params.familyId,
       userId: params.userId,
       programId: params.programId,
       eventId: params.eventId,
@@ -1001,7 +796,6 @@ export async function executeNotification(
   // Build base context
   const baseContext = await buildTemplateContext(rule.organizationId, {
     athleteId: params.athleteId,
-    familyId: params.familyId,
     userId: params.userId,
     membershipId: params.membershipId,
     programId: params.programId,
@@ -1014,40 +808,16 @@ export async function executeNotification(
     // Build recipient-specific context
     const context: TemplateContext = { ...baseContext };
     
-    // If this is a user recipient, populate guardian context (and family aliases)
     if (recipient.userId && !context.guardianName) {
       const user = await db.user.findUnique({
         where: { id: recipient.userId },
       });
       if (user) {
         context.guardianName = user.name;
+        context.guardianFirstName = user.name.split(" ")[0];
         context.guardianEmail = user.email;
         context.guardianPhone = user.phone || undefined;
         context.guardianBalance = formatCurrency(Number(user.balance));
-        context.familyName = context.familyName || user.name;
-        context.primaryContact = context.primaryContact || user.name;
-        context.primaryContactFirstName = context.primaryContactFirstName || user.name.split(" ")[0];
-        context.familyEmail = context.familyEmail || user.email;
-        context.familyPhone = context.familyPhone || user.phone || undefined;
-        context.familyBalance = context.familyBalance || formatCurrency(Number(user.balance));
-      }
-    }
-    // Legacy fallback: family recipient without userId
-    if (recipient.familyId && !context.familyName) {
-      const family = await db.family.findUnique({
-        where: { id: recipient.familyId },
-      });
-      if (family) {
-        context.familyName = family.name;
-        context.primaryContact = family.primaryContact;
-        context.primaryContactFirstName = family.primaryContact.split(" ")[0];
-        context.familyEmail = family.email;
-        context.familyPhone = family.phone;
-        context.familyBalance = formatCurrency(Number(family.balance));
-        context.guardianName = context.guardianName || family.primaryContact;
-        context.guardianEmail = context.guardianEmail || family.email;
-        context.guardianPhone = context.guardianPhone || family.phone;
-        context.guardianBalance = context.guardianBalance || formatCurrency(Number(family.balance));
       }
     }
 
@@ -1071,7 +841,6 @@ export async function executeNotification(
         recipientEmail: recipient.email,
         recipientPhone: recipient.phone,
         recipientName: recipient.name,
-        familyId: recipient.familyId,
         athleteId: recipient.athleteId,
         userId: recipient.userId,
         subject: subjectResult.rendered,
@@ -1099,7 +868,6 @@ export async function executeNotification(
             to: recipient.email,
             subject: subjectResult.rendered,
             htmlBody: bodyResult.rendered,
-            familyId: recipient.familyId,
             userId: recipient.userId,
           });
           if (actionResult.success) {
@@ -1125,7 +893,6 @@ export async function executeNotification(
             organizationId: rule.organizationId,
             to: recipient.phone,
             body: smsBody,
-            familyId: recipient.familyId,
             userId: recipient.userId,
           });
           if (actionResult.success) {

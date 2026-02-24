@@ -50,7 +50,6 @@ export interface EntityMatch {
   entityType: string;
   entityId: string;
   userId?: string;
-  familyId?: string; // Legacy fallback
   athleteId?: string;
   membershipId?: string;
   invoiceId?: string;
@@ -187,13 +186,12 @@ export async function processOrganizationNotifications(
 
       // Process each entity
       for (const entity of entities) {
-        // Check deduplication using userId (preferred) or familyId (legacy)
+        // Check deduplication
         const alreadySent = await hasAlreadySentNotification(
           rule.id,
           entity.entityType,
           entity.entityId,
-          entity.userId,
-          entity.familyId
+          entity.userId
         );
 
         if (alreadySent) {
@@ -207,7 +205,6 @@ export async function processOrganizationNotifications(
             ruleId: rule.id,
             athleteId: entity.athleteId,
             userId: entity.userId,
-            familyId: entity.familyId,
             membershipId: entity.membershipId,
             invoiceId: entity.invoiceId,
             eventId: entity.eventId,
@@ -224,8 +221,7 @@ export async function processOrganizationNotifications(
               rule.id,
               entity.entityType,
               entity.entityId,
-              entity.userId,
-              entity.familyId
+              entity.userId
             );
           } else {
             result.notificationsFailed++;
@@ -434,7 +430,6 @@ async function findExpiringMemberships(
           guardians: {
             include: {
               user: { select: { id: true } },
-              family: { select: { id: true } },
             },
           },
         },
@@ -446,11 +441,11 @@ async function findExpiringMemberships(
   
   for (const membership of memberships) {
     for (const guardian of membership.athlete.guardians) {
+      if (!guardian.user?.id) continue;
       entities.push({
         entityType: "membership",
         entityId: membership.id,
-        userId: guardian.user?.id,
-        familyId: guardian.family?.id,
+        userId: guardian.user.id,
         athleteId: membership.athleteId,
         membershipId: membership.id,
       });
@@ -479,20 +474,14 @@ async function findDueInvoices(
         : { gte: startDate, lte: endDate }, // Due: within range
       status: { in: ["DRAFT", "SENT"] }, // DRAFT = unpaid, SENT = sent but unpaid
     },
-    include: {
-      family: {
-        select: { id: true },
-      },
-    },
   });
 
   return invoices
-    .filter((invoice) => invoice.userId != null || invoice.familyId != null)
+    .filter((invoice) => invoice.userId != null)
     .map((invoice) => ({
       entityType: "invoice",
       entityId: invoice.id,
       userId: invoice.userId ?? undefined,
-      familyId: invoice.familyId ?? undefined,
       invoiceId: invoice.id,
     }));
 }
@@ -507,27 +496,21 @@ async function findRecentPayments(
 ): Promise<EntityMatch[]> {
   const payments = await db.payment.findMany({
     where: {
-      organizationId,
+      invoice: { organizationId },
       createdAt: {
         gte: startDate,
         lte: endDate,
       },
       status: "COMPLETED",
     },
-    include: {
-      family: {
-        select: { id: true },
-      },
-    },
   });
 
   return payments
-    .filter((payment) => payment.userId != null || payment.familyId != null)
+    .filter((payment) => payment.userId != null)
     .map((payment) => ({
       entityType: "payment",
       entityId: payment.id,
       userId: payment.userId ?? undefined,
-      familyId: payment.familyId ?? undefined,
     }));
 }
 
@@ -560,7 +543,6 @@ async function findUpcomingProgramSessions(
                   guardians: {
                     include: {
                       user: { select: { id: true } },
-                      family: { select: { id: true } },
                     },
                   },
                 },
@@ -579,11 +561,11 @@ async function findUpcomingProgramSessions(
     
     for (const enrollment of event.program.enrollments) {
       for (const guardian of enrollment.athlete.guardians) {
+        if (!guardian.user?.id) continue;
         entities.push({
           entityType: "program_session",
           entityId: event.id,
-          userId: guardian.user?.id,
-          familyId: guardian.family?.id,
+          userId: guardian.user.id,
           athleteId: enrollment.athleteId,
           programId: event.programId!,
           eventId: event.id,
@@ -620,7 +602,6 @@ async function findUpcomingEvents(
               guardians: {
                 include: {
                   user: { select: { id: true } },
-                  family: { select: { id: true } },
                 },
               },
             },
@@ -635,11 +616,11 @@ async function findUpcomingEvents(
   for (const event of events) {
     for (const attendance of event.attendances) {
       for (const guardian of attendance.athlete.guardians) {
+        if (!guardian.user?.id) continue;
         entities.push({
           entityType: "event",
           entityId: event.id,
-          userId: guardian.user?.id,
-          familyId: guardian.family?.id,
+          userId: guardian.user.id,
           athleteId: attendance.athleteId,
           eventId: event.id,
         });
@@ -661,7 +642,7 @@ async function findBirthdays(organizationId: string): Promise<EntityMatch[]> {
   // Find athletes whose birth month and day match today
   const athletes = await db.athlete.findMany({
     where: {
-      organizationId,
+      organizationAthletes: { some: { organizationId } },
       birthDate: { not: null },
       status: "ACTIVE",
     },
@@ -669,7 +650,6 @@ async function findBirthdays(organizationId: string): Promise<EntityMatch[]> {
       guardians: {
         include: {
           user: { select: { id: true } },
-          family: { select: { id: true } },
         },
       },
     },
@@ -686,11 +666,11 @@ async function findBirthdays(organizationId: string): Promise<EntityMatch[]> {
   
   for (const athlete of birthdayAthletes) {
     for (const guardian of athlete.guardians) {
+      if (!guardian.user?.id) continue;
       entities.push({
         entityType: "birthday",
         entityId: athlete.id,
-        userId: guardian.user?.id,
-        familyId: guardian.family?.id,
+        userId: guardian.user.id,
         athleteId: athlete.id,
       });
     }
@@ -722,7 +702,6 @@ async function findDueEvaluations(
           guardians: {
             include: {
               user: { select: { id: true } },
-              family: { select: { id: true } },
             },
           },
         },
@@ -734,11 +713,11 @@ async function findDueEvaluations(
   
   for (const evaluation of evaluations) {
     for (const guardian of evaluation.athlete.guardians) {
+      if (!guardian.user?.id) continue;
       entities.push({
         entityType: "evaluation",
         entityId: evaluation.id,
-        userId: guardian.user?.id,
-        familyId: guardian.family?.id,
+        userId: guardian.user.id,
         athleteId: evaluation.athleteId,
       });
     }
@@ -770,7 +749,6 @@ async function findRecentSkillAchievements(
           guardians: {
             include: {
               user: { select: { id: true } },
-              family: { select: { id: true } },
             },
           },
         },
@@ -782,11 +760,11 @@ async function findRecentSkillAchievements(
   
   for (const achievement of achievements) {
     for (const guardian of achievement.athlete.guardians) {
+      if (!guardian.user?.id) continue;
       entities.push({
         entityType: "skill_achievement",
         entityId: achievement.id,
-        userId: guardian.user?.id,
-        familyId: guardian.family?.id,
+        userId: guardian.user.id,
         athleteId: achievement.athleteId,
       });
     }
@@ -800,104 +778,60 @@ async function findRecentSkillAchievements(
 // ============================================
 
 /**
- * Check if we've already sent this notification.
- * Uses userId (preferred) or familyId (legacy fallback) for dedup key.
+ * Check if we've already sent this notification using userId for dedup key.
  */
 async function hasAlreadySentNotification(
   ruleId: string,
   entityType: string,
   entityId: string,
-  userId?: string,
-  familyId?: string
+  userId?: string
 ): Promise<boolean> {
-  if (userId) {
-    const existing = await db.notificationDeduplication.findUnique({
-      where: {
-        ruleId_entityType_entityId_userId: {
-          ruleId,
-          entityType,
-          entityId,
-          userId,
-        },
-      },
-    });
-    if (existing) return true;
-  }
+  if (!userId) return false;
 
-  // Legacy fallback: check familyId-based dedup
-  if (familyId) {
-    const existing = await db.notificationDeduplication.findUnique({
-      where: {
-        ruleId_entityType_entityId_familyId: {
-          ruleId,
-          entityType,
-          entityId,
-          familyId,
-        },
-      },
-    });
-    if (existing) return true;
-  }
-
-  return false;
-}
-
-/**
- * Record that we've sent a notification.
- * Uses userId (preferred) or familyId (legacy fallback).
- */
-async function recordNotificationSent(
-  ruleId: string,
-  entityType: string,
-  entityId: string,
-  userId?: string,
-  familyId?: string
-): Promise<void> {
-  if (userId) {
-    await db.notificationDeduplication.upsert({
-      where: {
-        ruleId_entityType_entityId_userId: {
-          ruleId,
-          entityType,
-          entityId,
-          userId,
-        },
-      },
-      update: {
-        sentAt: new Date(),
-      },
-      create: {
+  const existing = await db.notificationDeduplication.findUnique({
+    where: {
+      ruleId_entityType_entityId_userId: {
         ruleId,
         entityType,
         entityId,
         userId,
       },
-    });
-    return;
-  }
+    },
+  });
 
-  // Legacy fallback
-  if (familyId) {
-    await db.notificationDeduplication.upsert({
-      where: {
-        ruleId_entityType_entityId_familyId: {
-          ruleId,
-          entityType,
-          entityId,
-          familyId,
-        },
-      },
-      update: {
-        sentAt: new Date(),
-      },
-      create: {
+  return !!existing;
+}
+
+/**
+ * Record that we've sent a notification using userId for dedup key.
+ */
+async function recordNotificationSent(
+  ruleId: string,
+  entityType: string,
+  entityId: string,
+  userId?: string
+): Promise<void> {
+  if (!userId) return;
+
+  await db.notificationDeduplication.upsert({
+    where: {
+      ruleId_entityType_entityId_userId: {
         ruleId,
         entityType,
         entityId,
-        familyId,
+        userId,
       },
-    });
-  }
+    },
+    update: {
+      sentAt: new Date(),
+    },
+    create: {
+      ruleId,
+      entityType,
+      entityId,
+      userId,
+    },
+  });
 }
 
 /**

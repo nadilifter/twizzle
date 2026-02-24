@@ -141,24 +141,9 @@ export async function GET(request: NextRequest) {
 
     // Build where clause - check organization via athlete's organization or guardians
     const where = {
-      OR: [
-        {
-          athlete: {
-            organizationId: session.user.organizationId,
-          },
-        },
-        {
-          athlete: {
-            guardians: {
-              some: {
-                family: {
-                  organizationId: session.user.organizationId,
-                },
-              },
-            },
-          },
-        },
-      ],
+      athlete: {
+        organizationId: session.user.organizationId,
+      },
       ...(athleteId && { athleteId }),
       ...(coachId && { coachId }),
       ...(templateId && { templateId }),
@@ -277,18 +262,9 @@ export async function POST(request: NextRequest) {
     const athlete = await db.athlete.findFirst({
       where: {
         id: validatedData.athleteId,
-        OR: [
-          { organizationId: session.user.organizationId },
-          {
-            guardians: {
-              some: {
-                family: {
-                  organizationId: session.user.organizationId,
-                },
-              },
-            },
-          },
-        ],
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
+        },
       },
     });
 

@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const createRecurringChargeSchema = z.object({
-  familyId: z.string().optional(),
   userId: z.string().optional(),
   athleteId: z.string().optional().nullable(),
   description: z.string().min(1, "Description is required"),
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status");
-    const familyId = searchParams.get("familyId");
     const userId = searchParams.get("userId");
     const athleteId = searchParams.get("athleteId");
     const limit = parseInt(searchParams.get("limit") || "50");
@@ -49,7 +47,6 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { description: { contains: search, mode: "insensitive" } },
-        { family: { name: { contains: search, mode: "insensitive" } } },
         { athlete: { name: { contains: search, mode: "insensitive" } } },
       ];
     }
@@ -58,11 +55,7 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    if (familyId && userId) {
-      where.OR = [{ familyId }, { userId }];
-    } else if (familyId) {
-      where.familyId = familyId;
-    } else if (userId) {
+    if (userId) {
       where.userId = userId;
     }
 
@@ -74,13 +67,6 @@ export async function GET(request: NextRequest) {
       db.recurringCharge.findMany({
         where,
         include: {
-          family: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
           athlete: {
             select: {
               id: true,
@@ -186,26 +172,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createRecurringChargeSchema.parse(body);
 
-    // Support familyId or userId for Guardian/Ward migration
-    const familyId = validatedData.familyId;
     const userId = validatedData.userId ?? session.user.id;
 
-    if (!familyId && !userId) {
-      return NextResponse.json({ error: "Family or user is required" }, { status: 400 });
-    }
-
-    // Verify family exists if provided
-    if (familyId) {
-      const family = await db.family.findFirst({
-        where: {
-          id: familyId,
-          organizationId: session.user.organizationId,
-        },
-      });
-
-      if (!family) {
-        return NextResponse.json({ error: "Family not found" }, { status: 404 });
-      }
+    if (!userId) {
+      return NextResponse.json({ error: "User is required" }, { status: 400 });
     }
 
     // Verify athlete if provided
@@ -213,7 +183,9 @@ export async function POST(request: NextRequest) {
       const athlete = await db.athlete.findFirst({
         where: {
           id: validatedData.athleteId,
-          organizationId: session.user.organizationId,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
         },
       });
 
@@ -227,10 +199,7 @@ export async function POST(request: NextRequest) {
       const paymentMethod = await db.paymentMethod.findFirst({
         where: {
           id: validatedData.paymentMethodId,
-          OR: [
-            ...(familyId ? [{ familyId }] : []),
-            ...(userId ? [{ userId }] : []),
-          ],
+          userId,
         },
       });
 
@@ -242,7 +211,6 @@ export async function POST(request: NextRequest) {
     const charge = await db.recurringCharge.create({
       data: {
         organizationId: session.user.organizationId,
-        familyId: familyId ?? undefined,
         userId: userId ?? undefined,
         athleteId: validatedData.athleteId,
         description: validatedData.description,
@@ -253,7 +221,6 @@ export async function POST(request: NextRequest) {
         status: validatedData.status,
       },
       include: {
-        family: true,
         athlete: true,
         paymentMethod: true,
       },
@@ -307,7 +274,6 @@ export async function PATCH(request: NextRequest) {
           },
         },
         include: {
-          family: true,
           paymentMethod: true,
         },
       });
@@ -374,7 +340,6 @@ export async function PATCH(request: NextRequest) {
           ...(validatedData.status && { status: validatedData.status }),
         },
         include: {
-          family: true,
           athlete: true,
           paymentMethod: true,
         },

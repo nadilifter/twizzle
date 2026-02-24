@@ -24,7 +24,7 @@ const updateRuleSchema = z.object({
   }).optional(),
   recipientConfig: z.object({
     recipientType: z.enum([
-      "ALL_FAMILIES",
+      "ALL_GUARDIANS",
       "ALL_ATHLETES",
       "PROGRAM_MEMBERS",
       "MEMBERSHIP_HOLDERS",
@@ -217,7 +217,6 @@ export async function POST(
     const result = await executeNotification({
       ruleId: id,
       athleteId: body.athleteId,
-      familyId: body.familyId,
       membershipId: body.membershipId,
       programId: body.programId,
       eventId: body.eventId,

@@ -20,49 +20,32 @@ const upsertMedicalInfoSchema = z.object({
   })).optional(),
 });
 
-// Helper to check if user can access athlete (same org or parent)
+// Helper to check if user can access athlete (org link via junction or guardian)
 async function canAccessAthlete(session: any, athleteId: string): Promise<boolean> {
   const organizationId = session.user.organizationId;
   
-  // Check if athlete belongs to the user's organization
   const athlete = await db.athlete.findFirst({
     where: {
       id: athleteId,
-      OR: [
-        // Direct organization link
-        { organizationId: organizationId },
-        // Via guardian/family link
-        {
-          guardians: {
-            some: {
-              family: {
-                organizationId: organizationId,
-              },
-            },
-          },
-        },
-      ],
+      organizationAthletes: {
+        some: { organizationId },
+      },
     },
   });
 
   return !!athlete;
 }
 
-// Helper to check if user is a parent of the athlete (via family link)
+// Helper to check if user is a parent/guardian of the athlete
 async function isParentOfAthlete(session: any, athleteId: string): Promise<boolean> {
-  // Check if user has a family link to this athlete
-  const family = await db.family.findFirst({
+  const guardianLink = await db.athleteGuardian.findFirst({
     where: {
+      athleteId,
       userId: session.user.id,
-      guardians: {
-        some: {
-          athleteId: athleteId,
-        },
-      },
     },
   });
 
-  return !!family;
+  return !!guardianLink;
 }
 
 // GET /api/athletes/[id]/medical

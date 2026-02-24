@@ -17,7 +17,6 @@ export default async function SuperadminBillingPage() {
   const invoices = await db.invoice.findMany({
     include: {
       organization: true,
-      family: true,
       user: { select: { id: true, name: true, email: true } },
       _count: {
         select: { lineItems: true, payments: true }
@@ -30,7 +29,6 @@ export default async function SuperadminBillingPage() {
   // Get all payments across the platform
   const payments = await db.payment.findMany({
     include: {
-      family: true,
       user: { select: { id: true, name: true, email: true } },
       invoice: {
         include: {
@@ -223,7 +221,7 @@ export default async function SuperadminBillingPage() {
                 {payments.slice(0, 10).map((payment) => (
                   <div key={payment.id} className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{payment.user?.name ?? payment.family?.name ?? 'N/A'}</p>
+                      <p className="font-medium">{payment.user?.name ?? 'N/A'}</p>
                       <p className="text-xs text-muted-foreground">
                         {payment.invoice?.organization.name || 'N/A'} • {payment.method}
                       </p>
@@ -280,7 +278,7 @@ export default async function SuperadminBillingPage() {
                         {invoice.organization.name}
                       </Link>
                     </TableCell>
-                    <TableCell>{invoice.user?.name ?? invoice.family?.name ?? 'N/A'}</TableCell>
+                    <TableCell>{invoice.user?.name ?? 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(invoice.status) as "default" | "destructive" | "secondary" | "outline"}>
                         {invoice.status}

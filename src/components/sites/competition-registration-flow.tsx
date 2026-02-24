@@ -354,7 +354,7 @@ export function CompetitionRegistrationFlow({
   const [isSigningWaiver, setIsSigningWaiver] = useState(false)
   const [signatureEmpty, setSignatureEmpty] = useState(true)
   const [signAllMode, setSignAllMode] = useState(false)
-  const [familyId, setFamilyId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [isCheckingWaivers, setIsCheckingWaivers] = useState(false)
   const signaturePadRef = useRef<SignaturePadRef>(null)
 
@@ -653,7 +653,7 @@ export function CompetitionRegistrationFlow({
       if (!checkResponse.ok) throw new Error("Failed to check waiver status")
 
       const checkData = await checkResponse.json()
-      setFamilyId(checkData.familyId)
+      setUserId(checkData.userId)
 
       const stillUnsigned: WaiverToSign[] = (checkData.data || []).filter(
         (w: WaiverToSign) => !w.isSigned
@@ -719,7 +719,7 @@ export function CompetitionRegistrationFlow({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             organizationId: competition.organizationId,
-            familyId,
+            userId,
             athleteId: selectedAthlete?.id || null,
             email: session?.user?.email,
             name: session?.user?.name || "",
@@ -731,7 +731,7 @@ export function CompetitionRegistrationFlow({
       if (!response.ok) throw new Error("Failed to sign waiver")
 
       const result = await response.json()
-      setFamilyId(result.familyId)
+      setUserId(result.userId)
 
       if (result.allPagesSigned || signAllMode) {
         toast.success(`"${currentWaiver.waiverTitle}" signed successfully`)
@@ -767,7 +767,7 @@ export function CompetitionRegistrationFlow({
     currentPageIndex,
     signAllMode,
     competition.organizationId,
-    familyId,
+    userId,
     selectedAthlete?.id,
     session?.user?.email,
     session?.user?.name,

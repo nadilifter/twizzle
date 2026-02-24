@@ -21,7 +21,6 @@ export interface PlaceholderDefinition {
 
 export type PlaceholderCategory = 
   | "athlete"
-  | "family"
   | "guardian"
   | "membership"
   | "program"
@@ -40,16 +39,9 @@ export interface TemplateContext {
   athleteBirthDate?: string;
   athleteAge?: number;
   
-  // Family context
-  familyName?: string;
-  primaryContact?: string;
-  primaryContactFirstName?: string;
-  familyEmail?: string;
-  familyPhone?: string;
-  familyBalance?: string;
-  
-  // Guardian context (user-based guardian)
+  // Guardian context
   guardianName?: string;
+  guardianFirstName?: string;
   guardianEmail?: string;
   guardianPhone?: string;
   guardianBalance?: string;
@@ -168,56 +160,19 @@ export const PLACEHOLDER_DEFINITIONS: PlaceholderDefinition[] = [
     category: "athlete",
   },
 
-  // Family placeholders
-  {
-    key: "familyName",
-    label: "Family Name",
-    description: "Name of the family/account",
-    example: "Johnson Family",
-    category: "family",
-  },
-  {
-    key: "primaryContact",
-    label: "Primary Contact Name",
-    description: "Full name of the primary contact",
-    example: "Sarah Johnson",
-    category: "family",
-  },
-  {
-    key: "primaryContactFirstName",
-    label: "Primary Contact First Name",
-    description: "First name of the primary contact",
-    example: "Sarah",
-    category: "family",
-  },
-  {
-    key: "familyEmail",
-    label: "Family Email",
-    description: "Primary email for the family",
-    example: "sarah@example.com",
-    category: "family",
-  },
-  {
-    key: "familyPhone",
-    label: "Family Phone",
-    description: "Primary phone number for the family",
-    example: "(555) 123-4567",
-    category: "family",
-  },
-  {
-    key: "familyBalance",
-    label: "Family Balance",
-    description: "Current account balance",
-    example: "$150.00",
-    category: "family",
-  },
-
-  // Guardian placeholders (user-based guardian)
+  // Guardian placeholders
   {
     key: "guardianName",
     label: "Guardian Name",
     description: "Name of the guardian user (when using user-based guardianship)",
     example: "Sarah Johnson",
+    category: "guardian",
+  },
+  {
+    key: "guardianFirstName",
+    label: "Guardian First Name",
+    description: "First name of the guardian user",
+    example: "Sarah",
     category: "guardian",
   },
   {
@@ -478,53 +433,52 @@ export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType):
   switch (triggerType) {
     case "MEMBERSHIP_EXPIRY":
     case "MEMBERSHIP_EXPIRED":
-      additionalCategories.push("athlete", "family", "guardian", "membership");
+      additionalCategories.push("athlete", "guardian", "membership");
       break;
       
     case "PAYMENT_DUE":
     case "PAYMENT_OVERDUE":
     case "PAYMENT_RECEIVED":
-      additionalCategories.push("family", "guardian", "payment");
+      additionalCategories.push("guardian", "payment");
       break;
       
     case "PROGRAM_REMINDER":
     case "PROGRAM_ENROLLMENT":
     case "PROGRAM_CANCELLATION":
-      additionalCategories.push("athlete", "family", "program");
+      additionalCategories.push("athlete", "guardian", "program");
       break;
       
     case "EVENT_REMINDER":
     case "EVENT_REGISTRATION_OPEN":
     case "EVENT_REGISTRATION_CLOSE":
-      additionalCategories.push("athlete", "family", "guardian", "event");
+      additionalCategories.push("athlete", "guardian", "event");
       break;
       
     case "ATTENDANCE_MISSED":
     case "SKILL_ACHIEVED":
     case "EVALUATION_DUE":
     case "EVALUATION_COMPLETED":
-      additionalCategories.push("athlete", "family", "program");
+      additionalCategories.push("athlete", "guardian", "program");
       break;
       
     case "BIRTHDAY":
-      additionalCategories.push("athlete", "family", "guardian");
+      additionalCategories.push("athlete", "guardian");
       break;
       
     case "WAITLIST_OPENING":
-      additionalCategories.push("athlete", "family", "guardian", "program", "event");
+      additionalCategories.push("athlete", "guardian", "program", "event");
       break;
       
     case "CONTRACT_RENEWAL":
     case "MAKEUP_CLASS_EXPIRING":
-      additionalCategories.push("athlete", "family", "guardian", "program");
+      additionalCategories.push("athlete", "guardian", "program");
       break;
       
     case "CUSTOM":
-      // All placeholders available for custom triggers
       return PLACEHOLDER_DEFINITIONS;
       
     default:
-      additionalCategories.push("athlete", "family", "guardian");
+      additionalCategories.push("athlete", "guardian");
   }
   
   const allCategories = [...baseCategories, ...additionalCategories];
@@ -672,7 +626,6 @@ export function getTemplatePlaceholderSummary(template: string): Record<Placehol
   const usedPlaceholders = extractPlaceholders(template);
   const summary: Record<PlaceholderCategory, string[]> = {
     athlete: [],
-    family: [],
     guardian: [],
     membership: [],
     program: [],
@@ -712,7 +665,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     triggerType: "PAYMENT_DUE",
     name: "Payment Reminder",
     subject: "Payment Reminder - {{invoiceReference}}",
-    body: `Dear {{primaryContact}},
+    body: `Dear {{guardianName}},
 
 This is a friendly reminder that payment of {{invoiceAmount}} for {{invoiceDescription}} is due on {{dueDate}}.
 
@@ -732,7 +685,7 @@ Thank you,
     triggerType: "PAYMENT_OVERDUE",
     name: "Payment Reminder Urgent",
     subject: "URGENT: Payment Overdue - {{invoiceReference}}",
-    body: `Dear {{primaryContact}},
+    body: `Dear {{guardianName}},
 
 This is an urgent reminder that payment of {{invoiceAmount}} for {{invoiceDescription}} is now overdue.
 
@@ -752,7 +705,7 @@ Thank you,
     triggerType: "MEMBERSHIP_EXPIRY",
     name: "Membership Expiry Warning",
     subject: "Your Membership is Expiring Soon - {{athleteName}}",
-    body: `Dear {{primaryContact}},
+    body: `Dear {{guardianName}},
 
 This is a reminder that {{athleteName}}'s {{membershipName}} will expire on {{membershipEndDate}}.
 
@@ -773,7 +726,7 @@ Thank you,
     triggerType: "MEMBERSHIP_EXPIRED",
     name: "Membership Expiry Urgent",
     subject: "URGENT: Membership Expired - {{athleteName}}",
-    body: `Dear {{primaryContact}},
+    body: `Dear {{guardianName}},
 
 This is an urgent notice that {{athleteName}}'s {{membershipName}} has expired.
 
@@ -793,7 +746,7 @@ Thank you,
     triggerType: "PROGRAM_REMINDER",
     name: "Program Reminder",
     subject: "Reminder: {{programName}} - {{eventDate}}",
-    body: `Dear {{primaryContact}},
+    body: `Dear {{guardianName}},
 
 This is a reminder that {{athleteName}} has {{programName}} coming up.
 

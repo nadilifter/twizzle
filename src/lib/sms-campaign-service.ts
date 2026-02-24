@@ -33,7 +33,6 @@ import type {
 // ============================================
 
 export interface SmsRecipient {
-  familyId: string;
   userId?: string;
   phone: string;
   name: string;
@@ -47,7 +46,6 @@ export interface SmsTargetingParams {
   targetMembershipStatus?: "ACTIVE" | "EXPIRED";
   targetProgramInstanceId?: string;
   targetMembershipGroupIds?: string[];
-  targetFamilyIds?: string[];
   targetUserIds?: string[];
 }
 
@@ -62,7 +60,6 @@ export interface CreateSmsCampaignParams {
   targetMembershipStatus?: "ACTIVE" | "EXPIRED";
   targetProgramInstanceId?: string;
   targetMembershipGroupIds?: string[];
-  targetFamilyIds?: string[];
   targetUserIds?: string[];
   createdById?: string;
   scheduledAt?: Date;
@@ -94,21 +91,18 @@ export async function getExpandedSmsCampaignRecipients(
     targetMembershipStatus,
     targetProgramInstanceId,
     targetMembershipGroupIds,
-    targetFamilyIds,
     targetUserIds,
   } = params;
 
   const recipients: SmsRecipient[] = [];
   const seenPhones = new Set<string>();
 
-  // Helper to add a user (guardian) - phone from User.phone or linked Family
   const addUser = (user: { id: string; phone: string; name: string; smsOptOut?: boolean }) => {
     if (user.smsOptOut) return;
     const normalized = normalizePhoneNumber(user.phone);
     if (normalized && isValidE164(normalized) && !seenPhones.has(normalized)) {
       seenPhones.add(normalized);
       recipients.push({
-        familyId: "",
         userId: user.id,
         phone: normalized,
         name: user.name,
@@ -150,7 +144,7 @@ export async function getExpandedSmsCampaignRecipients(
     }
 
     case "ALL_MEMBERS":
-    case "ALL_FAMILIES": {
+    case "ALL_GUARDIANS": {
       const users = await db.user.findMany({
         where: {
           smsOptOut: false,
@@ -458,7 +452,6 @@ export async function getExpandedSmsCampaignRecipients(
           if (normalized && isValidE164(normalized) && !eventSeenPhones.has(normalized)) {
             eventSeenPhones.add(normalized);
             eventRecipients.push({
-              familyId: "",
               userId: g.user.id,
               phone: normalized,
               name: g.user.name,
@@ -540,11 +533,10 @@ export async function getSmsCampaignRecipientCount(
 // ============================================
 
 /**
- * Build template context for a specific recipient (family-based or user-based)
+ * Build template context for a specific recipient
  */
 async function buildRecipientContext(
   organizationId: string,
-  familyId?: string,
   userId?: string
 ): Promise<Record<string, string>> {
   const context: Record<string, string> = {};
@@ -592,12 +584,11 @@ async function buildRecipientContext(
       },
     });
     if (user) {
-      context.familyName = user.name;
-      context.primaryContact = user.name;
-      context.primaryContactFirstName = user.name.split(" ")[0];
-      context.familyEmail = user.email;
-      context.familyPhone = user.phone || "";
-      context.familyBalance = `$${Number(user.balance).toFixed(2)}`;
+      context.guardianName = user.name;
+      context.guardianFirstName = user.name.split(" ")[0];
+      context.guardianEmail = user.email;
+      context.guardianPhone = user.phone || "";
+      context.guardianBalance = `$${Number(user.balance).toFixed(2)}`;
       const athlete = user.athleteGuardians[0]?.athlete;
       if (athlete) {
         context.athleteName = athlete.name;
@@ -629,77 +620,6 @@ async function buildRecipientContext(
     return context;
   }
 
-  // Family context
-  if (!familyId) return context;
-
-  const family = await db.family.findUnique({
-    where: { id: familyId },
-    include: {
-      guardians: {
-        include: {
-          athlete: {
-            include: {
-              memberships: {
-                where: { status: "ACTIVE" },
-                include: { instance: { include: { group: true } } },
-                take: 1,
-              },
-              enrollments: {
-                where: { status: "ACTIVE" },
-                include: { program: true },
-                take: 1,
-              },
-            },
-          },
-        },
-        take: 1,
-      },
-    },
-  });
-
-  if (family) {
-    context.familyName = family.name;
-    context.primaryContact = family.primaryContact;
-    context.primaryContactFirstName = family.primaryContact.split(" ")[0];
-    context.familyEmail = family.email;
-    context.familyPhone = family.phone;
-    context.familyBalance = `$${Number(family.balance).toFixed(2)}`;
-
-    // Athlete context from first guardian's athlete
-    const athlete = family.guardians[0]?.athlete;
-    if (athlete) {
-      context.athleteName = athlete.name;
-      const nameParts = athlete.name.split(" ");
-      context.athleteFirstName = nameParts[0];
-      if (nameParts.length > 1) context.athleteLastName = nameParts.slice(1).join(" ");
-      if (athlete.email) context.athleteEmail = athlete.email;
-      if (athlete.level) context.athleteLevel = athlete.level;
-      
-
-      // Membership context
-      const membership = athlete.memberships[0];
-      if (membership) {
-        context.membershipName = membership.instance.name;
-        context.membershipGroupName = membership.instance.group.name;
-        context.membershipStartDate = membership.startDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-        if (membership.endDate) {
-          context.membershipEndDate = membership.endDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-          const daysRemaining = Math.ceil((membership.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          context.membershipDaysRemaining = daysRemaining.toString();
-        }
-        context.membershipStatus = membership.status;
-        context.membershipPrice = `$${Number(membership.instance.price).toFixed(2)}`;
-      }
-
-      // Program context
-      const enrollment = athlete.enrollments[0];
-      if (enrollment) {
-        context.programName = enrollment.program.name;
-        if (enrollment.program.description) context.programDescription = enrollment.program.description;
-      }
-    }
-  }
-
   return context;
 }
 
@@ -722,12 +642,10 @@ export function renderSmsCampaignPreview(body: string): string {
     athleteLastName: "Johnson",
     athleteEmail: "emma@example.com",
     athleteLevel: "Level 4",
-    familyName: "Johnson Family",
-    primaryContact: "Sarah Johnson",
-    primaryContactFirstName: "Sarah",
-    familyEmail: "sarah@example.com",
-    familyPhone: "(555) 123-4567",
-    familyBalance: "$150.00",
+    guardianName: "Sarah Johnson",
+    guardianEmail: "sarah@example.com",
+    guardianPhone: "(555) 123-4567",
+    guardianBalance: "$150.00",
     membershipName: "Annual Membership 2026",
     membershipGroupName: "Annual Membership",
     membershipStartDate: "January 1, 2026",
@@ -769,7 +687,6 @@ export async function createSmsCampaign(
     targetMembershipStatus,
     targetProgramInstanceId,
     targetMembershipGroupIds,
-    targetFamilyIds,
     targetUserIds,
     createdById,
     scheduledAt,
@@ -793,7 +710,6 @@ export async function createSmsCampaign(
     targetMembershipStatus,
     targetProgramInstanceId,
     targetMembershipGroupIds,
-    targetFamilyIds,
     targetUserIds,
   });
 
@@ -832,7 +748,6 @@ export async function createSmsCampaign(
       targetMembershipStatus,
       targetProgramInstanceId,
       targetMembershipGroupIds: targetMembershipGroupIds || [],
-      targetFamilyIds: [],
       targetUserIds: targetUserIds || [],
       totalRecipients: recipients.length,
       createdById,
@@ -888,7 +803,6 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
     targetMembershipStatus: campaign.targetMembershipStatus as "ACTIVE" | "EXPIRED" | undefined,
     targetProgramInstanceId: campaign.targetProgramInstanceId ?? undefined,
     targetMembershipGroupIds: campaign.targetMembershipGroupIds,
-    targetFamilyIds: campaign.targetFamilyIds,
     targetUserIds: campaign.targetUserIds,
   });
 
@@ -897,12 +811,9 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
 
   // Send to each recipient with per-recipient placeholder rendering
   for (const recipient of recipients) {
-    // Build context for this recipient
     const context = recipient.userId
-      ? await buildRecipientContext(campaign.organizationId, undefined, recipient.userId)
-      : recipient.familyId
-        ? await buildRecipientContext(campaign.organizationId, recipient.familyId)
-        : {
+      ? await buildRecipientContext(campaign.organizationId, recipient.userId)
+      : {
           organizationName: campaign.organization.name,
           currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
           currentYear: new Date().getFullYear().toString(),
@@ -918,7 +829,6 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
     const smsMessage = await db.smsMessage.create({
       data: {
         organizationId: campaign.organizationId,
-        familyId: recipient.familyId || undefined,
         userId: recipient.userId || undefined,
         campaignId,
         to: recipient.phone,

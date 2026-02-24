@@ -38,7 +38,6 @@ model Organization {
   membershipGroups    MembershipGroup[]
   members             OrganizationMember[]
   users               User[] // Legacy relation, keep for now but rely on members
-  families            Family[]
   programs            Program[]
   events              Event[]
   invoices            Invoice[]
@@ -130,6 +129,9 @@ model Organization {
   // Competitions
   competitions     Competition[]
   competitionTeams CompetitionTeam[]
+
+  // Organization-Athlete junction (tracks which athletes are visible to this org)
+  organizationAthletes OrganizationAthlete[]
 }
 
 model OrganizationMember {
@@ -198,22 +200,22 @@ model User {
   claimRequestsMade     GuardianClaimRequest[] @relation("ClaimRequester")
   claimRequestsReviewed GuardianClaimRequest[] @relation("ClaimReviewer")
 
-  // Billing (migrating from Family)
+  // Billing
   userPaymentMethods   PaymentMethod[]   @relation("UserPaymentMethods")
   userInvoices         Invoice[]         @relation("UserInvoices")
   userPayments         Payment[]         @relation("UserPayments")
   userEnrollments      Enrollment[]      @relation("UserEnrollments")
   userRecurringCharges RecurringCharge[] @relation("UserRecurringCharges")
 
-  // Communication (migrating from Family)
+  // Communication
   userSmsMessages      SmsMessage[]      @relation("UserSmsMessages")
   userSmsConversations SmsConversation[] @relation("UserSmsConversations")
   userEmailMessages    EmailMessage[]    @relation("UserEmailMessages")
 
-  // Registration (migrating from Family)
+  // Registration
   userInstanceRegistrations InstanceRegistration[] @relation("UserInstanceRegistrations")
 
-  // Waivers (migrating from Family)
+  // Waivers
   userWaiverSignatures  WaiverSignature[]  @relation("UserWaiverSignatures")
   userWaiverAcceptances WaiverAcceptance[] @relation("UserWaiverAcceptances")
 
@@ -343,81 +345,6 @@ enum UserStatus {
 // PHASE 2: Core Entities - Athletes & Families
 // ============================================
 
-model Family {
-  id             String   @id @default(cuid())
-  name           String
-  primaryContact String
-  email          String
-  phone          String
-  address        String?
-  balance        Decimal  @default(0) @db.Decimal(10, 2)
-  organizationId String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  // SMS Preferences
-  smsOptOut   Boolean   @default(false) // True if family has opted out of SMS
-  smsOptOutAt DateTime? // When they opted out
-
-  // Email Preferences
-  emailOptOut   Boolean   @default(false) // True if family has opted out of marketing emails
-  emailOptOutAt DateTime? // When they opted out
-
-  // Relations
-  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  // athletes       Athlete[] // Deprecated, use guardians
-  guardians             AthleteGuardian[]
-  paymentMethods        PaymentMethod[]
-  invoices              Invoice[]
-  payments              Payment[]
-  enrollments           Enrollment[] // Enrollments paid/managed by this family
-  recurringCharges      RecurringCharge[]
-  smsMessages           SmsMessage[]
-  smsConversations      SmsConversation[]
-  emailMessages         EmailMessage[]
-  instanceRegistrations InstanceRegistration[] // Per-instance program registrations
-  waiverSignatures      WaiverSignature[]
-  waiverAcceptances     WaiverAcceptance[]
-
-  // Contacts & Billing
-  contacts         FamilyContact[]
-  billingAddresses FamilyBillingAddress[]
-
-  // Auth Link
-  userId String? @unique
-}
-
-model FamilyContact {
-  id           String   @id @default(cuid())
-  familyId     String
-  firstName    String
-  lastName     String
-  email        String
-  phone        String
-  relationship String? // e.g. "Parent", "Guardian", "Sibling"
-  isPrimary    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
-}
-
-model FamilyBillingAddress {
-  id            String   @id @default(cuid())
-  familyId      String
-  label         String? // e.g. "Home", "Work"
-  street        String
-  city          String
-  stateProvince String?
-  postalCode    String
-  country       String   @default("US")
-  isPrimary     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
-}
-
 model Athlete {
   id        String             @id @default(cuid())
   name      String // Deprecated: use firstName + lastName
@@ -429,7 +356,6 @@ model Athlete {
   avatar    String?
   birthDate DateTime?
   gender    GenderDeclaration?
-  familyId  String? // Deprecated: Use guardians relation
 
   // New fields for refactor
   customId       String? // Club-specific ID (e.g. Member ID)
@@ -474,12 +400,14 @@ model Athlete {
   // Competition entries & results
   competitionEntries CompetitionEntry[]
   competitionResults CompetitionResult[]
+
+  // Organization-Athlete junction (which orgs can see this athlete)
+  organizationAthletes OrganizationAthlete[]
 }
 
 model AthleteGuardian {
   id           String  @id @default(cuid())
   athleteId    String
-  familyId     String? // Deprecated: nullable during transition to User-based guardianship
   userId       String? // The guardian user
   relationship String? // e.g. "Parent", "Guardian", "Grandparent", "Self"
   isPrimary    Boolean @default(false)
@@ -492,11 +420,23 @@ model AthleteGuardian {
   updatedAt DateTime @updatedAt
 
   athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  family  Family? @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([athleteId, familyId])
   @@unique([athleteId, userId])
+}
+
+model OrganizationAthlete {
+  id             String   @id @default(cuid())
+  organizationId String
+  athleteId      String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  athlete      Athlete      @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, athleteId])
+  @@index([organizationId])
+  @@index([athleteId])
 }
 
 model GuardianClaimRequest {
@@ -687,7 +627,6 @@ model CustomMedicalResponse {
 
 model PaymentMethod {
   id        String            @id @default(cuid())
-  familyId  String?
   userId    String? // Guardian/Ward: the user who owns this payment method
   type      PaymentMethodType
   last4     String
@@ -697,7 +636,6 @@ model PaymentMethod {
   createdAt DateTime          @default(now())
 
   // Relations
-  family           Family?           @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user             User?             @relation("UserPaymentMethods", fields: [userId], references: [id], onDelete: Cascade)
   recurringCharges RecurringCharge[]
 
@@ -1035,7 +973,6 @@ model Enrollment {
   id        String           @id @default(cuid())
   athleteId String
   programId String
-  familyId  String? // Deprecated: use registeredByUserId
   userId    String? // The guardian who registered this enrollment
   startDate DateTime
   endDate   DateTime?
@@ -1046,7 +983,6 @@ model Enrollment {
   // Relations
   athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
-  family  Family? @relation(fields: [familyId], references: [id])
   user    User?   @relation("UserEnrollments", fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
@@ -1102,7 +1038,6 @@ model InstanceRegistration {
   id                String             @id @default(cuid())
   programInstanceId String
   athleteId         String
-  familyId          String? // Deprecated: use userId
   userId            String? // The guardian who registered this instance
   status            RegistrationStatus @default(REGISTERED)
   createdAt         DateTime           @default(now())
@@ -1111,13 +1046,11 @@ model InstanceRegistration {
   // Relations
   programInstance ProgramInstance @relation(fields: [programInstanceId], references: [id], onDelete: Cascade)
   athlete         Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  family          Family?         @relation(fields: [familyId], references: [id], onDelete: SetNull)
   user            User?           @relation("UserInstanceRegistrations", fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([programInstanceId, athleteId])
   @@index([programInstanceId])
   @@index([athleteId])
-  @@index([familyId])
   @@index([userId])
   @@index([status])
 }
@@ -1227,7 +1160,6 @@ enum AttendanceStatus {
 model Invoice {
   id             String        @id @default(cuid())
   reference      String        @unique
-  familyId       String? // Deprecated: use userId
   userId         String? // The guardian billed for this invoice
   status         InvoiceStatus @default(DRAFT)
   dueDate        DateTime
@@ -1241,7 +1173,6 @@ model Invoice {
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family       Family?      @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user         User?        @relation("UserInvoices", fields: [userId], references: [id], onDelete: SetNull)
   lineItems    LineItem[]
   payments     Payment[]
@@ -1288,7 +1219,6 @@ model LineItem {
 model Payment {
   id            String        @id @default(cuid())
   invoiceId     String?
-  familyId      String? // Deprecated: use userId
   userId        String? // The guardian who made this payment
   amount        Decimal       @db.Decimal(10, 2)
   method        PaymentType
@@ -1299,7 +1229,6 @@ model Payment {
 
   // Relations
   invoice     Invoice?     @relation(fields: [invoiceId], references: [id])
-  family      Family?      @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user        User?        @relation("UserPayments", fields: [userId], references: [id], onDelete: SetNull)
   transaction Transaction? // Linked Adyen transaction
 
@@ -1503,7 +1432,6 @@ enum PayoutStatus {
 model RecurringCharge {
   id              String          @id @default(cuid())
   organizationId  String
-  familyId        String? // Deprecated: use userId
   userId          String? // The guardian billed for this recurring charge
   athleteId       String?
   description     String
@@ -1519,13 +1447,11 @@ model RecurringCharge {
 
   // Relations
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family        Family?        @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user          User?          @relation("UserRecurringCharges", fields: [userId], references: [id], onDelete: SetNull)
   athlete       Athlete?       @relation(fields: [athleteId], references: [id])
   paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
 
   @@index([organizationId])
-  @@index([familyId])
   @@index([userId])
   @@index([nextChargeDate])
 }
@@ -1923,7 +1849,7 @@ enum AnnouncementScope {
   ALL
   PROGRAM
   EVENT
-  FAMILY
+  GUARDIAN
 }
 
 enum AnnouncementStatus {
@@ -1946,7 +1872,6 @@ enum AnnouncementPriority {
 model SmsMessage {
   id             String  @id @default(cuid())
   organizationId String
-  familyId       String? // Deprecated: use userId
   userId         String? // Recipient guardian user (if outbound)
   staffProfileId String? // Recipient staff (if outbound)
   campaignId     String? // Part of a campaign
@@ -1985,13 +1910,11 @@ model SmsMessage {
 
   // Relations
   organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family       Family?          @relation(fields: [familyId], references: [id], onDelete: SetNull)
   user         User?            @relation("UserSmsMessages", fields: [userId], references: [id], onDelete: SetNull)
   campaign     SmsCampaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   conversation SmsConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
-  @@index([familyId])
   @@index([userId])
   @@index([campaignId])
   @@index([conversationId, createdAt])
@@ -2039,7 +1962,6 @@ model SmsCampaign {
   targetMembershipStatus   String? // "ACTIVE", "EXPIRED", or null for all
   targetProgramInstanceId  String? // For PROGRAM_SPECIFIC_INSTANCE
   targetMembershipGroupIds String[] // For MEMBERSHIP_HOLDERS (array of group IDs)
-  targetFamilyIds          String[] // Deprecated: use targetUserIds
   targetUserIds            String[] // For SPECIFIC_USERS (hand-picked guardian users)
 
   // Status
@@ -2079,7 +2001,7 @@ enum SmsTargetType {
   PROGRAM_SPECIFIC_INSTANCE
   MEMBERSHIP_HOLDERS
   SPECIFIC_USERS
-  ALL_FAMILIES
+  ALL_GUARDIANS
 }
 
 enum SmsCampaignStatus {
@@ -2094,9 +2016,8 @@ enum SmsCampaignStatus {
 model SmsConversation {
   id             String  @id @default(cuid())
   organizationId String
-  familyId       String? // Deprecated: use userId
   userId         String? // The guardian user in this conversation
-  phoneNumber    String // User/Family's phone number (E.164)
+  phoneNumber    String // User's phone number (E.164)
 
   // Status
   status SmsConversationStatus @default(OPEN)
@@ -2111,11 +2032,9 @@ model SmsConversation {
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family       Family?      @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user         User?        @relation("UserSmsConversations", fields: [userId], references: [id], onDelete: Cascade)
   messages     SmsMessage[]
 
-  @@unique([organizationId, familyId])
   @@unique([organizationId, userId])
   @@index([organizationId, lastMessageAt])
   @@index([organizationId, status])
@@ -2167,7 +2086,6 @@ model SmsUsage {
 model EmailMessage {
   id             String  @id @default(cuid())
   organizationId String
-  familyId       String? // Deprecated: use userId
   userId         String? // Recipient guardian user
   campaignId     String? // Part of a campaign
 
@@ -2209,12 +2127,10 @@ model EmailMessage {
 
   // Relations
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  family       Family?        @relation(fields: [familyId], references: [id], onDelete: SetNull)
   user         User?          @relation("UserEmailMessages", fields: [userId], references: [id], onDelete: SetNull)
   campaign     EmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
-  @@index([familyId])
   @@index([userId])
   @@index([campaignId])
   @@index([sesMessageId])
@@ -2263,7 +2179,6 @@ model EmailCampaign {
   targetMembershipStatus   String? // "ACTIVE", "EXPIRED", or null for all
   targetProgramInstanceId  String? // For PROGRAM_SPECIFIC_INSTANCE
   targetMembershipGroupIds String[] // For MEMBERSHIP_HOLDERS (array of group IDs)
-  targetFamilyIds          String[] // Deprecated: use targetUserIds
   targetUserIds            String[] // For SPECIFIC_USERS (hand-picked guardian users)
 
   // Status
@@ -2307,7 +2222,7 @@ enum EmailTargetType {
   PROGRAM_SPECIFIC_INSTANCE
   MEMBERSHIP_HOLDERS
   SPECIFIC_USERS
-  ALL_FAMILIES
+  ALL_GUARDIANS
 }
 
 enum EmailCampaignStatus {
@@ -3118,7 +3033,6 @@ model QueueEntry {
 
   // User info (may be anonymous until they identify)
   email    String?
-  familyId String?
 
   // Queue status
   position Int // Current position in queue
@@ -3232,9 +3146,9 @@ enum NotificationActionType {
 
 // Recipient types - who receives the notification
 enum NotificationRecipientType {
-  ALL_FAMILIES // All families in organization
+  ALL_GUARDIANS // All guardians in organization
   ALL_ATHLETES // All athletes (via their guardians)
-  PROGRAM_MEMBERS // Athletes/families in specific programs
+  PROGRAM_MEMBERS // Athletes/guardians in specific programs
   MEMBERSHIP_HOLDERS // Athletes with specific memberships
   INTERNAL_USERS // Staff, coaches, admins
   CUSTOM // Custom filter combination
@@ -3325,7 +3239,7 @@ model NotificationRecipientConfig {
   notificationRuleId String @unique
 
   // Primary recipient type
-  recipientType NotificationRecipientType @default(ALL_FAMILIES)
+  recipientType NotificationRecipientType @default(ALL_GUARDIANS)
 
   // Filters (JSON for flexibility)
   // Structure: {
@@ -3362,7 +3276,6 @@ model NotificationLog {
   recipientEmail String?
   recipientPhone String?
   recipientName  String?
-  familyId       String?
   athleteId      String?
   userId         String?
 
@@ -3397,7 +3310,6 @@ model NotificationLog {
   @@index([status])
   @@index([triggerType])
   @@index([createdAt])
-  @@index([familyId])
   @@index([athleteId])
 }
 
@@ -3415,14 +3327,12 @@ model NotificationDeduplication {
   ruleId     String
   entityType String // "membership", "invoice", "event", "athlete" (for birthday), etc.
   entityId   String // The specific entity ID
-  familyId   String? // Deprecated: use userId
   userId     String? // The guardian user this dedup record is for
   sentAt     DateTime @default(now())
 
   // Relations
   rule NotificationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
-  @@unique([ruleId, entityType, entityId, familyId])
   @@unique([ruleId, entityType, entityId, userId])
   @@index([ruleId])
   @@index([sentAt])
@@ -3498,7 +3408,6 @@ model WaiverSignature {
   id            String   @id @default(cuid())
   waiverId      String
   waiverPageId  String
-  familyId      String? // Deprecated: use userId
   userId        String? // The guardian user who signed
   athleteId     String? // The athlete this signature is for (waivers are per-athlete)
   signatureData String   @db.Text // Base64 PNG from signature canvas
@@ -3511,15 +3420,12 @@ model WaiverSignature {
   // Relations
   waiver     Waiver     @relation(fields: [waiverId], references: [id], onDelete: Cascade)
   waiverPage WaiverPage @relation(fields: [waiverPageId], references: [id], onDelete: Cascade)
-  family     Family?    @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user       User?      @relation("UserWaiverSignatures", fields: [userId], references: [id], onDelete: SetNull)
   athlete    Athlete?   @relation(fields: [athleteId], references: [id], onDelete: SetNull)
 
-  @@unique([waiverPageId, familyId, athleteId])
   @@unique([waiverPageId, userId, athleteId])
   @@index([waiverId])
   @@index([waiverPageId])
-  @@index([familyId])
   @@index([userId])
   @@index([athleteId])
 }
@@ -3529,21 +3435,17 @@ model WaiverSignature {
 model WaiverAcceptance {
   id          String   @id @default(cuid())
   waiverId    String
-  familyId    String? // Deprecated: use userId
   userId      String? // The guardian user who completed the waiver
   athleteId   String? // The athlete this acceptance is for (waivers are per-athlete)
   completedAt DateTime @default(now())
 
   // Relations
   waiver  Waiver   @relation(fields: [waiverId], references: [id], onDelete: Cascade)
-  family  Family?  @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user    User?    @relation("UserWaiverAcceptances", fields: [userId], references: [id], onDelete: SetNull)
   athlete Athlete? @relation(fields: [athleteId], references: [id], onDelete: SetNull)
 
-  @@unique([waiverId, familyId, athleteId])
   @@unique([waiverId, userId, athleteId])
   @@index([waiverId])
-  @@index([familyId])
   @@index([userId])
   @@index([athleteId])
 }

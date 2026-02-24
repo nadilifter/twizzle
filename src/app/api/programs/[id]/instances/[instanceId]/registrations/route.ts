@@ -5,7 +5,6 @@ import { z } from "zod";
 
 const createRegistrationSchema = z.object({
   athleteId: z.string(),
-  familyId: z.string().optional().nullable(),
   userId: z.string().optional().nullable(),
   status: z.enum(["REGISTERED", "WAITLISTED", "CANCELLED"]).default("REGISTERED"),
 });
@@ -13,7 +12,6 @@ const createRegistrationSchema = z.object({
 const bulkCreateSchema = z.object({
   registrations: z.array(z.object({
     athleteId: z.string(),
-    familyId: z.string().optional().nullable(),
     userId: z.string().optional().nullable(),
     status: z.enum(["REGISTERED", "WAITLISTED", "CANCELLED"]).default("REGISTERED"),
   })),
@@ -63,13 +61,6 @@ export async function GET(
             avatar: true,
             level: true,
             dateOfBirth: true,
-          },
-        },
-        family: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
           },
         },
       },
@@ -163,14 +154,12 @@ export async function POST(
             ...toRegister.map(r => ({
               programInstanceId: instanceId,
               athleteId: r.athleteId,
-              familyId: r.familyId ?? undefined,
               userId: r.userId ?? sessionUserId,
               status: "REGISTERED" as const,
             })),
             ...toWaitlist.map(r => ({
               programInstanceId: instanceId,
               athleteId: r.athleteId,
-              familyId: r.familyId ?? undefined,
               userId: r.userId ?? sessionUserId,
               status: "WAITLISTED" as const,
             })),
@@ -190,7 +179,6 @@ export async function POST(
         data: newRegistrations.map(r => ({
           programInstanceId: instanceId,
           athleteId: r.athleteId,
-          familyId: r.familyId ?? undefined,
           userId: r.userId ?? sessionUserId,
           status: r.status,
         })),
@@ -232,7 +220,6 @@ export async function POST(
         data: {
           programInstanceId: instanceId,
           athleteId: validated.athleteId,
-          familyId: validated.familyId ?? undefined,
           userId: validated.userId ?? session.user.id,
           status,
         },
@@ -244,9 +231,6 @@ export async function POST(
               email: true,
               avatar: true,
             },
-          },
-          family: {
-            select: { id: true, name: true },
           },
         },
       });

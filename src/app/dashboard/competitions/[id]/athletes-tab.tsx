@@ -44,7 +44,6 @@ interface CompetitionAthlete {
   birthDate: string | null
   gender: string | null
   level: { id: string; name: string } | null
-  family: { id: string; name: string } | null
   eventCount: number
   compliance: {
     membership?: "verified" | "missing"
@@ -136,28 +135,6 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
           </Link>
         ),
         filterFn: "includesString",
-      },
-      {
-        id: "family",
-        accessorFn: (row) => row.family?.name ?? "",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Family" />
-        ),
-        cell: ({ row }) => {
-          const family = row.original.family
-          if (!family) return <span className="text-muted-foreground">-</span>
-          return (
-            <Link
-              href={`/dashboard/athletes/families/${family.id}`}
-              className="text-primary hover:underline"
-            >
-              {family.name}
-            </Link>
-          )
-        },
-        filterFn: (row, id, value) => {
-          return value.includes(row.getValue(id))
-        },
       },
       {
         accessorKey: "eventCount",
@@ -293,11 +270,6 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
 
   const genders = React.useMemo(
     () => Array.from(new Set(athletes.map((a) => a.gender).filter(Boolean))).sort() as string[],
-    [athletes],
-  )
-
-  const familyNames = React.useMemo(
-    () => Array.from(new Set(athletes.map((a) => a.family?.name).filter(Boolean))).sort() as string[],
     [athletes],
   )
 
@@ -450,25 +422,6 @@ export function AthletesTab({ competitionId }: AthletesTabProps) {
                             />
                             <label htmlFor={`medical-${status}`} className="text-sm leading-none">
                               {status === "complete" ? "On File" : "Incomplete"}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {familyNames.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted-foreground">Family</h4>
-                      <div className="grid gap-2">
-                        {familyNames.map((name) => (
-                          <div key={name} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`family-${name}`}
-                              checked={(table.getColumn("family")?.getFilterValue() as string[])?.includes(name)}
-                              onCheckedChange={(checked) => handleFilterChange("family", name, !!checked)}
-                            />
-                            <label htmlFor={`family-${name}`} className="text-sm leading-none truncate">
-                              {name}
                             </label>
                           </div>
                         ))}

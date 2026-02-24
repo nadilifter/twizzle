@@ -83,13 +83,6 @@ export async function GET(request: NextRequest) {
               id: true,
               amount: true,
               invoiceId: true,
-              familyId: true,
-              family: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
             },
           },
         },

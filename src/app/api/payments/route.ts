@@ -6,7 +6,6 @@ import { z } from "zod";
 const createPaymentSchema = z.object({
   invoiceId: z.string().optional().nullable(),
   userId: z.string().min(1, "Guardian is required"),
-  familyId: z.string().optional(),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   method: z.enum(["CARD", "BANK", "CASH", "CHECK"]),
   transactionId: z.string().optional(),
@@ -21,7 +20,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const familyId = searchParams.get("familyId");
     const userId = searchParams.get("userId");
     const invoiceId = searchParams.get("invoiceId");
     const status = searchParams.get("status");
@@ -32,21 +30,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     const where: Record<string, unknown> = {
-      AND: [
-        {
-          OR: [
-            { family: { organizationId: session.user.organizationId } },
-            { userId: session.user.id },
-          ],
-        },
-        ...(familyId && userId
-          ? [{ OR: [{ familyId }, { userId }] }]
-          : familyId
-            ? [{ familyId }]
-            : userId
-              ? [{ userId }]
-              : []),
-      ],
+      ...(userId ? { userId } : {}),
       ...(invoiceId && { invoiceId }),
       ...(status && { status: status as "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" }),
       ...(method && { method: method as "CARD" | "BANK" | "CASH" | "CHECK" }),
@@ -68,13 +52,6 @@ export async function GET(request: NextRequest) {
               reference: true,
               total: true,
               status: true,
-            },
-          },
-          family: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
             },
           },
         },
@@ -142,7 +119,6 @@ export async function POST(request: NextRequest) {
     const payment = await db.payment.create({
       data: {
         invoiceId: validatedData.invoiceId,
-        familyId: validatedData.familyId || undefined,
         userId: validatedData.userId,
         amount: validatedData.amount,
         method: validatedData.method,
@@ -152,7 +128,6 @@ export async function POST(request: NextRequest) {
       },
       include: {
         invoice: true,
-        family: true,
       },
     });
 

@@ -13,7 +13,6 @@ const sendSmsSchema = z.object({
     .enum(["GENERAL", "REMINDER", "ALERT", "BILLING", "EVENT", "NEWS"])
     .optional()
     .default("GENERAL"),
-  familyId: z.string().optional(),
   staffProfileId: z.string().optional(),
 });
 
@@ -79,13 +78,6 @@ export async function GET(request: NextRequest) {
       db.smsMessage.findMany({
         where,
         include: {
-          family: {
-            select: {
-              id: true,
-              name: true,
-              primaryContact: true,
-            },
-          },
           campaign: {
             select: {
               id: true,
@@ -158,7 +150,6 @@ export async function POST(request: NextRequest) {
       to: validatedData.to,
       body: validatedData.body,
       classification: validatedData.classification,
-      familyId: validatedData.familyId,
       staffProfileId: validatedData.staffProfileId,
     });
 

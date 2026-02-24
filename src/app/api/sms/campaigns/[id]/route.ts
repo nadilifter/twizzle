@@ -34,15 +34,6 @@ export async function GET(
         messages: {
           orderBy: { createdAt: "desc" },
           take: 100,
-          include: {
-            family: {
-              select: {
-                id: true,
-                name: true,
-                primaryContact: true,
-              },
-            },
-          },
         },
         _count: {
           select: { messages: true },

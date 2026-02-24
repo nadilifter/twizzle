@@ -61,7 +61,7 @@ const targetScopeLabels: Record<string, string> = {
   ALL: "All Members",
   PROGRAM: "Program Participants",
   EVENT: "Event Attendees",
-  FAMILY: "All Families",
+  GUARDIAN: "All Guardians",
 }
 
 export default function EmailPage() {

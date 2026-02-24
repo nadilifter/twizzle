@@ -109,7 +109,9 @@ export async function PATCH(
       const athlete = await db.athlete.findFirst({
         where: {
           id: validatedData.athleteId,
-          organizationId: session.user.organizationId,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
         },
       });
       if (!athlete) {

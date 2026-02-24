@@ -338,6 +338,15 @@ export async function middleware(req: NextRequest) {
 
   // TENANT SITES (wildcard)
   if (currentHost !== "main" && currentHost !== "www") {
+      // Redirect /login to centralized login portal with callback back to this site
+      if (path.startsWith("/login")) {
+          const loginHost = getLoginHost();
+          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
+          const existingCallback = req.nextUrl.searchParams.get("callbackUrl");
+          loginUrl.searchParams.set("callbackUrl", existingCallback || `${protocol}//${hostname}/`);
+          return NextResponse.redirect(loginUrl);
+      }
+
       url.pathname = `/sites/${currentHost}${path}`;
       return NextResponse.rewrite(url);
   }

@@ -27,18 +27,6 @@ export async function GET(
         organizationId: session.user.organizationId,
       },
       include: {
-        family: {
-          include: {
-            guardians: {
-              include: {
-                athlete: {
-                  select: { id: true, name: true },
-                },
-              },
-            },
-            paymentMethods: true,
-          },
-        },
         lineItems: {
           include: {
             program: true,
@@ -109,7 +97,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // Handle status changes that affect family balance
+    // Handle status changes that affect user balance
     const oldStatus = existing.status;
     const newStatus = validatedData.status;
 
@@ -120,7 +108,6 @@ export async function PATCH(
         dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : undefined,
       },
       include: {
-        family: true,
         lineItems: true,
         payments: true,
       },
@@ -135,11 +122,6 @@ export async function PATCH(
             where: { id: invoice.userId },
             data: { balance: { increment: amount } },
           });
-        } else if (invoice.familyId) {
-          await db.family.update({
-            where: { id: invoice.familyId },
-            data: { balance: { increment: amount } },
-          });
         }
       }
 
@@ -147,11 +129,6 @@ export async function PATCH(
         if (invoice.userId) {
           await db.user.update({
             where: { id: invoice.userId },
-            data: { balance: { decrement: amount } },
-          });
-        } else if (invoice.familyId) {
-          await db.family.update({
-            where: { id: invoice.familyId },
             data: { balance: { decrement: amount } },
           });
         }

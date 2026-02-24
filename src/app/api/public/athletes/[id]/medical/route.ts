@@ -23,7 +23,7 @@ const upsertMedicalInfoSchema = z.object({
 });
 
 /**
- * Verify that the email has a family connection to this athlete's organization.
+ * Verify that the email has a guardian connection to this athlete's organization.
  * This prevents unauthorized access to athlete medical data.
  */
 async function verifyAccess(
@@ -31,31 +31,23 @@ async function verifyAccess(
   organizationId: string,
   email: string
 ): Promise<boolean> {
-  // Verify athlete belongs to the organization
   const athlete = await db.athlete.findFirst({
     where: {
       id: athleteId,
-      organizationId,
+      organizationAthletes: { some: { organizationId } },
     },
   });
 
   if (!athlete) return false;
 
-  // Verify the email corresponds to a family in this organization
-  // that is a guardian of this athlete
-  const family = await db.family.findFirst({
+  const guardianLink = await db.athleteGuardian.findFirst({
     where: {
-      email,
-      organizationId,
-      guardians: {
-        some: {
-          athleteId,
-        },
-      },
+      athleteId,
+      user: { email },
     },
   });
 
-  return !!family;
+  return !!guardianLink;
 }
 
 // GET /api/public/athletes/[id]/medical?organizationId=xxx&email=xxx

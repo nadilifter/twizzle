@@ -116,65 +116,6 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Legacy: Family-based guardian links (email match)
-    const families = await db.family.findMany({
-      where: { email: session.user.email ?? "" },
-      select: { id: true },
-    });
-    const familyIds = families.map((f) => f.id);
-
-    let familyGuardianLinks: typeof userGuardianLinks = [];
-    if (familyIds.length > 0) {
-      familyGuardianLinks = await db.athleteGuardian.findMany({
-        where: { familyId: { in: familyIds } },
-        include: {
-          athlete: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              name: true,
-              birthDate: true,
-              gender: true,
-              status: true,
-              level: true,
-              allowGuardianClaims: true,
-              userId: true,
-              organizationId: true,
-              _count: {
-                select: {
-                  guardians: true,
-                  enrollments: true,
-                  instanceRegistrations: true,
-                  competitionEntries: true,
-                },
-              },
-              enrollments: {
-                select: {
-                  program: { select: { organization: { select: { name: true } } } },
-                },
-              },
-              instanceRegistrations: {
-                select: {
-                  programInstance: {
-                    select: { organization: { select: { name: true } } },
-                  },
-                },
-              },
-              competitionEntries: {
-                select: {
-                  competition: {
-                    select: { organization: { select: { name: true } } },
-                  },
-                },
-              },
-              organization: { select: { name: true } },
-            },
-          },
-        },
-      });
-    }
-
     // Deduplicate athletes
     const athleteMap = new Map<string, (typeof userGuardianLinks)[0]["athlete"]>();
     for (const link of userGuardianLinks) {
@@ -182,11 +123,6 @@ export async function GET(request: NextRequest) {
     }
     for (const a of selfAthletes) {
       athleteMap.set(a.id, a);
-    }
-    for (const link of familyGuardianLinks) {
-      if (!athleteMap.has(link.athlete.id)) {
-        athleteMap.set(link.athlete.id, link.athlete);
-      }
     }
 
     const athletes = Array.from(athleteMap.values()).map((a) => {

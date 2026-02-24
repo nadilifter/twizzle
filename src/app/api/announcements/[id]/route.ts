@@ -6,7 +6,7 @@ import { z } from "zod"
 const updateAnnouncementSchema = z.object({
   title: z.string().min(1, "Title is required").optional(),
   content: z.string().min(1, "Content is required").optional(),
-  targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "FAMILY"]).optional(),
+  targetScope: z.enum(["ALL", "PROGRAM", "EVENT", "GUARDIAN"]).optional(),
   targetProgramId: z.string().optional().nullable(),
   targetEventId: z.string().optional().nullable(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
