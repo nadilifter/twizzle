@@ -90,6 +90,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
   const { updateProgram, fetchPrograms } = usePrograms()
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
+  const membershipsEnabled = isFeatureEnabled("memberships")
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
 
@@ -1027,76 +1028,76 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
               )}
             </div>
 
-            {/* Membership Restriction */}
-            <div className="rounded-lg border p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Membership Requirement</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Require athletes to have an active membership
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.hasMembershipRestriction}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      hasMembershipRestriction: checked,
-                      membershipRequirementIds: checked ? prev.membershipRequirementIds : [],
-                    }))
-                  }
-                />
-              </div>
-
-              {formData.hasMembershipRestriction && (
-                <div className="pt-2 border-t">
-                  {loadingMemberships ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading memberships...
-                    </div>
-                  ) : allMembershipInstances.length === 0 ? (
+            {membershipsEnabled && (
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Membership Requirement</Label>
                     <p className="text-sm text-muted-foreground">
-                      No memberships configured.{" "}
-                      <a
-                        href="/dashboard/athletes/memberships"
-                        className="text-primary underline"
-                      >
-                        Create memberships
-                      </a>{" "}
-                      first.
+                      Require athletes to have an active membership
                     </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {allMembershipInstances.map((instance: MembershipInstance) => (
-                        <label
-                          key={instance.id}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                            formData.membershipRequirementIds.includes(instance.id)
-                              ? "border-primary bg-primary/5"
-                              : "hover:bg-muted/50"
-                          )}
+                  </div>
+                  <Switch
+                    checked={formData.hasMembershipRestriction}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasMembershipRestriction: checked,
+                        membershipRequirementIds: checked ? prev.membershipRequirementIds : [],
+                      }))
+                    }
+                  />
+                </div>
+
+                {formData.hasMembershipRestriction && (
+                  <div className="pt-2 border-t">
+                    {loadingMemberships ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading memberships...
+                      </div>
+                    ) : allMembershipInstances.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No memberships configured.{" "}
+                        <a
+                          href="/dashboard/athletes/memberships"
+                          className="text-primary underline"
                         >
-                          <Checkbox
-                            checked={formData.membershipRequirementIds.includes(instance.id)}
-                            onCheckedChange={(checked) => {
-                              setFormData((prev) => ({
-                                ...prev,
-                                membershipRequirementIds: checked
-                                  ? [...prev.membershipRequirementIds, instance.id]
-                                  : prev.membershipRequirementIds.filter(
-                                      (id) => id !== instance.id
-                                    ),
-                              }))
-                            }}
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">
-                                {instance.groupName} - {instance.name}
-                              </span>
+                          Create memberships
+                        </a>{" "}
+                        first.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {allMembershipInstances.map((instance: MembershipInstance) => (
+                          <label
+                            key={instance.id}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                              formData.membershipRequirementIds.includes(instance.id)
+                                ? "border-primary bg-primary/5"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
+                            <Checkbox
+                              checked={formData.membershipRequirementIds.includes(instance.id)}
+                              onCheckedChange={(checked) => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  membershipRequirementIds: checked
+                                    ? [...prev.membershipRequirementIds, instance.id]
+                                    : prev.membershipRequirementIds.filter(
+                                        (id) => id !== instance.id
+                                      ),
+                                }))
+                              }}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">
+                                  {instance.groupName} - {instance.name}
+                                </span>
                             </div>
                             <span className="text-xs text-muted-foreground">
                               ${instance.price.toFixed(2)}
@@ -1108,7 +1109,8 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                   )}
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Waiver Requirement */}
             <div className="rounded-lg border p-4 space-y-4">

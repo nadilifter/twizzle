@@ -15,6 +15,7 @@ export const FEATURE_KEYS = [
   "qboIntegration",
   "training",
   "pointOfSale",
+  "memberships",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -30,6 +31,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   qboIntegration: false,
   training: false,
   pointOfSale: false,
+  memberships: false,
 };
 
 /** Human-readable labels for each feature */
@@ -42,6 +44,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   qboIntegration: "QuickBooks Integration",
   training: "Training",
   pointOfSale: "Point of Sale",
+  memberships: "Memberships",
 };
 
 /** Descriptions shown to admins */
@@ -54,6 +57,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   qboIntegration: "QuickBooks Online accounting integration",
   training: "Skills tracking, evaluations, levels, and training programs",
   pointOfSale: "Point of Sale terminal and checkout via the POS portal",
+  memberships: "Membership management, restrictions, and storefront purchasing",
 };
 
 /**
@@ -125,6 +129,14 @@ export const FEATURE_SIDEBAR_MAP: Record<
     ],
     accessPoints: ["Point of Sale"],
   },
+  memberships: {
+    subItems: [
+      {
+        section: "Athletes",
+        items: ["Memberships"],
+      },
+    ],
+  },
 };
 
 /**
@@ -145,6 +157,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
     "/api/evaluations",
   ],
   pointOfSale: ["/api/pos"],
+  memberships: ["/api/memberships", "/api/public/memberships"],
 };
 
 /**

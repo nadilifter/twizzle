@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useFeatures } from "@/components/feature-context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -165,6 +166,9 @@ const RECIPIENT_LABELS: Record<RecipientType, string> = {
 }
 
 export default function NotificationsPage() {
+  const { isFeatureEnabled } = useFeatures()
+  const membershipsEnabled = isFeatureEnabled("memberships")
+
   const [rules, setRules] = useState<NotificationRule[]>([])
   const [placeholders, setPlaceholders] = useState<PlaceholderDefinition[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -775,7 +779,7 @@ export default function NotificationsPage() {
                     <SelectValue placeholder="Select recipients" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(RECIPIENT_LABELS).map(([key, label]) => (
+                    {Object.entries(RECIPIENT_LABELS).filter(([key]) => membershipsEnabled || key !== "MEMBERSHIP_HOLDERS").map(([key, label]) => (
                       <SelectItem key={key} value={key}>
                         {label}
                       </SelectItem>

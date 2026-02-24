@@ -197,6 +197,7 @@ export default function AthleteProfilePage() {
   const trainingEnabled = isFeatureEnabled("training")
   const eventsEnabled = isFeatureEnabled("events")
   const competitionsEnabled = isFeatureEnabled("competitions")
+  const membershipsEnabled = isFeatureEnabled("memberships")
 
   const { athlete, isLoading, error, fetchAthlete, updateAthlete } = useAthlete(athleteId)
   const [isEditOpen, setIsEditOpen] = React.useState(false)
@@ -388,10 +389,12 @@ export default function AthleteProfilePage() {
               Competitions
             </TabsTrigger>
           )}
-          <TabsTrigger value="memberships" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Memberships
-          </TabsTrigger>
+          {membershipsEnabled && (
+            <TabsTrigger value="memberships" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Memberships
+            </TabsTrigger>
+          )}
           <TabsTrigger value="attendance" className="gap-2">
             <CalendarCheck className="h-4 w-4" />
             Attendance
@@ -439,33 +442,34 @@ export default function AthleteProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Memberships Card */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Shield className="h-5 w-5" />
-                    Memberships
-                  </CardTitle>
-                  <CardDescription>Active memberships</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {memberships.length > 0 ? (
-                    <div className="space-y-3">
-                      {memberships.map((m) => (
-                        <div key={m.id} className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{m.groupName}</p>
-                            <p className="text-xs text-muted-foreground truncate">{m.instanceName}</p>
+              {membershipsEnabled && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Shield className="h-5 w-5" />
+                      Memberships
+                    </CardTitle>
+                    <CardDescription>Active memberships</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {memberships.length > 0 ? (
+                      <div className="space-y-3">
+                        {memberships.map((m) => (
+                          <div key={m.id} className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{m.groupName}</p>
+                              <p className="text-xs text-muted-foreground truncate">{m.instanceName}</p>
+                            </div>
+                            <MembershipStatusBadge status={m.status} />
                           </div>
-                          <MembershipStatusBadge status={m.status} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No memberships found.</p>
-                  )}
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No memberships found.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Waivers Card */}
               <Card>
@@ -551,9 +555,11 @@ export default function AthleteProfilePage() {
         )}
 
         {/* ===== MEMBERSHIPS TAB ===== */}
-        <TabsContent value="memberships">
-          <AthleteMembershipsTab memberships={memberships} />
-        </TabsContent>
+        {membershipsEnabled && (
+          <TabsContent value="memberships">
+            <AthleteMembershipsTab memberships={memberships} />
+          </TabsContent>
+        )}
 
         {/* ===== ATTENDANCE TAB (placeholder) ===== */}
         <TabsContent value="attendance">

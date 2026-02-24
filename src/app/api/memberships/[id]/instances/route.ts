@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 
 const createInstanceSchema = z.object({
@@ -26,6 +27,9 @@ export async function GET(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const gate = await checkFeatureGate(session.user.organizationId, "memberships");
+    if (gate) return gate;
 
     const scopedDb = getScopedDb(session.user.organizationId);
     const { searchParams } = new URL(request.url);
@@ -69,6 +73,9 @@ export async function POST(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const gate = await checkFeatureGate(session.user.organizationId, "memberships");
+    if (gate) return gate;
 
     const permissions = session.user.permissions || [];
     if (

@@ -118,6 +118,7 @@ export default function AthletesPage() {
   const router = useRouter()
   const { isFeatureEnabled } = useFeatures()
   const competitionsEnabled = isFeatureEnabled("competitions")
+  const membershipsEnabled = isFeatureEnabled("memberships")
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
     { id: "status", value: ["ACTIVE", "TRIAL", "GRADUATED"] },
@@ -301,11 +302,11 @@ export default function AthletesPage() {
         )
       },
     },
-    {
+    ...(membershipsEnabled ? [{
       id: "memberships",
-      accessorFn: (row) => row.activeMemberships ?? 0,
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Memberships" className="justify-end" />,
-      cell: ({ row }) => {
+      accessorFn: (row: AthleteWithRelations) => row.activeMemberships ?? 0,
+      header: ({ column }: { column: import("@tanstack/react-table").Column<AthleteWithRelations, unknown> }) => <DataTableColumnHeader column={column} title="Memberships" className="justify-end" />,
+      cell: ({ row }: { row: import("@tanstack/react-table").Row<AthleteWithRelations> }) => {
         const count = row.original.activeMemberships ?? 0
         return (
           <div className="text-right">
@@ -317,7 +318,7 @@ export default function AthletesPage() {
           </div>
         )
       },
-    },
+    }] : []),
     ...(competitionsEnabled ? [{
       id: "competitions",
       accessorFn: (row: AthleteWithRelations) => row.upcomingCompetitions ?? 0,

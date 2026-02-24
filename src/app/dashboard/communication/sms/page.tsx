@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useFeatures } from "@/components/feature-context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -257,6 +258,18 @@ const { useStepper: useSmsStepper } = defineStepper(
 // ============================================
 
 export default function SmsCampaignsPage() {
+  const { isFeatureEnabled } = useFeatures()
+  const membershipsEnabled = isFeatureEnabled("memberships")
+
+  const activePlaceholders = useMemo(() =>
+    membershipsEnabled ? PLACEHOLDER_DEFS : PLACEHOLDER_DEFS.filter((p) => p.category !== "membership"),
+    [membershipsEnabled]
+  )
+  const activeQuickPlaceholders = useMemo(() =>
+    membershipsEnabled ? QUICK_PLACEHOLDERS : QUICK_PLACEHOLDERS.filter((k) => k !== "membershipName"),
+    [membershipsEnabled]
+  )
+
   // List state
   const [campaigns, setCampaigns] = useState<SmsCampaign[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -336,11 +349,12 @@ export default function SmsCampaignsPage() {
   }, [])
 
   useEffect(() => {
+    if (!membershipsEnabled) return
     fetch("/api/memberships")
       .then((r) => r.json())
       .then((data) => setMembershipGroups((data.data || data.groups || []).map((g: any) => ({ id: g.id, name: g.name }))))
       .catch(() => {})
-  }, [])
+  }, [membershipsEnabled])
 
   useEffect(() => {
     if (!targetProgramId) { setProgramInstances([]); return }
@@ -526,12 +540,12 @@ export default function SmsCampaignsPage() {
   }, [campaigns, searchQuery])
 
   const filteredPlaceholders = placeholderSearch
-    ? PLACEHOLDER_DEFS.filter(
+    ? activePlaceholders.filter(
         (p) =>
           p.label.toLowerCase().includes(placeholderSearch.toLowerCase()) ||
           p.key.toLowerCase().includes(placeholderSearch.toLowerCase())
       )
-    : PLACEHOLDER_DEFS
+    : activePlaceholders
 
   // ============================================
   // Render
@@ -730,7 +744,7 @@ export default function SmsCampaignsPage() {
                   <Select value={targetType} onValueChange={(v) => setTargetType(v as TargetType)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {(Object.entries(TARGET_TYPE_LABELS) as [TargetType, string][]).map(([key, label]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}
+                      {(Object.entries(TARGET_TYPE_LABELS) as [TargetType, string][]).filter(([key]) => membershipsEnabled || key !== "MEMBERSHIP_HOLDERS").map(([key, label]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">{TARGET_TYPE_DESCRIPTIONS[targetType]}</p>
@@ -887,8 +901,8 @@ export default function SmsCampaignsPage() {
                 <div className="border rounded-md p-3">
                   <Label className="text-sm font-medium mb-2 block">Quick Insert</Label>
                   <div className="flex flex-wrap gap-1.5">
-                    {QUICK_PLACEHOLDERS.map((key) => {
-                      const def = PLACEHOLDER_DEFS.find((p) => p.key === key)
+                    {activeQuickPlaceholders.map((key) => {
+                      const def = activePlaceholders.find((p) => p.key === key)
                       if (!def) return null
                       return (
                         <TooltipProvider key={key} delayDuration={200}>

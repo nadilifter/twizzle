@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb, db } from "@/lib/db";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 
 const genderEnum = z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]);
@@ -53,6 +54,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const gate = await checkFeatureGate(session.user.organizationId, "memberships");
+    if (gate) return gate;
+
     const scopedDb = getScopedDb(session.user.organizationId);
     const group = await scopedDb.membershipGroup.findUnique({
       where: {
@@ -103,6 +107,9 @@ export async function PATCH(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const gate = await checkFeatureGate(session.user.organizationId, "memberships");
+    if (gate) return gate;
 
     if (
       !session.user.permissions.includes("*") &&
@@ -201,6 +208,9 @@ export async function DELETE(
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const gate = await checkFeatureGate(session.user.organizationId, "memberships");
+    if (gate) return gate;
 
     const permissions = session.user.permissions || [];
     if (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { subDays } from "date-fns";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 
 /**
  * GET /api/public/memberships?organizationId=xxx
@@ -24,6 +25,11 @@ export async function GET(request: NextRequest) {
         { error: "organizationId is required" },
         { status: 400 }
       );
+    }
+
+    const membershipsFeatureEnabled = await isFeatureEnabled(organizationId, "memberships");
+    if (!membershipsFeatureEnabled) {
+      return NextResponse.json({ data: [] });
     }
 
     const now = new Date();

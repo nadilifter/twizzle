@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useFeatures } from "@/components/feature-context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -252,9 +253,15 @@ function renderPlaceholderPills(text: string) {
 function SubjectLineInput({
   value,
   onChange,
+  placeholders,
+  labelMap,
+  quickPlaceholders,
 }: {
   value: string
   onChange: (v: string) => void
+  placeholders: PlaceholderDefinition[]
+  labelMap: Record<string, string>
+  quickPlaceholders: string[]
 }) {
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -278,7 +285,7 @@ function SubjectLineInput({
         dropcursor: false,
         gapcursor: false,
       }),
-      PlaceholderChip.configure({ labelMap: PLACEHOLDER_LABEL_MAP }),
+      PlaceholderChip.configure({ labelMap }),
       Placeholder.configure({
         placeholder: "e.g., Important Update for Athlete Name",
       }),
@@ -315,7 +322,7 @@ function SubjectLineInput({
       if (!value) {
         subjectEditor.commands.clearContent()
       } else {
-        const chipHtml = deserializePlaceholders(value, PLACEHOLDER_LABEL_MAP)
+        const chipHtml = deserializePlaceholders(value, labelMap)
         subjectEditor.commands.setContent(`<p>${chipHtml}</p>`)
       }
     }
@@ -327,12 +334,12 @@ function SubjectLineInput({
   }
 
   const filteredPlaceholders = search
-    ? PLACEHOLDER_DEFS.filter(
+    ? placeholders.filter(
         (p) =>
           p.label.toLowerCase().includes(search.toLowerCase()) ||
           p.key.toLowerCase().includes(search.toLowerCase())
       )
-    : PLACEHOLDER_DEFS
+    : placeholders
 
   return (
     <div className="grid gap-2">
@@ -385,8 +392,8 @@ function SubjectLineInput({
       </div>
       {/* Quick insert chips */}
       <div className="flex flex-wrap gap-1.5">
-        {SUBJECT_QUICK_PLACEHOLDERS.map((key) => {
-          const def = PLACEHOLDER_DEFS.find((p) => p.key === key)
+        {quickPlaceholders.map((key) => {
+          const def = placeholders.find((p) => p.key === key)
           if (!def) return null
           return (
             <TooltipProvider key={key} delayDuration={200}>
@@ -429,6 +436,23 @@ const { useStepper: useEmailStepper } = defineStepper(
 // ============================================
 
 export default function EmailCampaignsPage() {
+  const { isFeatureEnabled } = useFeatures()
+  const membershipsEnabled = isFeatureEnabled("memberships")
+
+  const activePlaceholders = useMemo(() =>
+    membershipsEnabled ? PLACEHOLDER_DEFS : PLACEHOLDER_DEFS.filter((p) => p.category !== "membership"),
+    [membershipsEnabled]
+  )
+  const activePlaceholderLabelMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    activePlaceholders.forEach((p) => { map[p.key] = p.label })
+    return map
+  }, [activePlaceholders])
+  const activeQuickPlaceholders = useMemo(() =>
+    membershipsEnabled ? SUBJECT_QUICK_PLACEHOLDERS : SUBJECT_QUICK_PLACEHOLDERS.filter((k) => k !== "membershipName"),
+    [membershipsEnabled]
+  )
+
   // List state
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -481,7 +505,7 @@ export default function EmailCampaignsPage() {
       Link.configure({ openOnClick: false, HTMLAttributes: { class: "text-primary underline" } }),
       Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      PlaceholderChip.configure({ labelMap: PLACEHOLDER_LABEL_MAP }),
+      PlaceholderChip.configure({ labelMap: activePlaceholderLabelMap }),
     ],
     content: "",
     onUpdate: ({ editor: e }) => {
@@ -527,11 +551,12 @@ export default function EmailCampaignsPage() {
   }, [])
 
   useEffect(() => {
+    if (!membershipsEnabled) return
     fetch("/api/memberships")
       .then((r) => r.json())
       .then((data) => setMembershipGroups((data.data || data.groups || []).map((g: any) => ({ id: g.id, name: g.name }))))
       .catch(() => {})
-  }, [])
+  }, [membershipsEnabled])
 
   useEffect(() => {
     if (!targetProgramId) { setProgramInstances([]); return }
@@ -908,7 +933,7 @@ export default function EmailCampaignsPage() {
                   <Select value={classification} onValueChange={setClassification}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(CLASSIFICATION_LABELS).map(([key, label]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}
+                      {Object.entries(CLASSIFICATION_LABELS).filter(([key]) => membershipsEnabled || key !== "MEMBERSHIP").map(([key, label]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -918,7 +943,7 @@ export default function EmailCampaignsPage() {
                   <Select value={targetType} onValueChange={(v) => setTargetType(v as TargetType)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {(Object.entries(TARGET_TYPE_LABELS) as [TargetType, string][]).map(([key, label]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}
+                      {(Object.entries(TARGET_TYPE_LABELS) as [TargetType, string][]).filter(([key]) => membershipsEnabled || key !== "MEMBERSHIP_HOLDERS").map(([key, label]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">{TARGET_TYPE_DESCRIPTIONS[targetType]}</p>
@@ -1001,7 +1026,7 @@ export default function EmailCampaignsPage() {
             {/* Step 2: Subject & Body (forceMount to preserve Tiptap editor state) */}
             <div className="px-0" style={{ display: emailCurrentStepId === "content" ? undefined : "none" }}>
               <div className="overflow-y-auto max-h-[calc(90vh-280px)] px-1 space-y-5 py-2">
-                <SubjectLineInput value={subject} onChange={setSubject} />
+                <SubjectLineInput value={subject} onChange={setSubject} placeholders={activePlaceholders} labelMap={activePlaceholderLabelMap} quickPlaceholders={activeQuickPlaceholders} />
 
                 <div className="grid gap-2">
                   <Label>Email Body</Label>
@@ -1027,7 +1052,7 @@ export default function EmailCampaignsPage() {
                 <div className="border rounded-md p-3">
                   <Label className="text-sm font-medium mb-2 block">Insert Placeholders</Label>
                   <p className="text-xs text-muted-foreground mb-2">Click a placeholder to insert it as a styled chip into the email body.</p>
-                  <PlaceholderPicker editor={editor} placeholders={PLACEHOLDER_DEFS} />
+                  <PlaceholderPicker editor={editor} placeholders={activePlaceholders} />
                 </div>
               </div>
             </div>
