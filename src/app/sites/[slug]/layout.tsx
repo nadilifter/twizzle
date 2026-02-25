@@ -20,6 +20,7 @@ import { SiteStructuredData } from "@/components/sites/structured-data";
 import { getSubdomainUrl, getLoginUrl as getEnvLoginUrl } from "@/lib/env-domains";
 import { getAuthSession } from "@/lib/auth";
 import { MarketingUserMenu } from "@/components/sites/marketing-user-menu";
+import { SiteUnavailablePage } from "@/components/sites/site-unavailable";
 
 export const dynamic = "force-dynamic";
 
@@ -200,6 +201,12 @@ export default async function SiteLayout({
 
   if (!config || !config.isPublished) {
     return notFound();
+  }
+
+  if (!config.organization.isActive) {
+    return (
+      <SiteUnavailablePage organizationName={config.organization.name} />
+    );
   }
 
   // Get login URL for this tenant site

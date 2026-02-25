@@ -20,18 +20,30 @@ function getAdminDashboardSwitchUrl(orgId: string, orgName: string): string {
   return `${adminBase}/dashboard/switch-org?orgId=${encodeURIComponent(orgId)}&orgName=${encodeURIComponent(orgName)}`
 }
 
+import { StatusFilter } from "./status-filter"
+
 interface Props {
-  searchParams: Promise<{ sport?: string }>
+  searchParams: Promise<{ sport?: string; status?: string }>
 }
 
 export default async function AdminOrganizationsPage({ searchParams }: Props) {
-  const { sport: sportFilter } = await searchParams
+  const { sport: sportFilter, status: statusFilter } = await searchParams
+
+  const statusWhere =
+    statusFilter === "active"
+      ? { isActive: true }
+      : statusFilter === "deactivated"
+        ? { isActive: false }
+        : undefined
 
   const [organizations, allSports] = await Promise.all([
     db.organization.findMany({
-      where: sportFilter
-        ? { sports: { some: { sport: { slug: sportFilter } } } }
-        : undefined,
+      where: {
+        ...(sportFilter
+          ? { sports: { some: { sport: { slug: sportFilter } } } }
+          : undefined),
+        ...statusWhere,
+      },
       include: {
         _count: {
           select: { members: true, invoices: true },
@@ -58,7 +70,10 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Organizations</h1>
-        <SportFilter sports={allSports} currentSport={sportFilter} />
+        <div className="flex items-center gap-2">
+          <StatusFilter currentStatus={statusFilter} />
+          <SportFilter sports={allSports} currentSport={sportFilter} />
+        </div>
       </div>
       <Card>
         <CardHeader>
@@ -73,6 +88,7 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Slug (Domain)</TableHead>
                 <TableHead>Sports</TableHead>
                 <TableHead>Members</TableHead>
@@ -84,7 +100,7 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
             <TableBody>
               {organizations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     {sportFilter
                       ? "No organizations found for this sport."
                       : "No organizations yet."}
@@ -92,7 +108,7 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
                 </TableRow>
               ) : (
                 organizations.map((org) => (
-                  <TableRow key={org.id}>
+                  <TableRow key={org.id} className={org.isActive ? "" : "opacity-60"}>
                     <TableCell className="font-medium">
                       <Link
                         href={`/superadmin/organizations/${org.slug}`}
@@ -100,6 +116,11 @@ export default async function AdminOrganizationsPage({ searchParams }: Props) {
                       >
                         {org.name}
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={org.isActive ? "default" : "destructive"} className="text-xs">
+                        {org.isActive ? "Active" : "Deactivated"}
+                      </Badge>
                     </TableCell>
                     <TableCell>{org.slug}</TableCell>
                     <TableCell>

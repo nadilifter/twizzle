@@ -13,9 +13,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle, Trophy } from "lucide-react"
+import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle, Trophy, Ban } from "lucide-react"
 import { SubscriptionManager } from "./subscription-manager"
 import { FeatureOverrides } from "./feature-overrides"
+import { DeactivationDialog } from "./deactivation-dialog"
+import { ReactivationDialog } from "./reactivation-dialog"
 import { getSubdomainUrl } from "@/lib/env-domains"
 
 function getMarketingSiteUrl(slug: string, websiteConfig: { domain?: string | null; subdomain?: string | null } | null): string {
@@ -100,7 +102,12 @@ export default async function OrganizationDetailPage({ params }: Props) {
           { isDefault: "desc" },
           { createdAt: "desc" },
         ],
-      }
+      },
+      statusLogs: {
+        orderBy: { performedAt: "desc" },
+        take: 1,
+        include: { user: { select: { name: true, email: true } } },
+      },
     }
   })
 
@@ -130,13 +137,38 @@ export default async function OrganizationDetailPage({ params }: Props) {
         </BreadcrumbList>
       </Breadcrumb>
 
+      {!organization.isActive && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+          <Ban className="h-5 w-5 text-destructive shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-destructive">This organization is deactivated</p>
+            <p className="text-sm text-muted-foreground">
+              Reason: {organization.deactivationReason || "Not specified"}
+              {organization.deactivationNotes && ` — ${organization.deactivationNotes}`}
+              {" · "}
+              {organization.deactivatedAt && new Date(organization.deactivatedAt).toLocaleDateString()}
+              {organization.statusLogs[0]?.user && ` by ${organization.statusLogs[0].user.name}`}
+            </p>
+          </div>
+          <ReactivationDialog
+            organizationId={organization.id}
+            organizationName={organization.name}
+          />
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10">
-            <Building2 className="h-8 w-8 text-primary" />
+          <div className={`flex h-16 w-16 items-center justify-center rounded-lg ${organization.isActive ? "bg-primary/10" : "bg-destructive/10"}`}>
+            <Building2 className={`h-8 w-8 ${organization.isActive ? "text-primary" : "text-destructive"}`} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">{organization.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{organization.name}</h1>
+              {!organization.isActive && (
+                <Badge variant="destructive">Deactivated</Badge>
+              )}
+            </div>
             <p className="text-muted-foreground">{organization.slug}</p>
           </div>
         </div>
@@ -155,6 +187,17 @@ export default async function OrganizationDetailPage({ params }: Props) {
               <ExternalLink className="ml-2 h-3 w-3" />
             </a>
           </Button>
+          {organization.isActive ? (
+            <DeactivationDialog
+              organizationId={organization.id}
+              organizationName={organization.name}
+            />
+          ) : (
+            <ReactivationDialog
+              organizationId={organization.id}
+              organizationName={organization.name}
+            />
+          )}
         </div>
       </div>
 

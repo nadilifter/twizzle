@@ -28,6 +28,7 @@ type Organization = {
     name: string
     slug: string
     logo: string | null
+    isActive?: boolean
 }
 
 // Module-level cache survives component remounts during client-side navigation
@@ -130,12 +131,17 @@ export function OrganizationSwitcher() {
               <DropdownMenuItem
                 key={org.id}
                 onClick={() => handleSwitch(org)}
-                className="gap-2 p-2"
+                className={`gap-2 p-2 ${org.isActive === false ? "opacity-50" : ""}`}
               >
                 <div className="flex size-6 items-center justify-center rounded-sm border">
                    <Building2 className="size-4 shrink-0" />
                 </div>
-                {org.name}
+                <span className="truncate">
+                  {org.name}
+                  {org.isActive === false && (
+                    <span className="ml-1 text-xs text-destructive">(Deactivated)</span>
+                  )}
+                </span>
                 {activeOrg.id === org.id && <Check className="ml-auto size-4" />}
               </DropdownMenuItem>
             ))}

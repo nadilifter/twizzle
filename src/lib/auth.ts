@@ -115,17 +115,24 @@ export const authOptions: NextAuthOptions = {
           // Determine organization to use
           let organizationId = user.organizationId;
           let organizationName = user.organization?.name;
+
+          // Skip deactivated saved org for non-superadmins
+          if (organizationId && !user.isSuperAdmin && user.organization && !user.organization.isActive) {
+            organizationId = null;
+            organizationName = undefined;
+          }
+
+          const activeMemberships = user.isSuperAdmin
+            ? user.memberships
+            : user.memberships.filter((m) => m.organization.isActive);
           
-          // Logic for organization selection:
-          // - If user has a saved organizationId, use it
-          // - If user has exactly one membership, auto-select it
-          // - If user has multiple memberships, leave empty to trigger org selection
-          if (!organizationId && user.memberships.length === 1) {
-              // Only auto-select if there's exactly one organization
-              organizationId = user.memberships[0].organizationId;
-              organizationName = user.memberships[0].organization.name;
-          } else if (!organizationId && user.memberships.length > 1) {
-              // Multiple organizations - leave empty to trigger switch-organization page
+          if (!organizationId && activeMemberships.length === 1) {
+              organizationId = activeMemberships[0].organizationId;
+              organizationName = activeMemberships[0].organization.name;
+          } else if (!organizationId && activeMemberships.length > 1) {
+              organizationId = "";
+              organizationName = "";
+          } else if (!organizationId) {
               organizationId = "";
               organizationName = "";
           }
@@ -299,20 +306,26 @@ export const authOptions: NextAuthOptions = {
             }
             token.permissions = permissions;
 
-            // Super admins don't need a specific organization - they can access all
-            // But we can default to their saved org if they have one
             let organizationId = dbUser.organizationId;
             let organizationName = dbUser.organization?.name;
+
+            if (organizationId && !dbUser.isSuperAdmin && dbUser.organization && !dbUser.organization.isActive) {
+              organizationId = null;
+              organizationName = undefined;
+            }
+
+            const activeMemberships = dbUser.isSuperAdmin
+              ? dbUser.memberships
+              : dbUser.memberships.filter((m) => m.organization.isActive);
             
-            if (!organizationId && dbUser.memberships.length === 1) {
-              organizationId = dbUser.memberships[0].organizationId;
-              organizationName = dbUser.memberships[0].organization.name;
-            } else if (!organizationId && dbUser.memberships.length > 1) {
+            if (!organizationId && activeMemberships.length === 1) {
+              organizationId = activeMemberships[0].organizationId;
+              organizationName = activeMemberships[0].organization.name;
+            } else if (!organizationId) {
               organizationId = "";
               organizationName = "";
             }
             
-            // Super admins can proceed without organization - they'll select one
             token.organizationId = organizationId || "";
             token.organizationName = organizationName || "";
           }

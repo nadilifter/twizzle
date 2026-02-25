@@ -263,10 +263,11 @@ export async function PATCH(request: NextRequest) {
       const today = new Date();
       today.setHours(23, 59, 59, 999);
 
-      // Get all active charges due today or earlier
+      // Get all active charges due today or earlier (skip deactivated orgs)
       const dueCharges = await db.recurringCharge.findMany({
         where: {
           organizationId: session.user.organizationId,
+          organization: { isActive: true },
           status: "ACTIVE",
           nextChargeDate: {
             lte: today,

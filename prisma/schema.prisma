@@ -34,7 +34,15 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Deactivation
+  isActive           Boolean   @default(true)
+  deactivatedAt      DateTime?
+  deactivatedBy      String?
+  deactivationReason String?
+  deactivationNotes  String?
+
   // Relations
+  statusLogs          OrganizationStatusLog[]
   membershipGroups    MembershipGroup[]
   members             OrganizationMember[]
   users               User[] // Legacy relation, keep for now but rely on members
@@ -233,6 +241,9 @@ model User {
 
   // Invitations sent by this user
   invitationsSent OrganizationInvitation[] @relation("InvitationsSent")
+
+  // Organization status changes performed by this user
+  organizationStatusLogs OrganizationStatusLog[] @relation("StatusLogPerformer")
 }
 
 model Session {
@@ -3981,4 +3992,19 @@ model CompetitionResult {
   @@index([competitionCategoryId])
   @@index([athleteId])
   @@index([competitionId, competitionCategoryId, placement])
+}
+
+model OrganizationStatusLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  action         String   // "DEACTIVATED" | "REACTIVATED"
+  reason         String?
+  notes          String?
+  performedBy    String
+  performedAt    DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("StatusLogPerformer", fields: [performedBy], references: [id])
+
+  @@index([organizationId])
 }

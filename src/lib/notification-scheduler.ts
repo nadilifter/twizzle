@@ -83,9 +83,10 @@ export async function processAllOrganizations(): Promise<SchedulerResult> {
   };
 
   try {
-    // Get all organizations that have at least one active notification rule
+    // Get all active organizations that have at least one active notification rule
     const organizations = await db.organization.findMany({
       where: {
+        isActive: true,
         notificationRules: {
           some: {
             isActive: true,

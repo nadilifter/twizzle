@@ -13,6 +13,7 @@ export async function generateUpcomingInstances() {
     where: {
       isRecurring: true,
       autoGenerateInstances: true,
+      organization: { isActive: true },
     },
     include: {
       instances: {
@@ -110,6 +111,7 @@ export async function processMembershipInstanceRenewals() {
       },
       group: {
         allowAutoRenew: true,
+        organization: { isActive: true },
       },
       status: { in: ["ACTIVE"] },
     },
@@ -191,6 +193,11 @@ export async function processAthleteRenewals() {
       },
       status: "ACTIVE",
       autoRenew: true,
+      instance: {
+        group: {
+          organization: { isActive: true },
+        },
+      },
     },
     include: {
       instance: {
