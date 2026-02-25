@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = session.user.id;
+    // Support superadmin impersonation: use viewingAsUserId if set
+    const userId = (session.user.isSuperAdmin && session.user.viewingAsUserId)
+      ? session.user.viewingAsUserId
+      : session.user.id;
 
     // Find athletes via User-based AthleteGuardian links
     const athleteSelect = {

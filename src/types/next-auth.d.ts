@@ -15,6 +15,10 @@ declare module "next-auth" {
       viewingAsCoachName?: string;
       viewingAsOrganizationId?: string;
       viewingAsOrganizationName?: string;
+      // Impersonation fields (superadmin "view as user" feature for athletes portal)
+      viewingAsUserId?: string;
+      viewingAsUserName?: string;
+      viewingAsUserEmail?: string;
     } & DefaultSession["user"];
   }
 
@@ -40,5 +44,9 @@ declare module "next-auth/jwt" {
     viewingAsCoachName?: string;
     viewingAsOrganizationId?: string;
     viewingAsOrganizationName?: string;
+    // Impersonation fields (superadmin "view as user" feature for athletes portal)
+    viewingAsUserId?: string;
+    viewingAsUserName?: string;
+    viewingAsUserEmail?: string;
   }
 }

@@ -1,0 +1,119 @@
+---
+description: Use the project's standard form components for phone numbers and addresses instead of raw Input fields
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# Standard Form Components
+
+This project has purpose-built components and utilities for phone numbers and addresses. Always use them instead of raw `<Input>` fields.
+
+## Phone Numbers
+
+Use the `PhoneInput` component from `@/components/ui/phone-input` for all phone number fields. It provides a country code selector with flags, E.164 formatting, and international number support.
+
+```tsx
+import { PhoneInput } from "@/components/ui/phone-input"
+import { isValidPhoneNumber, formatPhoneNumberIntl } from "react-phone-number-input"
+
+// Input
+<PhoneInput
+  defaultCountry="US"
+  value={form.phone}
+  onChange={(value) => setForm((f) => ({ ...f, phone: value || "" }))}
+/>
+
+// Validation
+if (!isValidPhoneNumber(form.phone)) { /* invalid */ }
+
+// Display (on cards, tables, etc.)
+formatPhoneNumberIntl(phone) || phone   // "+1 555 123 4567"
+```
+
+**Never** use `<Input type="tel">` for phone numbers.
+
+## Addresses (Country, State/Province, Postal Code)
+
+Use the standard location data utilities from `@/lib/location-data`:
+
+```tsx
+import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data"
+```
+
+### Country — `Select` dropdown
+
+```tsx
+<Select value={form.country} onValueChange={(value) =>
+  setForm((f) => ({ ...f, country: value, stateProvince: f.country !== value ? "" : f.stateProvince }))
+}>
+  <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+  <SelectContent>
+    {COUNTRIES.map((c) => (
+      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+```
+
+### State / Province — Searchable `Command` combobox (Popover)
+
+When `getRegionsForCountry(country)` returns entries, render a searchable Popover+Command combobox. Fall back to a plain `<Input>` when there are no known regions for the selected country.
+
+```tsx
+const regions = getRegionsForCountry(form.country)
+
+{regions.length > 0 ? (
+  <Popover open={stateOpen} onOpenChange={setStateOpen}>
+    <PopoverTrigger asChild>
+      <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+        {form.stateProvince
+          ? regions.find((r) => r.code === form.stateProvince)?.name ?? form.stateProvince
+          : `Select ${form.country === "CA" ? "province" : "state"}...`}
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <Command>
+        <CommandInput placeholder={`Search ${form.country === "CA" ? "provinces" : "states"}...`} />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup>
+            {regions.map((region) => (
+              <CommandItem key={region.code} value={region.name}
+                onSelect={() => { setForm((f) => ({ ...f, stateProvince: region.code })); setStateOpen(false) }}>
+                <Check className={cn("mr-2 h-4 w-4", form.stateProvince === region.code ? "opacity-100" : "opacity-0")} />
+                {region.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    </PopoverContent>
+  </Popover>
+) : (
+  <Input value={form.stateProvince} onChange={(e) => setForm((f) => ({ ...f, stateProvince: e.target.value }))} />
+)}
+```
+
+### Postal / ZIP Code — contextual label and validation
+
+- Label: `"Postal Code"` for CA, `"ZIP Code"` for US
+- Placeholder: `"A1A 1A1"` for CA, `"12345"` for US
+- Validate with `isValidPostalCode(value, country)` before submit
+
+### Displaying addresses
+
+Resolve codes to names for display:
+
+```tsx
+// State/Province name
+getRegionsForCountry(address.country).find((r) => r.code === address.stateProvince)?.name ?? address.stateProvince
+
+// Country name
+COUNTRIES.find((c) => c.code === address.country)?.name ?? address.country
+```
+
+## Default values
+
+- Phone: `defaultCountry="US"`
+- Address country: `"US"` as the default initial value

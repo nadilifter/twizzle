@@ -244,6 +244,26 @@ export async function middleware(req: NextRequest) {
 
   // ATHLETE PORTAL (athletes.{baseDomain}) -> /athletes
   if (currentHost === "athletes") {
+      // Redirect /login to centralized login portal
+      if (path.startsWith("/login")) {
+          const loginHost = getLoginHost();
+          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
+          const athletesHost = getSubdomainHost("athletes");
+          const existingCallback = req.nextUrl.searchParams.get("callbackUrl");
+          loginUrl.searchParams.set("callbackUrl", existingCallback || `${protocol}//${athletesHost}/`);
+          return NextResponse.redirect(loginUrl);
+      }
+
+      // Auth Check for Athletes Portal
+      if (!token && !path.startsWith("/login")) {
+          const loginHost = getLoginHost();
+          const loginUrl = new URL("/login", `${protocol}//${loginHost}`);
+          const athletesHost = getSubdomainHost("athletes");
+          const externalCallbackUrl = `${protocol}//${athletesHost}${path}${url.search}`;
+          loginUrl.searchParams.set("callbackUrl", externalCallbackUrl);
+          return NextResponse.redirect(loginUrl);
+      }
+
       let newPath = path;
       if (path === "/") {
           newPath = "/athletes";

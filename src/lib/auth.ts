@@ -336,6 +336,13 @@ export const authOptions: NextAuthOptions = {
             token.viewingAsOrganizationId = session.viewingAsOrganizationId || undefined;
             token.viewingAsOrganizationName = session.viewingAsOrganizationName || undefined;
           }
+
+          // Handle impersonation (superadmin "view as user" feature for athletes portal)
+          if (token.isSuperAdmin && session.viewingAsUserId !== undefined) {
+            token.viewingAsUserId = session.viewingAsUserId || undefined;
+            token.viewingAsUserName = session.viewingAsUserName || undefined;
+            token.viewingAsUserEmail = session.viewingAsUserEmail || undefined;
+          }
         }
 
         // console.log("JWT callback returning token:", JSON.stringify(token, null, 2));
@@ -361,6 +368,9 @@ export const authOptions: NextAuthOptions = {
           session.user.viewingAsCoachName = token.viewingAsCoachName as string | undefined;
           session.user.viewingAsOrganizationId = token.viewingAsOrganizationId as string | undefined;
           session.user.viewingAsOrganizationName = token.viewingAsOrganizationName as string | undefined;
+          session.user.viewingAsUserId = token.viewingAsUserId as string | undefined;
+          session.user.viewingAsUserName = token.viewingAsUserName as string | undefined;
+          session.user.viewingAsUserEmail = token.viewingAsUserEmail as string | undefined;
         }
         return session;
       } catch (error) {

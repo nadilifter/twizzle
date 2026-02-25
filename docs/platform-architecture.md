@@ -226,3 +226,42 @@ flowchart TB
 ```
 
 Users can belong to multiple organizations with different roles. The session tracks their currently active organization, and they can switch between organizations via the organization switcher in the sidebar.
+
+## Standard UI Components
+
+The platform uses a consistent set of form components across all portals (admin, athletes, marketing sites, org signup). New forms **must** use these rather than raw `<Input>` fields.
+
+### Phone Numbers
+
+| What | Where |
+|------|-------|
+| Input component | `PhoneInput` from `@/components/ui/phone-input` |
+| Validation | `isValidPhoneNumber()` from `react-phone-number-input` |
+| Display formatting | `formatPhoneNumberIntl()` from `react-phone-number-input` |
+| Default country | `"US"` via `defaultCountry` prop |
+
+The `PhoneInput` wraps `react-phone-number-input` with shadcn/ui styling and a country-flag selector. Values are stored in E.164 format (e.g. `+15551234567`).
+
+### Address Fields
+
+| What | Where |
+|------|-------|
+| Country/region data | `COUNTRIES`, `getRegionsForCountry()` from `@/lib/location-data` |
+| Postal code validation | `isValidPostalCode()` from `@/lib/location-data` |
+| Country input | `Select` dropdown with `COUNTRIES` list |
+| State/Province input | Searchable `Popover` + `Command` combobox using `getRegionsForCountry()` |
+| Postal/ZIP code input | Standard `Input` with contextual label (`"ZIP Code"` for US, `"Postal Code"` for CA) and placeholder |
+
+Key behaviors:
+- Changing country resets state/province selection
+- When `getRegionsForCountry()` returns an empty array (unsupported country), state/province falls back to a plain text `Input`
+- `isValidPostalCode()` enforces US ZIP (5 or 5+4 digit) and Canadian postal code (A1A 1A1) formats
+- Display should resolve codes to names: use `COUNTRIES.find()` for country names and `getRegionsForCountry().find()` for state/province names
+
+### Used In
+
+- **Org signup** (`src/app/org-signup/page.tsx`) — organization address
+- **Competition stepper** (`src/app/dashboard/competitions/components/competition-stepper.tsx`) — venue location
+- **Athletes billing** (`src/app/athletes/billing/page.tsx`) — saved billing addresses & contacts
+- **Marketing site checkout** (`src/app/sites/[slug]/checkout/page.tsx`) — checkout billing address
+- **Marketing site account** (`src/app/sites/[slug]/account/page.tsx`) — saved contacts & addresses
