@@ -26,6 +26,9 @@ const createProgramSchema = z.object({
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
+  // Training zone capacity
+  hasTrainingZoneRestriction: z.boolean().default(false),
+  trainingZoneCapacityMode: z.enum(["MINIMUM", "SUM"]).default("MINIMUM"),
   // Restriction flags
   hasGenderRestriction: z.boolean().default(false),
   hasLevelRestriction: z.boolean().default(false),
@@ -40,6 +43,7 @@ const createProgramSchema = z.object({
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
+  trainingZoneIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
     staffProfileId: z.string(),
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
@@ -158,6 +162,13 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          trainingZones: {
+            include: {
+              trainingZone: {
+                select: { id: true, name: true, type: true, capacity: true, status: true },
+              },
+            },
+          },
         },
         orderBy: { name: "asc" },
         take: limit,
@@ -247,6 +258,8 @@ export async function POST(request: NextRequest) {
           showCoachOnSite: validatedData.showCoachOnSite,
           minAge: validatedData.minAge,
           maxAge: validatedData.maxAge,
+          hasTrainingZoneRestriction: validatedData.hasTrainingZoneRestriction,
+          trainingZoneCapacityMode: validatedData.trainingZoneCapacityMode,
           hasLevelRestriction: validatedData.hasLevelRestriction,
           hasCapacityRestriction: validatedData.hasCapacityRestriction,
           hasAgeRestriction: validatedData.hasAgeRestriction,
@@ -295,6 +308,16 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Create training zone assignments if provided
+      if (validatedData.trainingZoneIds?.length) {
+        await tx.programTrainingZone.createMany({
+          data: validatedData.trainingZoneIds.map(trainingZoneId => ({
+            programId: newProgram.id,
+            trainingZoneId,
+          })),
+        });
+      }
+
       // Generate program instances based on schedule
       if (validatedData.startDate && validatedData.startTime && validatedData.duration) {
         const startDate = new Date(validatedData.startDate);
@@ -319,6 +342,27 @@ export async function POST(request: NextRequest) {
               organizationId: session.user.organizationId!,
             })),
           });
+
+          // Assign training zones to instances (inherit from program defaults)
+          if (validatedData.trainingZoneIds?.length) {
+            const createdInstances = await tx.programInstance.findMany({
+              where: { programId: newProgram.id },
+              select: { id: true },
+            });
+
+            const instanceZoneData = createdInstances.flatMap(inst =>
+              validatedData.trainingZoneIds!.map(trainingZoneId => ({
+                programInstanceId: inst.id,
+                trainingZoneId,
+              }))
+            );
+
+            if (instanceZoneData.length > 0) {
+              await tx.programInstanceTrainingZone.createMany({
+                data: instanceZoneData,
+              });
+            }
+          }
         }
       }
 
@@ -359,6 +403,13 @@ export async function POST(request: NextRequest) {
             include: {
               waiver: {
                 select: { id: true, title: true, status: true },
+              },
+            },
+          },
+          trainingZones: {
+            include: {
+              trainingZone: {
+                select: { id: true, name: true, type: true, capacity: true, status: true },
               },
             },
           },

@@ -765,6 +765,47 @@ async function main() {
   console.log(`  ✓ Created ${trainingZoneData.length} training zones`);
 
   // ============================================
+  // TRAINING ZONE AVAILABILITY
+  // ============================================
+  console.log("\n🕐 Creating training zone availability hours...");
+  const zoneAvailabilityData = [
+    // Org1 Main Facility - Main Floor: Mon-Fri 7am-9pm, Sat 8am-5pm
+    ...([1, 2, 3, 4, 5].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-1`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
+    { trainingZoneId: `${ORG1_ID}-zone-1`, dayOfWeek: 6, openTime: "08:00", closeTime: "17:00" },
+    // Vault Runway: Mon-Fri 8am-8pm
+    ...([1, 2, 3, 4, 5].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-2`, dayOfWeek: day, openTime: "08:00", closeTime: "20:00" }))),
+    // Beam Area: Mon-Sat 7am-9pm
+    ...([1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-4`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
+    // Tumble Track: Mon-Fri 9am-6pm
+    ...([1, 2, 3, 4, 5].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-5`, dayOfWeek: day, openTime: "09:00", closeTime: "18:00" }))),
+    // Org1 Satellite - Preschool Area: Mon-Fri 8am-4pm
+    ...([1, 2, 3, 4, 5].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-6`, dayOfWeek: day, openTime: "08:00", closeTime: "16:00" }))),
+    // Recreational Floor: Mon-Sat 7am-9pm
+    ...([1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-7`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
+    // Org2 - Basketball Court A: Mon-Sun 6am-10pm
+    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG2_ID}-zone-1`, dayOfWeek: day, openTime: "06:00", closeTime: "22:00" }))),
+    // Basketball Court B: Mon-Sun 6am-10pm
+    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG2_ID}-zone-2`, dayOfWeek: day, openTime: "06:00", closeTime: "22:00" }))),
+    // Soccer Field: Mon-Sun 7am-8pm
+    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG2_ID}-zone-3`, dayOfWeek: day, openTime: "07:00", closeTime: "20:00" }))),
+    // Swimming Pool: Mon-Sat 6am-9pm
+    ...([1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG2_ID}-zone-4`, dayOfWeek: day, openTime: "06:00", closeTime: "21:00" }))),
+  ];
+  for (const slot of zoneAvailabilityData) {
+    await prisma.trainingZoneAvailability.upsert({
+      where: {
+        trainingZoneId_dayOfWeek: {
+          trainingZoneId: slot.trainingZoneId,
+          dayOfWeek: slot.dayOfWeek,
+        },
+      },
+      update: { openTime: slot.openTime, closeTime: slot.closeTime },
+      create: slot,
+    });
+  }
+  console.log(`  ✓ Created ${zoneAvailabilityData.length} availability slots`);
+
+  // ============================================
   // EQUIPMENT
   // ============================================
   console.log("\n🎯 Creating equipment...");

@@ -17,7 +17,8 @@ import {
   Loader2,
   Pencil,
   Trash2,
-  ChevronRight
+  ChevronRight,
+  Clock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,6 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import {
   DropdownMenu,
@@ -142,6 +144,12 @@ export default function FacilitiesPage() {
   // Search states
   const [zoneSearch, setZoneSearch] = useState("")
   const [equipmentSearch, setEquipmentSearch] = useState("")
+
+  // Zone availability state
+  const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false)
+  const [editingZoneAvailability, setEditingZoneAvailability] = useState<TrainingZone | null>(null)
+  const [availabilitySlots, setAvailabilitySlots] = useState<Record<number, { enabled: boolean; openTime: string; closeTime: string }>>({})
+  const [savingAvailability, setSavingAvailability] = useState(false)
 
   // Fetch facilities
   const fetchFacilities = useCallback(async () => {
@@ -392,6 +400,62 @@ export default function FacilitiesPage() {
       }
     } catch (error) {
       toast.error("Failed to delete equipment")
+    }
+  }
+
+  const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+  const handleOpenAvailability = async (zone: TrainingZone) => {
+    setEditingZoneAvailability(zone)
+    if (!selectedFacility) return
+    try {
+      const res = await fetch(`/api/organization/facilities/${selectedFacility.id}/zones/${zone.id}/availability`)
+      if (res.ok) {
+        const slots: Array<{ dayOfWeek: number; openTime: string; closeTime: string }> = await res.json()
+        const initial: Record<number, { enabled: boolean; openTime: string; closeTime: string }> = {}
+        for (let d = 0; d < 7; d++) {
+          const existing = slots.find(s => s.dayOfWeek === d)
+          initial[d] = existing
+            ? { enabled: true, openTime: existing.openTime, closeTime: existing.closeTime }
+            : { enabled: false, openTime: "08:00", closeTime: "18:00" }
+        }
+        setAvailabilitySlots(initial)
+      }
+    } catch {
+      toast.error("Failed to load zone availability")
+    }
+    setAvailabilityDialogOpen(true)
+  }
+
+  const handleSaveAvailability = async () => {
+    if (!selectedFacility || !editingZoneAvailability) return
+    setSavingAvailability(true)
+    try {
+      const slots = Object.entries(availabilitySlots)
+        .filter(([, v]) => v.enabled)
+        .map(([day, v]) => ({
+          dayOfWeek: parseInt(day),
+          openTime: v.openTime,
+          closeTime: v.closeTime,
+        }))
+      const res = await fetch(
+        `/api/organization/facilities/${selectedFacility.id}/zones/${editingZoneAvailability.id}/availability`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slots }),
+        }
+      )
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Failed to save")
+      }
+      toast.success("Availability hours saved")
+      setAvailabilityDialogOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save availability")
+    } finally {
+      setSavingAvailability(false)
     }
   }
 
@@ -891,6 +955,17 @@ export default function FacilitiesPage() {
                           {zone._count.equipment} equipment items
                         </p>
                       </CardContent>
+                      <CardFooter className="pt-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleOpenAvailability(zone)}
+                        >
+                          <Clock className="mr-2 h-3.5 w-3.5" />
+                          Availability Hours
+                        </Button>
+                      </CardFooter>
                     </Card>
                   ))}
                   
@@ -1087,6 +1162,80 @@ export default function FacilitiesPage() {
             <Button variant="destructive" onClick={handleDeleteFacility} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Zone Availability Dialog */}
+      <Dialog open={availabilityDialogOpen} onOpenChange={setAvailabilityDialogOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>
+              Availability Hours &mdash; {editingZoneAvailability?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Set the weekly operating hours for this training zone. Programs can only be scheduled within these windows.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto py-2">
+            {DAY_LABELS.map((label, dayIndex) => {
+              const slot = availabilitySlots[dayIndex]
+              if (!slot) return null
+              return (
+                <div key={dayIndex} className="flex items-center gap-3">
+                  <div className="w-24 flex items-center gap-2">
+                    <Switch
+                      checked={slot.enabled}
+                      onCheckedChange={(checked) =>
+                        setAvailabilitySlots(prev => ({
+                          ...prev,
+                          [dayIndex]: { ...prev[dayIndex], enabled: checked },
+                        }))
+                      }
+                    />
+                    <span className="text-sm font-medium">{label.slice(0, 3)}</span>
+                  </div>
+                  {slot.enabled ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        type="time"
+                        value={slot.openTime}
+                        onChange={(e) =>
+                          setAvailabilitySlots(prev => ({
+                            ...prev,
+                            [dayIndex]: { ...prev[dayIndex], openTime: e.target.value },
+                          }))
+                        }
+                        className="w-[120px]"
+                      />
+                      <span className="text-muted-foreground text-sm">to</span>
+                      <Input
+                        type="time"
+                        value={slot.closeTime}
+                        onChange={(e) =>
+                          setAvailabilitySlots(prev => ({
+                            ...prev,
+                            [dayIndex]: { ...prev[dayIndex], closeTime: e.target.value },
+                          }))
+                        }
+                        className="w-[120px]"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Closed</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAvailabilityDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveAvailability} disabled={savingAvailability}>
+              {savingAvailability && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Hours
             </Button>
           </DialogFooter>
         </DialogContent>

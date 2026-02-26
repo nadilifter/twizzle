@@ -26,6 +26,9 @@ const updateProgramSchema = z.object({
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
+  // Training zone capacity
+  hasTrainingZoneRestriction: z.boolean().optional(),
+  trainingZoneCapacityMode: z.enum(["MINIMUM", "SUM"]).optional(),
   // Restriction flags
   hasGenderRestriction: z.boolean().optional(),
   hasLevelRestriction: z.boolean().optional(),
@@ -40,6 +43,7 @@ const updateProgramSchema = z.object({
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
+  trainingZoneIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
     staffProfileId: z.string(),
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
@@ -146,6 +150,13 @@ export async function GET(
           include: {
             waiver: {
               select: { id: true, title: true, status: true },
+            },
+          },
+        },
+        trainingZones: {
+          include: {
+            trainingZone: {
+              select: { id: true, name: true, type: true, capacity: true, status: true },
             },
           },
         },
@@ -280,6 +291,8 @@ export async function PATCH(
       if (validatedData.hasMembershipRestriction !== undefined) updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
       if (validatedData.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = validatedData.hasWaiverRestriction;
       if (validatedData.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
+      if (validatedData.hasTrainingZoneRestriction !== undefined) updateData.hasTrainingZoneRestriction = validatedData.hasTrainingZoneRestriction;
+      if (validatedData.trainingZoneCapacityMode !== undefined) updateData.trainingZoneCapacityMode = validatedData.trainingZoneCapacityMode;
 
       // Update the program
       const updatedProgram = await tx.program.update({
@@ -383,11 +396,9 @@ export async function PATCH(
 
       // Update staff assignments if provided
       if (validatedData.staffAssignments !== undefined) {
-        // Delete existing assignments
         await tx.programStaff.deleteMany({
           where: { programId: id },
         });
-        // Create new assignments
         if (validatedData.staffAssignments.length > 0) {
           await tx.programStaff.createMany({
             data: validatedData.staffAssignments.map(sa => ({
@@ -397,6 +408,50 @@ export async function PATCH(
               isPrimary: sa.isPrimary,
             })),
           });
+        }
+      }
+
+      // Update training zone assignments if provided
+      if (validatedData.trainingZoneIds !== undefined) {
+        await tx.programTrainingZone.deleteMany({
+          where: { programId: id },
+        });
+        if (validatedData.trainingZoneIds.length > 0) {
+          await tx.programTrainingZone.createMany({
+            data: validatedData.trainingZoneIds.map(trainingZoneId => ({
+              programId: id,
+              trainingZoneId,
+            })),
+          });
+        }
+
+        // Update instance-level zone assignments for future instances
+        // that don't have custom zone overrides
+        const futureInstances = await tx.programInstance.findMany({
+          where: {
+            programId: id,
+            date: { gte: new Date() },
+          },
+          select: { id: true },
+        });
+
+        if (futureInstances.length > 0) {
+          const instanceIds = futureInstances.map(i => i.id);
+          await tx.programInstanceTrainingZone.deleteMany({
+            where: { programInstanceId: { in: instanceIds } },
+          });
+
+          if (validatedData.trainingZoneIds.length > 0) {
+            const instanceZoneData = futureInstances.flatMap(inst =>
+              validatedData.trainingZoneIds!.map(trainingZoneId => ({
+                programInstanceId: inst.id,
+                trainingZoneId,
+              }))
+            );
+            await tx.programInstanceTrainingZone.createMany({
+              data: instanceZoneData,
+            });
+          }
         }
       }
 
@@ -447,6 +502,13 @@ export async function PATCH(
             include: {
               waiver: {
                 select: { id: true, title: true, status: true },
+              },
+            },
+          },
+          trainingZones: {
+            include: {
+              trainingZone: {
+                select: { id: true, name: true, type: true, capacity: true, status: true },
               },
             },
           },

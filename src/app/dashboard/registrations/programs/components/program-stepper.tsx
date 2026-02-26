@@ -22,6 +22,16 @@ import {
   getStepStatus,
 } from "@/components/ui/stepper"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   ArrowLeft,
   ArrowRight,
   Check,
@@ -41,18 +51,25 @@ import {
   CalendarDays,
   FileText,
   Heart,
+  AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useFeatures } from "@/components/feature-context"
 import { useStaff } from "@/hooks/use-staff"
 import { useMemberships } from "@/hooks/use-memberships"
 import type { ProgramStaffRole } from "@/types/staff"
-import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload } from "@/types/programs"
+import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, TrainingZoneWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
 import { RecurrencePicker, type RecurrenceConfig, configToRRule, parseRRule } from "@/components/ui/recurrence-picker"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { format, addMonths } from "date-fns"
 
 interface Level {
@@ -107,11 +124,14 @@ interface ProgramFormData {
   duration: number | null
   facilityId: string | null
   rrule: string | null
+  trainingZoneIds: string[]
   
   // Step 3: Requirements
   hasLevelRestriction: boolean
   levelRequirementIds: string[]
   hasCapacityRestriction: boolean
+  hasTrainingZoneRestriction: boolean
+  trainingZoneCapacityMode: "MINIMUM" | "SUM"
   capacity: number | null
   hasAgeRestriction: boolean
   minAge: number | null
@@ -169,6 +189,12 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const [waivers, setWaivers] = React.useState<Array<{ id: string; title: string; status: string }>>([])
   const [loadingWaivers, setLoadingWaivers] = React.useState(true)
   
+  // Training zones state
+  const [trainingZones, setTrainingZones] = React.useState<TrainingZoneWithAvailability[]>([])
+  const [loadingZones, setLoadingZones] = React.useState(false)
+  const [fullyBookedOverride, setFullyBookedOverride] = React.useState<string | null>(null)
+  const [conflictDetailsZoneId, setConflictDetailsZoneId] = React.useState<string | null>(null)
+  
   // Form state
   const [formData, setFormData] = React.useState<ProgramFormData>(() => ({
     // Step 1: General
@@ -191,11 +217,14 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     duration: (program as any)?.duration || 60,
     facilityId: (program as any)?.facilityId || null,
     rrule: (program as any)?.rrule || null,
+    trainingZoneIds: program?.trainingZones?.map(tz => tz.trainingZoneId) || [],
     
     // Step 3: Requirements
     hasLevelRestriction: program?.hasLevelRestriction || false,
     levelRequirementIds: program?.levelRequirements?.map(lr => lr.levelId) || [],
     hasCapacityRestriction: program?.hasCapacityRestriction || false,
+    hasTrainingZoneRestriction: program?.hasTrainingZoneRestriction || false,
+    trainingZoneCapacityMode: program?.trainingZoneCapacityMode || "MINIMUM",
     capacity: program?.capacity || null,
     hasAgeRestriction: program?.hasAgeRestriction || false,
     minAge: program?.minAge || null,
@@ -272,6 +301,86 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     }
     fetchWaivers()
   }, [])
+
+  // Fetch training zones + availability when facility or time changes
+  // Extract ISO weekdays from rrule string (e.g. BYDAY=MO,WE,FR -> [0,2,4])
+  const rruleDays = React.useMemo(() => {
+    if (!formData.rrule) return []
+    const match = formData.rrule.match(/BYDAY=([A-Z,]+)/)
+    if (!match) return []
+    const dayMap: Record<string, number> = { MO: 0, TU: 1, WE: 2, TH: 3, FR: 4, SA: 5, SU: 6 }
+    return match[1].split(",").map(d => dayMap[d]).filter((d): d is number => d != null)
+  }, [formData.rrule])
+
+  const fetchZoneAvailability = React.useCallback(async (
+    facilityId: string,
+    startTime?: string,
+    duration?: number | null,
+    daysOfWeek?: number[],
+    programStartDate?: Date | null,
+    programEndDate?: Date | null,
+  ) => {
+    setLoadingZones(true)
+    try {
+      const params = new URLSearchParams()
+      if (startTime && duration) {
+        params.set("startTime", startTime)
+        const [h, m] = startTime.split(":").map(Number)
+        const endDate = new Date(2000, 0, 1, h, m + duration)
+        params.set("endTime", `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`)
+      }
+      if (daysOfWeek && daysOfWeek.length > 0) {
+        params.set("daysOfWeek", daysOfWeek.join(","))
+      }
+      if (programStartDate) {
+        params.set("programStartDate", programStartDate.toISOString().slice(0, 10))
+      }
+      if (programEndDate) {
+        params.set("programEndDate", programEndDate.toISOString().slice(0, 10))
+      }
+      if (isEditing && program) {
+        params.set("excludeProgramId", program.id)
+      }
+      const qs = params.toString()
+      const response = await fetch(`/api/organization/facilities/${facilityId}/zones/availability${qs ? `?${qs}` : ""}`)
+      if (response.ok) {
+        const data = await response.json()
+        setTrainingZones(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch training zones:", error)
+    } finally {
+      setLoadingZones(false)
+    }
+  }, [isEditing, program])
+
+  React.useEffect(() => {
+    if (formData.facilityId) {
+      fetchZoneAvailability(
+        formData.facilityId,
+        formData.startTime,
+        formData.duration,
+        rruleDays,
+        formData.startDate,
+        formData.endDate,
+      )
+    } else {
+      setTrainingZones([])
+      setFormData(prev => ({ ...prev, trainingZoneIds: [] }))
+    }
+  }, [formData.facilityId, formData.startTime, formData.duration, rruleDays, formData.startDate, formData.endDate, fetchZoneAvailability])
+
+  // Compute zone-derived capacity
+  const zoneDerivedCapacity = React.useMemo(() => {
+    if (formData.trainingZoneIds.length === 0) return null
+    const selectedZones = trainingZones.filter(z => formData.trainingZoneIds.includes(z.id))
+    const capacities = selectedZones.map(z => z.capacity).filter((c): c is number => c != null)
+    if (capacities.length === 0) return null
+    if (formData.trainingZoneCapacityMode === "SUM") {
+      return capacities.reduce((sum, c) => sum + c, 0)
+    }
+    return Math.min(...capacities)
+  }, [formData.trainingZoneIds, formData.trainingZoneCapacityMode, trainingZones])
   
   // Flatten membership instances from groups
   const allMembershipInstances = React.useMemo(() => {
@@ -411,7 +520,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         hasMembershipRestriction: formData.hasMembershipRestriction,
         hasWaiverRestriction: formData.hasWaiverRestriction,
         hasMedicalRequirement: formData.hasMedicalRequirement,
+        hasTrainingZoneRestriction: formData.hasTrainingZoneRestriction,
+        trainingZoneCapacityMode: formData.trainingZoneCapacityMode,
         capacity: formData.hasCapacityRestriction ? formData.capacity : null,
+        trainingZoneIds: formData.trainingZoneIds,
         minAge: formData.hasAgeRestriction ? formData.minAge : null,
         maxAge: formData.hasAgeRestriction ? formData.maxAge : null,
         showCoachOnSite: formData.showCoachOnSite,
@@ -847,6 +959,21 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 </div>
               </div>
               
+              {/* Recurrence Pattern - only for recurring programs */}
+              {formData.recurrenceType === "RECURRING" && formData.startDate && formData.endDate && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-base font-medium">Recurrence Pattern</Label>
+                  </div>
+                  <RecurrencePicker
+                    startDate={formData.startDate}
+                    endDate={formData.endDate}
+                    onRRuleChange={(rrule) => setFormData(prev => ({ ...prev, rrule }))}
+                  />
+                </div>
+              )}
+
               {/* Facility Selection */}
               <div className="space-y-2">
                 <Label>Location</Label>
@@ -870,7 +997,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     value={formData.facilityId || "__none__"}
                     onValueChange={(value) => setFormData(prev => ({ 
                       ...prev, 
-                      facilityId: value === "__none__" ? null : value 
+                      facilityId: value === "__none__" ? null : value,
+                      trainingZoneIds: value === "__none__" ? [] : prev.trainingZoneIds,
                     }))}
                   >
                     <SelectTrigger>
@@ -895,19 +1023,194 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   </Select>
                 )}
               </div>
-              
-              {/* Recurrence Pattern - only for recurring programs */}
-              {formData.recurrenceType === "RECURRING" && formData.startDate && formData.endDate && (
-                <div className="space-y-4 rounded-lg border p-4">
-                  <div className="flex items-center gap-2">
-                    <Repeat className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-base font-medium">Recurrence Pattern</Label>
-                  </div>
-                  <RecurrencePicker
-                    startDate={formData.startDate}
-                    endDate={formData.endDate}
-                    onRRuleChange={(rrule) => setFormData(prev => ({ ...prev, rrule }))}
-                  />
+
+              {/* Training Zone Selection - shown when a facility is selected */}
+              {formData.facilityId && (
+                <div className="space-y-3">
+                  <Label>Training Zones (optional)</Label>
+                  {loadingZones ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading training zones...
+                    </div>
+                  ) : trainingZones.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No training zones configured for this facility.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {trainingZones.map(zone => {
+                          const isSelected = formData.trainingZoneIds.includes(zone.id)
+                          const hasConflicts = zone.totalConflicts > 0
+                          return (
+                            <label
+                              key={zone.id}
+                              className={cn(
+                                "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                                isSelected
+                                  ? "border-primary bg-primary/5"
+                                  : "hover:bg-muted/50",
+                                zone.isFullyBooked && !isSelected && "opacity-60"
+                              )}
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={checked => {
+                                  if (checked && hasConflicts) {
+                                    setFullyBookedOverride(zone.id)
+                                    return
+                                  }
+                                  setFormData(prev => {
+                                    const newIds = checked
+                                      ? [...prev.trainingZoneIds, zone.id]
+                                      : prev.trainingZoneIds.filter(id => id !== zone.id)
+                                    const hasZones = newIds.length > 0
+                                    return {
+                                      ...prev,
+                                      trainingZoneIds: newIds,
+                                      hasCapacityRestriction: hasZones ? true : prev.hasCapacityRestriction,
+                                      hasTrainingZoneRestriction: hasZones ? true : false,
+                                    }
+                                  })
+                                }}
+                                className="mt-0.5"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium">{zone.name}</span>
+                                  <Badge variant="outline" className="text-xs">{zone.type}</Badge>
+                                  {zone.isFullyBooked ? (
+                                    <Badge variant="destructive" className="text-xs">
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      Fully booked
+                                    </Badge>
+                                  ) : hasConflicts && zone.totalConflicts <= 3 ? (
+                                    <Badge variant="secondary" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      Full on {zone.conflictDates.map(c => format(new Date(c.date + "T00:00:00"), "MMM d")).join(", ")}
+                                    </Badge>
+                                  ) : hasConflicts ? (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs text-amber-600 border-amber-300 bg-amber-50 cursor-pointer"
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictDetailsZoneId(zone.id) }}
+                                    >
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      {zone.totalConflicts} date conflicts
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                                {zone.capacity != null && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Capacity: {zone.capacity}
+                                    {hasConflicts && !zone.isFullyBooked && (
+                                      <> &middot; <span className="text-amber-600">{zone.totalConflicts} date{zone.totalConflicts !== 1 ? "s" : ""} at capacity</span></>
+                                    )}
+                                  </p>
+                                )}
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+
+                      {/* Conflict details dialog */}
+                      <Dialog open={!!conflictDetailsZoneId} onOpenChange={(open) => !open && setConflictDetailsZoneId(null)}>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>
+                              Conflict Details &mdash; {trainingZones.find(z => z.id === conflictDetailsZoneId)?.name}
+                            </DialogTitle>
+                          </DialogHeader>
+                          {(() => {
+                            const zone = trainingZones.find(z => z.id === conflictDetailsZoneId)
+                            if (!zone) return null
+                            return (
+                              <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">
+                                  This zone (capacity {zone.capacity}) is fully booked on the following {zone.totalConflicts} date{zone.totalConflicts !== 1 ? "s" : ""}:
+                                </p>
+                                <div className="max-h-64 overflow-y-auto rounded border divide-y">
+                                  {zone.conflictDates.map(c => (
+                                    <div key={c.date} className="flex items-center justify-between px-3 py-2 text-sm">
+                                      <span>{format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")}</span>
+                                      <span className="text-destructive font-medium">{c.used}/{zone.capacity} used</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          })()}
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* Conflict override dialog */}
+                      <AlertDialog open={!!fullyBookedOverride} onOpenChange={(open) => !open && setFullyBookedOverride(null)}>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2">
+                              <AlertTriangle className="h-5 w-5 text-destructive" />
+                              Training Zone Capacity Conflict
+                            </AlertDialogTitle>
+                            <AlertDialogDescription asChild>
+                              <div>
+                                {(() => {
+                                  const zone = trainingZones.find(z => z.id === fullyBookedOverride)
+                                  if (!zone) return <p>This training zone has capacity conflicts.</p>
+                                  if (zone.isFullyBooked) {
+                                    return <p>This training zone is fully booked during the selected time slot on all dates. Selecting it will lead to capacity conflicts.</p>
+                                  }
+                                  return (
+                                    <>
+                                      <p>
+                                        This training zone is at capacity on {zone.totalConflicts} date{zone.totalConflicts !== 1 ? "s" : ""} during the selected time slot.
+                                      </p>
+                                      {zone.totalConflicts <= 5 ? (
+                                        <ul className="mt-2 space-y-1 text-sm">
+                                          {zone.conflictDates.map(c => (
+                                            <li key={c.date} className="text-destructive">
+                                              {format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")} ({c.used}/{zone.capacity} used)
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      ) : (
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                          Dates include {format(new Date(zone.conflictDates[0].date + "T00:00:00"), "MMM d")} through {format(new Date(zone.conflictDates[zone.conflictDates.length - 1].date + "T00:00:00"), "MMM d, yyyy")}.
+                                        </p>
+                                      )}
+                                    </>
+                                  )
+                                })()}
+                                <p className="mt-2">Are you sure you want to proceed?</p>
+                              </div>
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => {
+                                if (fullyBookedOverride) {
+                                  setFormData(prev => {
+                                    const newIds = [...prev.trainingZoneIds, fullyBookedOverride]
+                                    return {
+                                      ...prev,
+                                      trainingZoneIds: newIds,
+                                      hasCapacityRestriction: true,
+                                      hasTrainingZoneRestriction: true,
+                                    }
+                                  })
+                                }
+                                setFullyBookedOverride(null)
+                              }}
+                            >
+                              Proceed Anyway
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -1009,26 +1312,105 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     onCheckedChange={checked => setFormData(prev => ({
                       ...prev,
                       hasCapacityRestriction: checked,
-                      capacity: checked ? (prev.capacity || 20) : null,
+                      capacity: checked ? (prev.capacity || zoneDerivedCapacity || 20) : null,
                     }))}
                   />
                 </div>
                 
                 {formData.hasCapacityRestriction && (
-                  <div className="pt-2 border-t">
-                    <Label htmlFor="capacity">Maximum Capacity</Label>
-                    <Input
-                      id="capacity"
-                      type="number"
-                      min={1}
-                      placeholder="Enter maximum number of athletes"
-                      value={formData.capacity || ""}
-                      onChange={e => setFormData(prev => ({
-                        ...prev,
-                        capacity: e.target.value ? parseInt(e.target.value) : null,
-                      }))}
-                      className="mt-2 max-w-[200px]"
-                    />
+                  <div className="pt-2 border-t space-y-4">
+                    {/* Training zone capacity restriction */}
+                    {formData.trainingZoneIds.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label className="text-sm font-medium">Restrict by Training Zone Capacity</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Derive capacity from the selected training zones
+                            </p>
+                          </div>
+                          <Switch
+                            checked={formData.hasTrainingZoneRestriction}
+                            onCheckedChange={checked => {
+                              setFormData(prev => ({
+                                ...prev,
+                                hasTrainingZoneRestriction: checked,
+                                capacity: checked && zoneDerivedCapacity ? zoneDerivedCapacity : prev.capacity,
+                              }))
+                            }}
+                          />
+                        </div>
+
+                        {formData.hasTrainingZoneRestriction && formData.trainingZoneIds.length > 1 && (
+                          <div className="pl-4 border-l-2 space-y-2">
+                            <Label className="text-sm">Multi-zone capacity mode</Label>
+                            <RadioGroup
+                              value={formData.trainingZoneCapacityMode}
+                              onValueChange={(value: "MINIMUM" | "SUM") => {
+                                setFormData(prev => {
+                                  const selectedZones = trainingZones.filter(z => prev.trainingZoneIds.includes(z.id))
+                                  const capacities = selectedZones.map(z => z.capacity).filter((c): c is number => c != null)
+                                  const derived = value === "SUM"
+                                    ? capacities.reduce((s, c) => s + c, 0)
+                                    : capacities.length > 0 ? Math.min(...capacities) : null
+                                  return {
+                                    ...prev,
+                                    trainingZoneCapacityMode: value,
+                                    capacity: derived ?? prev.capacity,
+                                  }
+                                })
+                              }}
+                              className="space-y-2"
+                            >
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <RadioGroupItem value="MINIMUM" />
+                                <span className="text-sm">Use smallest zone capacity</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <RadioGroupItem value="SUM" />
+                                <span className="text-sm">Use combined zone capacity</span>
+                              </label>
+                            </RadioGroup>
+                            {zoneDerivedCapacity != null && (
+                              <p className="text-xs text-muted-foreground">
+                                Derived capacity: {zoneDerivedCapacity} athletes
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {formData.hasTrainingZoneRestriction && zoneDerivedCapacity != null && formData.trainingZoneIds.length === 1 && (
+                          <p className="text-xs text-muted-foreground pl-4 border-l-2">
+                            Zone capacity: {zoneDerivedCapacity} athletes
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div>
+                      <Label htmlFor="capacity">Maximum Capacity</Label>
+                      <Input
+                        id="capacity"
+                        type="number"
+                        min={1}
+                        max={formData.hasTrainingZoneRestriction && zoneDerivedCapacity ? zoneDerivedCapacity : undefined}
+                        placeholder="Enter maximum number of athletes"
+                        value={formData.capacity || ""}
+                        onChange={e => {
+                          const val = e.target.value ? parseInt(e.target.value) : null
+                          const capped = formData.hasTrainingZoneRestriction && zoneDerivedCapacity && val
+                            ? Math.min(val, zoneDerivedCapacity)
+                            : val
+                          setFormData(prev => ({ ...prev, capacity: capped }))
+                        }}
+                        className="mt-2 max-w-[200px]"
+                      />
+                      {formData.hasTrainingZoneRestriction && zoneDerivedCapacity != null && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Cannot exceed zone capacity of {zoneDerivedCapacity}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

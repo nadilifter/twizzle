@@ -720,6 +720,10 @@ model Program {
   minAge Int? // Minimum age (0-100)
   maxAge Int? // Maximum age (0-100)
 
+  // Training Zone Capacity
+  hasTrainingZoneRestriction Boolean                  @default(false)
+  trainingZoneCapacityMode   TrainingZoneCapacityMode @default(MINIMUM)
+
   // Restriction Flags (for UI toggle state)
   hasGenderRestriction     Boolean @default(false)
   hasLevelRestriction      Boolean @default(false)
@@ -747,6 +751,7 @@ model Program {
   levelRequirements   ProgramLevelRequirement[]
   waiverRequirements  ProgramWaiverRequirement[]
   instances           ProgramInstance[]
+  trainingZones       ProgramTrainingZone[]
 
   // Registration Queue
   queueConfigs      RegistrationQueueConfig[]
@@ -1021,11 +1026,12 @@ model ProgramInstance {
   updatedAt      DateTime       @updatedAt
 
   // Relations
-  program       Program                @relation(fields: [programId], references: [id], onDelete: Cascade)
-  facility      Facility?              @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  organization  Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program       Program                        @relation(fields: [programId], references: [id], onDelete: Cascade)
+  facility      Facility?                      @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  organization  Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   registrations InstanceRegistration[]
   attendances   InstanceAttendance[]
+  trainingZones ProgramInstanceTrainingZone[]
 
   @@index([programId])
   @@index([facilityId])
@@ -2556,8 +2562,11 @@ model TrainingZone {
   updatedAt DateTime @updatedAt
 
   // Relations
-  facility  Facility    @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  equipment Equipment[]
+  facility            Facility                       @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  equipment           Equipment[]
+  programAssignments  ProgramTrainingZone[]
+  instanceAssignments ProgramInstanceTrainingZone[]
+  availability        TrainingZoneAvailability[]
 
   @@index([facilityId])
 }
@@ -2566,6 +2575,50 @@ enum ZoneStatus {
   OPEN
   CLOSED
   MAINTENANCE
+}
+
+enum TrainingZoneCapacityMode {
+  MINIMUM // Capacity = smallest zone capacity
+  SUM // Capacity = sum of zone capacities
+}
+
+model ProgramTrainingZone {
+  id             String @id @default(cuid())
+  programId      String
+  trainingZoneId String
+
+  program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  trainingZone TrainingZone @relation(fields: [trainingZoneId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, trainingZoneId])
+  @@index([programId])
+  @@index([trainingZoneId])
+}
+
+model ProgramInstanceTrainingZone {
+  id                String @id @default(cuid())
+  programInstanceId String
+  trainingZoneId    String
+
+  programInstance ProgramInstance @relation(fields: [programInstanceId], references: [id], onDelete: Cascade)
+  trainingZone    TrainingZone   @relation(fields: [trainingZoneId], references: [id], onDelete: Cascade)
+
+  @@unique([programInstanceId, trainingZoneId])
+  @@index([programInstanceId])
+  @@index([trainingZoneId])
+}
+
+model TrainingZoneAvailability {
+  id             String @id @default(cuid())
+  trainingZoneId String
+  dayOfWeek      Int // 0=Sunday, 1=Monday, ..., 6=Saturday
+  openTime       String // e.g., "08:00"
+  closeTime      String // e.g., "18:00"
+
+  trainingZone TrainingZone @relation(fields: [trainingZoneId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingZoneId, dayOfWeek])
+  @@index([trainingZoneId])
 }
 
 model Equipment {

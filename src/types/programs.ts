@@ -24,6 +24,7 @@ export type RecurrenceType = "NON_RECURRING" | "RECURRING";
 export type RegistrationType = "ALL_INSTANCES" | "PER_INSTANCE";
 export type InstanceStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
 export type RegistrationStatus = "REGISTERED" | "WAITLISTED" | "CANCELLED" | "ATTENDED" | "NO_SHOW";
+export type TrainingZoneCapacityMode = "MINIMUM" | "SUM";
 
 export interface ProgramLevelRequirement {
   id: string;
@@ -85,6 +86,10 @@ export interface Program {
   minAge: number | null;
   maxAge: number | null;
   
+  // Training zone capacity
+  hasTrainingZoneRestriction: boolean;
+  trainingZoneCapacityMode: TrainingZoneCapacityMode;
+
   // Restriction flags
   hasGenderRestriction: boolean;
   hasLevelRestriction: boolean;
@@ -151,6 +156,49 @@ export interface InstanceRegistration {
   } | null;
 }
 
+export interface ProgramTrainingZone {
+  id: string;
+  programId: string;
+  trainingZoneId: string;
+  trainingZone: {
+    id: string;
+    name: string;
+    type: string;
+    capacity: number | null;
+    status: string;
+  };
+}
+
+export interface TrainingZoneAvailabilitySlot {
+  id: string;
+  trainingZoneId: string;
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+}
+
+export interface TrainingZoneConflictDate {
+  date: string;
+  used: number;
+  available: number;
+}
+
+export interface TrainingZoneWithAvailability {
+  id: string;
+  name: string;
+  type: string;
+  capacity: number | null;
+  status: string;
+  description: string | null;
+  availability: TrainingZoneAvailabilitySlot[];
+  maxCapacity: number | null;
+  availableCapacity: number | null;
+  isAvailable: boolean;
+  isFullyBooked: boolean;
+  conflictDates: TrainingZoneConflictDate[];
+  totalConflicts: number;
+}
+
 export interface ProgramWithRelations extends Program {
   _count: {
     enrollments: number;
@@ -161,6 +209,7 @@ export interface ProgramWithRelations extends Program {
   requiredMemberships?: ProgramRequiredMembership[];
   levelRequirements?: ProgramLevelRequirement[];
   waiverRequirements?: ProgramWaiverRequirement[];
+  trainingZones?: ProgramTrainingZone[];
 }
 
 export interface ProgramsListResponse {
@@ -195,6 +244,8 @@ export interface CreateProgramPayload {
   hasMembershipRestriction?: boolean;
   hasWaiverRestriction?: boolean;
   hasMedicalRequirement?: boolean;
+  hasTrainingZoneRestriction?: boolean;
+  trainingZoneCapacityMode?: TrainingZoneCapacityMode;
   // For staff assignments during creation
   staffAssignments?: Array<{
     staffProfileId: string;
@@ -207,6 +258,8 @@ export interface CreateProgramPayload {
   membershipRequirementIds?: string[];
   // For waiver requirements during creation
   waiverRequirementIds?: string[];
+  // For training zone assignments during creation
+  trainingZoneIds?: string[];
 }
 
 export interface UpdateProgramPayload {
@@ -234,6 +287,8 @@ export interface UpdateProgramPayload {
   hasMembershipRestriction?: boolean;
   hasWaiverRestriction?: boolean;
   hasMedicalRequirement?: boolean;
+  hasTrainingZoneRestriction?: boolean;
+  trainingZoneCapacityMode?: TrainingZoneCapacityMode;
   // For staff assignments
   staffAssignments?: Array<{
     staffProfileId: string;
@@ -246,6 +301,8 @@ export interface UpdateProgramPayload {
   membershipRequirementIds?: string[];
   // For waiver requirements
   waiverRequirementIds?: string[];
+  // For training zone assignments
+  trainingZoneIds?: string[];
 }
 
 export interface ProgramsQueryParams {
