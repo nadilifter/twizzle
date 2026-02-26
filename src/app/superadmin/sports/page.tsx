@@ -2,6 +2,24 @@
 
 import * as React from "react"
 import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers"
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import {
   Plus,
   Pencil,
   Trash2,
@@ -9,6 +27,8 @@ import {
   Loader2,
   Building2,
   Trophy,
+  GripVertical,
+  ArrowUpDown,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -100,6 +120,54 @@ function generateSlug(name: string): string {
     .replace(/^-|-$/g, "")
 }
 
+// Sortable sport item for reorder dialog
+function SortableSportItem({ sport }: { sport: Sport }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: sport.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 rounded-lg border bg-card p-3 ${
+        isDragging ? "opacity-50 shadow-lg" : ""
+      }`}
+    >
+      <button
+        type="button"
+        className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{sport.name}</span>
+          <span className="text-muted-foreground font-mono text-sm">{sport.slug}</span>
+        </div>
+        {sport.description && (
+          <p className="mt-0.5 truncate text-sm text-muted-foreground">{sport.description}</p>
+        )}
+      </div>
+      <Badge variant={sport.isActive ? "default" : "secondary"}>
+        {sport.isActive ? "Active" : "Inactive"}
+      </Badge>
+    </div>
+  )
+}
+
 export default function SuperadminSportsPage() {
   const [sports, setSports] = React.useState<Sport[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -111,6 +179,16 @@ export default function SuperadminSportsPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [deletingSport, setDeletingSport] = React.useState<Sport | null>(null)
+
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = React.useState(false)
+  const [reorderSports, setReorderSports] = React.useState<Sport[]>([])
+  const [isSavingOrder, setIsSavingOrder] = React.useState(false)
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {}),
+    useSensor(TouchSensor, {}),
+    useSensor(KeyboardSensor, {})
+  )
 
   const fetchSports = React.useCallback(async () => {
     try {
@@ -185,7 +263,7 @@ export default function SuperadminSportsPage() {
           description: formData.description || null,
           icon: formData.icon || null,
           isActive: formData.isActive,
-          displayOrder: formData.displayOrder,
+          ...(editingSport ? {} : { displayOrder: formData.displayOrder }),
         }),
       })
 
@@ -226,6 +304,51 @@ export default function SuperadminSportsPage() {
     }
   }
 
+  const handleOpenReorder = () => {
+    setReorderSports([...sports])
+    setIsReorderDialogOpen(true)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setReorderSports((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
+  }
+
+  const handleSaveOrder = async () => {
+    setIsSavingOrder(true)
+    try {
+      const updates = reorderSports.map((sport, index) => ({
+        id: sport.id,
+        displayOrder: index,
+      }))
+
+      const response = await fetch("/api/superadmin/sports/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sports: updates }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to save order")
+      }
+
+      toast.success("Sport order updated")
+      setIsReorderDialogOpen(false)
+      fetchSports()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save order")
+    } finally {
+      setIsSavingOrder(false)
+    }
+  }
+
   const totalOrgs = sports.reduce((sum, s) => sum + s._count.organizations, 0)
 
   if (loading) {
@@ -245,10 +368,18 @@ export default function SuperadminSportsPage() {
             Manage the sports available for organizations to select.
           </p>
         </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Sport
-        </Button>
+        <div className="flex gap-2">
+          {sports.length > 1 && (
+            <Button variant="outline" onClick={handleOpenReorder}>
+              <ArrowUpDown className="mr-2 h-4 w-4" />
+              Reorder
+            </Button>
+          )}
+          <Button onClick={handleOpenCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Sport
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -318,14 +449,13 @@ export default function SuperadminSportsPage() {
                 <TableHead>Description</TableHead>
                 <TableHead className="text-center">Organizations</TableHead>
                 <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Order</TableHead>
                 <TableHead className="w-[70px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sports.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     No sports configured yet. Add your first sport to get started.
                   </TableCell>
                 </TableRow>
@@ -346,9 +476,6 @@ export default function SuperadminSportsPage() {
                       <Badge variant={sport.isActive ? "default" : "secondary"}>
                         {sport.isActive ? "Active" : "Inactive"}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-center text-muted-foreground">
-                      {sport.displayOrder}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -431,21 +558,6 @@ export default function SuperadminSportsPage() {
                 rows={3}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="sport-order">Display Order</Label>
-              <Input
-                id="sport-order"
-                type="number"
-                min={0}
-                value={formData.displayOrder}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    displayOrder: parseInt(e.target.value) || 0,
-                  }))
-                }
-              />
-            </div>
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Active</Label>
@@ -500,6 +612,48 @@ export default function SuperadminSportsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reorder Dialog */}
+      <Dialog open={isReorderDialogOpen} onOpenChange={setIsReorderDialogOpen}>
+        <DialogContent className="max-w-3xl overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Reorder Sports</DialogTitle>
+            <DialogDescription>
+              Drag and drop to reorder how sports appear to organizations
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] overflow-y-auto py-4">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={reorderSports.map((s) => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-2">
+                  {reorderSports.map((sport) => (
+                    <SortableSportItem key={sport.id} sport={sport} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReorderDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveOrder} disabled={isSavingOrder}>
+              {isSavingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
