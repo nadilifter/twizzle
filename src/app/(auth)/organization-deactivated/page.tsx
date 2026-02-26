@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { AlertTriangle, Mail, LogOut, CreditCard, Loader2 } from "lucide-react"
@@ -16,6 +17,14 @@ const SELF_SERVICE_REASONS = ["Non-payment"]
 const SUPPORT_EMAIL = "support@uplifterinc.com"
 
 export default function OrganizationDeactivatedPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
+      <OrganizationDeactivatedContent />
+    </Suspense>
+  )
+}
+
+function OrganizationDeactivatedContent() {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
 
