@@ -96,7 +96,7 @@ const quickLinkConfig = [
   { title: "Feedback", subdomain: "feedback", path: "/", icon: MessageSquare },
 ]
 
-// Org Signup link component (separate subdomain)
+// Org Signup link: startup subdomain (not superadmin)
 function OrgSignupLink({ getUrl }: { getUrl: (subdomain: string | null) => string }) {
   const url = getUrl("startup")
 
