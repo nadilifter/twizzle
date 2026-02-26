@@ -206,23 +206,30 @@ export async function GET(
         conflictDates.length > 0 &&
         conflictDates.length === totalDatesWithBookings;
 
-      // Availability window check
-      let isAvailable = true;
-      if (jsDays.length > 0 && zone.availability.length > 0) {
-        let unavailableCount = 0;
-        for (const jsDay of jsDays) {
+      // Availability window check - identify days the zone is closed or
+      // outside operating hours for the requested time slot
+      const JS_DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const closedDays: Array<{ day: string; reason: string }> = [];
+
+      if (zone.availability.length > 0) {
+        const daysToCheck = jsDays.length > 0 ? jsDays : (hasTimeSlot ? [0, 1, 2, 3, 4, 5, 6] : []);
+        for (const jsDay of daysToCheck) {
           const daySlot = zone.availability.find((a) => a.dayOfWeek === jsDay);
           if (!daySlot) {
-            unavailableCount++;
+            closedDays.push({
+              day: JS_DAY_LABELS[jsDay],
+              reason: "closed",
+            });
           } else if (
             hasTimeSlot &&
             (startTime < daySlot.openTime || endTime! > daySlot.closeTime)
           ) {
-            unavailableCount++;
+            closedDays.push({
+              day: JS_DAY_LABELS[jsDay],
+              reason: `open ${daySlot.openTime}–${daySlot.closeTime}`,
+            });
           }
         }
-        // Only mark unavailable if ALL days are outside hours
-        isAvailable = unavailableCount < jsDays.length;
       }
 
       return {
@@ -235,10 +242,11 @@ export async function GET(
         availability: zone.availability,
         maxCapacity,
         availableCapacity,
-        isAvailable,
+        isAvailable: closedDays.length === 0,
         isFullyBooked,
         conflictDates,
         totalConflicts: conflictDates.length,
+        closedDays,
       };
     });
 

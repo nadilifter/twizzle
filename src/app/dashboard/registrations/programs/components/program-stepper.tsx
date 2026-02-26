@@ -1043,6 +1043,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                         {trainingZones.map(zone => {
                           const isSelected = formData.trainingZoneIds.includes(zone.id)
                           const hasConflicts = zone.totalConflicts > 0
+                          const hasClosed = zone.closedDays?.length > 0
+                          const hasWarnings = hasConflicts || hasClosed
                           return (
                             <label
                               key={zone.id}
@@ -1051,13 +1053,13 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                                 isSelected
                                   ? "border-primary bg-primary/5"
                                   : "hover:bg-muted/50",
-                                zone.isFullyBooked && !isSelected && "opacity-60"
+                                (zone.isFullyBooked || !zone.isAvailable) && !isSelected && "opacity-60"
                               )}
                             >
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={checked => {
-                                  if (checked && hasConflicts) {
+                                  if (checked && hasWarnings) {
                                     setFullyBookedOverride(zone.id)
                                     return
                                   }
@@ -1100,6 +1102,17 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                                       {zone.totalConflicts} date conflicts
                                     </Badge>
                                   ) : null}
+                                  {hasClosed && (
+                                    <Badge variant="secondary" className="text-xs text-orange-600 border-orange-300 bg-orange-50">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      {zone.closedDays.length === 1
+                                        ? `Closed ${zone.closedDays[0].day}`
+                                        : zone.closedDays.every(d => d.reason === "closed")
+                                          ? `Closed ${zone.closedDays.map(d => d.day).join(", ")}`
+                                          : `${zone.closedDays.length} day${zone.closedDays.length !== 1 ? "s" : ""} outside hours`
+                                      }
+                                    </Badge>
+                                  )}
                                 </div>
                                 {zone.capacity != null && (
                                   <p className="text-xs text-muted-foreground mt-1">
@@ -1145,44 +1158,67 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                         </DialogContent>
                       </Dialog>
 
-                      {/* Conflict override dialog */}
+                      {/* Conflict / closed-hours override dialog */}
                       <AlertDialog open={!!fullyBookedOverride} onOpenChange={(open) => !open && setFullyBookedOverride(null)}>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle className="flex items-center gap-2">
                               <AlertTriangle className="h-5 w-5 text-destructive" />
-                              Training Zone Capacity Conflict
+                              Training Zone Warning
                             </AlertDialogTitle>
                             <AlertDialogDescription asChild>
-                              <div>
+                              <div className="space-y-3">
                                 {(() => {
                                   const zone = trainingZones.find(z => z.id === fullyBookedOverride)
-                                  if (!zone) return <p>This training zone has capacity conflicts.</p>
-                                  if (zone.isFullyBooked) {
-                                    return <p>This training zone is fully booked during the selected time slot on all dates. Selecting it will lead to capacity conflicts.</p>
-                                  }
-                                  return (
-                                    <>
-                                      <p>
-                                        This training zone is at capacity on {zone.totalConflicts} date{zone.totalConflicts !== 1 ? "s" : ""} during the selected time slot.
-                                      </p>
-                                      {zone.totalConflicts <= 5 ? (
-                                        <ul className="mt-2 space-y-1 text-sm">
-                                          {zone.conflictDates.map(c => (
-                                            <li key={c.date} className="text-destructive">
-                                              {format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")} ({c.used}/{zone.capacity} used)
+                                  if (!zone) return <p>This training zone has issues.</p>
+                                  const sections: React.ReactNode[] = []
+
+                                  if (zone.closedDays?.length > 0) {
+                                    sections.push(
+                                      <div key="closed">
+                                        <p className="font-medium text-foreground">Outside operating hours</p>
+                                        <ul className="mt-1 space-y-0.5 text-sm">
+                                          {zone.closedDays.map(d => (
+                                            <li key={d.day} className="text-orange-600">
+                                              {d.day}: {d.reason === "closed" ? "Zone is closed" : `Zone is ${d.reason}`}
                                             </li>
                                           ))}
                                         </ul>
-                                      ) : (
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                          Dates include {format(new Date(zone.conflictDates[0].date + "T00:00:00"), "MMM d")} through {format(new Date(zone.conflictDates[zone.conflictDates.length - 1].date + "T00:00:00"), "MMM d, yyyy")}.
-                                        </p>
-                                      )}
-                                    </>
-                                  )
+                                      </div>
+                                    )
+                                  }
+
+                                  if (zone.isFullyBooked) {
+                                    sections.push(
+                                      <div key="full">
+                                        <p className="font-medium text-foreground">Fully booked</p>
+                                        <p className="text-sm">This zone is at capacity on all dates during the selected time slot.</p>
+                                      </div>
+                                    )
+                                  } else if (zone.totalConflicts > 0) {
+                                    sections.push(
+                                      <div key="conflicts">
+                                        <p className="font-medium text-foreground">Capacity conflicts</p>
+                                        {zone.totalConflicts <= 5 ? (
+                                          <ul className="mt-1 space-y-0.5 text-sm">
+                                            {zone.conflictDates.map(c => (
+                                              <li key={c.date} className="text-destructive">
+                                                {format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")} ({c.used}/{zone.capacity} used)
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        ) : (
+                                          <p className="text-sm text-muted-foreground">
+                                            {zone.totalConflicts} dates at capacity, from {format(new Date(zone.conflictDates[0].date + "T00:00:00"), "MMM d")} through {format(new Date(zone.conflictDates[zone.conflictDates.length - 1].date + "T00:00:00"), "MMM d, yyyy")}.
+                                          </p>
+                                        )}
+                                      </div>
+                                    )
+                                  }
+
+                                  return sections.length > 0 ? sections : <p>This training zone has issues.</p>
                                 })()}
-                                <p className="mt-2">Are you sure you want to proceed?</p>
+                                <p>Are you sure you want to proceed?</p>
                               </div>
                             </AlertDialogDescription>
                           </AlertDialogHeader>

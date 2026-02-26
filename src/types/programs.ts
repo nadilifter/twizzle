@@ -183,6 +183,11 @@ export interface TrainingZoneConflictDate {
   available: number;
 }
 
+export interface TrainingZoneClosedDay {
+  day: string;
+  reason: string;
+}
+
 export interface TrainingZoneWithAvailability {
   id: string;
   name: string;
@@ -197,6 +202,7 @@ export interface TrainingZoneWithAvailability {
   isFullyBooked: boolean;
   conflictDates: TrainingZoneConflictDate[];
   totalConflicts: number;
+  closedDays: TrainingZoneClosedDay[];
 }
 
 export interface ProgramWithRelations extends Program {
