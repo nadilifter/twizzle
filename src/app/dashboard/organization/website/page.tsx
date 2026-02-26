@@ -239,7 +239,7 @@ export default function WebsitePage() {
                     <div className="relative flex-1 max-w-[250px]">
                       <Input 
                         value={config.subdomain || ""} 
-                        onChange={(e) => updateConfig("subdomain", e.target.value)}
+                        onChange={(e) => updateConfig("subdomain", e.target.value.replace(/\s/g, "-"))}
                         placeholder="my-gym" 
                         className={subdomainStatus === 'taken' || subdomainStatus === 'invalid' || subdomainStatus === 'error' ? 'border-red-500 pr-8' : 'pr-8'}
                         disabled={domainType === 'custom'}

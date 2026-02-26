@@ -176,8 +176,9 @@ export default function SignupPage() {
 
   // Debounced subdomain check
   const handleSubdomainChange = (value: string) => {
-    // Normalize subdomain: lowercase, alphanumeric and hyphens only
-    const normalized = value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+    // Space bar inserts a dash; then normalize: lowercase, alphanumeric and hyphens only
+    const withDashes = value.replace(/\s/g, "-")
+    const normalized = withDashes.toLowerCase().replace(/[^a-z0-9-]/g, "")
     setFormData(prev => ({ ...prev, subdomain: normalized }))
     
     if (subdomainCheckTimeout.current) {
@@ -500,7 +501,7 @@ export default function SignupPage() {
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <div className="flex items-center">
+                <div className="relative flex w-full items-center">
                   <Input
                     id="subdomain"
                     name="subdomain"
@@ -508,26 +509,28 @@ export default function SignupPage() {
                     value={formData.subdomain}
                     onChange={(e) => handleSubdomainChange(e.target.value)}
                     className={cn(
-                      "rounded-r-none",
+                      "flex-1 min-w-0 rounded-r-none",
                       errors.subdomain ? "border-destructive" : "",
                       subdomainStatus === "available" ? "border-green-500 focus-visible:ring-green-500" : "",
                       subdomainStatus === "taken" ? "border-destructive" : ""
                     )}
                   />
-                  <span className="inline-flex items-center px-3 h-9 border border-l-0 rounded-r-md bg-muted text-muted-foreground text-sm">
+                  <span className="inline-flex items-center px-3 h-9 border border-l-0 rounded-r-md bg-muted text-muted-foreground text-sm whitespace-nowrap">
                     {getBaseDomainSuffix()}
                   </span>
-                  <div className="ml-2 w-6">
-                    {subdomainStatus === "checking" && (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
-                    {subdomainStatus === "available" && (
-                      <Check className="h-4 w-4 text-green-500" />
-                    )}
-                    {subdomainStatus === "taken" && (
-                      <X className="h-4 w-4 text-destructive" />
-                    )}
-                  </div>
+                  {subdomainStatus !== "idle" && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      {subdomainStatus === "checking" && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {subdomainStatus === "available" && (
+                        <Check className="h-4 w-4 text-green-500" />
+                      )}
+                      {subdomainStatus === "taken" && (
+                        <X className="h-4 w-4 text-destructive" />
+                      )}
+                    </div>
+                  )}
                 </div>
                 {errors.subdomain && <p className="text-sm text-destructive">{errors.subdomain}</p>}
                 {subdomainStatus === "available" && (
