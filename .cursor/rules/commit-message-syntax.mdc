@@ -1,0 +1,45 @@
+---
+description: Enforce conventional commit message syntax when creating git commits
+alwaysApply: true
+---
+
+# Commit Message Syntax
+
+All commits MUST follow [Conventional Commits](https://www.conventionalcommits.org/) format used in this project.
+
+## Format
+
+```
+type: lowercase imperative description
+```
+
+## Allowed Types
+
+| Type | When to use |
+|------|-------------|
+| `feat` | New feature or capability |
+| `fix` | Bug fix |
+| `refactor` | Code restructuring with no behavior change |
+| `chore` | Maintenance, deps, scripts, config |
+| `style` | Visual/UI-only changes (not code formatting) |
+| `docs` | Documentation only |
+| `test` | Adding or updating tests |
+| `perf` | Performance improvement |
+
+## Rules
+
+- **No scope**: write `feat: add billing page`, NOT `feat(billing): add page`
+- **Lowercase** after the colon — no capitalized first word
+- **Imperative mood** — write "add", "fix", "remove", not "added", "fixes", "removed"
+- **Single line** — no multi-line body or footer unless the user explicitly asks for one
+- **Concise** — describe what changed in a short phrase, not a full sentence
+
+## Examples
+
+```
+feat: add organization deactivation/reactivation for superadmins
+fix: resolve all non-Adyen TypeScript errors across the project
+refactor: migrate ledger tables to reusable DataTable components
+chore: remove defunct User Signup quick link from superadmin sidebar
+style: move Directory to top of Athletes section in admin sidebar
+```
