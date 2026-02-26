@@ -88,7 +88,6 @@ function getSubdomainUrl(subdomain: string | null): string {
 const quickLinkConfig = [
   { title: "Landing Page", subdomain: null, path: "/", icon: Home },
   { title: "Login", subdomain: "login", path: "/", icon: LogIn },
-  { title: "User Signup", subdomain: "login", path: "/signup", icon: UserPlus },
   { title: "Dashboard", subdomain: "admin", path: "/", icon: LayoutDashboard },
   { title: "POS Terminal", subdomain: "pos", path: "/", icon: ShoppingCart },
   { title: "Coach Portal", subdomain: "coach", path: "/", icon: Users },
