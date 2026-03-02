@@ -295,6 +295,25 @@ model PasswordResetToken {
   @@index([token])
 }
 
+enum VerificationCodeType {
+  MFA_CHALLENGE
+  EMAIL_LOGIN
+}
+
+// Email verification codes for MFA challenges and passwordless email login
+model EmailVerificationCode {
+  id        String               @id @default(cuid())
+  email     String
+  code      String
+  token     String               @unique
+  type      VerificationCodeType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  @@index([email, type])
+}
+
 model UserPermission {
   id         String @id @default(cuid())
   userId     String

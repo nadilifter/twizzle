@@ -39,6 +39,10 @@ export const RATE_LIMITS = {
   api: { limit: 100, windowSeconds: 60 }, // 100 requests per minute
   /** Sensitive operations (payment, etc) */
   sensitive: { limit: isDev ? 30 : 10, windowSeconds: 60 }, // More lenient in dev
+  /** MFA challenge requests */
+  mfaChallenge: { limit: isDev ? 10 : 5, windowSeconds: 300 },
+  /** Email login code requests */
+  emailLoginSend: { limit: isDev ? 10 : 3, windowSeconds: 300 },
 } as const;
 
 /**

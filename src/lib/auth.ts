@@ -8,6 +8,7 @@ import { db } from "./db";
 import { ROLE_PERMISSIONS } from "./permissions";
 import { getEnvConfig, getCurrentEnvironment, getSubdomainUrl } from "./env-domains";
 import { getAuthCookies } from "./auth-cookies";
+import { shouldRequireMfa, validateVerificationCode, verifyVerifiedToken } from "./mfa";
 
 /**
  * Creates a signed bridge token for cross-domain session transfer
@@ -22,6 +23,64 @@ function createBridgeToken(email: string, secret: string): string {
 
   const tokenData = { email, exp, signature };
   return Buffer.from(JSON.stringify(tokenData)).toString("base64url");
+}
+
+/**
+ * Resolve the organization context and permissions for a user,
+ * returning the shape expected by NextAuth callbacks.
+ */
+async function buildAuthorizedUser(userId: string) {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: {
+      organization: true,
+      permissions: true,
+      memberships: { include: { organization: true } },
+    },
+  });
+
+  if (!user) return null;
+
+  let organizationId = user.organizationId;
+  let organizationName = user.organization?.name;
+
+  if (organizationId && !user.isSuperAdmin && user.organization && !user.organization.isActive) {
+    organizationId = null;
+    organizationName = undefined;
+  }
+
+  const activeMemberships = user.isSuperAdmin
+    ? user.memberships
+    : user.memberships.filter((m) => m.organization.isActive);
+
+  if (!organizationId && activeMemberships.length === 1) {
+    organizationId = activeMemberships[0].organizationId;
+    organizationName = activeMemberships[0].organization.name;
+  } else if (!organizationId) {
+    organizationId = "";
+    organizationName = "";
+  }
+
+  const dbPermissions = user.permissions.map((p) => p.permission);
+  let permissions =
+    dbPermissions.length > 0
+      ? dbPermissions
+      : ROLE_PERMISSIONS[(user.role || "").toUpperCase()] ?? [];
+  if (user.isSuperAdmin && !permissions.includes("*")) {
+    permissions = ["*"];
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    image: user.avatar,
+    role: user.role,
+    organizationId: organizationId || "",
+    organizationName: organizationName || "",
+    permissions,
+    isSuperAdmin: user.isSuperAdmin,
+  };
 }
 
 export const authOptions: NextAuthOptions = {
@@ -73,6 +132,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        mfaCode: { label: "MFA Code", type: "text" },
       },
       async authorize(credentials) {
         try {
@@ -82,15 +142,7 @@ export const authOptions: NextAuthOptions = {
 
           const user = await db.user.findUnique({
             where: { email: credentials.email },
-            include: {
-              organization: true,
-              permissions: true,
-              memberships: {
-                include: {
-                  organization: true
-                }
-              }
-            },
+            select: { id: true, passwordHash: true, lastActiveAt: true },
           });
 
           if (!user || !user.passwordHash) {
@@ -106,62 +158,95 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Invalid email or password");
           }
 
+          // MFA check: if the user is inactive, require a valid MFA code
+          if (shouldRequireMfa(user.lastActiveAt)) {
+            if (!credentials.mfaCode) {
+              return null;
+            }
+
+            // Accept either a signed proof token (from magic link) or a DB code
+            const proofResult = verifyVerifiedToken(credentials.mfaCode, "MFA_CHALLENGE");
+            const isProofValid = proofResult && proofResult.email === credentials.email;
+
+            if (!isProofValid) {
+              const mfaValid = await validateVerificationCode(
+                credentials.email,
+                credentials.mfaCode,
+                "MFA_CHALLENGE"
+              );
+              if (!mfaValid) {
+                throw new Error("Invalid or expired verification code");
+              }
+            }
+          }
+
           // Update last active
           await db.user.update({
             where: { id: user.id },
             data: { lastActiveAt: new Date() },
           });
 
-          // Determine organization to use
-          let organizationId = user.organizationId;
-          let organizationName = user.organization?.name;
-
-          // Skip deactivated saved org for non-superadmins
-          if (organizationId && !user.isSuperAdmin && user.organization && !user.organization.isActive) {
-            organizationId = null;
-            organizationName = undefined;
-          }
-
-          const activeMemberships = user.isSuperAdmin
-            ? user.memberships
-            : user.memberships.filter((m) => m.organization.isActive);
-          
-          if (!organizationId && activeMemberships.length === 1) {
-              organizationId = activeMemberships[0].organizationId;
-              organizationName = activeMemberships[0].organization.name;
-          } else if (!organizationId && activeMemberships.length > 1) {
-              organizationId = "";
-              organizationName = "";
-          } else if (!organizationId) {
-              organizationId = "";
-              organizationName = "";
-          }
-
-          const dbPermissions = user.permissions.map((p) => p.permission);
-          let permissions =
-            dbPermissions.length > 0
-              ? dbPermissions
-              : ROLE_PERMISSIONS[(user.role || "").toUpperCase()] ?? [];
-          if (user.isSuperAdmin && !permissions.includes("*")) {
-            permissions = ["*"];
-          }
-
-          const returnedUser = {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: user.avatar,
-            role: user.role,
-            organizationId: organizationId || "",
-            organizationName: organizationName || "",
-            permissions,
-            isSuperAdmin: user.isSuperAdmin,
-          };
+          const returnedUser = await buildAuthorizedUser(user.id);
+          if (!returnedUser) throw new Error("User not found");
           console.log("Authorize returning user:", returnedUser.email, returnedUser.id);
           return returnedUser;
         } catch (error) {
           console.error("Authorize error:", error);
           throw error; 
+        }
+      },
+    }),
+    CredentialsProvider({
+      id: "email-code",
+      name: "Email Code",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        code: { label: "Code", type: "text" },
+      },
+      async authorize(credentials) {
+        try {
+          if (!credentials?.email || !credentials?.code) {
+            throw new Error("Email and code are required");
+          }
+
+          const email = credentials.email.toLowerCase().trim();
+
+          // Accept either a signed proof token (from magic link) or a DB code
+          const proofResult = verifyVerifiedToken(credentials.code, "EMAIL_LOGIN");
+          const isProofValid = proofResult && proofResult.email === email;
+
+          if (!isProofValid) {
+            const isValid = await validateVerificationCode(
+              email,
+              credentials.code,
+              "EMAIL_LOGIN"
+            );
+            if (!isValid) {
+              throw new Error("Invalid or expired code");
+            }
+          }
+
+          const user = await db.user.findUnique({
+            where: { email },
+            select: { id: true, status: true },
+          });
+
+          if (!user || user.status !== "ACTIVE") {
+            throw new Error("Account not found or inactive");
+          }
+
+          await db.user.update({
+            where: { id: user.id },
+            data: { lastActiveAt: new Date() },
+          });
+
+          const returnedUser = await buildAuthorizedUser(user.id);
+          if (!returnedUser) throw new Error("User not found");
+          console.log("Email-code authorize returning user:", returnedUser.email, returnedUser.id);
+          return returnedUser;
+        } catch (error) {
+          console.error("Email-code authorize error:", error);
+          throw error;
         }
       },
     }),
@@ -264,9 +349,9 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user, account, trigger, session }) {
       try {
-        // Initial sign in with credentials provider
-        if (user && account?.provider === "credentials") {
-          console.log("JWT callback: Credentials sign in for user:", user.email, user.id);
+        // Initial sign in with credentials or email-code provider
+        if (user && (account?.provider === "credentials" || account?.provider === "email-code")) {
+          console.log(`JWT callback: ${account.provider} sign in for user:`, user.email, user.id);
           token.id = user.id;
           token.role = user.role;
           token.organizationId = user.organizationId;
