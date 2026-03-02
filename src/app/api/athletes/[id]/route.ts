@@ -254,6 +254,15 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
+    // Fetch instance attendance records to pair with registrations
+    const instanceAttendances = await db.instanceAttendance.findMany({
+      where: { athleteId: id },
+      select: { programInstanceId: true, status: true },
+    });
+    const attendanceByInstance = new Map(
+      instanceAttendances.map(a => [a.programInstanceId, a.status])
+    );
+
     // Fetch medical info
     const medicalInfo = await db.athleteMedicalInfo.findUnique({
       where: { athleteId: id },
@@ -369,6 +378,7 @@ export async function GET(
       instanceStatus: reg.programInstance.status,
       facilityName: reg.programInstance.facility?.name ?? null,
       status: reg.status,
+      attendanceStatus: attendanceByInstance.get(reg.programInstanceId) ?? null,
       createdAt: reg.createdAt.toISOString(),
     }))
 

@@ -268,8 +268,6 @@ export default function InstanceDetailPage() {
       REGISTERED: "default",
       WAITLISTED: "secondary",
       CANCELLED: "destructive",
-      ATTENDED: "default",
-      NO_SHOW: "destructive",
     };
     return (
       <Badge variant={variants[status] || "outline"}>
@@ -475,32 +473,28 @@ export default function InstanceDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-        <TabsList>
-          <TabsTrigger value="registrations" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Registrations ({instance._count.registrations})
-          </TabsTrigger>
-          <TabsTrigger value="attendance" className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
-            Attendance
-          </TabsTrigger>
-          {trainingEnabled && (
+        {trainingEnabled && (
+          <TabsList>
+            <TabsTrigger value="registrations" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Roster & Attendance ({instance._count.registrations})
+            </TabsTrigger>
             <TabsTrigger value="evaluations" className="flex items-center gap-2">
               <Star className="h-4 w-4" />
               Evaluations
             </TabsTrigger>
-          )}
-        </TabsList>
+          </TabsList>
+        )}
 
-        {/* Registrations Tab */}
+        {/* Roster & Attendance Tab */}
         <TabsContent value="registrations" className="mt-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Registrations</CardTitle>
+                  <CardTitle>Roster & Attendance</CardTitle>
                   <CardDescription>
-                    Athletes registered for this session
+                    Manage registrations and track attendance for this session
                   </CardDescription>
                 </div>
                 <Button size="sm">
@@ -521,166 +515,105 @@ export default function InstanceDetailPage() {
                     <TableRow>
                       <TableHead>Athlete</TableHead>
                       <TableHead>Guardian</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Registered</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {instance.registrations.map((reg) => (
-                      <TableRow key={reg.id}>
-                        <TableCell className="font-medium">
-                          {reg.athlete.name}
-                        </TableCell>
-                        <TableCell>{reg.user?.name || "-"}</TableCell>
-                        <TableCell>{getStatusBadge(reg.status)}</TableCell>
-                        <TableCell>
-                          {format(parseISO(reg.createdAt), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                disabled={updateLoading === reg.id}
-                              >
-                                {updateLoading === reg.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <MoreHorizontal className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => router.push(`/dashboard/athletes/${reg.athlete.id}`)}
-                              >
-                                View Athlete
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {reg.status !== "REGISTERED" && (
-                                <DropdownMenuItem
-                                  onClick={() => updateRegistrationStatus(reg.id, "REGISTERED")}
-                                >
-                                  Mark as Registered
-                                </DropdownMenuItem>
-                              )}
-                              {reg.status !== "ATTENDED" && (
-                                <DropdownMenuItem
-                                  onClick={() => updateRegistrationStatus(reg.id, "ATTENDED")}
-                                >
-                                  Mark as Attended
-                                </DropdownMenuItem>
-                              )}
-                              {reg.status !== "NO_SHOW" && (
-                                <DropdownMenuItem
-                                  onClick={() => updateRegistrationStatus(reg.id, "NO_SHOW")}
-                                >
-                                  Mark as No Show
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              {reg.status !== "CANCELLED" && (
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => updateRegistrationStatus(reg.id, "CANCELLED")}
-                                >
-                                  Cancel Registration
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Attendance Tab */}
-        <TabsContent value="attendance" className="mt-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Attendance</CardTitle>
-                  <CardDescription>
-                    Track attendance for registered athletes
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {instance.registrations.filter(r => r.status === "REGISTERED" || r.status === "ATTENDED").length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>No registered athletes to track</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Athlete</TableHead>
-                      <TableHead>Registration Status</TableHead>
+                      <TableHead>Registration</TableHead>
                       <TableHead>Attendance</TableHead>
                       <TableHead>Checked In</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {instance.registrations
-                      .filter(r => r.status === "REGISTERED" || r.status === "ATTENDED" || r.status === "NO_SHOW")
-                      .map((reg) => {
-                        const attendance = instance.attendances.find(
-                          a => a.athlete.id === reg.athlete.id
-                        );
-                        return (
-                          <TableRow key={reg.id}>
-                            <TableCell className="font-medium">
-                              {reg.athlete.name}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(reg.status)}</TableCell>
-                            <TableCell>
-                              {attendance ? (
-                                <div className="flex items-center gap-2">
-                                  {getAttendanceIcon(attendance.status)}
-                                  <span>{attendance.status}</span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">Not marked</span>
+                    {instance.registrations.map((reg) => {
+                      const attendance = instance.attendances.find(
+                        a => a.athlete.id === reg.athlete.id
+                      );
+                      return (
+                        <TableRow key={reg.id}>
+                          <TableCell className="font-medium">
+                            {reg.athlete.name}
+                          </TableCell>
+                          <TableCell>{reg.user?.name || "-"}</TableCell>
+                          <TableCell>{getStatusBadge(reg.status)}</TableCell>
+                          <TableCell>
+                            {reg.status === "CANCELLED" ? (
+                              <span className="text-muted-foreground">-</span>
+                            ) : attendance ? (
+                              <div className="flex items-center gap-2">
+                                {getAttendanceIcon(attendance.status)}
+                                <span>{attendance.status}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Not marked</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {attendance?.checkedIn
+                              ? format(parseISO(attendance.checkedIn), "h:mm a")
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {reg.status === "REGISTERED" && (
+                                <Select
+                                  value={attendance?.status || ""}
+                                  onValueChange={(value) =>
+                                    markAttendance(reg.athlete.id, value as any)
+                                  }
+                                  disabled={updateLoading === reg.athlete.id}
+                                >
+                                  <SelectTrigger className="w-[130px]">
+                                    <SelectValue placeholder="Mark..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="PRESENT">Present</SelectItem>
+                                    <SelectItem value="ABSENT">Absent</SelectItem>
+                                    <SelectItem value="LATE">Late</SelectItem>
+                                    <SelectItem value="EXCUSED">Excused</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              {attendance?.checkedIn
-                                ? format(parseISO(attendance.checkedIn), "h:mm a")
-                                : "-"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Select
-                                value={attendance?.status || ""}
-                                onValueChange={(value) =>
-                                  markAttendance(reg.athlete.id, value as any)
-                                }
-                                disabled={updateLoading === reg.athlete.id}
-                              >
-                                <SelectTrigger className="w-[130px]">
-                                  <SelectValue placeholder="Mark..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="PRESENT">Present</SelectItem>
-                                  <SelectItem value="ABSENT">Absent</SelectItem>
-                                  <SelectItem value="LATE">Late</SelectItem>
-                                  <SelectItem value="EXCUSED">Excused</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={updateLoading === reg.id}
+                                  >
+                                    {updateLoading === reg.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => router.push(`/dashboard/athletes/${reg.athlete.id}`)}
+                                  >
+                                    View Athlete
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {reg.status !== "REGISTERED" && reg.status !== "CANCELLED" && (
+                                    <DropdownMenuItem
+                                      onClick={() => updateRegistrationStatus(reg.id, "REGISTERED")}
+                                    >
+                                      Mark as Registered
+                                    </DropdownMenuItem>
+                                  )}
+                                  {reg.status !== "CANCELLED" && (
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      onClick={() => updateRegistrationStatus(reg.id, "CANCELLED")}
+                                    >
+                                      Cancel Registration
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -702,7 +635,7 @@ export default function InstanceDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {instance.registrations.filter(r => r.status === "REGISTERED" || r.status === "ATTENDED").length === 0 ? (
+              {instance.registrations.filter(r => r.status === "REGISTERED").length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <Star className="h-12 w-12 mx-auto mb-4 opacity-30" />
                   <p>No athletes to evaluate</p>
@@ -719,7 +652,7 @@ export default function InstanceDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {instance.registrations
-                      .filter(r => r.status === "REGISTERED" || r.status === "ATTENDED")
+                      .filter(r => r.status === "REGISTERED")
                       .map((reg) => {
                         const attendance = instance.attendances.find(
                           a => a.athlete.id === reg.athlete.id

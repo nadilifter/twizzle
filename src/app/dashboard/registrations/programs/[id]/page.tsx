@@ -38,6 +38,13 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
@@ -93,6 +100,13 @@ interface Registration {
     } | null;
 }
 
+interface InstanceAttendanceRecord {
+    id: string;
+    athleteId: string;
+    status: string;
+    checkedIn: string | null;
+}
+
 export default function ProgramDetailPage() {
     const params = useParams();
     const router = useRouter();
@@ -102,9 +116,11 @@ export default function ProgramDetailPage() {
     const [instances, setInstances] = useState<Instance[]>([]);
     const [selectedInstance, setSelectedInstance] = useState<Instance | null>(null);
     const [registrations, setRegistrations] = useState<Registration[]>([]);
+    const [attendances, setAttendances] = useState<InstanceAttendanceRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [instancesLoading, setInstancesLoading] = useState(false);
     const [registrationsLoading, setRegistrationsLoading] = useState(false);
+    const [attendanceLoading, setAttendanceLoading] = useState<string | null>(null);
 
     useBreadcrumbOverride(
         program ? `/dashboard/registrations/programs/${programId}` : undefined,
@@ -152,10 +168,18 @@ export default function ProgramDetailPage() {
     const fetchRegistrations = async (instanceId: string) => {
         setRegistrationsLoading(true);
         try {
-            const response = await fetch(`/api/programs/${programId}/instances/${instanceId}/registrations`);
-            if (!response.ok) throw new Error("Failed to fetch registrations");
-            const data = await response.json();
-            setRegistrations(data || []);
+            const [regRes, attRes] = await Promise.all([
+                fetch(`/api/programs/${programId}/instances/${instanceId}/registrations`),
+                fetch(`/api/programs/${programId}/instances/${instanceId}/attendance`),
+            ]);
+            if (!regRes.ok) throw new Error("Failed to fetch registrations");
+            const regData = await regRes.json();
+            setRegistrations(regData || []);
+
+            if (attRes.ok) {
+                const attData = await attRes.json();
+                setAttendances(attData.attendances || []);
+            }
         } catch (error) {
             toast.error("Failed to load registrations");
         } finally {
@@ -194,6 +218,32 @@ export default function ProgramDetailPage() {
             fetchRegistrations(selectedInstance.id);
         } catch (error) {
             toast.error("Failed to update registration");
+        }
+    };
+
+    const markAttendance = async (athleteId: string, status: string) => {
+        if (!selectedInstance) return;
+        setAttendanceLoading(athleteId);
+        try {
+            const response = await fetch(
+                `/api/programs/${programId}/instances/${selectedInstance.id}/attendance`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        athleteId,
+                        status,
+                        checkedIn: status === "PRESENT" || status === "LATE",
+                    }),
+                }
+            );
+            if (!response.ok) throw new Error("Failed to mark attendance");
+            toast.success("Attendance updated");
+            fetchRegistrations(selectedInstance.id);
+        } catch (error) {
+            toast.error("Failed to mark attendance");
+        } finally {
+            setAttendanceLoading(null);
         }
     };
 
@@ -521,74 +571,94 @@ export default function ProgramDetailPage() {
                                     <TableRow>
                                         <TableHead>Athlete</TableHead>
                                         <TableHead>Guardian</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        <TableHead>Registration</TableHead>
+                                        <TableHead>Attendance</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {registrations.map((reg) => (
-                                        <TableRow key={reg.id}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                                        {reg.athlete.name?.charAt(0) || "?"}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium">{reg.athlete.name}</div>
-                                                        <div className="text-xs text-muted-foreground">
-                                                            {reg.athlete.email}
+                                    {registrations.map((reg) => {
+                                        const attendance = attendances.find(a => a.athleteId === reg.athlete.id);
+                                        return (
+                                            <TableRow key={reg.id}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                                            {reg.athlete.name?.charAt(0) || "?"}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium">{reg.athlete.name}</div>
+                                                            <div className="text-xs text-muted-foreground">
+                                                                {reg.athlete.email}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                {reg.user?.name || "-"}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge 
-                                                    variant={
-                                                        reg.status === "ATTENDED" ? "default" :
-                                                        reg.status === "NO_SHOW" ? "destructive" :
-                                                        reg.status === "WAITLISTED" ? "secondary" :
-                                                        reg.status === "CANCELLED" ? "outline" :
-                                                        "default"
-                                                    }
-                                                >
-                                                    {reg.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            onClick={() => updateRegistrationStatus(reg.id, "ATTENDED")}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {reg.user?.name || "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge 
+                                                        variant={
+                                                            reg.status === "WAITLISTED" ? "secondary" :
+                                                            reg.status === "CANCELLED" ? "outline" :
+                                                            "default"
+                                                        }
+                                                    >
+                                                        {reg.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {reg.status === "REGISTERED" ? (
+                                                        <Select
+                                                            value={attendance?.status || ""}
+                                                            onValueChange={(value) => markAttendance(reg.athlete.id, value)}
+                                                            disabled={attendanceLoading === reg.athlete.id}
                                                         >
-                                                            <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                                                            Mark Attended
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => updateRegistrationStatus(reg.id, "NO_SHOW")}
-                                                        >
-                                                            <XCircle className="h-4 w-4 mr-2 text-red-600" />
-                                                            Mark No-Show
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            onClick={() => updateRegistrationStatus(reg.id, "CANCELLED")}
-                                                            className="text-destructive"
-                                                        >
-                                                            Cancel Registration
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                                            <SelectTrigger className="w-[130px]">
+                                                                <SelectValue placeholder="Mark..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="PRESENT">Present</SelectItem>
+                                                                <SelectItem value="ABSENT">Absent</SelectItem>
+                                                                <SelectItem value="LATE">Late</SelectItem>
+                                                                <SelectItem value="EXCUSED">Excused</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                onClick={() => router.push(`/dashboard/athletes/${reg.athlete.id}`)}
+                                                            >
+                                                                View Athlete
+                                                            </DropdownMenuItem>
+                                                            {reg.status !== "CANCELLED" && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => updateRegistrationStatus(reg.id, "CANCELLED")}
+                                                                        className="text-destructive"
+                                                                    >
+                                                                        Cancel Registration
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         )}

@@ -23,7 +23,7 @@ export type PricingModel = "FLAT_RATE" | "PER_SESSION";
 export type RecurrenceType = "NON_RECURRING" | "RECURRING";
 export type RegistrationType = "ALL_INSTANCES" | "PER_INSTANCE";
 export type InstanceStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
-export type RegistrationStatus = "REGISTERED" | "WAITLISTED" | "CANCELLED" | "ATTENDED" | "NO_SHOW";
+export type RegistrationStatus = "REGISTERED" | "WAITLISTED" | "CANCELLED";
 export type TrainingZoneCapacityMode = "MINIMUM" | "SUM";
 
 export interface ProgramLevelRequirement {

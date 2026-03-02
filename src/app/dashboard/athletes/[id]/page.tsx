@@ -32,6 +32,8 @@ import {
   Trophy,
   MapPin,
   Calendar,
+  UserCheck,
+  UserX,
 } from "lucide-react"
 import { calculateAge } from "@/lib/age-utils"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
@@ -79,6 +81,7 @@ import type {
   EnrollmentWithProgram,
   CompetitionEntrySummary,
   EventRegistrationSummary,
+  AttendanceWithEvent,
 } from "@/types/athletes"
 
 interface RegistrationItem {
@@ -273,6 +276,7 @@ export default function AthleteProfilePage() {
   const registrations = ((athlete as any).registrations ?? []) as RegistrationItem[]
   const competitionEntries = ((athlete as any).competitionEntries ?? []) as CompetitionEntrySummary[]
   const eventRegistrations = ((athlete as any).eventRegistrations ?? []) as EventRegistrationSummary[]
+  const eventAttendances = ((athlete as any).attendances ?? []) as AttendanceWithEvent[]
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -561,23 +565,12 @@ export default function AthleteProfilePage() {
           </TabsContent>
         )}
 
-        {/* ===== ATTENDANCE TAB (placeholder) ===== */}
+        {/* ===== ATTENDANCE TAB ===== */}
         <TabsContent value="attendance">
-          <Card>
-            <CardHeader>
-              <CardTitle>Attendance</CardTitle>
-              <CardDescription>Attendance history and records</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <CalendarCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Coming Soon</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  Attendance tracking, history, and reporting will be available here.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <AthleteAttendanceTab
+            eventRegistrations={eventRegistrations}
+            eventAttendances={eventAttendances}
+          />
         </TabsContent>
 
         {/* ===== EVALUATIONS TAB (placeholder) ===== */}
@@ -1101,9 +1094,254 @@ const EVENT_REG_STATUS_CONFIG: Record<string, { label: string; className: string
   REGISTERED: { label: "Registered", className: "bg-green-50 text-green-700 border-green-200" },
   WAITLISTED: { label: "Waitlisted", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
   CANCELLED: { label: "Cancelled", className: "bg-red-50 text-destructive border-red-200" },
-  ATTENDED: { label: "Attended", className: "bg-blue-50 text-blue-700 border-blue-200" },
-  NO_SHOW: { label: "No Show", className: "bg-muted text-muted-foreground" },
 }
+
+const ATTENDANCE_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  PRESENT: { label: "Present", className: "bg-green-50 text-green-700 border-green-200" },
+  ABSENT: { label: "Absent", className: "bg-red-50 text-destructive border-red-200" },
+  LATE: { label: "Late", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  EXCUSED: { label: "Excused", className: "bg-blue-50 text-blue-700 border-blue-200" },
+}
+
+// ─── Attendance Tab ─────────────────────────────────────────────────
+
+interface UnifiedAttendanceRecord {
+  id: string
+  date: string
+  source: "instance" | "event"
+  programName: string
+  status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "REGISTERED" | null
+  checkedIn: string | null
+  facilityName: string | null
+}
+
+function AthleteAttendanceTab({
+  eventRegistrations,
+  eventAttendances,
+}: {
+  eventRegistrations: EventRegistrationSummary[]
+  eventAttendances: AttendanceWithEvent[]
+}) {
+  const records = React.useMemo<UnifiedAttendanceRecord[]>(() => {
+    const items: UnifiedAttendanceRecord[] = []
+
+    for (const reg of eventRegistrations) {
+      if (reg.attendanceStatus && reg.attendanceStatus !== "REGISTERED") {
+        items.push({
+          id: `inst-${reg.id}`,
+          date: reg.date,
+          source: "instance",
+          programName: reg.programName,
+          status: reg.attendanceStatus,
+          checkedIn: null,
+          facilityName: reg.facilityName,
+        })
+      }
+    }
+
+    for (const att of eventAttendances) {
+      items.push({
+        id: `evt-${att.id}`,
+        date: att.event.date,
+        source: "event",
+        programName: att.event.title,
+        status: att.status,
+        checkedIn: att.checkedIn,
+        facilityName: null,
+      })
+    }
+
+    items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return items
+  }, [eventRegistrations, eventAttendances])
+
+  const stats = React.useMemo(() => {
+    const all = records.filter(r => r.status && r.status !== "REGISTERED")
+    const present = all.filter(r => r.status === "PRESENT").length
+    const absent = all.filter(r => r.status === "ABSENT").length
+    const late = all.filter(r => r.status === "LATE").length
+    const excused = all.filter(r => r.status === "EXCUSED").length
+    const total = all.length
+    const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0
+    return { total, present, absent, late, excused, rate }
+  }, [records])
+
+  const attendanceColumns: ColumnDef<UnifiedAttendanceRecord>[] = [
+    {
+      id: "date",
+      accessorFn: (row) => new Date(row.date).getTime(),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {format(new Date(row.original.date), "MMM d, yyyy")}
+        </span>
+      ),
+    },
+    {
+      id: "program",
+      accessorFn: (row) => row.programName,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Program / Event" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.programName}</span>
+      ),
+    },
+    {
+      id: "facility",
+      accessorFn: (row) => row.facilityName ?? "",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Facility" />
+      ),
+      cell: ({ row }) =>
+        row.original.facilityName ? (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate max-w-[180px]">{row.original.facilityName}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      id: "status",
+      accessorFn: (row) => row.status ?? "",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Status" />
+      ),
+      cell: ({ row }) => {
+        const status = row.original.status
+        if (!status) return <span className="text-muted-foreground">—</span>
+        const config = ATTENDANCE_STATUS_CONFIG[status] ?? {
+          label: status,
+          className: "bg-muted text-muted-foreground",
+        }
+        return (
+          <Badge variant="outline" className={config.className}>
+            {config.label}
+          </Badge>
+        )
+      },
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      id: "source",
+      accessorKey: "source",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Type" />
+      ),
+      cell: ({ row }) => (
+        <Badge variant="outline" className="text-xs">
+          {row.original.source === "instance" ? "Session" : "Event"}
+        </Badge>
+      ),
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Summary Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Attendance Rate</p>
+                <p className="text-2xl font-bold">{stats.rate}%</p>
+              </div>
+              <div className={`rounded-full p-2.5 ${stats.rate >= 80 ? "bg-green-100" : stats.rate >= 60 ? "bg-yellow-100" : "bg-red-100"}`}>
+                <UserCheck className={`h-5 w-5 ${stats.rate >= 80 ? "text-green-700" : stats.rate >= 60 ? "text-yellow-700" : "text-red-700"}`} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Present</p>
+                <p className="text-2xl font-bold text-green-600">{stats.present}</p>
+              </div>
+              <div className="rounded-full bg-green-100 p-2.5">
+                <CheckCircle2 className="h-5 w-5 text-green-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Absent</p>
+                <p className="text-2xl font-bold text-red-600">{stats.absent}</p>
+              </div>
+              <div className="rounded-full bg-red-100 p-2.5">
+                <UserX className="h-5 w-5 text-red-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Late</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.late}</p>
+              </div>
+              <div className="rounded-full bg-yellow-100 p-2.5">
+                <Clock className="h-5 w-5 text-yellow-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Excused</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.excused}</p>
+              </div>
+              <div className="rounded-full bg-blue-100 p-2.5">
+                <AlertCircle className="h-5 w-5 text-blue-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Attendance History */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Attendance History</CardTitle>
+          <CardDescription className="mt-1">
+            {records.length} attendance record{records.length === 1 ? "" : "s"} across sessions and events
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {records.length > 0 ? (
+            <DataTable
+              columns={attendanceColumns}
+              data={records}
+              pageSize={10}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <CalendarCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-medium">No Attendance Records</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                Attendance records will appear here as this athlete attends sessions and events.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Events Tab ─────────────────────────────────────────────────────
 
 function AthleteEventsTab({
   eventRegistrations,
@@ -1177,7 +1415,7 @@ function AthleteEventsTab({
       id: "status",
       accessorKey: "status",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Status" />
+        <DataTableColumnHeader column={column} title="Registration" />
       ),
       cell: ({ row }) => {
         const config = EVENT_REG_STATUS_CONFIG[row.original.status] ?? {
@@ -1191,6 +1429,28 @@ function AthleteEventsTab({
         )
       },
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      id: "attendance",
+      accessorFn: (row) => row.attendanceStatus ?? "",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Attendance" />
+      ),
+      cell: ({ row }) => {
+        const attStatus = row.original.attendanceStatus
+        if (!attStatus) {
+          return <span className="text-muted-foreground">—</span>
+        }
+        const config = ATTENDANCE_STATUS_CONFIG[attStatus] ?? {
+          label: attStatus,
+          className: "bg-muted text-muted-foreground",
+        }
+        return (
+          <Badge variant="outline" className={config.className}>
+            {config.label}
+          </Badge>
+        )
+      },
     },
   ]
 
@@ -1217,7 +1477,7 @@ function AthleteEventsTab({
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Attended</p>
                 <p className="text-2xl font-bold">
-                  {eventRegistrations.filter((r) => r.status === "ATTENDED").length}
+                  {eventRegistrations.filter((r) => r.attendanceStatus === "PRESENT" || r.attendanceStatus === "LATE").length}
                 </p>
               </div>
               <div className="rounded-full bg-green-100 p-2.5">

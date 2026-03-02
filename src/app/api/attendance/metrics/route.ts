@@ -2,11 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
+type StatusKey = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "REGISTERED";
+
+function addStatus(
+  stats: { total: number; present: number; absent: number; late: number; excused: number },
+  status: string,
+) {
+  stats.total++;
+  if (status === "PRESENT") stats.present++;
+  else if (status === "ABSENT") stats.absent++;
+  else if (status === "LATE") stats.late++;
+  else if (status === "EXCUSED") stats.excused++;
+}
+
+function calcRate(s: { total: number; present: number; late: number }) {
+  return s.total > 0 ? Math.round(((s.present + s.late) / s.total) * 100) : 0;
+}
+
 // GET /api/attendance/metrics
-// Query params:
-// - groupBy: "overall" | "athlete" | "program" | "coach"
-// - athleteId, programId, coachId: optional filters
-// - startDate, endDate: date range filter
+// Combines data from both Event-based Attendance and InstanceAttendance
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
@@ -14,6 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const orgId = session.user.organizationId;
     const { searchParams } = new URL(request.url);
     const groupBy = searchParams.get("groupBy") || "overall";
     const athleteId = searchParams.get("athleteId");
@@ -22,60 +37,81 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    // Base where clause scoped to organization
-    const baseWhere: any = {
+    const dateFilter = startDate && endDate
+      ? { gte: new Date(startDate), lte: new Date(endDate) }
+      : undefined;
+
+    // ── Event-based Attendance where clause ──
+    const eventWhere: any = {
       event: {
-        organizationId: session.user.organizationId,
+        organizationId: orgId,
         ...(programId && { programId }),
         ...(coachId && { coachId }),
-        ...(startDate && endDate && {
-          date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
-          },
-        }),
+        ...(dateFilter && { date: dateFilter }),
       },
       ...(athleteId && { athleteId }),
     };
 
-    // Get overall summary counts
-    const [totalCount, presentCount, absentCount, lateCount, excusedCount, registeredCount] = await Promise.all([
-      db.attendance.count({ where: baseWhere }),
-      db.attendance.count({ where: { ...baseWhere, status: "PRESENT" } }),
-      db.attendance.count({ where: { ...baseWhere, status: "ABSENT" } }),
-      db.attendance.count({ where: { ...baseWhere, status: "LATE" } }),
-      db.attendance.count({ where: { ...baseWhere, status: "EXCUSED" } }),
-      db.attendance.count({ where: { ...baseWhere, status: "REGISTERED" } }),
-    ]);
-
-    const summary = {
-      total: totalCount,
-      present: presentCount,
-      absent: absentCount,
-      late: lateCount,
-      excused: excusedCount,
-      registered: registeredCount,
-      attendanceRate: totalCount > 0 
-        ? Math.round(((presentCount + lateCount) / totalCount) * 100) 
-        : 0,
+    // ── Instance-based Attendance where clause ──
+    const instanceWhere: any = {
+      programInstance: {
+        organizationId: orgId,
+        ...(programId && { programId }),
+        ...(dateFilter && { date: dateFilter }),
+      },
+      ...(athleteId && { athleteId }),
+      status: { not: "REGISTERED" as const },
     };
 
-    // Get breakdown based on groupBy
+    // ── Summary counts (both sources) ──
+    const statusList: StatusKey[] = ["PRESENT", "ABSENT", "LATE", "EXCUSED", "REGISTERED"];
+    const [eventCounts, instanceCounts] = await Promise.all([
+      Promise.all([
+        db.attendance.count({ where: eventWhere }),
+        ...statusList.map(s => db.attendance.count({ where: { ...eventWhere, status: s } })),
+      ]),
+      Promise.all([
+        db.instanceAttendance.count({ where: instanceWhere }),
+        ...statusList.map(s => db.instanceAttendance.count({ where: { ...instanceWhere, status: s } })),
+      ]),
+    ]);
+
+    const total = eventCounts[0] + instanceCounts[0];
+    const present = eventCounts[1] + instanceCounts[1];
+    const absent = eventCounts[2] + instanceCounts[2];
+    const late = eventCounts[3] + instanceCounts[3];
+    const excused = eventCounts[4] + instanceCounts[4];
+    const registered = eventCounts[5] + instanceCounts[5];
+
+    const summary = {
+      total,
+      present,
+      absent,
+      late,
+      excused,
+      registered,
+      attendanceRate: total > 0 ? Math.round(((present + late) / total) * 100) : 0,
+    };
+
+    // ── Breakdown ──
     let breakdown: any[] = [];
 
     if (groupBy === "athlete") {
-      // Group by athlete
-      const athleteStats = await db.attendance.groupBy({
-        by: ["athleteId"],
-        where: baseWhere,
-        _count: {
-          id: true,
-        },
-      });
+      const statsMap = new Map<string, { total: number; present: number; absent: number; late: number; excused: number }>();
 
-      // Get counts by status for each athlete
-      const athleteIds = athleteStats.map(s => s.athleteId);
-      
+      const [eventAtts, instanceAtts] = await Promise.all([
+        db.attendance.findMany({ where: eventWhere, select: { athleteId: true, status: true } }),
+        db.instanceAttendance.findMany({ where: instanceWhere, select: { athleteId: true, status: true } }),
+      ]);
+
+      for (const att of [...eventAtts, ...instanceAtts]) {
+        if (!statsMap.has(att.athleteId)) {
+          statsMap.set(att.athleteId, { total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+        }
+        addStatus(statsMap.get(att.athleteId)!, att.status);
+      }
+
+      const athleteIds = Array.from(statsMap.keys());
       if (athleteIds.length > 0) {
         const athletes = await db.athlete.findMany({
           where: { id: { in: athleteIds } },
@@ -83,243 +119,116 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             organizationAthletes: {
-              where: { organizationId: session.user.organizationId },
+              where: { organizationId: orgId },
               select: { level: true },
               take: 1,
             },
           },
         });
-
         const athleteMap = new Map(athletes.map(a => [a.id, a]));
 
-        // Get detailed status counts per athlete
-        const detailedStats = await Promise.all(
-          athleteIds.map(async (athleteId) => {
-            const whereWithAthlete = { ...baseWhere, athleteId };
-            const [total, present, absent, late, excused] = await Promise.all([
-              db.attendance.count({ where: whereWithAthlete }),
-              db.attendance.count({ where: { ...whereWithAthlete, status: "PRESENT" } }),
-              db.attendance.count({ where: { ...whereWithAthlete, status: "ABSENT" } }),
-              db.attendance.count({ where: { ...whereWithAthlete, status: "LATE" } }),
-              db.attendance.count({ where: { ...whereWithAthlete, status: "EXCUSED" } }),
-            ]);
-
-            const athlete = athleteMap.get(athleteId);
-            return {
-              id: athleteId,
-              name: athlete?.name || "Unknown",
-              level: athlete?.organizationAthletes?.[0]?.level || null,
-              total,
-              present,
-              absent,
-              late,
-              excused,
-              rate: total > 0 ? Math.round(((present + late) / total) * 100) : 0,
-            };
-          })
-        );
-
-        breakdown = detailedStats.sort((a, b) => b.total - a.total);
+        breakdown = athleteIds.map(id => {
+          const s = statsMap.get(id)!;
+          const athlete = athleteMap.get(id);
+          return {
+            id,
+            name: athlete?.name || "Unknown",
+            level: athlete?.organizationAthletes?.[0]?.level || null,
+            ...s,
+            rate: calcRate(s),
+          };
+        }).sort((a, b) => b.total - a.total);
       }
     } else if (groupBy === "program") {
-      // Group by program (via event)
-      const attendancesWithProgram = await db.attendance.findMany({
-        where: baseWhere,
-        select: {
-          id: true,
-          status: true,
-          event: {
-            select: {
-              programId: true,
-              program: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      const programStats = new Map<string, { id: string; name: string; total: number; present: number; absent: number; late: number; excused: number }>();
 
-      // Aggregate by program
-      const programStats = new Map<string, {
-        id: string;
-        name: string;
-        total: number;
-        present: number;
-        absent: number;
-        late: number;
-        excused: number;
-      }>();
+      const [eventAtts, instanceAtts] = await Promise.all([
+        db.attendance.findMany({
+          where: eventWhere,
+          select: { status: true, event: { select: { programId: true, program: { select: { id: true, name: true } } } } },
+        }),
+        db.instanceAttendance.findMany({
+          where: instanceWhere,
+          select: { status: true, programInstance: { select: { programId: true, program: { select: { id: true, name: true } } } } },
+        }),
+      ]);
 
-      for (const att of attendancesWithProgram) {
-        const programId = att.event.programId;
-        if (!programId) continue;
-
-        const program = att.event.program;
-        if (!programStats.has(programId)) {
-          programStats.set(programId, {
-            id: programId,
-            name: program?.name || "Unknown",
-            total: 0,
-            present: 0,
-            absent: 0,
-            late: 0,
-            excused: 0,
-          });
+      for (const att of eventAtts) {
+        const pid = att.event.programId;
+        if (!pid) continue;
+        if (!programStats.has(pid)) {
+          programStats.set(pid, { id: pid, name: att.event.program?.name || "Unknown", total: 0, present: 0, absent: 0, late: 0, excused: 0 });
         }
-
-        const stats = programStats.get(programId)!;
-        stats.total++;
-        if (att.status === "PRESENT") stats.present++;
-        else if (att.status === "ABSENT") stats.absent++;
-        else if (att.status === "LATE") stats.late++;
-        else if (att.status === "EXCUSED") stats.excused++;
+        addStatus(programStats.get(pid)!, att.status);
+      }
+      for (const att of instanceAtts) {
+        const pid = att.programInstance.programId;
+        if (!programStats.has(pid)) {
+          programStats.set(pid, { id: pid, name: att.programInstance.program.name, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+        }
+        addStatus(programStats.get(pid)!, att.status);
       }
 
       breakdown = Array.from(programStats.values())
-        .map(stats => ({
-          ...stats,
-          rate: stats.total > 0 ? Math.round(((stats.present + stats.late) / stats.total) * 100) : 0,
-        }))
+        .map(s => ({ ...s, rate: calcRate(s) }))
         .sort((a, b) => b.total - a.total);
     } else if (groupBy === "coach") {
-      // Group by coach (via event)
-      const attendancesWithCoach = await db.attendance.findMany({
-        where: baseWhere,
-        select: {
-          id: true,
-          status: true,
-          event: {
-            select: {
-              coachId: true,
-              coach: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-        },
+      // Coach breakdown only applies to Event-based attendance (events have a coach; instances don't)
+      const coachStats = new Map<string, { id: string; name: string; email: string | null; total: number; present: number; absent: number; late: number; excused: number }>();
+
+      const eventAtts = await db.attendance.findMany({
+        where: eventWhere,
+        select: { status: true, event: { select: { coachId: true, coach: { select: { id: true, name: true, email: true } } } } },
       });
 
-      // Aggregate by coach
-      const coachStats = new Map<string, {
-        id: string;
-        name: string;
-        email: string | null;
-        total: number;
-        present: number;
-        absent: number;
-        late: number;
-        excused: number;
-      }>();
-
-      for (const att of attendancesWithCoach) {
-        const coachId = att.event.coachId;
-        if (!coachId) continue;
-
-        const coach = att.event.coach;
-        if (!coachStats.has(coachId)) {
-          coachStats.set(coachId, {
-            id: coachId,
-            name: coach?.name || "Unknown",
-            email: coach?.email || null,
-            total: 0,
-            present: 0,
-            absent: 0,
-            late: 0,
-            excused: 0,
-          });
+      for (const att of eventAtts) {
+        const cid = att.event.coachId;
+        if (!cid) continue;
+        if (!coachStats.has(cid)) {
+          coachStats.set(cid, { id: cid, name: att.event.coach?.name || "Unknown", email: att.event.coach?.email || null, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
         }
-
-        const stats = coachStats.get(coachId)!;
-        stats.total++;
-        if (att.status === "PRESENT") stats.present++;
-        else if (att.status === "ABSENT") stats.absent++;
-        else if (att.status === "LATE") stats.late++;
-        else if (att.status === "EXCUSED") stats.excused++;
+        addStatus(coachStats.get(cid)!, att.status);
       }
 
       breakdown = Array.from(coachStats.values())
-        .map(stats => ({
-          ...stats,
-          rate: stats.total > 0 ? Math.round(((stats.present + stats.late) / stats.total) * 100) : 0,
-        }))
+        .map(s => ({ ...s, rate: calcRate(s) }))
         .sort((a, b) => b.total - a.total);
     } else if (groupBy === "date") {
-      // Group by date for trend analysis
-      const attendancesWithDate = await db.attendance.findMany({
-        where: baseWhere,
-        select: {
-          id: true,
-          status: true,
-          event: {
-            select: {
-              date: true,
-            },
-          },
-        },
-        orderBy: {
-          event: {
-            date: "asc",
-          },
-        },
-      });
+      const dateStats = new Map<string, { date: string; total: number; present: number; absent: number; late: number; excused: number }>();
 
-      // Aggregate by date
-      const dateStats = new Map<string, {
-        date: string;
-        total: number;
-        present: number;
-        absent: number;
-        late: number;
-        excused: number;
-      }>();
+      const [eventAtts, instanceAtts] = await Promise.all([
+        db.attendance.findMany({
+          where: eventWhere,
+          select: { status: true, event: { select: { date: true } } },
+          orderBy: { event: { date: "asc" } },
+        }),
+        db.instanceAttendance.findMany({
+          where: instanceWhere,
+          select: { status: true, programInstance: { select: { date: true } } },
+          orderBy: { programInstance: { date: "asc" } },
+        }),
+      ]);
 
-      for (const att of attendancesWithDate) {
-        const dateStr = att.event.date.toISOString().split("T")[0];
-        
-        if (!dateStats.has(dateStr)) {
-          dateStats.set(dateStr, {
-            date: dateStr,
-            total: 0,
-            present: 0,
-            absent: 0,
-            late: 0,
-            excused: 0,
-          });
-        }
-
-        const stats = dateStats.get(dateStr)!;
-        stats.total++;
-        if (att.status === "PRESENT") stats.present++;
-        else if (att.status === "ABSENT") stats.absent++;
-        else if (att.status === "LATE") stats.late++;
-        else if (att.status === "EXCUSED") stats.excused++;
+      for (const att of eventAtts) {
+        const d = att.event.date.toISOString().split("T")[0];
+        if (!dateStats.has(d)) dateStats.set(d, { date: d, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+        addStatus(dateStats.get(d)!, att.status);
+      }
+      for (const att of instanceAtts) {
+        const d = att.programInstance.date.toISOString().split("T")[0];
+        if (!dateStats.has(d)) dateStats.set(d, { date: d, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+        addStatus(dateStats.get(d)!, att.status);
       }
 
       breakdown = Array.from(dateStats.values())
-        .map(stats => ({
-          ...stats,
-          rate: stats.total > 0 ? Math.round(((stats.present + stats.late) / stats.total) * 100) : 0,
-        }));
+        .map(s => ({ ...s, rate: calcRate(s) }))
+        .sort((a, b) => a.date.localeCompare(b.date));
     }
 
     return NextResponse.json({
       summary,
       breakdown,
-      filters: {
-        groupBy,
-        athleteId,
-        programId,
-        coachId,
-        startDate,
-        endDate,
-      },
+      filters: { groupBy, athleteId, programId, coachId, startDate, endDate },
     });
   } catch (error) {
     console.error("Error fetching attendance metrics:", error);

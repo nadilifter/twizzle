@@ -70,7 +70,7 @@ export async function GET(
     const registeredAthletes = await db.instanceRegistration.findMany({
       where: {
         programInstanceId: instanceId,
-        status: { in: ["REGISTERED", "ATTENDED"] },
+        status: "REGISTERED",
       },
       include: {
         athlete: {
@@ -179,33 +179,6 @@ export async function POST(
         })
       );
 
-      // Also update related registration statuses if applicable
-      // Mark as ATTENDED for those who are present
-      await db.instanceRegistration.updateMany({
-        where: {
-          programInstanceId: instanceId,
-          athleteId: {
-            in: validated.attendances
-              .filter(a => a.status === "PRESENT")
-              .map(a => a.athleteId),
-          },
-        },
-        data: { status: "ATTENDED" },
-      });
-
-      // Mark as NO_SHOW for those who are absent
-      await db.instanceRegistration.updateMany({
-        where: {
-          programInstanceId: instanceId,
-          athleteId: {
-            in: validated.attendances
-              .filter(a => a.status === "ABSENT")
-              .map(a => a.athleteId),
-          },
-        },
-        data: { status: "NO_SHOW" },
-      });
-
       return NextResponse.json({
         message: `Updated ${results.length} attendance records`,
         count: results.length,
@@ -243,26 +216,6 @@ export async function POST(
           },
         },
       });
-
-      // Update registration status if applicable
-      // Map attendance status to registration status
-      if (validated.status === "PRESENT") {
-        await db.instanceRegistration.updateMany({
-          where: {
-            programInstanceId: instanceId,
-            athleteId: validated.athleteId,
-          },
-          data: { status: "ATTENDED" },
-        });
-      } else if (validated.status === "ABSENT") {
-        await db.instanceRegistration.updateMany({
-          where: {
-            programInstanceId: instanceId,
-            athleteId: validated.athleteId,
-          },
-          data: { status: "NO_SHOW" },
-        });
-      }
 
       return NextResponse.json(attendance, { status: 201 });
     }

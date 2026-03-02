@@ -223,7 +223,7 @@ export async function getExpandedSmsCampaignRecipients(
           programInstance: {
             programId: targetProgramId,
           },
-          status: { in: ["REGISTERED", "ATTENDED"] },
+          status: "REGISTERED",
         },
         include: {
           athlete: {
@@ -305,7 +305,7 @@ export async function getExpandedSmsCampaignRecipients(
       const registrations = await db.instanceRegistration.findMany({
         where: {
           programInstanceId: targetProgramInstanceId,
-          status: { in: ["REGISTERED", "ATTENDED"] },
+          status: "REGISTERED",
         },
         include: {
           athlete: {

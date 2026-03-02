@@ -257,7 +257,8 @@ export interface EventRegistrationSummary {
   endTime: string;
   instanceStatus: string;
   facilityName: string | null;
-  status: "REGISTERED" | "WAITLISTED" | "CANCELLED" | "ATTENDED" | "NO_SHOW";
+  status: "REGISTERED" | "WAITLISTED" | "CANCELLED";
+  attendanceStatus: "REGISTERED" | "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | null;
   createdAt: string;
 }
 

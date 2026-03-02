@@ -504,7 +504,7 @@ export async function getExpandedCampaignRecipients(
           programInstance: {
             programId: targetProgramId,
           },
-          status: { in: ["REGISTERED", "ATTENDED"] },
+          status: "REGISTERED",
         },
         include: {
           athlete: {
@@ -577,7 +577,7 @@ export async function getExpandedCampaignRecipients(
       const registrations = await db.instanceRegistration.findMany({
         where: {
           programInstanceId: targetProgramInstanceId,
-          status: { in: ["REGISTERED", "ATTENDED"] },
+          status: "REGISTERED",
         },
         include: {
           athlete: {

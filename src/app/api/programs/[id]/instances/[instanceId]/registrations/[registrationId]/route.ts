@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const updateRegistrationSchema = z.object({
-  status: z.enum(["REGISTERED", "WAITLISTED", "CANCELLED", "ATTENDED", "NO_SHOW"]),
+  status: z.enum(["REGISTERED", "WAITLISTED", "CANCELLED"]),
 });
 
 // GET /api/programs/[id]/instances/[instanceId]/registrations/[registrationId]
