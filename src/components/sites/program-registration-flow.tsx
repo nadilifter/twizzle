@@ -165,7 +165,7 @@ export function ProgramRegistrationFlow({
   slug,
 }: ProgramRegistrationFlowProps) {
   const { data: session } = useSession()
-  const { addItem, setIsOpen } = useCart()
+  const { addItem, setIsOpen, items: cartItems } = useCart()
   const router = useRouter()
   const stepper = useStepper()
 
@@ -194,6 +194,11 @@ export function ProgramRegistrationFlow({
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null)
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set())
   const [selectedMembership, setSelectedMembership] = useState<RequiredMembership | null>(null)
+
+  // Existing registration check
+  const [alreadyRegisteredIds, setAlreadyRegisteredIds] = useState<Set<string>>(new Set())
+  const [hasFullEnrollment, setHasFullEnrollment] = useState(false)
+  const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(false)
 
   // Waiver state
   const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([])
@@ -337,20 +342,91 @@ export function ProgramRegistrationFlow({
       : `Up to age ${program.maxAge}`
     : null
 
+  // ---------- Existing registration check ----------
+
+  const inCartIds = useMemo(() => {
+    if (!selectedAthlete) return new Set<string>()
+    return new Set(
+      cartItems
+        .filter(
+          (item) =>
+            item.type === "program" &&
+            item.athleteId === selectedAthlete.id &&
+            item.details?.instanceId
+        )
+        .map((item) => item.details!.instanceId as string)
+    )
+  }, [cartItems, selectedAthlete])
+
+  const isFullProgramInCart = useMemo(() => {
+    if (!selectedAthlete) return false
+    return cartItems.some(
+      (item) =>
+        item.type === "program" &&
+        item.athleteId === selectedAthlete.id &&
+        item.referenceId === program.id &&
+        !item.details?.instanceId
+    )
+  }, [cartItems, selectedAthlete, program.id])
+
+  const isAlreadyFullyRegistered = hasFullEnrollment || isFullProgramInCart
+
+  const checkExistingRegistrations = useCallback(
+    async (athleteId: string) => {
+      setIsCheckingRegistrations(true)
+      try {
+        const res = await fetch(
+          `/api/public/programs/registrations?programId=${encodeURIComponent(program.id)}&athleteId=${encodeURIComponent(athleteId)}`
+        )
+        if (res.ok) {
+          const data = await res.json()
+          const registered = new Set<string>(data.registeredInstanceIds || [])
+          setAlreadyRegisteredIds(registered)
+          setHasFullEnrollment(!!data.hasFullEnrollment)
+          // Deselect any instances that are already registered
+          if (registered.size > 0) {
+            setSelectedInstanceIds(prev => {
+              const next = new Set(prev)
+              for (const id of registered) next.delete(id)
+              return next.size !== prev.size ? next : prev
+            })
+          }
+        }
+      } catch {
+        // non-critical — just leave sets empty
+      } finally {
+        setIsCheckingRegistrations(false)
+      }
+    },
+    [program.id]
+  )
+
+  useEffect(() => {
+    if (selectedAthlete) {
+      checkExistingRegistrations(selectedAthlete.id)
+    } else {
+      setAlreadyRegisteredIds(new Set())
+      setHasFullEnrollment(false)
+    }
+  }, [selectedAthlete, checkExistingRegistrations])
+
   // ---------- Session helpers ----------
 
   const toggleInstance = useCallback((id: string) => {
+    if (alreadyRegisteredIds.has(id) || inCartIds.has(id)) return
     setSelectedInstanceIds(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
-  }, [])
+  }, [alreadyRegisteredIds, inCartIds])
 
   const selectAllInstances = () => {
     const available = instances
       .filter(i => !i.capacity || i.registrationCount < i.capacity)
+      .filter(i => !alreadyRegisteredIds.has(i.id))
+      .filter(i => !inCartIds.has(i.id))
       .map(i => i.id)
     setSelectedInstanceIds(new Set(available))
   }
@@ -898,6 +974,19 @@ export function ProgramRegistrationFlow({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {hasFullEnrollment && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 p-4 text-sm text-blue-800 dark:text-blue-200">
+                  {selectedAthlete?.firstName} is already enrolled in this program for the full season.
+                </div>
+              )}
+
+              {isCheckingRegistrations && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking existing registrations…
+                </div>
+              )}
+
               <div className="flex items-center justify-between pb-3 border-b border-border">
                 <div className="flex items-center gap-3">
                   <Button variant="outline" size="sm" onClick={selectAllInstances} disabled={instances.length === 0}>
@@ -915,6 +1004,9 @@ export function ProgramRegistrationFlow({
               <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
                 {instances.map(instance => {
                   const isFull = instance.capacity !== undefined && instance.registrationCount >= instance.capacity
+                  const isAlreadyRegistered = alreadyRegisteredIds.has(instance.id)
+                  const isInCart = inCartIds.has(instance.id)
+                  const isUnavailable = isFull || isAlreadyRegistered || isInCart
                   const isSelected = selectedInstanceIds.has(instance.id)
                   const spotsLeft = instance.capacity ? instance.capacity - instance.registrationCount : null
 
@@ -922,14 +1014,14 @@ export function ProgramRegistrationFlow({
                     <div
                       key={instance.id}
                       className={`flex items-center gap-4 py-3 px-2 rounded transition-colors ${
-                        isSelected ? "bg-primary/5" : "hover:bg-muted/50"
-                      } ${isFull ? "opacity-50" : "cursor-pointer"}`}
-                      onClick={() => !isFull && toggleInstance(instance.id)}
+                        isSelected ? "bg-primary/5" : isUnavailable ? "" : "hover:bg-muted/50"
+                      } ${isUnavailable ? "opacity-50" : "cursor-pointer"}`}
+                      onClick={() => !isUnavailable && toggleInstance(instance.id)}
                     >
                       <Checkbox
                         checked={isSelected}
-                        disabled={isFull}
-                        onCheckedChange={() => !isFull && toggleInstance(instance.id)}
+                        disabled={isUnavailable}
+                        onCheckedChange={() => !isUnavailable && toggleInstance(instance.id)}
                         className="shrink-0"
                       />
                       <div className="flex-1 min-w-0">
@@ -953,18 +1045,26 @@ export function ProgramRegistrationFlow({
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        {program.perSessionPrice != null && program.perSessionPrice > 0 && (
+                        {program.perSessionPrice != null && program.perSessionPrice > 0 && !isAlreadyRegistered && !isInCart && (
                           <div className="font-medium text-foreground">
                             {formatPrice(program.perSessionPrice)}
                           </div>
                         )}
-                        {spotsLeft !== null && (
+                        {isAlreadyRegistered ? (
+                          <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                            Already registered
+                          </div>
+                        ) : isInCart ? (
+                          <div className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                            In cart
+                          </div>
+                        ) : spotsLeft !== null ? (
                           <div className={`text-xs ${
                             isFull ? "text-red-600 dark:text-red-400" : spotsLeft <= 3 ? "text-orange-600 dark:text-orange-400" : "text-green-600 dark:text-green-400"
                           }`}>
                             {isFull ? "Full" : `${spotsLeft} spots`}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   )
@@ -1236,13 +1336,29 @@ export function ProgramRegistrationFlow({
                 </div>
               </div>
 
+              {/* Duplicate warning for full-program enrollment */}
+              {!isPerInstance && isAlreadyFullyRegistered && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 p-4 text-sm text-blue-800 dark:text-blue-200">
+                  {selectedAthlete?.firstName} is already {hasFullEnrollment ? "enrolled in" : "in your cart for"} this program.
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex flex-col gap-2 pt-2">
-                <Button className="w-full gap-2" onClick={() => handleAddToCart(true)}>
+                <Button
+                  className="w-full gap-2"
+                  onClick={() => handleAddToCart(true)}
+                  disabled={!isPerInstance && isAlreadyFullyRegistered}
+                >
                   <ClipboardList className="h-4 w-4" />
                   Register & Checkout
                 </Button>
-                <Button variant="outline" className="w-full gap-2" onClick={() => handleAddToCart(false)}>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => handleAddToCart(false)}
+                  disabled={!isPerInstance && isAlreadyFullyRegistered}
+                >
                   <ShoppingCart className="h-4 w-4" />
                   Add to Cart & Continue Browsing
                 </Button>
