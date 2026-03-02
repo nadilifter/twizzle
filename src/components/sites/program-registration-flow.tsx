@@ -693,11 +693,7 @@ export function ProgramRegistrationFlow({
       setIsOpen(false)
       router.push(`/checkout`)
     } else {
-      // Reset for another registration only when staying on the page
-      setSelectedAthlete(null)
-      setSelectedInstanceIds(new Set())
-      setSelectedMembership(needsMembership && program.requiredMemberships.length === 1 ? program.requiredMemberships[0] : null)
-      stepper.navigation.goTo("athlete")
+      router.push(`/`)
     }
   }
 
