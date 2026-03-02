@@ -1094,8 +1094,6 @@ enum RegistrationStatus {
   REGISTERED
   WAITLISTED
   CANCELLED
-  ATTENDED
-  NO_SHOW
 }
 
 // Instance Attendance - tracks attendance for specific program instances
