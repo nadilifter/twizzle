@@ -7,9 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle, Plus, Pencil } from "lucide-react"
+import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle, Plus, Pencil, CreditCard, Clock } from "lucide-react"
 import Link from "next/link"
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 import { SignaturePad, SignaturePadRef } from "@/components/ui/signature-pad"
 import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
 import { toast } from "sonner"
@@ -700,7 +699,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         return
       }
 
-      setPaymentSession({ id: data.sessionId, sessionData: data.sessionData })
+      // Payments not yet available — show coming soon instead of Adyen
       setCheckoutStep("payment")
     } catch (error: any) {
       console.error(error)
@@ -1141,24 +1140,36 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             </>
           )}
 
-          {/* Payment Section */}
-          {checkoutStep === "payment" && paymentSession && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payment Method</CardTitle>
+          {/* Payment Section — Coming Soon */}
+          {checkoutStep === "payment" && (
+              <Card className="text-center">
+                <CardHeader className="pb-4">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                    <CreditCard className="h-7 w-7 text-primary" />
+                  </div>
+                  <CardTitle className="text-xl">Online Payments Coming Soon</CardTitle>
                   <CardDescription>
-                    Secure payment via Adyen
+                    We&apos;re putting the finishing touches on our secure payment system.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div id="adyen-checkout-container" className="min-h-[200px]">
-                        <AdyenCheckoutComponent 
-                            sessionId={paymentSession.id}
-                            sessionData={paymentSession.sessionData}
-                            onPaymentCompleted={handlePaymentCompleted}
-                            onError={(err) => console.error("Adyen Error", err)}
-                        />
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-dashed p-4 space-y-2">
+                    <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>Available very soon</span>
                     </div>
+                    <p className="text-sm text-muted-foreground">
+                      Online checkout will be available shortly. Please contact the organization directly to complete your registration.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setCheckoutStep("details")}
+                  >
+                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    Back to Details
+                  </Button>
                 </CardContent>
               </Card>
           )}
