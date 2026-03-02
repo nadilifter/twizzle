@@ -59,12 +59,20 @@ const navItems = [
     url: "/athletes/billing",
     icon: Wallet,
   },
+  {
+    title: "Waivers",
+    url: "/athletes/waivers",
+    icon: FileText,
+  },
+  {
+    title: "Medical",
+    url: "/athletes/medical",
+    icon: Stethoscope,
+  },
 ]
 
 const comingSoonItems = [
   { title: "Invoices", icon: CreditCard },
-  { title: "Waivers", icon: FileText },
-  { title: "Medical", icon: Stethoscope },
 ]
 
 const superadminItems = [

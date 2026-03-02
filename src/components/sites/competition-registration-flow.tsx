@@ -5,6 +5,7 @@ import { useSession, signIn } from "next-auth/react"
 import { toast } from "sonner"
 import { calculateAge, isAgeEligible } from "@/lib/age-utils"
 import { useCart } from "@/components/sites/cart-context"
+import { getClientSubdomainUrl } from "@/lib/client-domains"
 import {
   defineStepper,
   StepperNav,
@@ -47,6 +48,7 @@ import {
   FileText,
   Heart,
   Gauge,
+  ExternalLink,
 } from "lucide-react"
 
 // ---------- Types ----------
@@ -1880,6 +1882,16 @@ function WaiverStep({
         <CardContent className="py-12 text-center">
           <Check className="h-8 w-8 text-primary mx-auto mb-4" />
           <p className="text-sm text-muted-foreground">All waivers have been signed.</p>
+          <a
+            href={`${getClientSubdomainUrl("athletes")}/waivers`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            View signed waivers
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button variant="outline" onClick={onBack}>
@@ -2047,6 +2059,16 @@ function MedicalStep({
         <CardContent className="py-12 text-center">
           <Check className="h-8 w-8 text-primary mx-auto mb-4" />
           <p className="text-sm text-muted-foreground">Medical information is up to date.</p>
+          <a
+            href={`${getClientSubdomainUrl("athletes")}/medical`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2"
+          >
+            <Heart className="h-3.5 w-3.5" />
+            View medical information
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button variant="outline" onClick={onBack}>
