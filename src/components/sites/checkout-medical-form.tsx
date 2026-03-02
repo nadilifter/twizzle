@@ -27,6 +27,7 @@ import {
   X,
   Check,
 } from "lucide-react"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { toast } from "sonner"
 import {
   COMMON_ALLERGIES,
@@ -470,11 +471,10 @@ function EmergencyInsuranceForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor="ecPhone">Phone Number</Label>
-              <Input
-                id="ecPhone"
-                type="tel"
+              <PhoneInput
+                defaultCountry="US"
                 value={emergencyContactPhone}
-                onChange={(e) => onChangeEC("emergencyContactPhone", e.target.value)}
+                onChange={(val) => onChangeEC("emergencyContactPhone", val || "")}
                 placeholder="(555) 555-5555"
               />
             </div>

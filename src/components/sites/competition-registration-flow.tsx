@@ -364,6 +364,9 @@ export function CompetitionRegistrationFlow({
   const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false)
   const [needsMedical, setNeedsMedical] = useState(false)
 
+  // Navigation direction: only auto-skip completed steps on the first forward pass
+  const isNavigatingBackRef = useRef(false)
+
   // Determine which steps are visible based on competition settings
   const needsWaivers = competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0
   const needsMedicalStep = competition.hasMedicalRequirement
@@ -387,6 +390,7 @@ export function CompetitionRegistrationFlow({
   // Navigation helpers that skip invisible steps
   const getNextStepId = useCallback(
     (currentId: string): string | null => {
+      isNavigatingBackRef.current = false
       const idx = visibleStepIds.indexOf(currentId)
       if (idx === -1 || idx >= visibleStepIds.length - 1) return null
       return visibleStepIds[idx + 1]
@@ -396,6 +400,7 @@ export function CompetitionRegistrationFlow({
 
   const getPreviousStepId = useCallback(
     (currentId: string): string | null => {
+      isNavigatingBackRef.current = true
       const idx = visibleStepIds.indexOf(currentId)
       if (idx <= 0) return null
       return visibleStepIds[idx - 1]
@@ -660,9 +665,10 @@ export function CompetitionRegistrationFlow({
       )
 
       if (stillUnsigned.length === 0) {
-        // All waivers already signed -- skip to next step
-        const nextId = getNextStepId("waivers")
-        if (nextId) stepper.navigation.goTo(nextId as any)
+        if (!isNavigatingBackRef.current) {
+          const nextId = getNextStepId("waivers")
+          if (nextId) stepper.navigation.goTo(nextId as any)
+        }
         return
       }
 
@@ -791,8 +797,10 @@ export function CompetitionRegistrationFlow({
         const data = await medicalCheckResponse.json()
         if (data.isCurrent) {
           setNeedsMedical(false)
-          const nextId = getNextStepId("medical")
-          if (nextId) stepper.navigation.goTo(nextId as any)
+          if (!isNavigatingBackRef.current) {
+            const nextId = getNextStepId("medical")
+            if (nextId) stepper.navigation.goTo(nextId as any)
+          }
           return
         }
       }
@@ -1636,6 +1644,10 @@ export function CompetitionRegistrationFlow({
             const prevId = getPreviousStepId("waivers")
             if (prevId) stepper.navigation.goTo(prevId as any)
           }}
+          onContinue={() => {
+            const nextId = getNextStepId("waivers")
+            if (nextId) stepper.navigation.goTo(nextId as any)
+          }}
         />
       )}
 
@@ -1827,6 +1839,7 @@ function WaiverStep({
   onSetSignAllMode,
   onSetSignatureEmpty,
   onBack,
+  onContinue,
 }: {
   isCheckingWaivers: boolean
   isLoadingWaiver: boolean
@@ -1844,8 +1857,8 @@ function WaiverStep({
   onSetSignAllMode: (v: boolean) => void
   onSetSignatureEmpty: (v: boolean) => void
   onBack: () => void
+  onContinue: () => void
 }) {
-  // Trigger waiver check when step mounts
   useEffect(() => {
     onEnterStep()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1868,6 +1881,16 @@ function WaiverStep({
           <Check className="h-8 w-8 text-primary mx-auto mb-4" />
           <p className="text-sm text-muted-foreground">All waivers have been signed.</p>
         </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" onClick={onBack}>
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Back
+          </Button>
+          <Button onClick={onContinue}>
+            Continue
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </CardFooter>
       </Card>
     )
   }
@@ -2003,7 +2026,6 @@ function MedicalStep({
   onComplete: () => void
   onBack: () => void
 }) {
-  // Trigger medical check when step mounts
   useEffect(() => {
     onEnterStep()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -2026,6 +2048,16 @@ function MedicalStep({
           <Check className="h-8 w-8 text-primary mx-auto mb-4" />
           <p className="text-sm text-muted-foreground">Medical information is up to date.</p>
         </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" onClick={onBack}>
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Back
+          </Button>
+          <Button onClick={onComplete}>
+            Continue
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </CardFooter>
       </Card>
     )
   }
