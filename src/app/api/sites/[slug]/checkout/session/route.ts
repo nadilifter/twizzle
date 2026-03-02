@@ -823,6 +823,33 @@ export async function POST(
 
     // 7. Handle payment — skip Adyen entirely for $0 orders
     if (total === 0) {
+      const payment = await db.payment.create({
+        data: {
+          invoiceId: invoice.id,
+          userId: checkoutUserId || undefined,
+          amount: 0,
+          method: "CASH",
+          status: "COMPLETED",
+          processedAt: new Date(),
+        },
+      });
+
+      await db.transaction.create({
+        data: {
+          organizationId,
+          paymentId: payment.id,
+          pspReference: `FREE-${invoice.id}`,
+          merchantRef: invoice.reference,
+          type: "PAYMENT",
+          amount: 0,
+          currency: "USD",
+          status: "SETTLED",
+          method: "comp",
+          description: `Free checkout – ${invoice.reference}`,
+          settledAt: new Date(),
+        },
+      });
+
       await db.invoice.update({
         where: { id: invoice.id },
         data: { status: "PAID" },

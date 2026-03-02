@@ -4,13 +4,8 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, ShoppingCart, User, AlertCircle, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield } from "lucide-react";
-import { useCart } from "@/components/sites/cart-context";
-import { MembershipRequirementDialog } from "@/components/sites/membership-requirement-dialog";
-import { AthleteSelectionDialog } from "@/components/sites/athlete-selection-dialog";
-import { useState } from "react";
-import { useSession, signIn } from "next-auth/react";
-import { useParams } from "next/navigation";
+import { CalendarDays, User, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield, ClipboardList } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 
 interface StaffAssignment {
@@ -65,14 +60,6 @@ interface Facility {
   stateProvince?: string | null;
 }
 
-interface ProgramInstance {
-  id: string;
-  date: string | Date;
-  startTime: string;
-  endTime: string;
-  status: string;
-}
-
 interface ProgramCardProps {
   program: {
     id: string;
@@ -86,7 +73,6 @@ interface ProgramCardProps {
     pricingModel?: string;
     basePrice?: number | string | null;
     perSessionPrice?: number | string | null;
-    // Calendar scheduling fields
     recurrenceType?: "NON_RECURRING" | "RECURRING" | null;
     registrationType?: "ALL_INSTANCES" | "PER_INSTANCE" | null;
     startDate?: string | Date | null;
@@ -94,8 +80,6 @@ interface ProgramCardProps {
     startTime?: string | null;
     duration?: number | null;
     facility?: Facility | null;
-    instances?: ProgramInstance[];
-    // Capacity & restrictions
     capacity?: number | null;
     hasCapacityRestriction?: boolean;
     hasAgeRestriction?: boolean;
@@ -122,38 +106,26 @@ function formatPrice(price: number | string): string {
   }).format(numPrice);
 }
 
-export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
-  const { addItem } = useCart();
-  const { data: session } = useSession();
+export function ProgramCard({ program }: ProgramCardProps) {
   const params = useParams();
+  const router = useRouter();
   const slug = (params?.slug as string) || "";
   const staffAssignments = program.staffAssignments || [];
   const requiredMemberships = program.requiredMemberships || [];
   const levelRequirements = program.levelRequirements || [];
   const bulkDiscounts = program.bulkDiscounts || [];
-  
-  // Display options default to true for backwards compatibility
   const showCoach = program.showCoachOnSite !== false;
-  
-  const [showMembershipDialog, setShowMembershipDialog] = useState(false);
-  const [showAthleteDialog, setShowAthleteDialog] = useState(false);
-  const [pendingCartAdd, setPendingCartAdd] = useState<{ direct?: boolean } | null>(null);
-  // Stores the selected athlete for the pending add-to-cart operation
-  const [selectedAthlete, setSelectedAthlete] = useState<{ id: string; name: string } | null>(null);
 
-  // Get the program's direct price - defaults to 0 (free) if no price is set
   const directPrice = program.basePrice 
     ? (typeof program.basePrice === "string" ? parseFloat(program.basePrice) : program.basePrice)
     : program.perSessionPrice
     ? (typeof program.perSessionPrice === "string" ? parseFloat(program.perSessionPrice) : program.perSessionPrice)
     : 0;
 
-  // Capacity info
   const totalCapacity = program.capacity || 0;
   const enrolled = program._count?.enrollments || 0;
   const spotsAvailable = program.hasCapacityRestriction && totalCapacity > 0 ? Math.max(0, totalCapacity - enrolled) : null;
 
-  // Age restriction label
   const ageLabel = program.hasAgeRestriction && (program.minAge !== null || program.maxAge !== null)
     ? program.minAge && program.maxAge
       ? `Ages ${program.minAge}–${program.maxAge}`
@@ -161,93 +133,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
       ? `Ages ${program.minAge}+`
       : `Up to age ${program.maxAge}`
     : null;
-
-  const handleAddToCart = () => {
-    // Require sign-in before adding to cart
-    if (!session?.user) {
-      signIn(undefined, { callbackUrl: window.location.href });
-      return;
-    }
-
-    // Show athlete selection dialog
-    setShowAthleteDialog(true);
-  };
-
-  const handleAthleteSelected = (athlete: { id: string; name: string }) => {
-    setSelectedAthlete(athlete);
-    setShowAthleteDialog(false);
-
-    // Check if there are required memberships
-    if (requiredMemberships.length > 0) {
-      setPendingCartAdd({ direct: true });
-      setShowMembershipDialog(true);
-      return;
-    }
-
-    addProgramForAthlete(athlete);
-  };
-
-  const addProgramDirectly = () => {
-    // Fallback: use selectedAthlete if available
-    if (selectedAthlete) {
-      addProgramForAthlete(selectedAthlete);
-    }
-  };
-
-  const addProgramForAthlete = (athlete: { id: string; name: string }) => {
-    addItem({
-      referenceId: program.id,
-      type: "program",
-      name: program.name,
-      description: program.description || undefined,
-      price: directPrice,
-      quantity: 1,
-      athleteId: athlete.id,
-      athleteName: athlete.name,
-      details: {
-        programId: program.id,
-        pricingModel: program.pricingModel,
-        requiredMemberships: requiredMemberships.map(m => m.id),
-      }
-    });
-  };
-
-  const handleMembershipDialogCancel = () => {
-    setShowMembershipDialog(false);
-    setPendingCartAdd(null);
-    setSelectedAthlete(null);
-  };
-
-  const handleAddMembership = (membership: RequiredMembership) => {
-    if (!selectedAthlete) return;
-
-    // Add the membership to cart
-    addItem({
-      referenceId: membership.id,
-      type: "membership",
-      name: membership.name,
-      description: `${membership.group.name} Membership`,
-      price: typeof membership.price === "string" ? parseFloat(membership.price) : membership.price,
-      quantity: 1,
-      athleteId: selectedAthlete.id,
-      athleteName: selectedAthlete.name,
-      details: {
-        membershipInstanceId: membership.id,
-        groupId: membership.group.id,
-        groupName: membership.group.name,
-        billingInterval: membership.billingInterval,
-      }
-    });
-
-    // Also add the program if there was a pending add
-    if (pendingCartAdd?.direct) {
-      addProgramForAthlete(selectedAthlete);
-    }
-
-    setShowMembershipDialog(false);
-    setPendingCartAdd(null);
-    setSelectedAthlete(null);
-  };
 
   return (
     <Card className="group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
@@ -270,7 +155,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           </div>
         </div>
         
-        {/* Level requirement badges */}
         {levelRequirements.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1.5">
             {levelRequirements.map((lr) => (
@@ -294,10 +178,8 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           </p>
         )}
 
-        {/* Schedule & Location Section */}
         {(program.startDate || program.startTime || program.facility || program.duration) && (
           <div className="mt-3 space-y-1.5">
-            {/* Date/Time Row */}
             {program.startDate && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <CalendarDays className="h-3.5 w-3.5 shrink-0" />
@@ -313,7 +195,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
               </div>
             )}
             
-            {/* Time & Duration Row */}
             {program.startTime && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5 shrink-0" />
@@ -324,7 +205,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
               </div>
             )}
 
-            {/* Facility/Location Row */}
             {program.facility && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -335,7 +215,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
               </div>
             )}
 
-            {/* Recurrence Info */}
             {program.recurrenceType === "RECURRING" && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Repeat className="h-3.5 w-3.5 shrink-0" />
@@ -353,7 +232,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           </div>
         )}
 
-        {/* Requirements & Details Chips */}
         {(ageLabel || (program.hasCapacityRestriction && totalCapacity > 0) || requiredMemberships.length > 0) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {ageLabel && (
@@ -377,7 +255,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           </div>
         )}
 
-        {/* Bulk Discounts Section */}
         {bulkDiscounts.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {bulkDiscounts.map((discount) => {
@@ -399,7 +276,6 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
           </div>
         )}
 
-        {/* Coaches Section */}
         {showCoach && staffAssignments.length > 0 && (
           <div className="mt-4 pt-3 border-t">
             <p className="text-xs text-muted-foreground mb-2">Coached by</p>
@@ -440,35 +316,14 @@ export function ProgramCard({ program, primaryColor }: ProgramCardProps) {
         </div>
 
         <Button
-          onClick={handleAddToCart}
+          onClick={() => router.push(`/programs/${program.id}`)}
           disabled={spotsAvailable === 0}
           className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
         >
-          <ShoppingCart className="h-4 w-4" />
-          {spotsAvailable === 0 ? "Currently Full" : "Add to Cart"}
+          <ClipboardList className="h-4 w-4" />
+          {spotsAvailable === 0 ? "Currently Full" : "Register"}
         </Button>
       </CardFooter>
-      
-      {/* Athlete Selection Dialog */}
-      <AthleteSelectionDialog
-        open={showAthleteDialog}
-        onOpenChange={setShowAthleteDialog}
-        onAthleteSelected={handleAthleteSelected}
-        slug={slug}
-        hasAgeRestriction={program.hasAgeRestriction}
-        minAge={program.minAge}
-        maxAge={program.maxAge}
-      />
-
-      {/* Membership Requirement Dialog */}
-      <MembershipRequirementDialog
-        open={showMembershipDialog}
-        onOpenChange={setShowMembershipDialog}
-        programName={program.name}
-        requiredMemberships={requiredMemberships}
-        onCancel={handleMembershipDialogCancel}
-        onAddMembership={handleAddMembership}
-      />
     </Card>
   );
 }

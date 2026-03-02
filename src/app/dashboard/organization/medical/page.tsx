@@ -67,10 +67,81 @@ import {
   Phone,
   UtensilsCrossed,
   Shield,
+  CalendarClock,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useMedicalConfig, useMedicalQuestions } from "@/hooks/use-medical";
-import type { CustomMedicalQuestion, CreateCustomMedicalQuestionPayload, MedicalQuestionType } from "@/types/medical";
+import type { CustomMedicalQuestion, CreateCustomMedicalQuestionPayload, MedicalQuestionType, UpdateMedicalFormConfigPayload } from "@/types/medical";
+
+function ValidityDaysInput({
+  value,
+  onSave,
+  disabled,
+}: {
+  value: number
+  onSave: (val: number) => void
+  disabled: boolean
+}) {
+  const [localValue, setLocalValue] = useState(String(value))
+
+  React.useEffect(() => {
+    setLocalValue(String(value))
+  }, [value])
+
+  const handleBlur = () => {
+    const parsed = parseInt(localValue, 10)
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 3650 && parsed !== value) {
+      onSave(parsed)
+    } else {
+      setLocalValue(String(value))
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor="validityDays">Valid for (days)</Label>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-xs">
+              Athletes who have submitted medical information within this window will not be asked to re-submit during registration or checkout.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <div className="flex items-center gap-2">
+        <Input
+          id="validityDays"
+          type="number"
+          min={1}
+          max={3650}
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              handleBlur()
+            }
+          }}
+          disabled={disabled}
+          className="w-32"
+        />
+        <span className="text-sm text-muted-foreground">days</span>
+      </div>
+    </div>
+  )
+}
 
 // Sortable question item component
 function SortableQuestion({
@@ -330,8 +401,8 @@ export default function MedicalSettingsPage() {
     })
   );
 
-  const handleConfigChange = async (key: string, value: boolean) => {
-    const success = await updateConfig({ [key]: value });
+  const handleConfigChange = async (key: keyof UpdateMedicalFormConfigPayload, value: boolean | number) => {
+    const success = await updateConfig({ [key]: value } as UpdateMedicalFormConfigPayload);
     if (success) {
       toast.success("Settings updated");
     } else {
@@ -529,6 +600,26 @@ export default function MedicalSettingsPage() {
               disabled={configSaving}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Validity Period */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarClock className="h-5 w-5" />
+            Medical Info Validity Period
+          </CardTitle>
+          <CardDescription>
+            How long collected medical information remains valid before athletes are asked to re-submit it
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ValidityDaysInput
+            value={config?.validityDays ?? 180}
+            onSave={(val) => handleConfigChange("validityDays", val)}
+            disabled={configSaving}
+          />
         </CardContent>
       </Card>
 

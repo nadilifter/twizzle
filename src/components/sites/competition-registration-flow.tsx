@@ -783,15 +783,13 @@ export function CompetitionRegistrationFlow({
     setIsLoadingMedicalConfig(true)
 
     try {
-      // Check if athlete already has medical info
       const medicalCheckResponse = await fetch(
         `/api/public/athletes/${selectedAthlete.id}/medical?organizationId=${competition.organizationId}&email=${encodeURIComponent(session?.user?.email || "")}`
       )
 
       if (medicalCheckResponse.ok) {
-        const existingMedical = await medicalCheckResponse.json()
-        if (existingMedical && existingMedical.id) {
-          // Already has medical info -- skip this step
+        const data = await medicalCheckResponse.json()
+        if (data.isCurrent) {
           setNeedsMedical(false)
           const nextId = getNextStepId("medical")
           if (nextId) stepper.navigation.goTo(nextId as any)
@@ -799,7 +797,6 @@ export function CompetitionRegistrationFlow({
         }
       }
 
-      // Need to collect medical info -- fetch config
       const configResponse = await fetch(
         `/api/public/medical-config?organizationId=${competition.organizationId}`
       )

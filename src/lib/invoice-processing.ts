@@ -91,28 +91,70 @@ export async function processInvoiceRegistrations(
     }
   }
 
-  // 2. Program registrations (InstanceRegistration)
+  // 2. Program registrations
   const programItems = items.filter((item) => item.type === "program");
   for (const item of programItems) {
-    const instanceId = item.details?.instanceId || item.referenceId;
+    const instanceId = item.details?.instanceId;
+    const programId = item.details?.programId || item.referenceId;
     const athleteId = item.athleteId || item.details?.athleteId;
-    if (!instanceId || !athleteId) continue;
+    if (!athleteId) continue;
 
-    await db.instanceRegistration.upsert({
-      where: {
-        programInstanceId_athleteId: {
+    if (instanceId) {
+      // Per-instance registration → InstanceRegistration
+      await db.instanceRegistration.upsert({
+        where: {
+          programInstanceId_athleteId: {
+            programInstanceId: instanceId,
+            athleteId,
+          },
+        },
+        update: {},
+        create: {
           programInstanceId: instanceId,
           athleteId,
+          userId: userId || undefined,
+          status: "REGISTERED",
         },
-      },
-      update: {},
-      create: {
-        programInstanceId: instanceId,
-        athleteId,
-        userId: userId || undefined,
-        status: "REGISTERED",
-      },
-    });
+      });
+    } else if (programId) {
+      // Full program registration → Enrollment + InstanceRegistrations for all instances
+      const existing = await db.enrollment.findFirst({
+        where: { programId, athleteId, status: { in: ["ACTIVE", "PAUSED"] } },
+      });
+      if (!existing) {
+        await db.enrollment.create({
+          data: {
+            programId,
+            athleteId,
+            userId: userId || undefined,
+            startDate: new Date(),
+            status: "ACTIVE",
+          },
+        });
+      }
+
+      const instances = await db.programInstance.findMany({
+        where: { programId, status: { not: "CANCELLED" } },
+        select: { id: true },
+      });
+      for (const inst of instances) {
+        await db.instanceRegistration.upsert({
+          where: {
+            programInstanceId_athleteId: {
+              programInstanceId: inst.id,
+              athleteId,
+            },
+          },
+          update: {},
+          create: {
+            programInstanceId: inst.id,
+            athleteId,
+            userId: userId || undefined,
+            status: "REGISTERED",
+          },
+        });
+      }
+    }
   }
 
   // 3. Membership purchases (AthleteMembership)

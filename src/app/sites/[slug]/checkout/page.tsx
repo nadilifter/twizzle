@@ -493,14 +493,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
       const queue: AthleteRequirements[] = Array.from(athleteMap.entries()).map(
         ([athleteId, { athleteName, programIds: athleteProgramIds }]) => {
-          // Compute required waiver IDs for this athlete's programs
           const waiverIdSet = new Set<string>()
           athleteProgramIds.forEach((pid) => {
             const waiverIds = programWaiverMap[pid] || []
             waiverIds.forEach((wid) => waiverIdSet.add(wid))
           })
 
-          // Check if any of this athlete's programs need medical
           const needsMedical = athleteProgramIds.some((pid) => programIdsRequiringMedical.includes(pid))
 
           return {
@@ -511,6 +509,31 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           }
         }
       )
+
+      // For athletes flagged as needing medical, check if their info is still current
+      const athletesNeedingMedical = queue.filter((a) => a.needsMedical)
+      if (athletesNeedingMedical.length > 0) {
+        const medicalChecks = await Promise.all(
+          athletesNeedingMedical.map(async (athlete) => {
+            try {
+              const res = await fetch(
+                `/api/public/athletes/${athlete.athleteId}/medical?organizationId=${orgId}&email=${encodeURIComponent(formData.email)}`
+              )
+              if (res.ok) {
+                const data = await res.json()
+                return { athleteId: athlete.athleteId, isCurrent: !!data.isCurrent }
+              }
+            } catch {}
+            return { athleteId: athlete.athleteId, isCurrent: false }
+          })
+        )
+        for (const check of medicalChecks) {
+          if (check.isCurrent) {
+            const entry = queue.find((a) => a.athleteId === check.athleteId)
+            if (entry) entry.needsMedical = false
+          }
+        }
+      }
 
       // Store queue in both state and ref
       setAthleteQueue(queue)

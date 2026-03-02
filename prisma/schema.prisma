@@ -566,6 +566,9 @@ model MedicalFormConfig {
   collectDietaryRestrictions Boolean @default(false)
   collectInsuranceInfo       Boolean @default(false)
 
+  // How long collected medical info remains valid before re-collection is required
+  validityDays Int @default(180)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

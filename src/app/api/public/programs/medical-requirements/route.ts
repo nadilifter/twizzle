@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
         collectEmergencyContact: true,
         collectDietaryRestrictions: false,
         collectInsuranceInfo: false,
+        validityDays: 180,
       },
       customQuestions,
     });

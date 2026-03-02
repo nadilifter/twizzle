@@ -2,21 +2,58 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 // POST /api/public/waivers/check
-// Public endpoint - check waiver status by userId and org
-// Used during checkout before payment
+// Public endpoint - check waiver status by userId (or email) and org
+// Used during checkout before payment and registration flows
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { waiverIds, organizationId, athleteId, userId } = body;
+    const { waiverIds, organizationId, athleteId, email } = body;
+    let { userId } = body;
 
-    if (!userId || !waiverIds?.length || !organizationId) {
+    if (!waiverIds?.length || !organizationId) {
       return NextResponse.json(
-        { error: "userId, waiverIds, and organizationId are required" },
+        { error: "waiverIds and organizationId are required" },
         { status: 400 }
       );
     }
 
-    // Check acceptances by userId, per athlete if athleteId is provided
+    if (!userId && !email) {
+      return NextResponse.json(
+        { error: "userId or email is required" },
+        { status: 400 }
+      );
+    }
+
+    // Resolve userId from email if not provided directly
+    if (!userId && email) {
+      const user = await db.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+      if (!user) {
+        // No user found — no waivers can be signed yet, return all unsigned
+        const waivers = await db.waiver.findMany({
+          where: {
+            id: { in: waiverIds },
+            organizationId,
+            status: "ACTIVE",
+          },
+          select: { id: true, title: true },
+        });
+
+        return NextResponse.json({
+          userId: null,
+          data: waivers.map((w) => ({
+            waiverId: w.id,
+            waiverTitle: w.title,
+            isSigned: false,
+          })),
+          allSigned: false,
+        });
+      }
+      userId = user.id;
+    }
+
     const acceptances = await db.waiverAcceptance.findMany({
       where: {
         waiverId: { in: waiverIds },

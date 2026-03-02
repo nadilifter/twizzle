@@ -78,6 +78,14 @@ export async function GET(
       );
     }
 
+    // Get the organization's medical form config for validity window
+    const medicalConfig = await db.medicalFormConfig.findUnique({
+      where: { organizationId },
+      select: { validityDays: true },
+    });
+
+    const validityDays = medicalConfig?.validityDays ?? 180;
+
     // Get existing medical info
     const medicalInfo = await db.athleteMedicalInfo.findUnique({
       where: { athleteId },
@@ -89,6 +97,15 @@ export async function GET(
         },
       },
     });
+
+    // Determine if the medical info is still current (within validity window)
+    let isCurrent = false;
+    if (medicalInfo?.updatedAt) {
+      const updatedAt = new Date(medicalInfo.updatedAt);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - validityDays);
+      isCurrent = updatedAt >= cutoff;
+    }
 
     return NextResponse.json({
       medicalInfo: medicalInfo || {
@@ -106,6 +123,8 @@ export async function GET(
         additionalNotes: null,
         customResponses: [],
       },
+      isCurrent,
+      validityDays,
     });
   } catch (error) {
     console.error("Error fetching athlete medical info (public):", error);
