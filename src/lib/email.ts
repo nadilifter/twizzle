@@ -278,7 +278,8 @@ export type EmailTemplate =
   | 'announcement'
   | 'feedback-roadmap'
   | 'mfa-code'
-  | 'email-login-code';
+  | 'email-login-code'
+  | 'no-account-login';
 
 /**
  * Render an email template with data
@@ -654,6 +655,43 @@ function renderTemplate(
         This code expires in {{expiresIn}}.
         
         If you didn't request this code, you can safely ignore this email.
+      `,
+    },
+    'no-account-login': {
+      subject: 'Sign-in Attempted',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #1f2937;">Sign-in Attempted</h1>
+          <p>Hello,</p>
+          <p>Someone tried to sign in with this email address, but we don&rsquo;t have an account associated with <strong>{{email}}</strong>.</p>
+          <p>If you&rsquo;re trying to access an organization&rsquo;s platform, you may need to:</p>
+          <ul style="color: #4b5563;">
+            <li>Contact your club or organization administrator to get an invitation</li>
+            <li>Sign up through your organization&rsquo;s website</li>
+          </ul>
+          <p>If you want to create a new organization on Uplifter, you can get started here:</p>
+          <p style="margin: 24px 0;">
+            <a href="{{signupUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Create an Organization</a>
+          </p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #6b7280; font-size: 12px;">If you didn&rsquo;t request this, you can safely ignore this email.</p>
+        </div>
+      `,
+      text: `
+        Sign-in Attempted
+        
+        Hello,
+        
+        Someone tried to sign in with this email address, but we don't have an account associated with {{email}}.
+        
+        If you're trying to access an organization's platform, you may need to:
+        - Contact your club or organization administrator to get an invitation
+        - Sign up through your organization's website
+        
+        If you want to create a new organization on Uplifter, you can get started here:
+        {{signupUrl}}
+        
+        If you didn't request this, you can safely ignore this email.
       `,
     },
   };

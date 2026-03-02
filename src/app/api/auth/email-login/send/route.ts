@@ -49,17 +49,22 @@ export async function POST(request: NextRequest) {
       select: { id: true, status: true },
     });
 
-    // Only send if the user exists and is active; otherwise silently succeed
+    const loginUrl = getSubdomainUrl("login");
+
     if (user && user.status === "ACTIVE") {
       const { code, token } = await createVerificationCode(email, "EMAIL_LOGIN");
-
-      const loginUrl = getSubdomainUrl("login");
       const verifyUrl = `${loginUrl}/api/auth/verify/${token}`;
 
       await sendTemplatedEmail("email-login-code", [email], {
         code,
         verifyUrl,
         expiresIn: `${CODE_EXPIRY_MINUTES} minutes`,
+      });
+    } else {
+      const signupUrl = `${loginUrl.replace("login.", "")}/org-signup`;
+      await sendTemplatedEmail("no-account-login", [email], {
+        email,
+        signupUrl,
       });
     }
 
