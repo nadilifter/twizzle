@@ -30,6 +30,29 @@ export async function GET(
             perSessionPrice: true,
             recurrenceType: true,
             registrationType: true,
+            evaluationTemplates: {
+              take: 1,
+              include: {
+                template: {
+                  select: {
+                    id: true,
+                    name: true,
+                    scoringType: true,
+                    pointScaleMin: true,
+                    pointScaleMax: true,
+                    pointScalePassThreshold: true,
+                    skills: {
+                      include: {
+                        skill: {
+                          select: { id: true, name: true, category: true },
+                        },
+                      },
+                      orderBy: { order: "asc" },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
         facility: {

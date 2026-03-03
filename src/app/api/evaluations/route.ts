@@ -22,6 +22,7 @@ const createEvaluationSchema = z.object({
   athleteId: z.string().min(1, "Athlete is required"),
   templateId: z.string().optional(), // Optional - can create from template
   programId: z.string().optional(), // Optional - link to program
+  programInstanceId: z.string().optional(), // Optional - link to specific session
   date: z.string().min(1, "Date is required"),
   levelId: z.string().optional(), // Optional if using template
   overallScore: z.number().min(0).max(10).optional().default(0),
@@ -365,6 +366,7 @@ export async function POST(request: NextRequest) {
         coachId: session.user.id,
         templateId: validatedData.templateId,
         programId: validatedData.programId,
+        programInstanceId: validatedData.programInstanceId,
         date: new Date(validatedData.date),
         levelId: levelId ?? undefined,
         overallScore: validatedData.overallScore || 0,

@@ -70,8 +70,61 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
+
+interface EvaluationTemplateSkillInfo {
+  id: string;
+  skill: { id: string; name: string; category: string };
+  order: number;
+}
+
+interface EvaluationTemplateInfo {
+  id: string;
+  name: string;
+  scoringType: "PASS_FAIL" | "POINT_SCALE";
+  pointScaleMin: number;
+  pointScaleMax: number;
+  pointScalePassThreshold: number;
+  skills: EvaluationTemplateSkillInfo[];
+}
+
+interface ProgramEvaluationTemplateAssignment {
+  id: string;
+  templateId: string;
+  template: EvaluationTemplateInfo;
+}
+
+interface InstanceEvaluation {
+  id: string;
+  athleteId: string;
+  status: string;
+  overallScore: number;
+  notes: string | null;
+  athlete: { id: string; name: string; avatar: string | null };
+  template: EvaluationTemplateInfo | null;
+  skillRatings: Array<{
+    id: string;
+    skillId: string;
+    attemptStatus: "NOT_ATTEMPTED" | "ATTEMPTED" | "SUCCEEDED";
+    pointScore: number | null;
+    passed: boolean;
+    skill: { id: string; name: string; category: string };
+  }>;
+}
 
 interface ProgramInstance {
   id: string;
@@ -90,6 +143,7 @@ interface ProgramInstance {
     perSessionPrice: number | null;
     recurrenceType: string;
     registrationType: string;
+    evaluationTemplates?: ProgramEvaluationTemplateAssignment[];
   };
   facility: {
     id: string;
@@ -146,6 +200,18 @@ export default function InstanceDetailPage() {
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [instanceNotes, setInstanceNotes] = useState("");
 
+  // Evaluation state
+  const [evaluations, setEvaluations] = useState<InstanceEvaluation[]>([]);
+  const [loadingEvals, setLoadingEvals] = useState(false);
+  const [savingEvals, setSavingEvals] = useState(false);
+  const [selectedAthleteIds, setSelectedAthleteIds] = useState<Set<string>>(new Set());
+  const [evalsDirty, setEvalsDirty] = useState(false);
+  const [detailEvaluation, setDetailEvaluation] = useState<InstanceEvaluation | null>(null);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+  const [detailNotes, setDetailNotes] = useState("");
+  const [detailStatus, setDetailStatus] = useState("");
+  const [detailSaving, setDetailSaving] = useState(false);
+
   useBreadcrumbOverride(
     instance ? `/dashboard/calendar/instance/${instanceId}` : undefined,
     instance?.program.name,
@@ -170,6 +236,214 @@ export default function InstanceDetailPage() {
   useEffect(() => {
     fetchInstance();
   }, [fetchInstance]);
+
+  const hasEvaluationTemplate = !!(instance?.program.evaluationTemplates && instance.program.evaluationTemplates.length > 0);
+  const evaluationTemplate = hasEvaluationTemplate ? instance!.program.evaluationTemplates![0].template : null;
+
+  const fetchEvaluations = useCallback(async () => {
+    if (!instance || !hasEvaluationTemplate) return;
+    setLoadingEvals(true);
+    try {
+      const response = await fetch(
+        `/api/programs/${instance.programId}/instances/${instanceId}/evaluations`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setEvaluations(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching evaluations:", error);
+    } finally {
+      setLoadingEvals(false);
+    }
+  }, [instance, instanceId, hasEvaluationTemplate]);
+
+  const autoCreateEvaluations = useCallback(async () => {
+    if (!instance || !hasEvaluationTemplate) return;
+    try {
+      const response = await fetch(
+        `/api/programs/${instance.programId}/instances/${instanceId}/evaluations`,
+        { method: "POST" }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.created > 0) {
+          fetchEvaluations();
+        }
+      }
+    } catch (error) {
+      console.error("Error auto-creating evaluations:", error);
+    }
+  }, [instance, instanceId, hasEvaluationTemplate, fetchEvaluations]);
+
+  useEffect(() => {
+    if (activeTab === "evaluations" && instance && hasEvaluationTemplate && evaluations.length === 0 && !loadingEvals) {
+      autoCreateEvaluations().then(() => fetchEvaluations());
+    }
+  }, [activeTab, instance, hasEvaluationTemplate]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateSkillInGrid = (evaluationId: string, skillId: string, newStatus: "NOT_ATTEMPTED" | "ATTEMPTED" | "SUCCEEDED") => {
+    setEvaluations(prev => prev.map(evalItem => {
+      if (evalItem.id !== evaluationId) return evalItem;
+      return {
+        ...evalItem,
+        skillRatings: evalItem.skillRatings.map(sr =>
+          sr.skillId === skillId
+            ? { ...sr, attemptStatus: newStatus, passed: newStatus === "SUCCEEDED" }
+            : sr
+        ),
+      };
+    }));
+    setEvalsDirty(true);
+  };
+
+  const updatePointScoreInGrid = (evaluationId: string, skillId: string, score: number) => {
+    const threshold = evaluationTemplate?.pointScalePassThreshold || 7;
+    setEvaluations(prev => prev.map(evalItem => {
+      if (evalItem.id !== evaluationId) return evalItem;
+      return {
+        ...evalItem,
+        skillRatings: evalItem.skillRatings.map(sr =>
+          sr.skillId === skillId
+            ? { ...sr, pointScore: score, passed: score >= threshold, attemptStatus: "ATTEMPTED" as const }
+            : sr
+        ),
+      };
+    }));
+    setEvalsDirty(true);
+  };
+
+  const cycleAttemptStatus = (current: string): "NOT_ATTEMPTED" | "ATTEMPTED" | "SUCCEEDED" => {
+    if (current === "NOT_ATTEMPTED") return "ATTEMPTED";
+    if (current === "ATTEMPTED") return "SUCCEEDED";
+    return "NOT_ATTEMPTED";
+  };
+
+  const handleBulkSetSkill = (skillId: string, status: "NOT_ATTEMPTED" | "ATTEMPTED" | "SUCCEEDED") => {
+    setEvaluations(prev => prev.map(evalItem => {
+      if (!selectedAthleteIds.has(evalItem.athleteId)) return evalItem;
+      return {
+        ...evalItem,
+        skillRatings: evalItem.skillRatings.map(sr =>
+          sr.skillId === skillId
+            ? { ...sr, attemptStatus: status, passed: status === "SUCCEEDED" }
+            : sr
+        ),
+      };
+    }));
+    setEvalsDirty(true);
+    toast.success(`Updated ${selectedAthleteIds.size} athletes`);
+  };
+
+  const handleBulkPassAll = () => {
+    setEvaluations(prev => prev.map(evalItem => {
+      if (!selectedAthleteIds.has(evalItem.athleteId)) return evalItem;
+      return {
+        ...evalItem,
+        skillRatings: evalItem.skillRatings.map(sr => ({
+          ...sr,
+          attemptStatus: "SUCCEEDED" as const,
+          passed: true,
+        })),
+      };
+    }));
+    setEvalsDirty(true);
+    toast.success(`Marked all skills passed for ${selectedAthleteIds.size} athletes`);
+  };
+
+  const saveAllEvaluations = async () => {
+    if (!instance) return;
+    setSavingEvals(true);
+    try {
+      const payload = {
+        evaluations: evaluations.map(evalItem => ({
+          evaluationId: evalItem.id,
+          skillRatings: evalItem.skillRatings.map(sr => ({
+            skillId: sr.skillId,
+            attemptStatus: sr.attemptStatus,
+            pointScore: sr.pointScore,
+            passed: sr.passed,
+          })),
+        })),
+      };
+
+      const response = await fetch(
+        `/api/programs/${instance.programId}/instances/${instanceId}/evaluations`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to save evaluations");
+      toast.success("Evaluations saved");
+      setEvalsDirty(false);
+      fetchEvaluations();
+    } catch (error) {
+      console.error("Error saving evaluations:", error);
+      toast.error("Failed to save evaluations");
+    } finally {
+      setSavingEvals(false);
+    }
+  };
+
+  const openDetailSheet = (evalItem: InstanceEvaluation) => {
+    setDetailEvaluation(evalItem);
+    setDetailNotes(evalItem.notes || "");
+    setDetailStatus(evalItem.status);
+    setDetailSheetOpen(true);
+  };
+
+  const saveDetailEvaluation = async () => {
+    if (!instance || !detailEvaluation) return;
+    setDetailSaving(true);
+    try {
+      const payload = {
+        evaluations: [{
+          evaluationId: detailEvaluation.id,
+          status: detailStatus,
+          notes: detailNotes,
+          skillRatings: detailEvaluation.skillRatings.map(sr => ({
+            skillId: sr.skillId,
+            attemptStatus: sr.attemptStatus,
+            pointScore: sr.pointScore,
+            passed: sr.passed,
+          })),
+        }],
+      };
+
+      const response = await fetch(
+        `/api/programs/${instance.programId}/instances/${instanceId}/evaluations`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to save evaluation");
+      toast.success("Evaluation saved");
+      setDetailSheetOpen(false);
+      fetchEvaluations();
+    } catch (error) {
+      console.error("Error saving evaluation:", error);
+      toast.error("Failed to save evaluation");
+    } finally {
+      setDetailSaving(false);
+    }
+  };
+
+  const getAttemptStatusIcon = (status: string) => {
+    switch (status) {
+      case "SUCCEEDED":
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case "ATTEMPTED":
+        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+      default:
+        return <XCircle className="h-5 w-5 text-muted-foreground/40" />;
+    }
+  };
 
   const updateRegistrationStatus = async (registrationId: string, status: string) => {
     if (!instance) return;
@@ -623,114 +897,285 @@ export default function InstanceDetailPage() {
 
         {/* Evaluations Tab */}
         {trainingEnabled && <TabsContent value="evaluations" className="mt-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Evaluations</CardTitle>
-                  <CardDescription>
-                    Evaluate athlete skills and track progress for this session
-                  </CardDescription>
+          {!hasEvaluationTemplate ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <ClipboardList className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
+                <p className="text-muted-foreground mb-4">
+                  No evaluation template is assigned to this program.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/dashboard/registrations/programs/${instance.programId}/edit`)}
+                >
+                  Edit Program
+                </Button>
+              </CardContent>
+            </Card>
+          ) : loadingEvals ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mt-2">Loading evaluations...</p>
+              </CardContent>
+            </Card>
+          ) : evaluations.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Star className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
+                <p className="text-muted-foreground">No registered athletes to evaluate</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <ClipboardList className="h-5 w-5" />
+                      {evaluationTemplate?.name}
+                    </CardTitle>
+                    <CardDescription>
+                      {evaluationTemplate?.scoringType === "POINT_SCALE"
+                        ? `Point scale ${evaluationTemplate.pointScaleMin}-${evaluationTemplate.pointScaleMax} (pass at ${evaluationTemplate.pointScalePassThreshold}+)`
+                        : "Pass / Fail"
+                      }
+                      {" · "}{evaluationTemplate?.skills.length} skills · {evaluations.length} athletes
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {evalsDirty && (
+                      <Badge variant="outline" className="text-yellow-600 border-yellow-300">
+                        Unsaved changes
+                      </Badge>
+                    )}
+                    <Button
+                      onClick={saveAllEvaluations}
+                      disabled={savingEvals || !evalsDirty}
+                      size="sm"
+                    >
+                      {savingEvals && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Save All
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {instance.registrations.filter(r => r.status === "REGISTERED").length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  <Star className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>No athletes to evaluate</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Athlete</TableHead>
-                      <TableHead>Attendance</TableHead>
-                      <TableHead>Quick Evaluation</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {instance.registrations
-                      .filter(r => r.status === "REGISTERED")
-                      .map((reg) => {
-                        const attendance = instance.attendances.find(
-                          a => a.athlete.id === reg.athlete.id
-                        );
-                        const isPresent = attendance?.status === "PRESENT" || attendance?.status === "LATE";
-                        return (
-                          <TableRow key={reg.id}>
-                            <TableCell className="font-medium">
-                              {reg.athlete.name}
-                            </TableCell>
-                            <TableCell>
-                              {attendance ? (
-                                <div className="flex items-center gap-2">
-                                  {getAttendanceIcon(attendance.status)}
-                                  <span className="text-sm">{attendance.status}</span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">Not marked</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Bulk Actions */}
+                {selectedAthleteIds.size > 0 && evaluationTemplate?.scoringType === "PASS_FAIL" && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/50">
+                    <span className="text-sm font-medium">{selectedAthleteIds.size} selected</span>
+                    <div className="h-4 w-px bg-border" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">Set Skill for Selected</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-64">
+                        {evaluationTemplate.skills.sort((a, b) => a.order - b.order).map(ts => (
+                          <DropdownMenuItem key={ts.skill.id} asChild>
+                            <div className="flex flex-col items-start gap-1 w-full p-0">
+                              <span className="text-sm font-medium px-2 pt-1">{ts.skill.name}</span>
+                              <div className="flex gap-1 px-2 pb-1">
                                 <Button
-                                  variant="outline"
+                                  variant="ghost"
                                   size="sm"
-                                  disabled={!isPresent}
-                                  className="gap-1"
-                                  onClick={() => router.push(`/dashboard/training/evaluations?athleteId=${reg.athlete.id}&programId=${instance.programId}&date=${instance.date}`)}
+                                  className="h-6 text-xs"
+                                  onClick={(e) => { e.stopPropagation(); handleBulkSetSkill(ts.skill.id, "SUCCEEDED"); }}
                                 >
-                                  <Star className="h-3 w-3" />
-                                  Evaluate
+                                  <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" />
+                                  Pass
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs"
+                                  onClick={(e) => { e.stopPropagation(); handleBulkSetSkill(ts.skill.id, "ATTEMPTED"); }}
+                                >
+                                  <AlertCircle className="h-3 w-3 mr-1 text-yellow-500" />
+                                  Attempted
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs"
+                                  onClick={(e) => { e.stopPropagation(); handleBulkSetSkill(ts.skill.id, "NOT_ATTEMPTED"); }}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1 text-muted-foreground" />
+                                  Clear
                                 </Button>
                               </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => router.push(`/dashboard/athletes/${reg.athlete.id}`)}
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button variant="outline" size="sm" onClick={handleBulkPassAll}>
+                      <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" />
+                      Pass All Skills
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedAthleteIds(new Set())}
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                )}
+
+                {/* Skill Matrix Grid */}
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 w-[200px] min-w-[200px]">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={
+                                evaluations.length > 0 &&
+                                selectedAthleteIds.size === evaluations.length
+                              }
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedAthleteIds(new Set(evaluations.map(e => e.athleteId)));
+                                } else {
+                                  setSelectedAthleteIds(new Set());
+                                }
+                              }}
+                            />
+                            <span>Athlete</span>
+                          </div>
+                        </TableHead>
+                        {evaluationTemplate?.skills
+                          .sort((a, b) => a.order - b.order)
+                          .map(ts => (
+                            <TableHead
+                              key={ts.skill.id}
+                              className="text-center min-w-[100px]"
+                              title={`${ts.skill.name} (${ts.skill.category})`}
+                            >
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className="text-xs font-medium truncate max-w-[90px]">
+                                  {ts.skill.name}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[90px]">
+                                  {ts.skill.category}
+                                </span>
+                              </div>
+                            </TableHead>
+                          ))}
+                        <TableHead className="text-center w-[80px]">Status</TableHead>
+                        <TableHead className="w-[60px]" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {evaluations.map(evalItem => (
+                        <TableRow key={evalItem.id}>
+                          <TableCell className="sticky left-0 bg-background z-10">
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={selectedAthleteIds.has(evalItem.athleteId)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedAthleteIds(prev => {
+                                    const next = new Set(prev);
+                                    if (checked) next.add(evalItem.athleteId);
+                                    else next.delete(evalItem.athleteId);
+                                    return next;
+                                  });
+                                }}
+                              />
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={evalItem.athlete.avatar || undefined} />
+                                <AvatarFallback className="text-xs">
+                                  {evalItem.athlete.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <button
+                                className="text-sm font-medium hover:underline text-left"
+                                onClick={() => openDetailSheet(evalItem)}
+                              >
+                                {evalItem.athlete.name}
+                              </button>
+                            </div>
+                          </TableCell>
+                          {evaluationTemplate?.skills
+                            .sort((a, b) => a.order - b.order)
+                            .map(ts => {
+                              const sr = evalItem.skillRatings.find(r => r.skillId === ts.skill.id);
+                              if (!sr) return <TableCell key={ts.skill.id} className="text-center">—</TableCell>;
+
+                              if (evaluationTemplate.scoringType === "POINT_SCALE") {
+                                return (
+                                  <TableCell key={ts.skill.id} className="text-center">
+                                    <div className="flex items-center justify-center">
+                                      <input
+                                        type="number"
+                                        min={evaluationTemplate.pointScaleMin}
+                                        max={evaluationTemplate.pointScaleMax}
+                                        value={sr.pointScore ?? ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                                          updatePointScoreInGrid(evalItem.id, ts.skill.id, val);
+                                        }}
+                                        className={`w-12 h-8 text-center text-sm border rounded-md ${
+                                          sr.passed
+                                            ? "border-green-300 bg-green-50 text-green-700"
+                                            : sr.pointScore !== null
+                                            ? "border-red-300 bg-red-50 text-red-700"
+                                            : "border-border"
+                                        }`}
+                                      />
+                                    </div>
+                                  </TableCell>
+                                );
+                              }
+
+                              return (
+                                <TableCell key={ts.skill.id} className="text-center">
+                                  <button
+                                    className="inline-flex items-center justify-center p-1 rounded-md hover:bg-muted transition-colors"
+                                    onClick={() =>
+                                      updateSkillInGrid(evalItem.id, ts.skill.id, cycleAttemptStatus(sr.attemptStatus))
+                                    }
+                                    title={sr.attemptStatus.replace("_", " ")}
                                   >
-                                    <Users className="h-4 w-4 mr-2" />
-                                    View Athlete Profile
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => router.push(`/dashboard/athletes/${reg.athlete.id}?tab=evaluations`)}
-                                  >
-                                    <ClipboardList className="h-4 w-4 mr-2" />
-                                    View All Evaluations
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => router.push(`/dashboard/athletes/${reg.athlete.id}?tab=achievements`)}
-                                  >
-                                    <Award className="h-4 w-4 mr-2" />
-                                    View Achievements
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() => router.push(`/dashboard/training/evaluations?athleteId=${reg.athlete.id}`)}
-                                  >
-                                    <ExternalLink className="h-4 w-4 mr-2" />
-                                    Full Evaluation Form
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                                    {getAttemptStatusIcon(sr.attemptStatus)}
+                                  </button>
+                                </TableCell>
+                              );
+                            })}
+                          <TableCell className="text-center">
+                            <Badge
+                              variant={
+                                evalItem.status === "PASS" || evalItem.status === "EXCELLENT"
+                                  ? "default"
+                                  : evalItem.status === "IN_PROGRESS"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                              className="text-xs"
+                            >
+                              {evalItem.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openDetailSheet(evalItem)}
+                              title="Open details"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>}
       </Tabs>
 
@@ -781,6 +1226,154 @@ export default function InstanceDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Evaluation Detail Sheet */}
+      <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
+        <SheetContent className="sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>Evaluation Details</SheetTitle>
+            <SheetDescription>
+              {detailEvaluation?.athlete.name} — {evaluationTemplate?.name}
+            </SheetDescription>
+          </SheetHeader>
+          {detailEvaluation && (
+            <ScrollArea className="h-[calc(100vh-220px)] pr-4">
+              <div className="space-y-6 py-4">
+                {/* Skills */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Skills Assessment</Label>
+                  {detailEvaluation.skillRatings
+                    .sort((a, b) => {
+                      const templateSkills = evaluationTemplate?.skills || [];
+                      const aOrder = templateSkills.find(ts => ts.skill.id === a.skillId)?.order ?? 0;
+                      const bOrder = templateSkills.find(ts => ts.skill.id === b.skillId)?.order ?? 0;
+                      return aOrder - bOrder;
+                    })
+                    .map(sr => (
+                      <div key={sr.id} className="rounded-lg border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-sm font-medium">{sr.skill.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{sr.skill.category}</span>
+                          </div>
+                          {sr.passed && (
+                            <Badge variant="default" className="text-xs bg-green-500">Passed</Badge>
+                          )}
+                        </div>
+
+                        {evaluationTemplate?.scoringType === "POINT_SCALE" ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-3">
+                              <Slider
+                                value={[sr.pointScore ?? evaluationTemplate.pointScaleMin]}
+                                min={evaluationTemplate.pointScaleMin}
+                                max={evaluationTemplate.pointScaleMax}
+                                step={1}
+                                onValueChange={([value]) => {
+                                  setDetailEvaluation(prev => {
+                                    if (!prev) return prev;
+                                    const threshold = evaluationTemplate?.pointScalePassThreshold || 7;
+                                    return {
+                                      ...prev,
+                                      skillRatings: prev.skillRatings.map(r =>
+                                        r.skillId === sr.skillId
+                                          ? { ...r, pointScore: value, passed: value >= threshold, attemptStatus: "ATTEMPTED" as const }
+                                          : r
+                                      ),
+                                    };
+                                  });
+                                }}
+                                className="flex-1"
+                              />
+                              <span className="text-sm font-medium w-8 text-right">
+                                {sr.pointScore ?? "—"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Pass threshold: {evaluationTemplate.pointScalePassThreshold}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex gap-1">
+                            {(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"] as const).map(status => (
+                              <Button
+                                key={status}
+                                variant={sr.attemptStatus === status ? "default" : "outline"}
+                                size="sm"
+                                className={`text-xs ${
+                                  sr.attemptStatus === status
+                                    ? status === "SUCCEEDED"
+                                      ? "bg-green-500 hover:bg-green-600"
+                                      : status === "ATTEMPTED"
+                                      ? "bg-yellow-500 hover:bg-yellow-600"
+                                      : ""
+                                    : ""
+                                }`}
+                                onClick={() => {
+                                  setDetailEvaluation(prev => {
+                                    if (!prev) return prev;
+                                    return {
+                                      ...prev,
+                                      skillRatings: prev.skillRatings.map(r =>
+                                        r.skillId === sr.skillId
+                                          ? { ...r, attemptStatus: status, passed: status === "SUCCEEDED" }
+                                          : r
+                                      ),
+                                    };
+                                  });
+                                }}
+                              >
+                                {status === "NOT_ATTEMPTED" ? "Not Attempted" : status === "ATTEMPTED" ? "Attempted" : "Passed"}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+
+                {/* Overall Status */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Overall Status</Label>
+                  <Select value={detailStatus} onValueChange={setDetailStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                      <SelectItem value="PASS">Pass</SelectItem>
+                      <SelectItem value="RETRY">Retry</SelectItem>
+                      <SelectItem value="EXCELLENT">Excellent</SelectItem>
+                      <SelectItem value="SATISFACTORY">Satisfactory</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Notes</Label>
+                  <Textarea
+                    value={detailNotes}
+                    onChange={(e) => setDetailNotes(e.target.value)}
+                    placeholder="Add notes about this evaluation..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+          <SheetFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDetailSheetOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveDetailEvaluation} disabled={detailSaving}>
+              {detailSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Evaluation
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

@@ -52,6 +52,7 @@ import {
   FileText,
   Heart,
   AlertTriangle,
+  ClipboardList,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useFeatures } from "@/components/feature-context"
@@ -142,7 +143,10 @@ interface ProgramFormData {
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
   
-  // Step 4: Staff
+  // Step 4: Evaluation
+  evaluationTemplateId: string | null
+  
+  // Step 5: Staff
   staffAssignments: StaffAssignment[]
   showCoachOnSite: boolean
 }
@@ -163,6 +167,7 @@ const { useStepper } = defineStepper(
   { id: "general", title: "General" },
   { id: "schedule", title: "Schedule" },
   { id: "requirements", title: "Requirements" },
+  { id: "evaluation", title: "Evaluation" },
   { id: "staff", title: "Staff" },
 )
 
@@ -194,6 +199,29 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const [loadingZones, setLoadingZones] = React.useState(false)
   const [fullyBookedOverride, setFullyBookedOverride] = React.useState<string | null>(null)
   const [conflictDetailsZoneId, setConflictDetailsZoneId] = React.useState<string | null>(null)
+  
+  // Evaluation templates state
+  const [evaluationTemplates, setEvaluationTemplates] = React.useState<Array<{
+    id: string
+    name: string
+    description: string | null
+    scoringType: string
+    pointScaleMin: number
+    pointScaleMax: number
+    pointScalePassThreshold: number
+    level: { id: string; name: string; color: string | null } | null
+    skills: Array<{ id: string; skill: { id: string; name: string; category: string }; order: number }>
+  }>>([])
+  const [loadingEvalTemplates, setLoadingEvalTemplates] = React.useState(false)
+  const [existingTemplateAssignment, setExistingTemplateAssignment] = React.useState<string | null>(null)
+  
+  // Visible step filtering (hides evaluation step when training is disabled)
+  const visibleStepIds = React.useMemo(() => {
+    const ids = ["general", "schedule", "requirements"]
+    if (trainingEnabled) ids.push("evaluation")
+    ids.push("staff")
+    return ids
+  }, [trainingEnabled])
   
   // Form state
   const [formData, setFormData] = React.useState<ProgramFormData>(() => ({
@@ -235,7 +263,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     waiverRequirementIds: (program as any)?.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
     hasMedicalRequirement: program?.hasMedicalRequirement || false,
     
-    // Step 4: Staff
+    // Step 4: Evaluation
+    evaluationTemplateId: null,
+    
+    // Step 5: Staff
     staffAssignments: program?.staffAssignments?.map(sa => ({
       staffProfileId: sa.staffProfileId,
       role: sa.role,
@@ -301,6 +332,47 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     }
     fetchWaivers()
   }, [])
+
+  // Fetch evaluation templates (only when training is enabled)
+  React.useEffect(() => {
+    if (!trainingEnabled) return
+    const fetchEvalTemplates = async () => {
+      setLoadingEvalTemplates(true)
+      try {
+        const response = await fetch("/api/evaluation-templates?isActive=true&limit=100")
+        if (response.ok) {
+          const data = await response.json()
+          setEvaluationTemplates(data.data || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch evaluation templates:", error)
+      } finally {
+        setLoadingEvalTemplates(false)
+      }
+    }
+    fetchEvalTemplates()
+  }, [trainingEnabled])
+
+  // Fetch existing evaluation template assignment when editing
+  React.useEffect(() => {
+    if (!isEditing || !program || !trainingEnabled) return
+    const fetchAssignment = async () => {
+      try {
+        const response = await fetch(`/api/programs/${program.id}/evaluation-templates`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.templates && data.templates.length > 0) {
+            const templateId = data.templates[0].templateId
+            setExistingTemplateAssignment(templateId)
+            setFormData(prev => ({ ...prev, evaluationTemplateId: templateId }))
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch evaluation template assignment:", error)
+      }
+    }
+    fetchAssignment()
+  }, [isEditing, program, trainingEnabled])
 
   // Fetch training zones + availability when facility or time changes
   // Extract ISO weekdays from rrule string (e.g. BYDAY=MO,WE,FR -> [0,2,4])
@@ -472,6 +544,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           return false
         }
         return true
+      case "evaluation":
+        return true
       case "staff":
         return true
       default:
@@ -479,19 +553,37 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     }
   }
   
+  type StepId = "general" | "schedule" | "requirements" | "evaluation" | "staff"
+  
+  const getNextVisibleStepId = (currentId: string): StepId | null => {
+    const idx = visibleStepIds.indexOf(currentId)
+    if (idx === -1 || idx >= visibleStepIds.length - 1) return null
+    return visibleStepIds[idx + 1] as StepId
+  }
+  
+  const getPrevVisibleStepId = (currentId: string): StepId | null => {
+    const idx = visibleStepIds.indexOf(currentId)
+    if (idx <= 0) return null
+    return visibleStepIds[idx - 1] as StepId
+  }
+  
   const handleNext = () => {
-    if (validateStep(stepper.state.current.data.id)) {
-      stepper.navigation.next()
+    const currentId = stepper.state.current.data.id
+    if (validateStep(currentId)) {
+      const nextId = getNextVisibleStepId(currentId)
+      if (nextId) stepper.navigation.goTo(nextId)
     }
   }
   
   const handlePrev = () => {
-    stepper.navigation.prev()
+    const currentId = stepper.state.current.data.id
+    const prevId = getPrevVisibleStepId(currentId)
+    if (prevId) stepper.navigation.goTo(prevId)
   }
   
   const handleSubmit = async () => {
-    if (!validateStep("general") || !validateStep("schedule") || !validateStep("requirements") || !validateStep("staff")) {
-      return
+    for (const stepId of visibleStepIds) {
+      if (!validateStep(stepId)) return
     }
     
     setIsSaving(true)
@@ -552,6 +644,30 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       }
       
       const savedProgram = await response.json()
+      
+      // Save evaluation template assignment if training is enabled
+      if (trainingEnabled) {
+        const programId = savedProgram.id
+        const newTemplateId = formData.evaluationTemplateId
+        const oldTemplateId = existingTemplateAssignment
+        
+        if (newTemplateId !== oldTemplateId) {
+          // Remove old assignment if it existed
+          if (oldTemplateId) {
+            await fetch(`/api/programs/${programId}/evaluation-templates?templateId=${oldTemplateId}`, {
+              method: "DELETE",
+            })
+          }
+          // Add new assignment if selected
+          if (newTemplateId) {
+            await fetch(`/api/programs/${programId}/evaluation-templates`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ templateId: newTemplateId }),
+            })
+          }
+        }
+      }
       
       toast.success(isEditing ? "Program updated successfully" : "Program created successfully")
       
@@ -624,15 +740,18 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     }))
   }
 
-  const currentIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id)
+  const visibleSteps = stepper.state.all.filter(s => visibleStepIds.includes(s.id))
+  const currentVisibleIndex = visibleSteps.findIndex(s => s.id === stepper.state.current.data.id)
+  const isFirstVisible = currentVisibleIndex === 0
+  const isLastVisible = currentVisibleIndex === visibleSteps.length - 1
 
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="flex flex-col gap-4">
         {/* Step Navigation */}
         <StepperNav className="mb-4">
-          {stepper.state.all.map((step, index) => {
-            const status = getStepStatus(index, currentIndex)
+          {visibleSteps.map((step, index) => {
+            const status = getStepStatus(index, currentVisibleIndex)
             return (
               <React.Fragment key={step.id}>
                 <StepperItem status={status}>
@@ -640,12 +759,12 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     status={status}
                     step={index + 1}
                     onClick={() => {
-                      if (index < currentIndex) stepper.navigation.goTo(step.id)
+                      if (index < currentVisibleIndex) stepper.navigation.goTo(step.id)
                     }}
                   />
                   <StepperTitle status={status} className="hidden sm:block">{step.title}</StepperTitle>
                 </StepperItem>
-                {index < stepper.state.all.length - 1 && (
+                {index < visibleSteps.length - 1 && (
                   <StepperSeparator status={status} className="hidden sm:block" />
                 )}
               </React.Fragment>
@@ -1703,7 +1822,117 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           </Card>
         )}
         
-        {/* Step 4: Staff */}
+        {/* Step 4: Evaluation */}
+        {stepper.state.current.data.id === "evaluation" && trainingEnabled && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                Evaluation Template
+              </CardTitle>
+              <CardDescription>
+                Select an evaluation template to assess athletes in this program
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Evaluation Template</Label>
+                <p className="text-sm text-muted-foreground">
+                  Choose how athletes in this program will be evaluated during sessions
+                </p>
+                {loadingEvalTemplates ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm text-muted-foreground">Loading templates...</span>
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.evaluationTemplateId || "none"}
+                    onValueChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      evaluationTemplateId: value === "none" ? null : value,
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No evaluation template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No evaluation template</SelectItem>
+                      {evaluationTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{template.name}</span>
+                            {template.level && (
+                              <Badge
+                                className="text-xs"
+                                style={template.level.color ? { backgroundColor: `${template.level.color}20`, color: template.level.color } : undefined}
+                                variant={template.level.color ? "outline" : "secondary"}
+                              >
+                                {template.level.name}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              ({template.skills.length} skills)
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              
+              {/* Template Preview */}
+              {formData.evaluationTemplateId && (() => {
+                const selected = evaluationTemplates.find(t => t.id === formData.evaluationTemplateId)
+                if (!selected) return null
+                return (
+                  <div className="rounded-lg border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">{selected.name}</h4>
+                      <Badge variant="outline">
+                        {selected.scoringType === "POINT_SCALE"
+                          ? `Point Scale (${selected.pointScaleMin}-${selected.pointScaleMax}, pass at ${selected.pointScalePassThreshold}+)`
+                          : "Pass / Fail"}
+                      </Badge>
+                    </div>
+                    {selected.description && (
+                      <p className="text-sm text-muted-foreground">{selected.description}</p>
+                    )}
+                    <div className="space-y-1">
+                      <Label className="text-sm">Skills ({selected.skills.length})</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-48 overflow-y-auto">
+                        {selected.skills
+                          .sort((a, b) => a.order - b.order)
+                          .map((ts) => (
+                            <div key={ts.id} className="flex items-center gap-2 text-sm py-1 px-2 rounded-md bg-muted/50">
+                              <Star className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <span>{ts.skill.name}</span>
+                              <span className="text-xs text-muted-foreground ml-auto">{ts.skill.category}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+              
+              {evaluationTemplates.length === 0 && !loadingEvalTemplates && (
+                <div className="rounded-lg border border-dashed p-6 text-center">
+                  <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No evaluation templates have been created yet.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Create templates in Training &gt; Evaluations to get started.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Step 5: Staff */}
         {stepper.state.current.data.id === "staff" && (
           <Card>
             <CardHeader>
@@ -1876,7 +2105,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           </Button>
           
           <div className="flex items-center gap-2">
-            {!stepper.state.isFirst && (
+            {!isFirstVisible && (
               <Button
                 type="button"
                 variant="outline"
@@ -1887,7 +2116,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               </Button>
             )}
             
-            {!stepper.state.isLast ? (
+            {!isLastVisible ? (
               <Button type="button" onClick={handleNext}>
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />

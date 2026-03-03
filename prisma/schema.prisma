@@ -1054,6 +1054,7 @@ model ProgramInstance {
   registrations InstanceRegistration[]
   attendances   InstanceAttendance[]
   trainingZones ProgramInstanceTrainingZone[]
+  evaluations   Evaluation[]
 
   @@index([programId])
   @@index([facilityId])
@@ -1663,24 +1664,26 @@ model RotationSkill {
 }
 
 model Evaluation {
-  id           String           @id @default(cuid())
-  athleteId    String
-  coachId      String
-  templateId   String? // Optional link to evaluation template
-  programId    String? // Optional link to program
-  levelId      String? // FK to Level model
-  date         DateTime
-  overallScore Decimal          @db.Decimal(3, 1)
-  status       EvaluationStatus
-  notes        String?          @db.Text
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id                String           @id @default(cuid())
+  athleteId         String
+  coachId           String
+  templateId        String? // Optional link to evaluation template
+  programId         String? // Optional link to program
+  programInstanceId String? // Optional link to specific session
+  levelId           String? // FK to Level model
+  date              DateTime
+  overallScore      Decimal          @db.Decimal(3, 1)
+  status            EvaluationStatus
+  notes             String?          @db.Text
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   // Relations
   athlete             Athlete              @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   coach               User                 @relation(fields: [coachId], references: [id])
   template            EvaluationTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
   program             Program?             @relation(fields: [programId], references: [id], onDelete: SetNull)
+  programInstance     ProgramInstance?     @relation(fields: [programInstanceId], references: [id], onDelete: SetNull)
   level               Level?               @relation(fields: [levelId], references: [id], onDelete: SetNull)
   skillRatings        EvaluationSkill[]
   athleteAchievements AthleteAchievement[]
@@ -1689,6 +1692,7 @@ model Evaluation {
   @@index([coachId])
   @@index([templateId])
   @@index([programId])
+  @@index([programInstanceId])
   @@index([levelId])
 }
 
