@@ -12,7 +12,6 @@ import {
   Globe, 
   CreditCard, 
   Palette, 
-  ExternalLink,
   Users,
   UserPlus,
   Calendar,
@@ -55,6 +54,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { getBaseDomainSuffix } from "@/lib/client-domains"
+import { PlansComparisonDialog } from "./plans-comparison-dialog"
 
 interface Sport {
   id: string
@@ -74,13 +74,16 @@ interface SubscriptionPlan {
   transactionFee: string
   perTransactionFee: string
   features: string[]
+  featureToggles: Record<string, boolean>
   isPopular: boolean
   maxAthletes: number | null
   maxUsers: number | null
   maxPrograms: number | null
   maxEvents: number | null
   smsIncluded: number | null
+  smsOverageRate: string | null
   emailIncluded: number | null
+  emailOverageRate: string | null
   maxStorageMB: number | null
   maxMembershipTypes: number | null
 }
@@ -941,15 +944,21 @@ export default function SignupPage() {
                     ))}
                   </div>
                   <div className="mt-4 text-center">
-                    <a 
-                      href="https://www.uplifterinc.com/pricing" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                    <PlansComparisonDialog
+                      plans={plans}
+                      selectedPlanId={formData.planId}
+                      onSelectPlan={(planId) =>
+                        setFormData((prev) => ({ ...prev, planId }))
+                      }
                     >
-                      Learn more about our plans
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="text-sm text-primary"
+                      >
+                        Compare all plans in detail
+                      </Button>
+                    </PlansComparisonDialog>
                   </div>
                 </>
               )}
