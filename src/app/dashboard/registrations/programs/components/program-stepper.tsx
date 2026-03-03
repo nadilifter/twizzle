@@ -1068,11 +1068,19 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                                       ? [...prev.trainingZoneIds, zone.id]
                                       : prev.trainingZoneIds.filter(id => id !== zone.id)
                                     const hasZones = newIds.length > 0
+                                    const selectedZones = trainingZones.filter(z => newIds.includes(z.id))
+                                    const capacities = selectedZones.map(z => z.capacity).filter((c): c is number => c != null)
+                                    const derived = capacities.length > 0
+                                      ? (prev.trainingZoneCapacityMode === "SUM"
+                                          ? capacities.reduce((sum, c) => sum + c, 0)
+                                          : Math.min(...capacities))
+                                      : null
                                     return {
                                       ...prev,
                                       trainingZoneIds: newIds,
                                       hasCapacityRestriction: hasZones ? true : prev.hasCapacityRestriction,
                                       hasTrainingZoneRestriction: hasZones ? true : false,
+                                      capacity: hasZones && derived != null ? derived : prev.capacity,
                                     }
                                   })
                                 }}
@@ -1229,11 +1237,19 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                                 if (fullyBookedOverride) {
                                   setFormData(prev => {
                                     const newIds = [...prev.trainingZoneIds, fullyBookedOverride]
+                                    const selectedZones = trainingZones.filter(z => newIds.includes(z.id))
+                                    const capacities = selectedZones.map(z => z.capacity).filter((c): c is number => c != null)
+                                    const derived = capacities.length > 0
+                                      ? (prev.trainingZoneCapacityMode === "SUM"
+                                          ? capacities.reduce((sum, c) => sum + c, 0)
+                                          : Math.min(...capacities))
+                                      : null
                                     return {
                                       ...prev,
                                       trainingZoneIds: newIds,
                                       hasCapacityRestriction: true,
                                       hasTrainingZoneRestriction: true,
+                                      capacity: derived ?? prev.capacity,
                                     }
                                   })
                                 }
@@ -1430,7 +1446,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                         type="number"
                         min={1}
                         max={formData.hasTrainingZoneRestriction && zoneDerivedCapacity ? zoneDerivedCapacity : undefined}
-                        placeholder="Enter maximum number of athletes"
+                        placeholder="Max athletes"
                         value={formData.capacity || ""}
                         onChange={e => {
                           const val = e.target.value ? parseInt(e.target.value) : null
