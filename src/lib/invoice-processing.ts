@@ -97,6 +97,7 @@ export async function processInvoiceRegistrations(
     const instanceId = item.details?.instanceId;
     const programId = item.details?.programId || item.referenceId;
     const athleteId = item.athleteId || item.details?.athleteId;
+    const isWaitlist = item.details?.waitlist === true;
     if (!athleteId) continue;
 
     if (instanceId) {
@@ -113,13 +114,13 @@ export async function processInvoiceRegistrations(
           programInstanceId: instanceId,
           athleteId,
           userId: userId || undefined,
-          status: "REGISTERED",
+          status: isWaitlist ? "WAITLISTED" : "REGISTERED",
         },
       });
     } else if (programId) {
       // Full program registration → Enrollment + InstanceRegistrations for all instances
       const existing = await db.enrollment.findFirst({
-        where: { programId, athleteId, status: { in: ["ACTIVE", "PAUSED"] } },
+        where: { programId, athleteId, status: { in: ["ACTIVE", "WAITLISTED", "PAUSED"] } },
       });
       if (!existing) {
         await db.enrollment.create({
@@ -128,31 +129,34 @@ export async function processInvoiceRegistrations(
             athleteId,
             userId: userId || undefined,
             startDate: new Date(),
-            status: "ACTIVE",
+            status: isWaitlist ? "WAITLISTED" : "ACTIVE",
           },
         });
       }
 
-      const instances = await db.programInstance.findMany({
-        where: { programId, status: { not: "CANCELLED" } },
-        select: { id: true },
-      });
-      for (const inst of instances) {
-        await db.instanceRegistration.upsert({
-          where: {
-            programInstanceId_athleteId: {
+      // Only create instance registrations for non-waitlist enrollments
+      if (!isWaitlist) {
+        const instances = await db.programInstance.findMany({
+          where: { programId, status: { not: "CANCELLED" } },
+          select: { id: true },
+        });
+        for (const inst of instances) {
+          await db.instanceRegistration.upsert({
+            where: {
+              programInstanceId_athleteId: {
+                programInstanceId: inst.id,
+                athleteId,
+              },
+            },
+            update: {},
+            create: {
               programInstanceId: inst.id,
               athleteId,
+              userId: userId || undefined,
+              status: "REGISTERED",
             },
-          },
-          update: {},
-          create: {
-            programInstanceId: inst.id,
-            athleteId,
-            userId: userId || undefined,
-            status: "REGISTERED",
-          },
-        });
+          });
+        }
       }
     }
   }

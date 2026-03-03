@@ -116,6 +116,10 @@ interface ProgramData {
   organizationId: string
   capacity: number | null
   hasCapacityRestriction: boolean
+  waitlistEnabled?: boolean
+  waitlistCapacity?: number | null
+  enrolled?: number
+  waitlistedCount?: number
   requiredMemberships: RequiredMembership[]
   waiverRequirements: WaiverRequirement[]
 }
@@ -173,6 +177,14 @@ export function ProgramRegistrationFlow({
   const needsWaivers = program.hasWaiverRestriction && program.waiverRequirements.length > 0
   const needsMedicalStep = program.hasMedicalRequirement
   const needsMembership = program.hasMembershipRestriction && program.requiredMemberships.length > 0
+
+  const programIsFull = program.hasCapacityRestriction
+    && program.capacity != null
+    && (program.enrolled ?? 0) >= program.capacity
+  const waitlistHasRoom = program.waitlistEnabled && (
+    program.waitlistCapacity == null || (program.waitlistedCount ?? 0) < program.waitlistCapacity
+  )
+  const isWaitlistMode = programIsFull && waitlistHasRoom
 
   const price = program.pricingModel === "PER_SESSION"
     ? (program.perSessionPrice || 0)
@@ -653,6 +665,7 @@ export function ProgramRegistrationFlow({
     if (isPerInstance) {
       const selectedInstances = instances.filter(i => selectedInstanceIds.has(i.id))
       for (const instance of selectedInstances) {
+        const instanceIsFull = instance.capacity !== undefined && instance.registrationCount >= instance.capacity
         addItem({
           referenceId: instance.id,
           type: "program",
@@ -667,6 +680,7 @@ export function ProgramRegistrationFlow({
             instanceId: instance.id,
             date: instance.date,
             startTime: instance.startTime,
+            waitlist: instanceIsFull && program.waitlistEnabled,
             endTime: instance.endTime,
           },
         })
@@ -685,6 +699,7 @@ export function ProgramRegistrationFlow({
           programId: program.id,
           pricingModel: program.pricingModel,
           requiredMemberships: program.requiredMemberships.map(m => m.id),
+          waitlist: isWaitlistMode,
         },
       })
     }
@@ -746,6 +761,23 @@ export function ProgramRegistrationFlow({
           )
         })}
       </StepperNav>
+
+      {/* Waitlist Banner */}
+      {isWaitlistMode && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                This program is currently full
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                You are joining the waitlist. You will not be charged until a spot becomes available and you are moved into the program.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Step: Select Athlete */}
       {currentStepId === "athlete" && (
@@ -1002,7 +1034,8 @@ export function ProgramRegistrationFlow({
                   const isFull = instance.capacity !== undefined && instance.registrationCount >= instance.capacity
                   const isAlreadyRegistered = alreadyRegisteredIds.has(instance.id)
                   const isInCart = inCartIds.has(instance.id)
-                  const isUnavailable = isFull || isAlreadyRegistered || isInCart
+                  const instanceWaitlistAvailable = isFull && program.waitlistEnabled
+                  const isUnavailable = (isFull && !instanceWaitlistAvailable) || isAlreadyRegistered || isInCart
                   const isSelected = selectedInstanceIds.has(instance.id)
                   const spotsLeft = instance.capacity ? instance.capacity - instance.registrationCount : null
 
@@ -1056,9 +1089,9 @@ export function ProgramRegistrationFlow({
                           </div>
                         ) : spotsLeft !== null ? (
                           <div className={`text-xs ${
-                            isFull ? "text-red-600 dark:text-red-400" : spotsLeft <= 3 ? "text-orange-600 dark:text-orange-400" : "text-green-600 dark:text-green-400"
+                            isFull && instanceWaitlistAvailable ? "text-amber-600 dark:text-amber-400" : isFull ? "text-red-600 dark:text-red-400" : spotsLeft <= 3 ? "text-orange-600 dark:text-orange-400" : "text-green-600 dark:text-green-400"
                           }`}>
-                            {isFull ? "Full" : `${spotsLeft} spots`}
+                            {isFull && instanceWaitlistAvailable ? "Waitlist" : isFull ? "Full" : `${spotsLeft} spots`}
                           </div>
                         ) : null}
                       </div>
@@ -1240,8 +1273,13 @@ export function ProgramRegistrationFlow({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5" />
-              Review Registration
+              {isWaitlistMode ? "Review & Join Waitlist" : "Review Registration"}
             </CardTitle>
+            {isWaitlistMode && (
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                You will be added to the waitlist. You will not be charged until a spot becomes available.
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -1347,7 +1385,7 @@ export function ProgramRegistrationFlow({
                   disabled={!isPerInstance && isAlreadyFullyRegistered}
                 >
                   <ClipboardList className="h-4 w-4" />
-                  Register & Checkout
+                  {isWaitlistMode ? "Join Waitlist & Checkout" : "Register & Checkout"}
                 </Button>
                 <Button
                   variant="outline"
@@ -1356,7 +1394,7 @@ export function ProgramRegistrationFlow({
                   disabled={!isPerInstance && isAlreadyFullyRegistered}
                 >
                   <ShoppingCart className="h-4 w-4" />
-                  Add to Cart & Continue Browsing
+                  {isWaitlistMode ? "Add to Cart & Continue Browsing" : "Add to Cart & Continue Browsing"}
                 </Button>
                 <Button
                   variant="ghost"

@@ -735,6 +735,11 @@ model Program {
   // Capacity (for classes)
   capacity Int?
 
+  // Waitlist
+  waitlistEnabled     Boolean @default(false)
+  waitlistAutoPromote Boolean @default(false)
+  waitlistCapacity    Int? // null = unlimited
+
   // Display
   showCoachOnSite Boolean @default(true)
 
@@ -1024,6 +1029,7 @@ model Enrollment {
 
 enum EnrollmentStatus {
   ACTIVE
+  WAITLISTED
   PAUSED
   CANCELLED
   COMPLETED

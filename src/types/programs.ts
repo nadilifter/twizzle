@@ -24,6 +24,7 @@ export type RecurrenceType = "NON_RECURRING" | "RECURRING";
 export type RegistrationType = "ALL_INSTANCES" | "PER_INSTANCE";
 export type InstanceStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
 export type RegistrationStatus = "REGISTERED" | "WAITLISTED" | "CANCELLED";
+export type EnrollmentStatus = "ACTIVE" | "WAITLISTED" | "PAUSED" | "CANCELLED" | "COMPLETED";
 export type TrainingZoneCapacityMode = "MINIMUM" | "SUM";
 
 export interface ProgramLevelRequirement {
@@ -81,6 +82,11 @@ export interface Program {
   
   // Capacity
   capacity: number | null;
+
+  // Waitlist
+  waitlistEnabled: boolean;
+  waitlistAutoPromote: boolean;
+  waitlistCapacity: number | null;
   
   // Age restrictions
   minAge: number | null;
@@ -252,6 +258,9 @@ export interface CreateProgramPayload {
   hasMedicalRequirement?: boolean;
   hasTrainingZoneRestriction?: boolean;
   trainingZoneCapacityMode?: TrainingZoneCapacityMode;
+  waitlistEnabled?: boolean;
+  waitlistAutoPromote?: boolean;
+  waitlistCapacity?: number | null;
   // For staff assignments during creation
   staffAssignments?: Array<{
     staffProfileId: string;
@@ -295,6 +304,9 @@ export interface UpdateProgramPayload {
   hasMedicalRequirement?: boolean;
   hasTrainingZoneRestriction?: boolean;
   trainingZoneCapacityMode?: TrainingZoneCapacityMode;
+  waitlistEnabled?: boolean;
+  waitlistAutoPromote?: boolean;
+  waitlistCapacity?: number | null;
   // For staff assignments
   staffAssignments?: Array<{
     staffProfileId: string;

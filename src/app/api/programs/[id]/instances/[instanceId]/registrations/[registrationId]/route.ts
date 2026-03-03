@@ -98,7 +98,12 @@ export async function PATCH(
       },
       include: {
         programInstance: {
-          select: { capacity: true },
+          select: {
+            capacity: true,
+            program: {
+              select: { waitlistEnabled: true, waitlistAutoPromote: true },
+            },
+          },
         },
       },
     });
@@ -107,10 +112,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Registration not found" }, { status: 404 });
     }
 
-    // If cancelling, check if we should promote someone from waitlist
     const shouldPromoteWaitlist =
       existing.status === "REGISTERED" &&
-      validated.status === "CANCELLED";
+      validated.status === "CANCELLED" &&
+      existing.programInstance.program.waitlistAutoPromote;
 
     const registration = await db.$transaction(async (tx) => {
       const updated = await tx.instanceRegistration.update({
@@ -128,7 +133,6 @@ export async function PATCH(
         },
       });
 
-      // Promote next waitlisted person if applicable
       if (shouldPromoteWaitlist) {
         const nextWaitlisted = await tx.instanceRegistration.findFirst({
           where: {
@@ -193,6 +197,15 @@ export async function DELETE(
           organizationId: session.user.organizationId,
         },
       },
+      include: {
+        programInstance: {
+          select: {
+            program: {
+              select: { waitlistAutoPromote: true },
+            },
+          },
+        },
+      },
     });
 
     if (!existing) {
@@ -200,14 +213,14 @@ export async function DELETE(
     }
 
     const wasRegistered = existing.status === "REGISTERED";
+    const shouldPromote = wasRegistered && existing.programInstance.program.waitlistAutoPromote;
 
     await db.$transaction(async (tx) => {
       await tx.instanceRegistration.delete({
         where: { id: registrationId },
       });
 
-      // Promote next waitlisted person if this was a registered user
-      if (wasRegistered) {
+      if (shouldPromote) {
         const nextWaitlisted = await tx.instanceRegistration.findFirst({
           where: {
             programInstanceId: instanceId,

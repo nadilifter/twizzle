@@ -18,6 +18,7 @@ interface CartItem {
   athleteName?: string;
   details?: {
     programId?: string;
+    instanceId?: string;
     membershipInstanceId?: string;
     athleteId?: string;
     level?: string;
@@ -29,6 +30,7 @@ interface CartItem {
     pricingMode?: string;
     entryFee?: number | null;
     seedMarks?: Record<string, Record<string, unknown>>;
+    waitlist?: boolean;
   };
 }
 

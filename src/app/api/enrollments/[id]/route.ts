@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { promoteFromWaitlist } from "@/lib/waitlist-promotion";
 
 const updateEnrollmentSchema = z.object({
-  status: z.enum(["ACTIVE", "PAUSED", "CANCELLED", "COMPLETED"]).optional(),
+  status: z.enum(["ACTIVE", "WAITLISTED", "PAUSED", "CANCELLED", "COMPLETED"]).optional(),
   endDate: z.string().optional().nullable(),
 });
 
@@ -86,6 +87,9 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateEnrollmentSchema.parse(body);
 
+    const wasCancellingActive =
+      existing.status === "ACTIVE" && validatedData.status === "CANCELLED";
+
     const enrollment = await db.enrollment.update({
       where: { id },
       data: {
@@ -101,6 +105,13 @@ export async function PATCH(
         program: true,
       },
     });
+
+    // Auto-promote from waitlist if an active enrollment was cancelled
+    if (wasCancellingActive) {
+      promoteFromWaitlist(existing.programId).catch((err) =>
+        console.error("Waitlist promotion failed:", err)
+      );
+    }
 
     return NextResponse.json(enrollment);
   } catch (error) {
@@ -146,7 +157,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Enrollment not found" }, { status: 404 });
     }
 
+    const wasActive = existing.status === "ACTIVE";
     await db.enrollment.delete({ where: { id } });
+
+    if (wasActive) {
+      promoteFromWaitlist(existing.programId).catch((err) =>
+        console.error("Waitlist promotion failed:", err)
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

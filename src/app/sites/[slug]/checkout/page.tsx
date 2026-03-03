@@ -67,6 +67,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const { items, subtotal, removeItem, clearCart, getDependentItems, removeItemWithDependents, getItemsByAthlete } = useCart()
   const router = useRouter()
   const { data: session } = useSession()
+  const hasWaitlistItems = items.some(item => item.details?.waitlist === true)
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("details")
   const [formData, setFormData] = useState({
     firstName: "",
@@ -1147,19 +1148,25 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                     <CreditCard className="h-7 w-7 text-primary" />
                   </div>
-                  <CardTitle className="text-xl">Online Payments Coming Soon</CardTitle>
+                  <CardTitle className="text-xl">
+                    {hasWaitlistItems ? "Waitlist Payment" : "Online Payments Coming Soon"}
+                  </CardTitle>
                   <CardDescription>
-                    We&apos;re putting the finishing touches on our secure payment system.
+                    {hasWaitlistItems
+                      ? "Payment information will be collected when a spot becomes available."
+                      : "We're putting the finishing touches on our secure payment system."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="rounded-lg border border-dashed p-4 space-y-2">
                     <div className="flex items-center justify-center gap-2 text-sm font-medium">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>Available very soon</span>
+                      <span>{hasWaitlistItems ? "You will not be charged yet" : "Available very soon"}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Online checkout will be available shortly. Please contact the organization directly to complete your registration.
+                      {hasWaitlistItems
+                        ? "You will be added to the waitlist. When a spot opens and you are promoted, we will collect payment at that time. Online payments are coming soon."
+                        : "Online checkout will be available shortly. Please contact the organization directly to complete your registration."}
                     </p>
                   </div>
                   <Button

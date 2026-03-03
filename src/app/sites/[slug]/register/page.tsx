@@ -33,7 +33,10 @@ export default async function RegisterPage({ params }: { params: { slug: string 
                     },
                 },
                 _count: {
-                    select: { instances: true, enrollments: true },
+                    select: {
+                        instances: true,
+                        enrollments: { where: { status: { not: "WAITLISTED" } } },
+                    },
                 },
                 staffAssignments: {
                     where: {
@@ -77,11 +80,28 @@ export default async function RegisterPage({ params }: { params: { slug: string 
         }),
     ]);
 
+    // Fetch waitlisted enrollment counts for programs with waitlists enabled
+    const waitlistPrograms = programs.filter(p => p.waitlistEnabled);
+    const waitlistedCounts = waitlistPrograms.length > 0
+        ? await db.enrollment.groupBy({
+            by: ["programId"],
+            where: {
+                programId: { in: waitlistPrograms.map(p => p.id) },
+                status: "WAITLISTED",
+            },
+            _count: true,
+        })
+        : [];
+    const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
+
     const serializedPrograms = programs.map(program => ({
         ...program,
-        // Serialize decimal fields to numbers
         basePrice: program.basePrice ? Number(program.basePrice) : null,
         perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
+        _count: {
+            ...program._count,
+            waitlistedEnrollments: waitlistCountMap.get(program.id) || 0,
+        },
         bulkDiscounts: program.bulkDiscounts.map(discount => ({
             ...discount,
             discountValue: Number(discount.discountValue),

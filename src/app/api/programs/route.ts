@@ -39,6 +39,10 @@ const createProgramSchema = z.object({
   hasMedicalRequirement: z.boolean().default(false),
   // Gender restriction values
   allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).default([]),
+  // Waitlist
+  waitlistEnabled: z.boolean().default(false),
+  waitlistAutoPromote: z.boolean().default(false),
+  waitlistCapacity: z.number().int().min(1).optional().nullable(),
   // Related data for creation
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
@@ -266,6 +270,9 @@ export async function POST(request: NextRequest) {
           hasMembershipRestriction: validatedData.hasMembershipRestriction,
           hasWaiverRestriction: validatedData.hasWaiverRestriction,
           hasMedicalRequirement: validatedData.hasMedicalRequirement,
+          waitlistEnabled: validatedData.waitlistEnabled,
+          waitlistAutoPromote: validatedData.waitlistAutoPromote,
+          waitlistCapacity: validatedData.waitlistCapacity,
           organizationId: session.user.organizationId,
           // Connect membership requirements in initial create
           ...(validatedData.membershipRequirementIds?.length && {

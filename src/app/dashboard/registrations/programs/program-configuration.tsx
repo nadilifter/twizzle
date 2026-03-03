@@ -110,6 +110,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
   const membershipsEnabled = isFeatureEnabled("memberships")
+  const waitlistsEnabled = isFeatureEnabled("waitlists")
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
 
@@ -171,6 +172,11 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     hasWaiverRestriction: (program as any).hasWaiverRestriction || false,
     waiverRequirementIds: ((program as any).waiverRequirements?.map((wr: any) => wr.waiverId) || []) as string[],
     hasMedicalRequirement: (program as any).hasMedicalRequirement || false,
+
+    // Waitlist
+    waitlistEnabled: program.waitlistEnabled || false,
+    waitlistAutoPromote: program.waitlistAutoPromote || false,
+    waitlistCapacity: (program.waitlistCapacity ?? null) as number | null,
 
     // Staff
     staffAssignments: (program.staffAssignments?.map((sa: any) => ({
@@ -529,6 +535,23 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     }
   }
 
+  const handleSaveWaitlist = async () => {
+    setIsSaving(true)
+    try {
+      await updateProgram(program.id, {
+        waitlistEnabled: formData.waitlistEnabled,
+        waitlistAutoPromote: formData.waitlistEnabled ? formData.waitlistAutoPromote : false,
+        waitlistCapacity: formData.waitlistEnabled ? formData.waitlistCapacity : null,
+      } as any)
+      toast.success("Waitlist settings saved")
+      fetchPrograms()
+    } catch (error) {
+      toast.error("Failed to save waitlist settings")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleSaveStaff = async () => {
     setIsSaving(true)
     try {
@@ -566,6 +589,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="requirements">Requirements</TabsTrigger>
+            {waitlistsEnabled && <TabsTrigger value="waitlist">Waitlist</TabsTrigger>}
             <TabsTrigger value="staff">Staff</TabsTrigger>
           </TabsList>
         </div>
@@ -1651,6 +1675,71 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
               </Button>
             </div>
           </TabsContent>
+
+          {/* ============================================= */}
+          {/* WAITLIST TAB                                   */}
+          {/* ============================================= */}
+          {waitlistsEnabled && (
+          <TabsContent value="waitlist" className="mt-0 space-y-6 max-w-2xl">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="config-waitlist-enabled" className="text-base">Enable Waitlist</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow athletes to join a waitlist when the program is full
+                </p>
+              </div>
+              <Switch
+                id="config-waitlist-enabled"
+                checked={formData.waitlistEnabled}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, waitlistEnabled: checked }))}
+              />
+            </div>
+
+            {formData.waitlistEnabled && (
+              <>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="config-waitlist-auto-promote" className="text-base">Automatic Promotion</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Automatically promote the next person on the waitlist when a spot opens, in registration order
+                    </p>
+                  </div>
+                  <Switch
+                    id="config-waitlist-auto-promote"
+                    checked={formData.waitlistAutoPromote}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, waitlistAutoPromote: checked }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="config-waitlist-capacity">Maximum Waitlist Size</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Limit how many people can join the waitlist. Leave empty for unlimited.
+                  </p>
+                  <Input
+                    id="config-waitlist-capacity"
+                    type="number"
+                    min={1}
+                    placeholder="Unlimited"
+                    value={formData.waitlistCapacity ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value ? parseInt(e.target.value, 10) : null
+                      setFormData(prev => ({ ...prev, waitlistCapacity: val }))
+                    }}
+                    className="max-w-[200px]"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="pt-4 flex justify-end">
+              <Button onClick={handleSaveWaitlist} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Waitlist
+              </Button>
+            </div>
+          </TabsContent>
+          )}
 
           {/* ============================================= */}
           {/* STAFF TAB                                     */}

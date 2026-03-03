@@ -46,6 +46,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2 } from "lucide-react";
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 import { toast } from "sonner";
 
@@ -62,6 +64,9 @@ interface Program {
     duration: number | null;
     capacity: number | null;
     basePrice: number | null;
+    waitlistEnabled: boolean;
+    waitlistAutoPromote: boolean;
+    waitlistCapacity: number | null;
     facility: { id: string; name: string; city?: string } | null;
     _count: {
         instances: number;
@@ -122,6 +127,17 @@ export default function ProgramDetailPage() {
     const [registrationsLoading, setRegistrationsLoading] = useState(false);
     const [attendanceLoading, setAttendanceLoading] = useState<string | null>(null);
 
+    // Waitlist state
+    const [waitlistEntries, setWaitlistEntries] = useState<Array<{
+        id: string;
+        position: number;
+        athleteId: string;
+        athlete: { id: string; name: string; email: string | null; avatar: string | null };
+        joinedAt: string;
+    }>>([]);
+    const [waitlistLoading, setWaitlistLoading] = useState(false);
+    const [promotingId, setPromotingId] = useState<string | null>(null);
+
     useBreadcrumbOverride(
         program ? `/dashboard/registrations/programs/${programId}` : undefined,
         program?.name,
@@ -130,6 +146,7 @@ export default function ProgramDetailPage() {
     useEffect(() => {
         fetchProgram();
         fetchInstances();
+        fetchWaitlist();
     }, [programId]);
 
     useEffect(() => {
@@ -184,6 +201,39 @@ export default function ProgramDetailPage() {
             toast.error("Failed to load registrations");
         } finally {
             setRegistrationsLoading(false);
+        }
+    };
+
+    const fetchWaitlist = async () => {
+        setWaitlistLoading(true);
+        try {
+            const response = await fetch(`/api/programs/${programId}/waitlist`);
+            if (!response.ok) throw new Error("Failed to fetch waitlist");
+            const data = await response.json();
+            setWaitlistEntries(data.waitlisted || []);
+        } catch (error) {
+            console.error("Failed to load waitlist:", error);
+        } finally {
+            setWaitlistLoading(false);
+        }
+    };
+
+    const promoteFromWaitlist = async (enrollmentId: string) => {
+        setPromotingId(enrollmentId);
+        try {
+            const response = await fetch(`/api/programs/${programId}/waitlist`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ enrollmentId }),
+            });
+            if (!response.ok) throw new Error("Failed to promote");
+            toast.success("Athlete promoted from waitlist");
+            fetchWaitlist();
+            fetchProgram();
+        } catch (error) {
+            toast.error("Failed to promote from waitlist");
+        } finally {
+            setPromotingId(null);
         }
     };
 
@@ -665,6 +715,92 @@ export default function ProgramDetailPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Waitlist Section */}
+            {program.waitlistEnabled && (
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Users className="h-5 w-5" />
+                                    Waitlist
+                                </CardTitle>
+                                <CardDescription>
+                                    {waitlistEntries.length} athlete{waitlistEntries.length !== 1 ? "s" : ""} on the waitlist
+                                    {program.waitlistCapacity != null && ` (max ${program.waitlistCapacity})`}
+                                    {program.waitlistAutoPromote && " · Auto-promote enabled"}
+                                </CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {waitlistLoading ? (
+                            <div className="space-y-3">
+                                {[1, 2, 3].map((i) => (
+                                    <Skeleton key={i} className="h-12 w-full" />
+                                ))}
+                            </div>
+                        ) : waitlistEntries.length === 0 ? (
+                            <div className="text-center text-muted-foreground py-8">
+                                No one is currently on the waitlist
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[60px]">#</TableHead>
+                                        <TableHead>Athlete</TableHead>
+                                        <TableHead>Joined</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {waitlistEntries.map((entry) => (
+                                        <TableRow key={entry.id}>
+                                            <TableCell className="font-medium">{entry.position}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={entry.athlete.avatar || ""} />
+                                                        <AvatarFallback className="text-xs">
+                                                            {entry.athlete.name?.charAt(0) || "?"}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <div className="font-medium text-sm">{entry.athlete.name}</div>
+                                                        {entry.athlete.email && (
+                                                            <div className="text-xs text-muted-foreground">{entry.athlete.email}</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">
+                                                {format(new Date(entry.joinedAt), "MMM d, yyyy")}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => promoteFromWaitlist(entry.id)}
+                                                    disabled={promotingId !== null}
+                                                >
+                                                    {promotingId === entry.id ? (
+                                                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                                    ) : (
+                                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                                    )}
+                                                    Promote
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

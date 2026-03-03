@@ -46,11 +46,14 @@ export default async function SitePage({ params }: { params: { slug: string } })
           },
         },
         _count: {
-          select: { instances: true, enrollments: true },
+          select: {
+            instances: true,
+            enrollments: { where: { status: { not: "WAITLISTED" } } },
+          },
         },
         staffAssignments: {
           where: {
-            role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] }, // Only show coaches, not substitutes/volunteers
+            role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
           },
           include: {
             staffProfile: {
@@ -69,7 +72,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
             { isPrimary: "desc" },
             { role: "asc" },
           ],
-          take: 3, // Limit to top 3 coaches for card display
+          take: 3,
         },
         requiredMemberships: {
           include: {
@@ -89,6 +92,28 @@ export default async function SitePage({ params }: { params: { slug: string } })
       orderBy: { order: "asc" },
     }),
   ]);
+
+  // Fetch waitlisted enrollment counts for programs with waitlists enabled
+  const waitlistPrograms = programs.filter(p => p.waitlistEnabled);
+  const waitlistedCounts = waitlistPrograms.length > 0
+    ? await db.enrollment.groupBy({
+        by: ["programId"],
+        where: {
+          programId: { in: waitlistPrograms.map(p => p.id) },
+          status: "WAITLISTED",
+        },
+        _count: true,
+      })
+    : [];
+  const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
+
+  const enrichedPrograms = programs.map(p => ({
+    ...p,
+    _count: {
+      ...p._count,
+      waitlistedEnrollments: waitlistCountMap.get(p.id) || 0,
+    },
+  }));
 
   return (
     <div className="min-h-screen">
@@ -231,7 +256,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
           </div>
 
           <FilterableProgramList
-            programs={programs.map(program => ({
+            programs={enrichedPrograms.map(program => ({
               ...program,
               basePrice: program.basePrice ? Number(program.basePrice) : null,
               perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,

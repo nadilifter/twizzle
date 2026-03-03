@@ -16,6 +16,7 @@ export const FEATURE_KEYS = [
   "training",
   "pointOfSale",
   "memberships",
+  "waitlists",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -32,6 +33,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   training: false,
   pointOfSale: false,
   memberships: false,
+  waitlists: false,
 };
 
 /** Human-readable labels for each feature */
@@ -45,6 +47,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   training: "Training",
   pointOfSale: "Point of Sale",
   memberships: "Memberships",
+  waitlists: "Waitlists",
 };
 
 /** Descriptions shown to admins */
@@ -58,6 +61,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   training: "Skills tracking, evaluations, levels, and training programs",
   pointOfSale: "Point of Sale terminal and checkout via the POS portal",
   memberships: "Membership management, restrictions, and storefront purchasing",
+  waitlists: "Program and session waitlist management with automatic promotion",
 };
 
 /**
@@ -137,6 +141,7 @@ export const FEATURE_SIDEBAR_MAP: Record<
       },
     ],
   },
+  waitlists: {},
 };
 
 /**
@@ -158,6 +163,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   ],
   pointOfSale: ["/api/pos"],
   memberships: ["/api/memberships", "/api/public/memberships"],
+  waitlists: [],
 };
 
 /**

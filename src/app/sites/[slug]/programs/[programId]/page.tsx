@@ -98,12 +98,22 @@ export default async function ProgramDetailPage({
                 take: 50
             },
             _count: {
-                select: { instances: true, enrollments: true }
+                select: {
+                    instances: true,
+                    enrollments: { where: { status: { not: "WAITLISTED" } } },
+                }
             }
         }
     });
 
     if (!program) return notFound();
+
+    // Fetch waitlisted enrollment count if waitlist is enabled
+    const waitlistedCount = program.waitlistEnabled
+        ? await db.enrollment.count({
+            where: { programId: program.id, status: "WAITLISTED" },
+        })
+        : 0;
 
     const isRecurring = program.recurrenceType === "RECURRING";
     const isPerInstance = program.registrationType === "PER_INSTANCE";
@@ -112,6 +122,11 @@ export default async function ProgramDetailPage({
     const totalCapacity = program.capacity || 0;
     const enrolled = program._count.enrollments || 0;
     const spotsAvailable = totalCapacity > 0 ? Math.max(0, totalCapacity - enrolled) : null;
+    const isFull = program.hasCapacityRestriction && spotsAvailable === 0;
+    const waitlistHasRoom = program.waitlistEnabled && (
+        program.waitlistCapacity == null || waitlistedCount < program.waitlistCapacity
+    );
+    const canJoinWaitlist = isFull && waitlistHasRoom;
 
     const hasAge = program.hasAgeRestriction && (program.minAge !== null || program.maxAge !== null);
     const ageLabel = hasAge
@@ -147,6 +162,10 @@ export default async function ProgramDetailPage({
         organizationId: config.organizationId,
         capacity: program.capacity,
         hasCapacityRestriction: program.hasCapacityRestriction,
+        waitlistEnabled: program.waitlistEnabled,
+        waitlistCapacity: program.waitlistCapacity,
+        enrolled,
+        waitlistedCount,
         requiredMemberships: program.requiredMemberships.map(m => ({
             id: m.id,
             name: m.name,
@@ -243,6 +262,8 @@ export default async function ProgramDetailPage({
                                 <span>
                                     {spotsAvailable > 0
                                         ? `${spotsAvailable} of ${totalCapacity} spots`
+                                        : canJoinWaitlist
+                                        ? "Full — Waitlist available"
                                         : "Currently full"}
                                 </span>
                             </div>

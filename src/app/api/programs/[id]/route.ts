@@ -39,6 +39,10 @@ const updateProgramSchema = z.object({
   hasMedicalRequirement: z.boolean().optional(),
   // Gender restriction values
   allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional(),
+  // Waitlist
+  waitlistEnabled: z.boolean().optional(),
+  waitlistAutoPromote: z.boolean().optional(),
+  waitlistCapacity: z.number().int().min(1).optional().nullable(),
   // Related data for updates
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
@@ -293,6 +297,9 @@ export async function PATCH(
       if (validatedData.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
       if (validatedData.hasTrainingZoneRestriction !== undefined) updateData.hasTrainingZoneRestriction = validatedData.hasTrainingZoneRestriction;
       if (validatedData.trainingZoneCapacityMode !== undefined) updateData.trainingZoneCapacityMode = validatedData.trainingZoneCapacityMode;
+      if (validatedData.waitlistEnabled !== undefined) updateData.waitlistEnabled = validatedData.waitlistEnabled;
+      if (validatedData.waitlistAutoPromote !== undefined) updateData.waitlistAutoPromote = validatedData.waitlistAutoPromote;
+      if (validatedData.waitlistCapacity !== undefined) updateData.waitlistCapacity = validatedData.waitlistCapacity;
 
       // Update the program
       const updatedProgram = await tx.program.update({

@@ -142,6 +142,11 @@ interface ProgramFormData {
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
+
+  // Waitlist
+  waitlistEnabled: boolean
+  waitlistAutoPromote: boolean
+  waitlistCapacity: number | null
   
   // Step 4: Evaluation
   evaluationTemplateId: string | null
@@ -167,6 +172,7 @@ const { useStepper } = defineStepper(
   { id: "general", title: "General" },
   { id: "schedule", title: "Schedule" },
   { id: "requirements", title: "Requirements" },
+  { id: "waitlist", title: "Waitlist" },
   { id: "evaluation", title: "Evaluation" },
   { id: "staff", title: "Staff" },
 )
@@ -177,6 +183,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
   const membershipsEnabled = isFeatureEnabled("memberships")
+  const waitlistsEnabled = isFeatureEnabled("waitlists")
   
   // Hooks for data
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
@@ -218,10 +225,11 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   // Visible step filtering (hides evaluation step when training is disabled)
   const visibleStepIds = React.useMemo(() => {
     const ids = ["general", "schedule", "requirements"]
+    if (waitlistsEnabled) ids.push("waitlist")
     if (trainingEnabled) ids.push("evaluation")
     ids.push("staff")
     return ids
-  }, [trainingEnabled])
+  }, [trainingEnabled, waitlistsEnabled])
   
   // Form state
   const [formData, setFormData] = React.useState<ProgramFormData>(() => ({
@@ -262,6 +270,11 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     hasWaiverRestriction: (program as any)?.hasWaiverRestriction || false,
     waiverRequirementIds: (program as any)?.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
     hasMedicalRequirement: program?.hasMedicalRequirement || false,
+
+    // Waitlist
+    waitlistEnabled: (program as any)?.waitlistEnabled || false,
+    waitlistAutoPromote: (program as any)?.waitlistAutoPromote || false,
+    waitlistCapacity: (program as any)?.waitlistCapacity || null,
     
     // Step 4: Evaluation
     evaluationTemplateId: null,
@@ -619,6 +632,9 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         minAge: formData.hasAgeRestriction ? formData.minAge : null,
         maxAge: formData.hasAgeRestriction ? formData.maxAge : null,
         showCoachOnSite: formData.showCoachOnSite,
+        waitlistEnabled: formData.waitlistEnabled,
+        waitlistAutoPromote: formData.waitlistEnabled ? formData.waitlistAutoPromote : false,
+        waitlistCapacity: formData.waitlistEnabled ? formData.waitlistCapacity : null,
         levelRequirementIds: formData.hasLevelRestriction ? formData.levelRequirementIds : [],
         membershipRequirementIds: formData.hasMembershipRestriction ? formData.membershipRequirementIds : [],
         waiverRequirementIds: formData.hasWaiverRestriction ? formData.waiverRequirementIds : [],
@@ -1822,6 +1838,73 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           </Card>
         )}
         
+        {/* Waitlist Step */}
+        {stepper.state.current.data.id === "waitlist" && waitlistsEnabled && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Waitlist Settings
+              </CardTitle>
+              <CardDescription>
+                Configure how waitlists work when this program reaches capacity
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="waitlist-enabled" className="text-base">Enable Waitlist</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow athletes to join a waitlist when the program is full
+                  </p>
+                </div>
+                <Switch
+                  id="waitlist-enabled"
+                  checked={formData.waitlistEnabled}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, waitlistEnabled: checked }))}
+                />
+              </div>
+
+              {formData.waitlistEnabled && (
+                <>
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="waitlist-auto-promote" className="text-base">Automatic Promotion</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically promote the next person on the waitlist when a spot opens, in registration order
+                      </p>
+                    </div>
+                    <Switch
+                      id="waitlist-auto-promote"
+                      checked={formData.waitlistAutoPromote}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, waitlistAutoPromote: checked }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="waitlist-capacity">Maximum Waitlist Size</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Limit how many people can join the waitlist. Leave empty for unlimited.
+                    </p>
+                    <Input
+                      id="waitlist-capacity"
+                      type="number"
+                      min={1}
+                      placeholder="Unlimited"
+                      value={formData.waitlistCapacity ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value ? parseInt(e.target.value, 10) : null
+                        setFormData(prev => ({ ...prev, waitlistCapacity: val }))
+                      }}
+                      className="max-w-[200px]"
+                    />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Step 4: Evaluation */}
         {stepper.state.current.data.id === "evaluation" && trainingEnabled && (
           <Card>
