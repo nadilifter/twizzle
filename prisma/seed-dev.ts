@@ -844,6 +844,7 @@ async function main() {
     historicalEvents.push(
       { id: `${ORG2_ID}-evt-hist-soccer-${week}`, title: "Soccer Practice - Historical", date: weekDate, startTime: "16:00", endTime: "17:30", type: "CLASS", programId: `${ORG2_ID}-prog-soccer`, coachId: org2Coach.id, organizationId: ORG2_ID, capacity: 24 },
       { id: `${ORG2_ID}-evt-hist-basketball-${week}`, title: "Basketball Practice - Historical", date: weekDate, startTime: "18:00", endTime: "20:00", type: "CLASS", programId: `${ORG2_ID}-prog-basketball`, coachId: org2Coach.id, organizationId: ORG2_ID, capacity: 20 },
+      { id: `${ORG2_ID}-evt-hist-swim-${week}`, title: "Swim Practice - Historical", date: weekDate, startTime: "06:00", endTime: "07:30", type: "CLASS", programId: `${ORG2_ID}-prog-swim`, coachId: org2Coach.id, organizationId: ORG2_ID, capacity: 30 },
     );
   }
   
@@ -952,6 +953,71 @@ async function main() {
       eventId: `${ORG2_ID}-evt-hist-soccer-${week}`, 
       status: week % 2 === 0 ? "PRESENT" : "ABSENT", 
       checkedIn: week % 2 === 0 ? weekDate : undefined 
+    });
+  }
+
+  // Historical attendance - ORG2 (Swim - Athlete 4, Lucas) - mostly present
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    const status = week === 3 ? "LATE" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG2_ID}-ath-4`, 
+      eventId: `${ORG2_ID}-evt-hist-swim-${week}`, 
+      status, 
+      checkedIn: weekDate,
+      notes: status === "LATE" ? "Traffic delay" : undefined
+    });
+  }
+
+  // Historical attendance - ORG2 (Soccer - Athlete 3, Sofia) - new beginner, inconsistent
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    const status = week === 1 ? "ABSENT" : week === 3 ? "LATE" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG2_ID}-ath-3`, 
+      eventId: `${ORG2_ID}-evt-hist-soccer-${week}`, 
+      status, 
+      checkedIn: status !== "ABSENT" ? weekDate : undefined,
+      notes: status === "ABSENT" ? "Schedule conflict" : undefined
+    });
+  }
+
+  // Historical attendance - ORG2 (Basketball - Athlete 6, Noah) - good attendance
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    const status = week === 4 ? "EXCUSED" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG2_ID}-ath-6`, 
+      eventId: `${ORG2_ID}-evt-hist-basketball-${week}`, 
+      status, 
+      checkedIn: status === "PRESENT" ? weekDate : undefined,
+      notes: status === "EXCUSED" ? "School field trip" : undefined
+    });
+  }
+
+  // Historical attendance - ORG1 (Silver class - Athlete 7, Ava, trial)
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    const status = week <= 2 ? "PRESENT" : "ABSENT";
+    attendanceData.push({ 
+      athleteId: `${ORG1_ID}-ath-7`, 
+      eventId: `${ORG1_ID}-evt-hist-silver-${week}`, 
+      status, 
+      checkedIn: status === "PRESENT" ? weekDate : undefined,
+      notes: status === "ABSENT" ? "Trial period ended" : undefined
+    });
+  }
+
+  // Historical attendance - ORG1 (JO Team - Athlete 5, Mia, Gold level)
+  for (let week = 1; week <= 4; week++) {
+    const weekDate = daysAgo(week * 7);
+    const status = week === 2 ? "LATE" : "PRESENT";
+    attendanceData.push({ 
+      athleteId: `${ORG1_ID}-ath-5`, 
+      eventId: `${ORG1_ID}-evt-hist-jo-${week}`, 
+      status, 
+      checkedIn: weekDate,
+      notes: status === "LATE" ? "Arrived 10 minutes late" : undefined
     });
   }
   
@@ -1294,6 +1360,64 @@ async function main() {
       completionThreshold: 10, // Must pass at least 10 skills
       skillIds: [], // Will be populated by auto-sync
     },
+    // Org2 - Metro Sports evaluation templates
+    {
+      id: `${ORG2_ID}-template-soccer-skills`,
+      name: "Soccer Skills Assessment",
+      description: "Fundamental soccer skills evaluation covering dribbling and passing for beginner-level players.",
+      levelId: `${ORG2_ID}-level-beginner`,
+      minAge: 5,
+      maxAge: 14,
+      organizationId: ORG2_ID,
+      autoSyncEnabled: false,
+      autoSyncLevels: [],
+      autoSyncCategories: [],
+      scoringType: "PASS_FAIL" as const,
+      pointScaleMin: 1,
+      pointScaleMax: 10,
+      pointScalePassThreshold: 7,
+      completionType: "PERCENTAGE" as const,
+      completionThreshold: 75,
+      skillIds: [`${ORG2_ID}-skill-1`, `${ORG2_ID}-skill-2`],
+    },
+    {
+      id: `${ORG2_ID}-template-basketball-skills`,
+      name: "Basketball Skills Assessment",
+      description: "Basketball fundamentals evaluation covering layups and shooting form for intermediate players.",
+      levelId: `${ORG2_ID}-level-intermediate`,
+      minAge: 8,
+      maxAge: 18,
+      organizationId: ORG2_ID,
+      autoSyncEnabled: false,
+      autoSyncLevels: [],
+      autoSyncCategories: [],
+      scoringType: "POINT_SCALE" as const,
+      pointScaleMin: 1,
+      pointScaleMax: 10,
+      pointScalePassThreshold: 7,
+      completionType: "PERCENTAGE" as const,
+      completionThreshold: 80,
+      skillIds: [`${ORG2_ID}-skill-3`, `${ORG2_ID}-skill-5`],
+    },
+    {
+      id: `${ORG2_ID}-template-swim-skills`,
+      name: "Swim Skills Assessment",
+      description: "Swimming technique evaluation covering freestyle and backstroke for advancing swimmers.",
+      levelId: `${ORG2_ID}-level-advanced`,
+      minAge: 6,
+      maxAge: 18,
+      organizationId: ORG2_ID,
+      autoSyncEnabled: false,
+      autoSyncLevels: [],
+      autoSyncCategories: [],
+      scoringType: "PASS_FAIL" as const,
+      pointScaleMin: 1,
+      pointScaleMax: 10,
+      pointScalePassThreshold: 7,
+      completionType: "ALL" as const,
+      completionThreshold: 100,
+      skillIds: [`${ORG2_ID}-skill-4`, `${ORG2_ID}-skill-6`],
+    },
   ];
   
   for (const template of evaluationTemplatesData) {
@@ -1374,6 +1498,31 @@ async function main() {
       badgeImageUrl: null,
       organizationId: ORG1_ID,
     },
+    // Org2 - Metro Sports achievements
+    {
+      id: `${ORG2_ID}-achievement-soccer`,
+      templateId: `${ORG2_ID}-template-soccer-skills`,
+      name: "Soccer Skills Star",
+      description: "Demonstrated solid soccer fundamentals in dribbling and passing. Ready for the next level!",
+      badgeImageUrl: null,
+      organizationId: ORG2_ID,
+    },
+    {
+      id: `${ORG2_ID}-achievement-basketball`,
+      templateId: `${ORG2_ID}-template-basketball-skills`,
+      name: "Basketball Rising Star",
+      description: "Showed excellent basketball skills with strong shooting form and layup technique.",
+      badgeImageUrl: null,
+      organizationId: ORG2_ID,
+    },
+    {
+      id: `${ORG2_ID}-achievement-swim`,
+      templateId: `${ORG2_ID}-template-swim-skills`,
+      name: "Swim Team Ready",
+      description: "Passed the swim skills assessment with proficiency in freestyle and backstroke. Ready for competitive swimming!",
+      badgeImageUrl: null,
+      organizationId: ORG2_ID,
+    },
   ];
 
   for (const achievement of achievementsData) {
@@ -1428,6 +1577,28 @@ async function main() {
       id: `${ORG1_ID}-pet-preschool`,
       programId: `${ORG1_ID}-prog-preschool`,
       templateId: `${ORG1_ID}-template-preschool`,
+      isRequired: true,
+      dueDate: null,
+    },
+    // Org2 - Metro Sports program-template assignments
+    {
+      id: `${ORG2_ID}-pet-soccer`,
+      programId: `${ORG2_ID}-prog-soccer`,
+      templateId: `${ORG2_ID}-template-soccer-skills`,
+      isRequired: true,
+      dueDate: null,
+    },
+    {
+      id: `${ORG2_ID}-pet-basketball`,
+      programId: `${ORG2_ID}-prog-basketball`,
+      templateId: `${ORG2_ID}-template-basketball-skills`,
+      isRequired: true,
+      dueDate: null,
+    },
+    {
+      id: `${ORG2_ID}-pet-swim`,
+      programId: `${ORG2_ID}-prog-swim`,
+      templateId: `${ORG2_ID}-template-swim-skills`,
       isRequired: true,
       dueDate: null,
     },
@@ -1646,7 +1817,127 @@ async function main() {
     });
   }
   
-  console.log("  ✓ Created 5 evaluations with skill ratings");
+  // Evaluation 6 - Jake (Metro, Soccer) - Completed Soccer Skills Assessment
+  const eval6 = await prisma.evaluation.upsert({
+    where: { id: `${ORG2_ID}-eval-1` },
+    update: { programId: `${ORG2_ID}-prog-soccer` },
+    create: {
+      id: `${ORG2_ID}-eval-1`,
+      athleteId: `${ORG2_ID}-ath-1`,
+      coachId: org2Coach.id,
+      templateId: `${ORG2_ID}-template-soccer-skills`,
+      programId: `${ORG2_ID}-prog-soccer`,
+      date: daysAgo(10),
+      levelId: `${ORG2_ID}-level-beginner`,
+      overallScore: 7.0,
+      status: "PASS",
+      notes: "Jake shows great footwork for his age. Dribbling is solid, passing accuracy improving.",
+    },
+  });
+
+  const eval6Skills = [
+    { skillId: `${ORG2_ID}-skill-1`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Good close control, uses both feet" },
+    { skillId: `${ORG2_ID}-skill-2`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Accurate short passes, needs work on long balls" },
+  ];
+
+  for (const skill of eval6Skills) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval6.id, skillId: skill.skillId } },
+      update: { passed: skill.passed },
+      create: { evaluationId: eval6.id, ...skill },
+    });
+  }
+
+  // Evaluation 7 - Ethan (Metro, Basketball) - Completed Basketball Skills (Point Scale)
+  const eval7 = await prisma.evaluation.upsert({
+    where: { id: `${ORG2_ID}-eval-2` },
+    update: { programId: `${ORG2_ID}-prog-basketball` },
+    create: {
+      id: `${ORG2_ID}-eval-2`,
+      athleteId: `${ORG2_ID}-ath-2`,
+      coachId: org2Coach.id,
+      templateId: `${ORG2_ID}-template-basketball-skills`,
+      programId: `${ORG2_ID}-prog-basketball`,
+      date: daysAgo(18),
+      levelId: `${ORG2_ID}-level-intermediate`,
+      overallScore: 8.5,
+      status: "EXCELLENT",
+      notes: "Ethan has excellent court awareness. Layups are consistent and shooting form is textbook.",
+    },
+  });
+
+  const eval7Skills = [
+    { skillId: `${ORG2_ID}-skill-3`, attemptStatus: "SUCCEEDED" as const, pointScore: 9, passed: true, comment: "Smooth layups from both sides" },
+    { skillId: `${ORG2_ID}-skill-5`, attemptStatus: "SUCCEEDED" as const, pointScore: 8, passed: true, comment: "Great BEEF form, consistent from mid-range" },
+  ];
+
+  for (const skill of eval7Skills) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval7.id, skillId: skill.skillId } },
+      update: { passed: skill.passed, pointScore: skill.pointScore },
+      create: { evaluationId: eval7.id, ...skill },
+    });
+  }
+
+  // Evaluation 8 - Lucas (Metro, Swim) - Completed Swim Skills Assessment
+  const eval8 = await prisma.evaluation.upsert({
+    where: { id: `${ORG2_ID}-eval-3` },
+    update: { programId: `${ORG2_ID}-prog-swim` },
+    create: {
+      id: `${ORG2_ID}-eval-3`,
+      athleteId: `${ORG2_ID}-ath-4`,
+      coachId: org2Coach.id,
+      templateId: `${ORG2_ID}-template-swim-skills`,
+      programId: `${ORG2_ID}-prog-swim`,
+      date: daysAgo(25),
+      levelId: `${ORG2_ID}-level-advanced`,
+      overallScore: 8.0,
+      status: "PASS",
+      notes: "Lucas has strong stroke technique. Ready for competitive meets.",
+    },
+  });
+
+  const eval8Skills = [
+    { skillId: `${ORG2_ID}-skill-4`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Excellent bilateral breathing and high elbow recovery" },
+    { skillId: `${ORG2_ID}-skill-6`, attemptStatus: "SUCCEEDED" as const, passed: true, comment: "Good hip rotation and steady kick" },
+  ];
+
+  for (const skill of eval8Skills) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval8.id, skillId: skill.skillId } },
+      update: { passed: skill.passed },
+      create: { evaluationId: eval8.id, ...skill },
+    });
+  }
+
+  // Evaluation 9 - Noah (Metro, Basketball) - Pending Basketball Skills Assessment
+  const eval9 = await prisma.evaluation.upsert({
+    where: { id: `${ORG2_ID}-eval-4` },
+    update: { programId: `${ORG2_ID}-prog-basketball` },
+    create: {
+      id: `${ORG2_ID}-eval-4`,
+      athleteId: `${ORG2_ID}-ath-6`,
+      coachId: org2Coach.id,
+      templateId: `${ORG2_ID}-template-basketball-skills`,
+      programId: `${ORG2_ID}-prog-basketball`,
+      date: daysFromNow(5),
+      levelId: `${ORG2_ID}-level-intermediate`,
+      overallScore: 0,
+      status: "PENDING",
+      notes: null,
+    },
+  });
+
+  const eval9SkillIds = [`${ORG2_ID}-skill-3`, `${ORG2_ID}-skill-5`];
+  for (const skillId of eval9SkillIds) {
+    await prisma.evaluationSkill.upsert({
+      where: { evaluationId_skillId: { evaluationId: eval9.id, skillId } },
+      update: { passed: false },
+      create: { evaluationId: eval9.id, skillId, attemptStatus: "NOT_ATTEMPTED", passed: false },
+    });
+  }
+
+  console.log("  ✓ Created 9 evaluations with skill ratings (5 Sunrise + 4 Metro)");
 
   // ============================================
   // ATHLETE ACHIEVEMENTS (Earned from completed evaluations)
@@ -1693,6 +1984,34 @@ async function main() {
       earnedAt: daysAgo(7),
       bestResultsByCategory: { "Floor": 66, "Beam": 100, "Flexibility": 100 },
       overallScore: 6.0,
+    },
+    // Metro Sports athlete achievements
+    {
+      id: `${ORG2_ID}-athlete-ach-1`,
+      athleteId: `${ORG2_ID}-ath-1`,
+      achievementId: `${ORG2_ID}-achievement-soccer`,
+      evaluationId: eval6.id,
+      earnedAt: daysAgo(10),
+      bestResultsByCategory: { "Soccer": 100 },
+      overallScore: 7.0,
+    },
+    {
+      id: `${ORG2_ID}-athlete-ach-2`,
+      athleteId: `${ORG2_ID}-ath-2`,
+      achievementId: `${ORG2_ID}-achievement-basketball`,
+      evaluationId: eval7.id,
+      earnedAt: daysAgo(18),
+      bestResultsByCategory: { "Basketball": 8.5 },
+      overallScore: 8.5,
+    },
+    {
+      id: `${ORG2_ID}-athlete-ach-3`,
+      athleteId: `${ORG2_ID}-ath-4`,
+      achievementId: `${ORG2_ID}-achievement-swim`,
+      evaluationId: eval8.id,
+      earnedAt: daysAgo(25),
+      bestResultsByCategory: { "Swimming": 100 },
+      overallScore: 8.0,
     },
   ];
 
@@ -1745,8 +2064,50 @@ async function main() {
       create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
     });
   }
+
+  // Jake's skill progress (Metro - Soccer)
+  const jakeProgress = [
+    { athleteId: `${ORG2_ID}-ath-1`, skillId: `${ORG2_ID}-skill-1`, bestStatus: "SUCCEEDED" as const, attemptCount: 3, successCount: 2, firstAttemptedAt: daysAgo(40), firstSucceededAt: daysAgo(20), lastEvaluatedAt: daysAgo(10) },
+    { athleteId: `${ORG2_ID}-ath-1`, skillId: `${ORG2_ID}-skill-2`, bestStatus: "SUCCEEDED" as const, attemptCount: 4, successCount: 2, firstAttemptedAt: daysAgo(35), firstSucceededAt: daysAgo(10), lastEvaluatedAt: daysAgo(10) },
+  ];
+
+  for (const progress of jakeProgress) {
+    await prisma.athleteSkillProgress.upsert({
+      where: { athleteId_skillId: { athleteId: progress.athleteId, skillId: progress.skillId } },
+      update: {},
+      create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
+    });
+  }
+
+  // Ethan's skill progress (Metro - Basketball)
+  const ethanProgress = [
+    { athleteId: `${ORG2_ID}-ath-2`, skillId: `${ORG2_ID}-skill-3`, bestStatus: "SUCCEEDED" as const, attemptCount: 5, successCount: 4, firstAttemptedAt: daysAgo(60), firstSucceededAt: daysAgo(30), lastEvaluatedAt: daysAgo(18) },
+    { athleteId: `${ORG2_ID}-ath-2`, skillId: `${ORG2_ID}-skill-5`, bestStatus: "SUCCEEDED" as const, attemptCount: 6, successCount: 3, firstAttemptedAt: daysAgo(55), firstSucceededAt: daysAgo(18), lastEvaluatedAt: daysAgo(18) },
+  ];
+
+  for (const progress of ethanProgress) {
+    await prisma.athleteSkillProgress.upsert({
+      where: { athleteId_skillId: { athleteId: progress.athleteId, skillId: progress.skillId } },
+      update: {},
+      create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
+    });
+  }
+
+  // Lucas's skill progress (Metro - Swimming)
+  const lucasProgress = [
+    { athleteId: `${ORG2_ID}-ath-4`, skillId: `${ORG2_ID}-skill-4`, bestStatus: "SUCCEEDED" as const, attemptCount: 4, successCount: 3, firstAttemptedAt: daysAgo(80), firstSucceededAt: daysAgo(40), lastEvaluatedAt: daysAgo(25) },
+    { athleteId: `${ORG2_ID}-ath-4`, skillId: `${ORG2_ID}-skill-6`, bestStatus: "SUCCEEDED" as const, attemptCount: 5, successCount: 3, firstAttemptedAt: daysAgo(70), firstSucceededAt: daysAgo(25), lastEvaluatedAt: daysAgo(25) },
+  ];
+
+  for (const progress of lucasProgress) {
+    await prisma.athleteSkillProgress.upsert({
+      where: { athleteId_skillId: { athleteId: progress.athleteId, skillId: progress.skillId } },
+      update: {},
+      create: { id: `${progress.athleteId}-progress-${progress.skillId}`, ...progress },
+    });
+  }
   
-  console.log(`  ✓ Created ${emilyProgress.length + sophieProgress.length} athlete skill progress records`);
+  console.log(`  ✓ Created ${emilyProgress.length + sophieProgress.length + jakeProgress.length + ethanProgress.length + lucasProgress.length} athlete skill progress records`);
 
   // ============================================
   // ANNOUNCEMENTS (Organization-level)
@@ -3432,15 +3793,15 @@ See you at Metro Sports!
   console.log("  • 9 programs with membership tiers");
   console.log("  • 12 program staff assignments (coaches)");
   console.log("  • 3 programs with membership requirements");
-  console.log("  • 29+ events with 40+ attendance records (historical + current)");
+  console.log("  • 33+ events with 64+ attendance records (historical + current)");
   console.log("  • 5 invoices with line items and payments");
   console.log("  • 9 transactions (Adyen)");
   console.log("  • 5 payouts (settlements)");
   console.log("  • 7 recurring charges");
   console.log("  • 34 gymnastics skills with difficulty levels and age ranges");
-  console.log("  • 5 evaluation templates with skill groupings");
-  console.log("  • 5 evaluations with skill attempt statuses");
-  console.log("  • 11 athlete skill progress records");
+  console.log("  • 8 evaluation templates with skill groupings (5 Sunrise + 3 Metro)");
+  console.log("  • 9 evaluations with skill attempt statuses (5 Sunrise + 4 Metro)");
+  console.log("  • 17 athlete skill progress records");
   console.log("  • Lesson plans and rotations");
   console.log("  • 7 POS products with stock movements");
   console.log("  • 6 media items (photos/videos)");
