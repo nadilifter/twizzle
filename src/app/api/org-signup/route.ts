@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { hashPassword } from "@/lib/auth"
 import { z } from "zod"
+import { passwordSchema } from "@/lib/password"
 import { isSubdomainReserved } from "@/lib/reserved-domains"
 import { containsProfanity } from "@/lib/profanity"
 
@@ -22,12 +23,7 @@ const signupSchema = z.object({
     .min(1, "Name is required")
     .max(MAX_NAME_LENGTH, `Name must be ${MAX_NAME_LENGTH} characters or less`),
   email: z.string().email("Invalid email address"),
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must include at least one uppercase letter")
-    .regex(/[a-z]/, "Password must include at least one lowercase letter")
-    .regex(/\d/, "Password must include at least one number")
-    .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/, "Password must include at least one special character"),
+  password: passwordSchema,
 
   // Organization
   orgName: z.string().min(1, "Organization name is required"),

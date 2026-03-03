@@ -46,7 +46,7 @@ The development seed (`seed-dev.ts`) creates two complete organizations with rea
 
 ### Test Accounts
 
-All test accounts use the password: `password123`
+Seed accounts are created **without passwords**. Use email-based login (magic link / login code) to sign in during local development.
 
 | Email | Role | Organization |
 |-------|------|--------------|

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { z } from "zod";
+import { passwordSchema } from "@/lib/password";
 
 const resetPasswordSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: passwordSchema,
   confirmPassword: z.string(),
 }).refine(
   (data) => data.password === data.confirmPassword,

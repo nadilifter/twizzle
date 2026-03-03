@@ -21,6 +21,7 @@ import {
   Tag
 } from "lucide-react"
 import { toast } from "sonner"
+import { validatePassword, PASSWORD_MESSAGES, PASSWORD_MIN_LENGTH } from "@/lib/password"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -215,11 +216,12 @@ export default function SignupPage() {
     }
     if (!formData.password) {
       newErrors.password = "Password is required"
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters"
+    } else {
+      const pwError = validatePassword(formData.password)
+      if (pwError) newErrors.password = pwError
     }
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match"
+      newErrors.confirmPassword = PASSWORD_MESSAGES.mismatch
     }
 
     // Organization validation
@@ -345,7 +347,7 @@ export default function SignupPage() {
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="Min. 8 characters"
+                  placeholder={`Min. ${PASSWORD_MIN_LENGTH} chars, upper, lower, number, special`}
                   value={formData.password}
                   onChange={handleInputChange}
                   className={errors.password ? "border-destructive" : ""}

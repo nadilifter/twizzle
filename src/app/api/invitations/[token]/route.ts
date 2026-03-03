@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession, hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { passwordSchema } from "@/lib/password";
 
-// Schema for accepting invitation (new users need to provide password)
 const acceptInvitationSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  password: passwordSchema.optional(),
   confirmPassword: z.string().optional(),
 }).refine(
   (data) => {

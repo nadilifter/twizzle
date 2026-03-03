@@ -28,7 +28,7 @@
  */
 
 import { PrismaClient, Prisma } from "@prisma/client";
-import bcrypt from "bcryptjs";
+
 import { Redis } from "@upstash/redis";
 
 const prisma = new PrismaClient();
@@ -53,11 +53,8 @@ const ORG_UPLIFTER_ID = "seed-org-uplifter";
 
 const daysFromNow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-const SEED_PASSWORD = "password123";
-
 async function main() {
   console.log("🌱 Starting development seed...\n");
-  const hashedPassword = await bcrypt.hash(SEED_PASSWORD, 12);
 
   // ============================================
   // SUBSCRIPTION PLANS
@@ -234,54 +231,54 @@ async function main() {
   const org1Admin = await prisma.user.upsert({
     where: { email: "admin@sunrise-gymnastics.com" },
     update: { organizationId: ORG1_ID },
-    create: { email: "admin@sunrise-gymnastics.com", name: "Jennifer Walsh", passwordHash: hashedPassword, role: "ADMIN", status: "ACTIVE", organizationId: ORG1_ID },
+    create: { email: "admin@sunrise-gymnastics.com", name: "Jennifer Walsh", passwordHash: null, role: "ADMIN", status: "ACTIVE", organizationId: ORG1_ID },
   });
   const org1Coach1 = await prisma.user.upsert({
     where: { email: "coach.maria@sunrise-gymnastics.com" },
     update: { organizationId: ORG1_ID },
-    create: { email: "coach.maria@sunrise-gymnastics.com", name: "Maria Rodriguez", passwordHash: hashedPassword, role: "COACH", status: "ACTIVE", organizationId: ORG1_ID },
+    create: { email: "coach.maria@sunrise-gymnastics.com", name: "Maria Rodriguez", passwordHash: null, role: "COACH", status: "ACTIVE", organizationId: ORG1_ID },
   });
   const org1Coach2 = await prisma.user.upsert({
     where: { email: "coach.james@sunrise-gymnastics.com" },
     update: { organizationId: ORG1_ID },
-    create: { email: "coach.james@sunrise-gymnastics.com", name: "James Chen", passwordHash: hashedPassword, role: "COACH", status: "ACTIVE", organizationId: ORG1_ID },
+    create: { email: "coach.james@sunrise-gymnastics.com", name: "James Chen", passwordHash: null, role: "COACH", status: "ACTIVE", organizationId: ORG1_ID },
   });
   const org1Accountant = await prisma.user.upsert({
     where: { email: "finance@sunrise-gymnastics.com" },
     update: { organizationId: ORG1_ID },
-    create: { email: "finance@sunrise-gymnastics.com", name: "Robert Kim", passwordHash: hashedPassword, role: "ACCOUNTANT", status: "ACTIVE", organizationId: ORG1_ID },
+    create: { email: "finance@sunrise-gymnastics.com", name: "Robert Kim", passwordHash: null, role: "ACCOUNTANT", status: "ACTIVE", organizationId: ORG1_ID },
   });
   const org2Admin = await prisma.user.upsert({
     where: { email: "admin@metro-sports.com" },
     update: { organizationId: ORG2_ID },
-    create: { email: "admin@metro-sports.com", name: "Michael Thompson", passwordHash: hashedPassword, role: "ADMIN", status: "ACTIVE", organizationId: ORG2_ID },
+    create: { email: "admin@metro-sports.com", name: "Michael Thompson", passwordHash: null, role: "ADMIN", status: "ACTIVE", organizationId: ORG2_ID },
   });
   const org2Coach = await prisma.user.upsert({
     where: { email: "coach.sarah@metro-sports.com" },
     update: { organizationId: ORG2_ID },
-    create: { email: "coach.sarah@metro-sports.com", name: "Sarah Martinez", passwordHash: hashedPassword, role: "COACH", status: "ACTIVE", organizationId: ORG2_ID },
+    create: { email: "coach.sarah@metro-sports.com", name: "Sarah Martinez", passwordHash: null, role: "COACH", status: "ACTIVE", organizationId: ORG2_ID },
   });
   const org2Volunteer = await prisma.user.upsert({
     where: { email: "volunteer@metro-sports.com" },
     update: { organizationId: ORG2_ID },
-    create: { email: "volunteer@metro-sports.com", name: "David Lee", passwordHash: hashedPassword, role: "VOLUNTEER", status: "ACTIVE", organizationId: ORG2_ID },
+    create: { email: "volunteer@metro-sports.com", name: "David Lee", passwordHash: null, role: "VOLUNTEER", status: "ACTIVE", organizationId: ORG2_ID },
   });
   
   // Demo Gym and Uplifter users (from original seed.ts)
   const andrewUser = await prisma.user.upsert({
     where: { email: "andrewkarzel@uplifterinc.com" },
     update: { isSuperAdmin: true, organizationId: orgUplifter.id },
-    create: { email: "andrewkarzel@uplifterinc.com", name: "Andrew Karzel", passwordHash: hashedPassword, role: "ADMIN", status: "ACTIVE", organizationId: orgUplifter.id, isSuperAdmin: true },
+    create: { email: "andrewkarzel@uplifterinc.com", name: "Andrew Karzel", passwordHash: null, role: "ADMIN", status: "ACTIVE", organizationId: orgUplifter.id, isSuperAdmin: true },
   });
   const demoAdmin = await prisma.user.upsert({
     where: { email: "admin@demo.com" },
     update: { organizationId: orgDemo.id },
-    create: { email: "admin@demo.com", name: "Admin User", passwordHash: hashedPassword, role: "ADMIN", status: "ACTIVE", organizationId: orgDemo.id },
+    create: { email: "admin@demo.com", name: "Admin User", passwordHash: null, role: "ADMIN", status: "ACTIVE", organizationId: orgDemo.id },
   });
   const demoCoach = await prisma.user.upsert({
     where: { email: "coach@demo.com" },
     update: { organizationId: orgDemo.id },
-    create: { email: "coach@demo.com", name: "Sarah Coach", passwordHash: hashedPassword, role: "COACH", status: "ACTIVE", organizationId: orgDemo.id },
+    create: { email: "coach@demo.com", name: "Sarah Coach", passwordHash: null, role: "COACH", status: "ACTIVE", organizationId: orgDemo.id },
   });
   console.log("  ✓ Created 10 users across all organizations");
 
@@ -516,15 +513,15 @@ async function main() {
   // GUARDIAN / PARENT USERS
   // ============================================
   console.log("\n👨‍👩‍👧‍👦 Creating guardian users...");
-  const org1Parent1 = await prisma.user.upsert({ where: { email: "michelle.anderson@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-1`, email: "michelle.anderson@email.com", name: "Michelle Anderson", passwordHash: hashedPassword, phone: "(555) 101-1001", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 0 } });
-  const org1Parent2 = await prisma.user.upsert({ where: { email: "thomas.baker@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-2`, email: "thomas.baker@email.com", name: "Thomas Baker", passwordHash: hashedPassword, phone: "(555) 102-1002", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 150.00 } });
-  const org1Parent3 = await prisma.user.upsert({ where: { email: "lisa.chen@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-3`, email: "lisa.chen@email.com", name: "Lisa Chen", passwordHash: hashedPassword, phone: "(555) 103-1003", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: -25.00 } });
-  const org1Parent4 = await prisma.user.upsert({ where: { email: "marcus.davis@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-4`, email: "marcus.davis@email.com", name: "Marcus Davis", passwordHash: hashedPassword, phone: "(555) 104-1004", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 0 } });
-  const org1Parent5 = await prisma.user.upsert({ where: { email: "nancy.evans@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-5`, email: "nancy.evans@email.com", name: "Nancy Evans", passwordHash: hashedPassword, phone: "(555) 105-1005", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 75.50 } });
-  const org2Parent1 = await prisma.user.upsert({ where: { email: "karen.foster@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-1`, email: "karen.foster@email.com", name: "Karen Foster", passwordHash: hashedPassword, phone: "(555) 201-2001", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 0 } });
-  const org2Parent2 = await prisma.user.upsert({ where: { email: "carlos.garcia@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-2`, email: "carlos.garcia@email.com", name: "Carlos Garcia", passwordHash: hashedPassword, phone: "(555) 202-2002", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 200.00 } });
-  const org2Parent3 = await prisma.user.upsert({ where: { email: "patricia.harris@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-3`, email: "patricia.harris@email.com", name: "Patricia Harris", passwordHash: hashedPassword, phone: "(555) 203-2003", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 0 } });
-  const org2Parent4 = await prisma.user.upsert({ where: { email: "john.irving@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-4`, email: "john.irving@email.com", name: "John Irving", passwordHash: hashedPassword, phone: "(555) 204-2004", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: -50.00 } });
+  const org1Parent1 = await prisma.user.upsert({ where: { email: "michelle.anderson@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-1`, email: "michelle.anderson@email.com", name: "Michelle Anderson", passwordHash: null, phone: "(555) 101-1001", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 0 } });
+  const org1Parent2 = await prisma.user.upsert({ where: { email: "thomas.baker@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-2`, email: "thomas.baker@email.com", name: "Thomas Baker", passwordHash: null, phone: "(555) 102-1002", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 150.00 } });
+  const org1Parent3 = await prisma.user.upsert({ where: { email: "lisa.chen@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-3`, email: "lisa.chen@email.com", name: "Lisa Chen", passwordHash: null, phone: "(555) 103-1003", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: -25.00 } });
+  const org1Parent4 = await prisma.user.upsert({ where: { email: "marcus.davis@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-4`, email: "marcus.davis@email.com", name: "Marcus Davis", passwordHash: null, phone: "(555) 104-1004", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 0 } });
+  const org1Parent5 = await prisma.user.upsert({ where: { email: "nancy.evans@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-5`, email: "nancy.evans@email.com", name: "Nancy Evans", passwordHash: null, phone: "(555) 105-1005", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 75.50 } });
+  const org2Parent1 = await prisma.user.upsert({ where: { email: "karen.foster@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-1`, email: "karen.foster@email.com", name: "Karen Foster", passwordHash: null, phone: "(555) 201-2001", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 0 } });
+  const org2Parent2 = await prisma.user.upsert({ where: { email: "carlos.garcia@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-2`, email: "carlos.garcia@email.com", name: "Carlos Garcia", passwordHash: null, phone: "(555) 202-2002", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 200.00 } });
+  const org2Parent3 = await prisma.user.upsert({ where: { email: "patricia.harris@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-3`, email: "patricia.harris@email.com", name: "Patricia Harris", passwordHash: null, phone: "(555) 203-2003", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 0 } });
+  const org2Parent4 = await prisma.user.upsert({ where: { email: "john.irving@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-4`, email: "john.irving@email.com", name: "John Irving", passwordHash: null, phone: "(555) 204-2004", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: -50.00 } });
   console.log("  ✓ Created 9 guardian users");
 
   // ============================================
@@ -3456,7 +3453,7 @@ See you at Metro Sports!
   console.log("  • 14 reserved domains");
   console.log("  • 12 notification rules (system + custom for both orgs)");
   console.log("  • 90 days of visitor analytics (if Redis configured)");
-  console.log("\nTest accounts (password: password123):");
+  console.log("\nTest accounts (use email-based login — no passwords set):");
   console.log("  Sunrise Gym Admin: admin@sunrise-gymnastics.com");
   console.log("  Metro Sports Admin: admin@metro-sports.com");
   console.log("  Demo Gym Admin: admin@demo.com");

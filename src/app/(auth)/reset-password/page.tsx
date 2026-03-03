@@ -12,6 +12,7 @@ import { ChevronLeft, Loader2, CheckCircle2, XCircle, Eye, EyeOff } from "lucide
 import { UplifterLogo } from "@/components/uplifter-logo"
 import { toast } from "sonner"
 import { Suspense } from "react"
+import { validatePassword, PASSWORD_PLACEHOLDER } from "@/lib/password"
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams()
@@ -62,9 +63,10 @@ function ResetPasswordContent() {
     validateToken()
   }, [token])
 
-  const validatePassword = (): boolean => {
-    if (password.length < 8) {
-      setFormError("Password must be at least 8 characters")
+  const validateForm = (): boolean => {
+    const pwError = validatePassword(password)
+    if (pwError) {
+      setFormError(pwError)
       return false
     }
     if (password !== confirmPassword) {
@@ -78,7 +80,7 @@ function ResetPasswordContent() {
     e.preventDefault()
     setFormError(null)
 
-    if (!validatePassword()) {
+    if (!validateForm()) {
       return
     }
 
@@ -217,7 +219,7 @@ function ResetPasswordContent() {
                   if (formError) setFormError(null)
                 }}
                 disabled={isSubmitting}
-                placeholder="At least 8 characters"
+                placeholder={PASSWORD_PLACEHOLDER}
               />
               <button
                 type="button"

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Loader2, CheckCircle2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { validatePassword, PASSWORD_PLACEHOLDER, PASSWORD_MIN_LENGTH } from "@/lib/password";
 
 interface OrganizationInfo {
   name: string;
@@ -71,8 +72,9 @@ export default function MarketingSiteSignupPage() {
       setError("Email is required");
       return;
     }
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters");
+    const pwError = validatePassword(formData.password);
+    if (pwError) {
+      setError(pwError);
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -215,10 +217,10 @@ export default function MarketingSiteSignupPage() {
               value={formData.password}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
-              placeholder="At least 8 characters"
+              placeholder={PASSWORD_PLACEHOLDER}
               disabled={isSubmitting}
               required
-              minLength={8}
+              minLength={PASSWORD_MIN_LENGTH}
             />
           </div>
 

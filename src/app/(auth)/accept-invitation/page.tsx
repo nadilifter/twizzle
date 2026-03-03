@@ -12,6 +12,7 @@ import { UplifterLogo } from "@/components/uplifter-logo"
 import { Loader2, ChevronLeft, AlertCircle, CheckCircle2 } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { toast } from "sonner"
+import { validatePassword, PASSWORD_PLACEHOLDER, PASSWORD_MIN_LENGTH } from "@/lib/password"
 
 interface InvitationData {
   valid: boolean
@@ -96,8 +97,9 @@ function AcceptInvitationContent() {
     e.preventDefault()
     setError(null)
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters")
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      setError(passwordError)
       return
     }
 
@@ -298,13 +300,13 @@ function AcceptInvitationContent() {
                 id="password"
                 type="password"
                 required
-                minLength={8}
+                minLength={PASSWORD_MIN_LENGTH}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value)
                   if (error) setError(null)
                 }}
-                placeholder="At least 8 characters"
+                placeholder={PASSWORD_PLACEHOLDER}
                 disabled={isSubmitting}
               />
             </div>
