@@ -17,37 +17,28 @@ const upsertMedicalInfoSchema = z.object({
     questionId: z.string(),
     response: z.string(),
   })).optional(),
-  // Required for public verification
   organizationId: z.string(),
   email: z.string().email(),
 });
 
 /**
- * Verify that the email has a guardian connection to this athlete's organization.
- * This prevents unauthorized access to athlete medical data.
+ * Verify the user (by email) is a guardian of the athlete.
+ * The organization ID is only used downstream for fetching medical config —
+ * it doesn't gate access, because the athlete may be registering for a
+ * program at an organization they haven't joined yet.
  */
-async function verifyAccess(
+async function verifyGuardian(
   athleteId: string,
-  organizationId: string,
-  email: string
+  email: string,
 ): Promise<boolean> {
-  const athlete = await db.athlete.findFirst({
-    where: {
-      id: athleteId,
-      organizationAthletes: { some: { organizationId } },
-    },
-  });
-
-  if (!athlete) return false;
-
-  const guardianLink = await db.athleteGuardian.findFirst({
+  const guardian = await db.athleteGuardian.findFirst({
     where: {
       athleteId,
       user: { email },
     },
+    select: { id: true },
   });
-
-  return !!guardianLink;
+  return !!guardian;
 }
 
 // GET /api/public/athletes/[id]/medical?organizationId=xxx&email=xxx
@@ -69,8 +60,7 @@ export async function GET(
       );
     }
 
-    // Verify access
-    const hasAccess = await verifyAccess(athleteId, organizationId, email);
+    const hasAccess = await verifyGuardian(athleteId, email);
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Access denied" },
@@ -148,8 +138,7 @@ export async function PUT(
 
     const { organizationId, email, customResponses, ...medicalData } = validatedData;
 
-    // Verify access
-    const hasAccess = await verifyAccess(athleteId, organizationId, email);
+    const hasAccess = await verifyGuardian(athleteId, email);
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Access denied" },
