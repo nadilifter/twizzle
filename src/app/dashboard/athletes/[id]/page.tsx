@@ -32,6 +32,8 @@ import {
   Trophy,
   MapPin,
   Calendar,
+  Star,
+  Target,
   UserCheck,
   UserX,
 } from "lucide-react"
@@ -83,6 +85,7 @@ import type {
   EventRegistrationSummary,
   AttendanceWithEvent,
 } from "@/types/athletes"
+import type { EvaluationWithRelations, EvaluationStatus } from "@/types/evaluations"
 
 interface RegistrationItem {
   id: string
@@ -573,24 +576,10 @@ export default function AthleteProfilePage() {
           />
         </TabsContent>
 
-        {/* ===== EVALUATIONS TAB (placeholder) ===== */}
+        {/* ===== EVALUATIONS TAB ===== */}
         {trainingEnabled && (
           <TabsContent value="evaluations">
-            <Card>
-              <CardHeader>
-                <CardTitle>Evaluations</CardTitle>
-                <CardDescription>Performance evaluations and progress</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-medium">Coming Soon</h3>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                    Skill evaluations, progress tracking, and coaching feedback will be available here.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <AthleteEvaluationsTab athleteId={athlete.id} />
           </TabsContent>
         )}
       </Tabs>
@@ -1765,6 +1754,313 @@ function AthleteCompetitionsTab({
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <History className="h-10 w-10 text-muted-foreground/50 mb-3" />
               <p className="text-sm text-muted-foreground">No past competitions</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Evaluations Tab ────────────────────────────────────────────────
+
+const EVALUATION_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
+  PENDING: { label: "Pending", icon: Clock, className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  IN_PROGRESS: { label: "In Progress", icon: Loader2, className: "bg-blue-50 text-blue-700 border-blue-200" },
+  PASS: { label: "Pass", icon: CheckCircle2, className: "bg-green-50 text-green-700 border-green-200" },
+  RETRY: { label: "Retry", icon: AlertCircle, className: "bg-red-50 text-destructive border-red-200" },
+  EXCELLENT: { label: "Excellent", icon: Star, className: "bg-purple-50 text-purple-700 border-purple-200" },
+  SATISFACTORY: { label: "Satisfactory", icon: CheckCircle2, className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+}
+
+function EvaluationStatusBadge({ status }: { status: string }) {
+  const config = EVALUATION_STATUS_CONFIG[status] ?? {
+    label: status,
+    icon: AlertCircle,
+    className: "bg-muted text-muted-foreground",
+  }
+  const Icon = config.icon
+  return (
+    <Badge variant="outline" className={config.className}>
+      <Icon className="h-3 w-3 mr-1" />
+      {config.label}
+    </Badge>
+  )
+}
+
+interface EvaluationsApiResponse {
+  data: EvaluationWithRelations[]
+  stats: { total: number; pending: number; passed: number; retry: number }
+  total: number
+  limit: number
+  offset: number
+}
+
+function AthleteEvaluationsTab({ athleteId }: { athleteId: string }) {
+  const [evaluations, setEvaluations] = React.useState<EvaluationWithRelations[]>([])
+  const [stats, setStats] = React.useState({ total: 0, pending: 0, passed: 0, retry: 0 })
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    let cancelled = false
+    setIsLoading(true)
+    setError(null)
+    api
+      .get<EvaluationsApiResponse>(`/api/athletes/${athleteId}/evaluations`, { limit: 200 })
+      .then((res) => {
+        if (cancelled) return
+        setEvaluations(res.data)
+        setStats(res.stats)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setError(err instanceof ApiError ? err.message : "Failed to load evaluations")
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [athleteId])
+
+  const evaluationColumns: ColumnDef<EvaluationWithRelations>[] = [
+    {
+      id: "date",
+      accessorFn: (row) => new Date(row.date).getTime(),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Date" />
+      ),
+      cell: ({ row }) => (
+        <Link
+          href={`/dashboard/athletes/${athleteId}/evaluations/${row.original.id}`}
+          className="font-medium text-primary hover:underline whitespace-nowrap"
+        >
+          {format(new Date(row.original.date), "MMM d, yyyy")}
+        </Link>
+      ),
+    },
+    {
+      id: "template",
+      accessorFn: (row) => row.template?.name ?? "",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Template" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">
+          {row.original.template?.name ?? "—"}
+        </span>
+      ),
+    },
+    {
+      id: "coach",
+      accessorFn: (row) => row.coach?.name ?? "",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Coach" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.coach?.name ?? "—"}
+        </span>
+      ),
+    },
+    {
+      id: "level",
+      accessorFn: (row) => row.level?.name ?? row.template?.level?.name ?? "",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Level" />
+      ),
+      cell: ({ row }) => {
+        const level = row.original.level ?? row.original.template?.level
+        if (!level) return <span className="text-muted-foreground">—</span>
+        return (
+          <Badge
+            variant="outline"
+            className="text-[10px] uppercase tracking-wider font-semibold"
+            style={level.color ? { borderColor: level.color, color: level.color, backgroundColor: `${level.color}15` } : undefined}
+          >
+            {level.name}
+          </Badge>
+        )
+      },
+    },
+    {
+      id: "status",
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Status" />
+      ),
+      cell: ({ row }) => <EvaluationStatusBadge status={row.original.status} />,
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      id: "score",
+      accessorFn: (row) => Number(row.overallScore),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Score" />
+      ),
+      cell: ({ row }) => {
+        const score = Number(row.original.overallScore)
+        return (
+          <span className="font-medium tabular-nums">
+            {score > 0 ? score.toFixed(1) : "—"}
+          </span>
+        )
+      },
+    },
+    {
+      id: "skills",
+      enableSorting: false,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Skills" />
+      ),
+      cell: ({ row }) => {
+        const ratings = row.original.skillRatings ?? []
+        if (ratings.length === 0) return <span className="text-muted-foreground">—</span>
+        const passed = ratings.filter((r) => r.passed).length
+        return (
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Target className="h-3.5 w-3.5 shrink-0" />
+            <span className="whitespace-nowrap">
+              <span className="font-medium text-foreground">{passed}</span>/{ratings.length} passed
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      id: "notes",
+      accessorFn: (row) => row.notes ?? "",
+      enableSorting: false,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Notes" />
+      ),
+      cell: ({ row }) =>
+        row.original.notes ? (
+          <span className="text-muted-foreground truncate max-w-[200px] block">
+            {row.original.notes}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      id: "actions",
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+          <Link href={`/dashboard/athletes/${athleteId}/evaluations/${row.original.id}`}>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      ),
+      size: 50,
+    },
+  ]
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <AlertCircle className="h-10 w-10 text-destructive mb-3" />
+            <h3 className="text-sm font-medium">Failed to load evaluations</h3>
+            <p className="text-sm text-muted-foreground mt-1">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Summary Stats */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+              <div className="rounded-full bg-muted p-2.5">
+                <ClipboardList className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold">{stats.pending}</p>
+              </div>
+              <div className="rounded-full bg-yellow-100 p-2.5">
+                <Clock className="h-5 w-5 text-yellow-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Passed</p>
+                <p className="text-2xl font-bold">{stats.passed}</p>
+              </div>
+              <div className="rounded-full bg-green-100 p-2.5">
+                <CheckCircle2 className="h-5 w-5 text-green-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Retry</p>
+                <p className="text-2xl font-bold">{stats.retry}</p>
+              </div>
+              <div className="rounded-full bg-red-100 p-2.5">
+                <AlertCircle className="h-5 w-5 text-red-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Evaluations Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Evaluation History</CardTitle>
+          <CardDescription className="mt-1">
+            {evaluations.length} evaluation{evaluations.length === 1 ? "" : "s"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {evaluations.length > 0 ? (
+            <DataTable
+              columns={evaluationColumns}
+              data={evaluations}
+              pageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <ClipboardList className="h-10 w-10 text-muted-foreground/50 mb-3" />
+              <h3 className="text-sm font-medium">No evaluations</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                Evaluations will appear here once coaches assess this athlete&apos;s skills.
+              </p>
             </div>
           )}
         </CardContent>
