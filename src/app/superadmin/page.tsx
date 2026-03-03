@@ -72,8 +72,8 @@ export default async function AdminDashboardPage() {
                 <span className="text-muted-foreground ml-2">Hidden from Dashboard section.</span>
               </li>
               <li>
-                <span className="font-medium">Forms Section</span> (/dashboard/forms, /dashboard/forms/waivers) - 
-                <span className="text-muted-foreground ml-2">Waivers visible in sidebar (live).</span>
+                <span className="font-medium">Forms Section</span> (/dashboard/forms) - 
+                <span className="text-muted-foreground ml-2">Forms parent page. Waivers moved to Athletes section (/dashboard/athletes/waivers).</span>
               </li>
               <li>
                 <span className="font-medium">Surveys</span> (/dashboard/forms/surveys) - 

@@ -49,7 +49,7 @@ export default function WaiversPage() {
           </p>
         </div>
         <Button asChild>
-          <a href="/dashboard/forms/waivers/new">
+          <a href="/dashboard/athletes/waivers/new">
             <Plus className="mr-2 h-4 w-4" /> Create Waiver
           </a>
         </Button>

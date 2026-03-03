@@ -129,7 +129,7 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
       }
 
       toast.success(isEditing ? "Waiver updated successfully" : "Waiver created successfully")
-      router.push("/dashboard/forms/waivers")
+      router.push("/dashboard/athletes/waivers")
     } catch (error: any) {
       console.error("Failed to save waiver:", error)
       toast.error(error.message || "Failed to save waiver")
@@ -275,7 +275,7 @@ export function WaiverBuilder({ waiver }: WaiverBuilderProps) {
       <div className="flex justify-end gap-4">
         <Button
           variant="outline"
-          onClick={() => router.push("/dashboard/forms/waivers")}
+          onClick={() => router.push("/dashboard/athletes/waivers")}
         >
           Cancel
         </Button>

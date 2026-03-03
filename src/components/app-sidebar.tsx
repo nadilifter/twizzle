@@ -160,8 +160,16 @@ const data = {
           url: "/dashboard/athletes/guardians",
         },
         {
+          title: "Medical Forms",
+          url: "/dashboard/athletes/medical",
+        },
+        {
           title: "Memberships",
           url: "/dashboard/athletes/memberships",
+        },
+        {
+          title: "Waivers",
+          url: "/dashboard/athletes/waivers",
         },
       ],
     },
@@ -180,10 +188,6 @@ const data = {
         {
           title: "Queues",
           url: "/dashboard/registrations/queues",
-        },
-        {
-          title: "Waivers",
-          url: "/dashboard/forms/waivers",
         },
       ],
     },
@@ -264,10 +268,6 @@ const data = {
         {
           title: "Facilities",
           url: "/dashboard/organization/facilities",
-        },
-        {
-          title: "Medical Forms",
-          url: "/dashboard/organization/medical",
         },
         {
           title: "Schedules",

@@ -194,7 +194,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "live",
     description: "Facility management with full CRUD operations",
   },
-  "/dashboard/organization/medical": {
+  "/dashboard/athletes/medical": {
     status: "live",
     description: "Medical form configuration and custom questions management",
     apiRoutes: ["/api/organization/medical-config", "/api/organization/medical-questions", "/api/athletes/[id]/medical"],
@@ -276,7 +276,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "demo",
     description: "Survey builder uses sample data",
   },
-  "/dashboard/forms/waivers": {
+  "/dashboard/athletes/waivers": {
     status: "live",
     description: "Waiver management with WYSIWYG builder and digital signatures",
     apiRoutes: ["/api/waivers", "/api/waivers/[id]", "/api/waivers/[id]/sign", "/api/waivers/check"],

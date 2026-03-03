@@ -103,7 +103,7 @@ function getColumns(onDelete: (id: string) => void, router: ReturnType<typeof us
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => router.push(`/dashboard/forms/waivers/${waiver.id}`)}>
+              <DropdownMenuItem onClick={() => router.push(`/dashboard/athletes/waivers/${waiver.id}`)}>
                 Edit Waiver
               </DropdownMenuItem>
               <DropdownMenuSeparator />

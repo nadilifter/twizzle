@@ -1050,7 +1050,7 @@ export function CompetitionConfiguration({
                   ) : waivers.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       No active waivers found.{" "}
-                      <a href="/dashboard/forms/waivers" className="text-primary underline">Create a waiver</a> first.
+                      <a href="/dashboard/athletes/waivers" className="text-primary underline">Create a waiver</a> first.
                     </p>
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
@@ -1106,7 +1106,7 @@ export function CompetitionConfiguration({
                     <Info className="h-4 w-4" />
                     <span>
                       Configure medical form fields in{" "}
-                      <a href="/dashboard/organization/medical" className="text-primary underline">
+                      <a href="/dashboard/athletes/medical" className="text-primary underline">
                         Medical Settings
                       </a>
                     </span>

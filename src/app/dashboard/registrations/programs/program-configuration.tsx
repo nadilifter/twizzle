@@ -1550,7 +1550,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                   ) : waivers.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       No active waivers found.{" "}
-                      <a href="/dashboard/forms/waivers/new" className="text-primary underline">
+                      <a href="/dashboard/athletes/waivers/new" className="text-primary underline">
                         Create a waiver
                       </a>{" "}
                       first.
@@ -1618,7 +1618,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                     <Heart className="h-4 w-4" />
                     <span>
                       Medical information categories are configured in your{" "}
-                      <a href="/dashboard/organization/medical" className="text-primary underline">
+                      <a href="/dashboard/athletes/medical" className="text-primary underline">
                         Medical Information Settings
                       </a>.
                     </span>
