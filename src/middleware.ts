@@ -125,9 +125,12 @@ export async function middleware(req: NextRequest) {
   // The login form handles this by posting OAuth to localhost:3000, then session-bridge
   // transfers the session back to the local subdomains
   if (currentHost === "login") {
-    // If user is already authenticated and visiting root, redirect to admin dashboard
-    // This prevents users from seeing the login form when they are already logged in
-    if (token && path === "/") {
+    // If user is already authenticated and visiting root or login page, redirect to admin dashboard
+    // This prevents users from seeing the login form when they are already logged in.
+    // The "/login" check is needed because other domains (e.g. localhost:3000) redirect
+    // unauthenticated users to login.{baseDomain}/login — the session cookie lives on
+    // .uplifterinc.localhost so it's invisible on bare localhost but visible here.
+    if (token && (path === "/" || path === "/login")) {
        const adminHost = getSubdomainHost("admin");
        return NextResponse.redirect(`${protocol}//${adminHost}/`);
     }
