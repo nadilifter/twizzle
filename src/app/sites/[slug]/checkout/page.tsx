@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle, Plus, Pencil, CreditCard, Clock } from "lucide-react"
+import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle, Plus, Pencil, CreditCard, Clock, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { SignaturePad, SignaturePadRef } from "@/components/ui/signature-pad"
 import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
@@ -18,6 +18,7 @@ import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate"
 import { ReservationTimer } from "@/components/sites/reservation-timer"
 import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
 
 interface SavedContact {
@@ -267,6 +268,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [discountCode, setDiscountCode] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(null)
+  const [checkoutInvoiceId, setCheckoutInvoiceId] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
 
   // Waiver state
   const [requiredWaivers, setRequiredWaivers] = useState<WaiverToSign[]>([])
@@ -700,7 +703,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         return
       }
 
-      // Payments not yet available — show coming soon instead of Adyen
+      setPaymentSession({ id: data.sessionId, sessionData: data.sessionData })
+      setCheckoutInvoiceId(data.invoiceId)
+      setPaymentError(null)
       setCheckoutStep("payment")
     } catch (error: any) {
       console.error(error)
@@ -724,12 +729,11 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     }
     await completeRegistration()
     clearCart()
-    router.push(`/receipt/${freeCheckoutInvoiceId}`)
+    router.push(`/sites/${params.slug}/receipt/${freeCheckoutInvoiceId}`)
   }
 
   const handlePaymentCompleted = async (result: any) => {
     if (result.resultCode === "Authorised" || result.resultCode === "Pending" || result.resultCode === "Received") {
-      // Clean up persisted checkout form data
       try {
         sessionStorage.removeItem(FORM_STORAGE_KEY)
         sessionStorage.removeItem(CONTACT_STORAGE_KEY)
@@ -741,7 +745,19 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       }
       clearCart()
       await completeRegistration()
+      if (checkoutInvoiceId) {
+        router.push(`/sites/${params.slug}/receipt/${checkoutInvoiceId}`)
+      }
+    } else {
+      setPaymentError(`Payment was not successful (${result.resultCode}). Please try again.`)
     }
+  }
+
+  const handlePaymentError = (error: any) => {
+    console.error("Payment error:", error)
+    const message = error?.message || error?.resultCode || "An error occurred during payment."
+    setPaymentError(message)
+    toast.error("Payment failed. Please try again.")
   }
 
   const taxRate = 0.13
@@ -1141,44 +1157,86 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             </>
           )}
 
-          {/* Payment Section — Coming Soon */}
+          {/* Payment Section */}
           {checkoutStep === "payment" && (
-              <Card className="text-center">
-                <CardHeader className="pb-4">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                    <CreditCard className="h-7 w-7 text-primary" />
-                  </div>
-                  <CardTitle className="text-xl">
-                    {hasWaitlistItems ? "Waitlist Payment" : "Online Payments Coming Soon"}
-                  </CardTitle>
-                  <CardDescription>
-                    {hasWaitlistItems
-                      ? "Payment information will be collected when a spot becomes available."
-                      : "We're putting the finishing touches on our secure payment system."}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="rounded-lg border border-dashed p-4 space-y-2">
-                    <div className="flex items-center justify-center gap-2 text-sm font-medium">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{hasWaitlistItems ? "You will not be charged yet" : "Available very soon"}</span>
+            <>
+              {hasWaitlistItems ? (
+                <Card className="text-center">
+                  <CardHeader className="pb-4">
+                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                      <Clock className="h-7 w-7 text-primary" />
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {hasWaitlistItems
-                        ? "You will be added to the waitlist. When a spot opens and you are promoted, we will collect payment at that time. Online payments are coming soon."
-                        : "Online checkout will be available shortly. Please contact the organization directly to complete your registration."}
-                    </p>
+                    <CardTitle className="text-xl">Waitlist Registration</CardTitle>
+                    <CardDescription>
+                      Payment information will be collected when a spot becomes available.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-lg border border-dashed p-4 space-y-2">
+                      <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>You will not be charged yet</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        You will be added to the waitlist. When a spot opens and you are promoted, we will collect payment at that time.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setCheckoutStep("details")}
+                    >
+                      <ChevronLeft className="mr-1 h-4 w-4" />
+                      Back to Details
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : paymentSession ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Payment</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCheckoutStep("details")
+                        setPaymentSession(null)
+                        setPaymentError(null)
+                      }}
+                    >
+                      <ChevronLeft className="mr-1 h-4 w-4" />
+                      Back to Details
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setCheckoutStep("details")}
-                  >
-                    <ChevronLeft className="mr-1 h-4 w-4" />
-                    Back to Details
-                  </Button>
-                </CardContent>
-              </Card>
+
+                  {paymentError && (
+                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-destructive">Payment failed</p>
+                        <p className="text-sm text-muted-foreground">{paymentError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <Card>
+                    <CardContent className="pt-6">
+                      <AdyenCheckoutComponent
+                        sessionId={paymentSession.id}
+                        sessionData={paymentSession.sessionData}
+                        onPaymentCompleted={handlePaymentCompleted}
+                        onError={handlePaymentError}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Preparing payment...</p>
+                </div>
+              )}
+            </>
           )}
 
           {/* Confirmation Step for $0 orders */}

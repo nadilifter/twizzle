@@ -248,6 +248,37 @@ export async function POST(request: NextRequest) {
       return { organization, user }
     })
 
+    // If a payment method was collected during signup, claim any tokens
+    // that the recurring webhook may have already created under the temporary reference
+    if (validatedData.adyenShopperReference) {
+      const permanentRef = `org-${result.organization.id}`
+      try {
+        const orphanedMethods = await db.organizationPaymentMethod.findMany({
+          where: { shopperReference: validatedData.adyenShopperReference },
+        })
+
+        for (const method of orphanedMethods) {
+          await db.organizationPaymentMethod.update({
+            where: { id: method.id },
+            data: {
+              organizationId: result.organization.id,
+              shopperReference: permanentRef,
+            },
+          })
+        }
+
+        // If we found tokens, set the first one as the recurring detail ref
+        if (orphanedMethods.length > 0) {
+          await db.organizationSubscription.updateMany({
+            where: { organizationId: result.organization.id },
+            data: { adyenRecurringDetailRef: orphanedMethods[0].storedPaymentMethodId },
+          })
+        }
+      } catch (err) {
+        console.error("Failed to claim orphaned payment methods:", err)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       organizationId: result.organization.id,

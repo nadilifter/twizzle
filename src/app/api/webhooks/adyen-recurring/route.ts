@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     
     // Verify HMAC signature (if ADYEN_HMAC_KEY is configured)
     const hmacSignature = request.headers.get("hmac-signature") || ""
-    if (process.env.ADYEN_HMAC_KEY && hmacSignature) {
+    if (process.env.ADYEN_WEBHOOK_HMAC_KEY && hmacSignature) {
       const isValid = verifyWebhookSignature(body, hmacSignature)
       if (!isValid) {
         console.error("Invalid webhook signature")
@@ -100,9 +100,7 @@ async function handleTokenCreated(tokenData: {
     holderName?: string
   }
 }) {
-  // Extract org ID from shopper reference
-  // Format: "org-{orgId}" or "signup-{subdomain}-{timestamp}"
-  const orgId = extractOrgIdFromShopperRef(tokenData.shopperReference)
+  const orgId = await resolveOrgIdFromShopperRef(tokenData.shopperReference)
   
   if (!orgId) {
     console.log("Could not extract org ID from shopper reference:", tokenData.shopperReference)
@@ -272,25 +270,41 @@ async function handleTokenDisabled(tokenData: {
 }
 
 /**
- * Extract organization ID from Adyen shopper reference
+ * Extract organization ID from Adyen shopper reference.
  * 
  * Formats:
  * - "org-{orgId}" - permanent reference for existing orgs
  * - "signup-{subdomain}-{timestamp}" - temporary reference during signup
+ *
+ * For signup references, looks up the org by subdomain. If the org hasn't
+ * been created yet (race condition), returns null -- the org signup API
+ * will claim orphaned tokens after org creation.
  */
-function extractOrgIdFromShopperRef(shopperReference: string): string | null {
+async function resolveOrgIdFromShopperRef(shopperReference: string): Promise<string | null> {
   if (!shopperReference) return null
 
-  // Check for permanent org reference
   if (shopperReference.startsWith("org-")) {
     return shopperReference.replace("org-", "")
   }
 
-  // For signup references, we need to look up by the temporary reference
-  // This would require storing the mapping during signup
-  // For now, we'll return null and handle this case differently
   if (shopperReference.startsWith("signup-")) {
-    console.log("Signup reference - token will be associated after org creation")
+    // Format: signup-{subdomain}-{timestamp}
+    // Extract subdomain by removing prefix and the trailing timestamp segment
+    const withoutPrefix = shopperReference.replace("signup-", "")
+    const lastDash = withoutPrefix.lastIndexOf("-")
+    const subdomain = lastDash > 0 ? withoutPrefix.substring(0, lastDash) : withoutPrefix
+
+    if (subdomain) {
+      const config = await db.websiteConfig.findUnique({
+        where: { subdomain },
+        select: { organizationId: true },
+      })
+      if (config) {
+        return config.organizationId
+      }
+    }
+
+    console.log("Signup reference - org not found yet, token will be claimed after org creation:", shopperReference)
     return null
   }
 

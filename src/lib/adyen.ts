@@ -5,7 +5,7 @@
  *   - ADYEN_API_KEY: Your Adyen API key
  *   - ADYEN_MERCHANT_ACCOUNT: Your Adyen merchant account name
  *   - ADYEN_ENVIRONMENT: "TEST" or "LIVE" (defaults to TEST in development, required in production)
- *   - ADYEN_HMAC_KEY: HMAC key for webhook signature verification
+ *   - ADYEN_WEBHOOK_HMAC_KEY: HMAC key for webhook signature verification
  */
 
 // Lazy initialization to avoid build-time errors
@@ -352,9 +352,9 @@ export function verifyWebhookSignature(
   payload: string,
   hmacSignature: string
 ): boolean {
-  const hmacKey = process.env.ADYEN_HMAC_KEY;
+  const hmacKey = process.env.ADYEN_WEBHOOK_HMAC_KEY;
   if (!hmacKey) {
-    console.error("ADYEN_HMAC_KEY is not set - cannot verify webhook signature");
+    console.error("ADYEN_WEBHOOK_HMAC_KEY is not set - cannot verify webhook signature");
     return false;
   }
 
