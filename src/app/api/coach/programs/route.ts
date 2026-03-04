@@ -5,7 +5,7 @@ import { getEffectiveUser } from "@/lib/impersonation";
 
 // GET /api/coach/programs
 // Returns programs assigned to the current coach (via ProgramStaff or Event.coachId)
-// Supports superadmin impersonation via "view as coach" feature
+// Supports superadmin impersonation via "view as user" feature
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
@@ -13,8 +13,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get effective user (handles superadmin impersonation)
-    const effectiveUser = getEffectiveUser(session);
+    const effectiveUser = await getEffectiveUser(session);
     if (!effectiveUser?.organizationId) {
       return NextResponse.json({ data: [], total: 0 });
     }

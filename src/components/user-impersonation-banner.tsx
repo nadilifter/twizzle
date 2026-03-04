@@ -6,10 +6,14 @@ import { useState } from "react"
 import { Eye, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+interface UserImpersonationBannerProps {
+  exitUrl?: string
+}
+
 /**
- * Banner displayed when a superadmin is viewing the athletes portal as another user.
+ * Banner displayed when a superadmin is viewing a portal as another user.
  */
-export function UserImpersonationBanner() {
+export function UserImpersonationBanner({ exitUrl = "/athletes/admin/view-as-user" }: UserImpersonationBannerProps) {
   const { data: session, update: updateSession } = useSession()
   const router = useRouter()
   const [isExiting, setIsExiting] = useState(false)
@@ -31,7 +35,7 @@ export function UserImpersonationBanner() {
         viewingAsUserName: "",
         viewingAsUserEmail: "",
       })
-      router.push("/athletes/admin/view-as-user")
+      router.push(exitUrl)
     } catch (err) {
       console.error("Failed to exit impersonation:", err)
       setIsExiting(false)

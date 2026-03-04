@@ -27,18 +27,16 @@ interface UseCoachEventsReturn {
 /**
  * Hook for fetching events assigned to the current coach.
  * Automatically filters by the logged-in user's ID as coachId.
- * Supports superadmin impersonation via "view as coach" feature.
+ * Supports superadmin impersonation via "view as user" feature.
  */
 export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEventsReturn {
   const { autoFetch = true, initialParams = {} } = options;
   const { data: session } = useSession();
   
-  // Get effective coach ID (use impersonated ID if superadmin is viewing as coach)
   const effectiveCoachId = useMemo(() => {
     if (!session?.user) return null;
-    // If superadmin is impersonating a coach, use the impersonated coach's ID
-    if (session.user.isSuperAdmin && session.user.viewingAsCoachId) {
-      return session.user.viewingAsCoachId;
+    if (session.user.isSuperAdmin && session.user.viewingAsUserId) {
+      return session.user.viewingAsUserId;
     }
     return session.user.id;
   }, [session?.user]);

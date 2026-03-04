@@ -1,7 +1,7 @@
 import { CoachSidebar } from "@/components/coach-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { ImpersonationBanner } from "@/components/impersonation-banner"
+import { UserImpersonationBanner } from "@/components/user-impersonation-banner"
 import { getAuthSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
 
@@ -18,7 +18,7 @@ export default async function CoachLayout({
 
   return (
     <>
-      <ImpersonationBanner />
+      <UserImpersonationBanner exitUrl="/coach/admin/view-as-user" />
       <SidebarProvider>
         <CoachSidebar />
         <SidebarInset>

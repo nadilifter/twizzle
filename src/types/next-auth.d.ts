@@ -10,12 +10,7 @@ declare module "next-auth" {
       organizationName: string;
       permissions: string[];
       isSuperAdmin: boolean;
-      // Impersonation fields (superadmin "view as coach" feature)
-      viewingAsCoachId?: string;
-      viewingAsCoachName?: string;
-      viewingAsOrganizationId?: string;
-      viewingAsOrganizationName?: string;
-      // Impersonation fields (superadmin "view as user" feature for athletes portal)
+      // Impersonation fields (superadmin "view as user" feature)
       viewingAsUserId?: string;
       viewingAsUserName?: string;
       viewingAsUserEmail?: string;
@@ -39,12 +34,7 @@ declare module "next-auth/jwt" {
     organizationName: string;
     permissions: string[];
     isSuperAdmin: boolean;
-    // Impersonation fields (superadmin "view as coach" feature)
-    viewingAsCoachId?: string;
-    viewingAsCoachName?: string;
-    viewingAsOrganizationId?: string;
-    viewingAsOrganizationName?: string;
-    // Impersonation fields (superadmin "view as user" feature for athletes portal)
+    // Impersonation fields (superadmin "view as user" feature)
     viewingAsUserId?: string;
     viewingAsUserName?: string;
     viewingAsUserEmail?: string;

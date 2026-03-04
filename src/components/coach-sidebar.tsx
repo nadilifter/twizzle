@@ -4,6 +4,7 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import { 
   ClipboardCheck,
+  Eye,
   LayoutDashboard, 
   UserCheck,
   Star,
@@ -62,9 +63,19 @@ const navItems = [
   },
 ]
 
+const superadminItems = [
+  {
+    title: "View as User",
+    url: "/coach/admin/view-as-user",
+    icon: Eye,
+  },
+]
+
 export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
+
+  const isSuperAdmin = session?.user?.isSuperAdmin === true
 
   // Get user data from session
   const user = session?.user ? {
@@ -112,6 +123,29 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isSuperAdmin && (
+          <SidebarGroup className="mt-auto">
+            <SidebarGroupLabel>Admin Tools</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {superadminItems.map((item) => {
+                  const isActive = pathname.startsWith(item.url)
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <a href={item.url}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </a>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
         {isLoading || !user ? (

@@ -7,7 +7,6 @@ import {
   Building2, 
   CreditCard,
   DollarSign,
-  Eye,
   Globe, 
   Layers,
   LayoutDashboard, 
@@ -184,11 +183,6 @@ const navItems = [
     title: "Feedback",
     url: "/superadmin/feedback",
     icon: MessageSquare,
-  },
-  {
-    title: "View as Coach",
-    url: "/superadmin/view-as-coach",
-    icon: Eye,
   },
 ]
 

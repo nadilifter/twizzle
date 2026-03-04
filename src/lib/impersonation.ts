@@ -1,11 +1,5 @@
 import { Session } from "next-auth";
-
-/**
- * Impersonation utilities for superadmin "view as coach" feature
- * 
- * When a superadmin is viewing as a coach, we use the impersonated coach's
- * ID and organization instead of the superadmin's own ID.
- */
+import { db } from "./db";
 
 export interface EffectiveUser {
   userId: string;
@@ -16,27 +10,36 @@ export interface EffectiveUser {
 
 /**
  * Get the effective user ID and organization for data queries.
- * If a superadmin is viewing as a coach, returns the impersonated coach's info.
+ * If a superadmin is viewing as another user, returns that user's info.
  * Otherwise, returns the actual user's info.
+ *
+ * Requires a DB lookup when impersonating to resolve the target user's organization.
  */
-export function getEffectiveUser(session: Session | null): EffectiveUser | null {
+export async function getEffectiveUser(session: Session | null): Promise<EffectiveUser | null> {
   if (!session?.user) {
     return null;
   }
 
   const user = session.user;
 
-  // Check if superadmin is impersonating a coach
-  if (user.isSuperAdmin && user.viewingAsCoachId && user.viewingAsOrganizationId) {
+  if (user.isSuperAdmin && user.viewingAsUserId) {
+    const targetUser = await db.user.findUnique({
+      where: { id: user.viewingAsUserId },
+      include: { organization: true },
+    });
+
+    if (!targetUser) {
+      return null;
+    }
+
     return {
-      userId: user.viewingAsCoachId,
-      organizationId: user.viewingAsOrganizationId,
-      organizationName: user.viewingAsOrganizationName || "",
+      userId: targetUser.id,
+      organizationId: targetUser.organizationId || "",
+      organizationName: targetUser.organization?.name || "",
       isImpersonating: true,
     };
   }
 
-  // Normal user - return their own info
   return {
     userId: user.id,
     organizationId: user.organizationId,
@@ -47,19 +50,19 @@ export function getEffectiveUser(session: Session | null): EffectiveUser | null 
 
 /**
  * Get the effective coach ID for coach-specific queries.
- * If a superadmin is viewing as a coach, returns the impersonated coach's ID.
+ * If a superadmin is viewing as another user, returns that user's ID.
  */
-export function getEffectiveCoachId(session: Session | null): string | null {
-  const effective = getEffectiveUser(session);
+export async function getEffectiveCoachId(session: Session | null): Promise<string | null> {
+  const effective = await getEffectiveUser(session);
   return effective?.userId || null;
 }
 
 /**
  * Get the effective organization ID for org-scoped queries.
- * If a superadmin is viewing as a coach, returns the impersonated org's ID.
+ * If a superadmin is viewing as another user, returns that user's org ID.
  */
-export function getEffectiveOrganizationId(session: Session | null): string | null {
-  const effective = getEffectiveUser(session);
+export async function getEffectiveOrganizationId(session: Session | null): Promise<string | null> {
+  const effective = await getEffectiveUser(session);
   return effective?.organizationId || null;
 }
 
@@ -68,9 +71,5 @@ export function getEffectiveOrganizationId(session: Session | null): string | nu
  */
 export function isImpersonating(session: Session | null): boolean {
   if (!session?.user) return false;
-  return !!(
-    session.user.isSuperAdmin && 
-    session.user.viewingAsCoachId && 
-    session.user.viewingAsOrganizationId
-  );
+  return !!(session.user.isSuperAdmin && session.user.viewingAsUserId);
 }

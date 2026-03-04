@@ -426,16 +426,7 @@ export const authOptions: NextAuthOptions = {
             token.organizationName = session.organizationName;
           }
           
-          // Handle impersonation (superadmin "view as coach" feature)
-          // Only allow if user is a superadmin
-          if (token.isSuperAdmin && session.viewingAsCoachId !== undefined) {
-            token.viewingAsCoachId = session.viewingAsCoachId || undefined;
-            token.viewingAsCoachName = session.viewingAsCoachName || undefined;
-            token.viewingAsOrganizationId = session.viewingAsOrganizationId || undefined;
-            token.viewingAsOrganizationName = session.viewingAsOrganizationName || undefined;
-          }
-
-          // Handle impersonation (superadmin "view as user" feature for athletes portal)
+          // Handle impersonation (superadmin "view as user" feature)
           if (token.isSuperAdmin && session.viewingAsUserId !== undefined) {
             token.viewingAsUserId = session.viewingAsUserId || undefined;
             token.viewingAsUserName = session.viewingAsUserName || undefined;
@@ -461,11 +452,6 @@ export const authOptions: NextAuthOptions = {
           session.user.permissions = token.permissions as string[];
           session.user.isSuperAdmin = token.isSuperAdmin as boolean;
           
-          // Include impersonation fields
-          session.user.viewingAsCoachId = token.viewingAsCoachId as string | undefined;
-          session.user.viewingAsCoachName = token.viewingAsCoachName as string | undefined;
-          session.user.viewingAsOrganizationId = token.viewingAsOrganizationId as string | undefined;
-          session.user.viewingAsOrganizationName = token.viewingAsOrganizationName as string | undefined;
           session.user.viewingAsUserId = token.viewingAsUserId as string | undefined;
           session.user.viewingAsUserName = token.viewingAsUserName as string | undefined;
           session.user.viewingAsUserEmail = token.viewingAsUserEmail as string | undefined;
