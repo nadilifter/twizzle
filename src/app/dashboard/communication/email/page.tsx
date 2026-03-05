@@ -925,7 +925,7 @@ export default function EmailCampaignsPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="campaign-name">Campaign Name</Label>
                   <Input id="campaign-name" placeholder="e.g., February Newsletter" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">This is for your internal reference only and won't be visible to recipients.</p>
+                  <p className="text-xs text-muted-foreground">This is for your internal reference only and won&apos;t be visible to recipients.</p>
                 </div>
 
                 <div className="grid gap-2">

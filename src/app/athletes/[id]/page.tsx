@@ -272,7 +272,7 @@ export default function AthleteDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <Label htmlFor="share-regs" className="text-sm font-medium">Share registrations</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Other guardians can see programs you've registered this athlete for</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Other guardians can see programs you&apos;ve registered this athlete for</p>
             </div>
             <Switch
               id="share-regs"

@@ -1025,6 +1025,11 @@ model Enrollment {
   user    User?   @relation("UserEnrollments", fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([athleteId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([athleteId, status])
+  @@index([athleteId, createdAt])
 }
 
 enum EnrollmentStatus {
@@ -1838,6 +1843,10 @@ model Announcement {
   // Relations
   organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   readBy       AnnouncementRead[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([status, publishedAt])
 }
 
 model AnnouncementRead {
@@ -1872,6 +1881,9 @@ model SystemAnnouncement {
 
   // Read tracking
   readBy SystemAnnouncementRead[]
+
+  @@index([status])
+  @@index([status, publishedAt])
 }
 
 model SystemAnnouncementRead {

@@ -9,10 +9,11 @@
  */
 
 // Lazy initialization to avoid build-time errors
-let _checkoutApi: import("@adyen/api-library").CheckoutAPI | null = null;
-let _recurringApi: import("@adyen/api-library").RecurringAPI | null = null;
+// Adyen client types are only available at runtime via require(), so we use any here
+let _checkoutApi: any = null; // CheckoutAPI
+let _recurringApi: any = null; // RecurringAPI
 let _adyenEnvironmentName: "TEST" | "LIVE" = "TEST";
-let _adyenClient: import("@adyen/api-library").Client | null = null;
+let _adyenClient: any = null; // Client
 
 /**
  * Check if Adyen is properly configured
@@ -33,7 +34,6 @@ function getAdyenClient() {
   }
 
   // Only initialize when actually needed
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Client, Environment } = require("@adyen/api-library");
 
   // Determine Adyen environment from env var
@@ -72,7 +72,6 @@ function getCheckoutApi() {
     return _checkoutApi;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { CheckoutAPI } = require("@adyen/api-library");
   _checkoutApi = new CheckoutAPI(getAdyenClient());
   return _checkoutApi;
@@ -83,7 +82,6 @@ function getRecurringApi() {
     return _recurringApi;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { RecurringAPI } = require("@adyen/api-library");
   _recurringApi = new RecurringAPI(getAdyenClient());
   return _recurringApi;
@@ -98,7 +96,8 @@ export const checkoutApi = {
     return getCheckoutApi().PaymentLinksApi;
   },
   get RecurringApi() {
-    return getRecurringApi();
+    // RecurringAPI wrapper exposes the actual RecurringApi (with disable(), etc.) as a getter
+    return getRecurringApi().RecurringApi;
   },
 };
 
@@ -129,7 +128,7 @@ export async function createPaymentSession(
       merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
       shopperEmail,
       lineItems,
-      channel: "Web",
+      channel: "Web" as any,
       countryCode: "US", // Should be dynamic
     });
     return response;
@@ -154,7 +153,7 @@ export async function createPaymentLink(
       merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
       countryCode: "US",
       // Optional: Set expiration (default is usually 24 hours)
-      ...(expiresAt && { expiresAt }),
+      ...(expiresAt && { expiresAt: new Date(expiresAt) }),
     });
     return response;
   } catch (error) {
@@ -217,14 +216,14 @@ export async function createTokenizationSession(
       merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
       shopperReference,
       shopperEmail,
-      channel: "Web",
+      channel: "Web" as any,
       countryCode: "US",
       // Enable tokenization
       storePaymentMethod: true,
-      storePaymentMethodMode: "askForConsent",  // Shows checkbox to save card
-      recurringProcessingModel: "Subscription",
+      storePaymentMethodMode: "askForConsent" as any,  // Shows checkbox to save card
+      recurringProcessingModel: "Subscription" as any,
       // Allow multiple payment methods to be stored
-      shopperInteraction: "Ecommerce",
+      shopperInteraction: "Ecommerce" as any,
     });
     return response;
   } catch (error) {
@@ -247,7 +246,7 @@ export async function getStoredPaymentMethods(
     const response = await checkoutApi.PaymentsApi.paymentMethods({
       merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
       shopperReference,
-      channel: "Web",
+      channel: "Web" as any,
     });
 
     // Transform stored payment methods from the response
@@ -324,11 +323,11 @@ export async function chargeSubscription(
       merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
       shopperReference,
       paymentMethod: {
-        type: "scheme",
+        type: "scheme" as any,
         storedPaymentMethodId,
       },
-      shopperInteraction: "ContAuth",  // Continuous authorization (recurring)
-      recurringProcessingModel: "Subscription",
+      shopperInteraction: "ContAuth" as any,  // Continuous authorization (recurring)
+      recurringProcessingModel: "Subscription" as any,
       // Optional metadata
       ...(description && { 
         metadata: { description } 
@@ -359,7 +358,6 @@ export function verifyWebhookSignature(
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { hmacValidator } = require("@adyen/api-library");
     const validator = new hmacValidator();
     

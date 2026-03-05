@@ -2279,7 +2279,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
                   <p className="text-xs text-muted-foreground">
                     Athletes are charged the per-event price from the tier matching their total number of events.
-                    Leave "Max Events" empty for unlimited.
+                    Leave &quot;Max Events&quot; empty for unlimited.
                   </p>
                 </div>
               )}

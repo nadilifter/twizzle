@@ -137,14 +137,11 @@ const getImageRemotePatterns = () => {
 
 const nextConfig = {
   output: "standalone",
-  // Skip TypeScript errors during build for staging deployment
-  // TODO: Fix pre-existing type errors and remove this
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
-    // Also skip ESLint errors during build
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   // Configure allowed remote image sources for Next.js Image component
   images: {
