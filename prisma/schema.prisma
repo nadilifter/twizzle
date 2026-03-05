@@ -1072,6 +1072,7 @@ model ProgramInstance {
   @@index([organizationId])
   @@index([date])
   @@index([status])
+  @@index([organizationId, date])
 }
 
 enum InstanceStatus {
