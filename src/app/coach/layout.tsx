@@ -25,17 +25,15 @@ export default async function CoachLayout({
   }
 
   return (
-    <>
-      <UserImpersonationBanner exitUrl="/coach/admin/view-as-user" />
-      <SidebarProvider>
-        <CoachSidebar />
-        <SidebarInset>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            {children}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </>
+    <SidebarProvider>
+      <CoachSidebar />
+      <SidebarInset>
+        <UserImpersonationBanner exitUrl="/coach/admin/view-as-user" />
+        <SiteHeader />
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
