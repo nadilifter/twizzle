@@ -70,7 +70,12 @@ export async function POST(request: NextRequest) {
     const user = await db.user.findFirst({
       where: {
         id: userId,
-        organizationId: session.user.organizationId,
+        memberships: {
+          some: {
+            organizationId: session.user.organizationId,
+            status: "ACTIVE",
+          },
+        },
       },
     });
 

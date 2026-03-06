@@ -3,8 +3,9 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
-const updateStaffSchema = z.object({
-  employmentType: z.enum(["FULL_TIME", "PART_TIME", "CONTRACTOR", "VOLUNTEER"]).optional(),
+const updateMemberSchema = z.object({
+  // Employment fields
+  employmentType: z.enum(["FULL_TIME", "PART_TIME", "CONTRACTOR", "VOLUNTEER"]).optional().nullable(),
   title: z.string().optional().nullable(),
   hourlyRate: z.number().optional().nullable(),
   hireDate: z.string().optional().nullable(),
@@ -19,9 +20,11 @@ const updateStaffSchema = z.object({
     phone: z.string(),
     relationship: z.string().optional(),
   }).optional().nullable(),
+  // Role and permissions
+  role: z.enum(["ADMIN", "COACH", "VOLUNTEER", "ACCOUNTANT", "CUSTOM", "PARENT"]).optional(),
+  permissions: z.array(z.string()).optional(),
 });
 
-// GET - Get a specific staff profile
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,10 +43,7 @@ export async function GET(
     const { id } = await params;
 
     const member = await db.organizationMember.findFirst({
-      where: {
-        id,
-        organizationId,
-      },
+      where: { id, organizationId },
       include: {
         user: {
           select: {
@@ -51,32 +51,51 @@ export async function GET(
             name: true,
             email: true,
             avatar: true,
-            role: true,
+            phone: true,
             status: true,
+            createdAt: true,
+            lastActiveAt: true,
           },
         },
-        availability: true,
+        permissions: true,
+        availability: { orderBy: { dayOfWeek: "asc" } },
+        shifts: {
+          orderBy: { date: "desc" },
+          take: 20,
+          include: { facility: { select: { name: true } } },
+        },
+        eventAssignments: {
+          take: 20,
+          include: {
+            event: { select: { id: true, title: true, date: true } },
+          },
+        },
+        programAssignments: {
+          include: {
+            program: { select: { id: true, name: true } },
+          },
+        },
         _count: {
           select: {
             shifts: true,
             eventAssignments: true,
+            programAssignments: true,
           },
         },
       },
     });
 
     if (!member) {
-      return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
     return NextResponse.json(member);
   } catch (error) {
-    console.error("Error fetching staff profile:", error);
-    return NextResponse.json({ error: "Failed to fetch staff profile" }, { status: 500 });
+    console.error("Error fetching member:", error);
+    return NextResponse.json({ error: "Failed to fetch member" }, { status: 500 });
   }
 }
 
-// PATCH - Update a staff profile
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -92,29 +111,26 @@ export async function PATCH(
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    // Check permissions
     if (
       !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("staff.edit")
+      !session.user.permissions.includes("users.edit")
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
 
-    // Verify member exists in organization
     const existingMember = await db.organizationMember.findFirst({
       where: { id, organizationId },
     });
 
     if (!existingMember) {
-      return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
     const body = await request.json();
-    const validatedData = updateStaffSchema.parse(body);
+    const validatedData = updateMemberSchema.parse(body);
 
-    // Build update data
     const updateData: Record<string, unknown> = {};
     if (validatedData.employmentType !== undefined) updateData.employmentType = validatedData.employmentType;
     if (validatedData.title !== undefined) updateData.title = validatedData.title;
@@ -123,10 +139,29 @@ export async function PATCH(
     if (validatedData.certifications !== undefined) updateData.certifications = validatedData.certifications;
     if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
     if (validatedData.emergencyContact !== undefined) updateData.emergencyContact = validatedData.emergencyContact;
+    if (validatedData.role !== undefined) updateData.role = validatedData.role;
 
-    const member = await db.organizationMember.update({
-      where: { id },
-      data: updateData,
+    await db.$transaction(async (tx) => {
+      await tx.organizationMember.update({
+        where: { id },
+        data: updateData,
+      });
+
+      if (validatedData.permissions !== undefined) {
+        await tx.orgMemberPermission.deleteMany({ where: { memberId: id } });
+        if (validatedData.permissions.length > 0) {
+          await tx.orgMemberPermission.createMany({
+            data: validatedData.permissions.map((permission) => ({
+              memberId: id,
+              permission,
+            })),
+          });
+        }
+      }
+    });
+
+    const member = await db.organizationMember.findFirst({
+      where: { id, organizationId },
       include: {
         user: {
           select: {
@@ -134,14 +169,19 @@ export async function PATCH(
             name: true,
             email: true,
             avatar: true,
-            role: true,
+            phone: true,
             status: true,
+            createdAt: true,
+            lastActiveAt: true,
           },
         },
+        permissions: true,
+        availability: { orderBy: { dayOfWeek: "asc" } },
         _count: {
           select: {
             shifts: true,
             eventAssignments: true,
+            programAssignments: true,
           },
         },
       },
@@ -152,53 +192,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error updating staff profile:", error);
-    return NextResponse.json({ error: "Failed to update staff profile" }, { status: 500 });
-  }
-}
-
-// DELETE - Delete a staff profile
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getAuthSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const organizationId = session.user.organizationId;
-    if (!organizationId) {
-      return NextResponse.json({ error: "No organization selected" }, { status: 400 });
-    }
-
-    // Check permissions
-    if (
-      !session.user.permissions.includes("*") &&
-      !session.user.permissions.includes("staff.delete")
-    ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const { id } = await params;
-
-    // Verify member exists in organization
-    const existingMember = await db.organizationMember.findFirst({
-      where: { id, organizationId },
-    });
-
-    if (!existingMember) {
-      return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
-    }
-
-    await db.organizationMember.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting staff profile:", error);
-    return NextResponse.json({ error: "Failed to delete staff profile" }, { status: 500 });
+    console.error("Error updating member:", error);
+    return NextResponse.json({ error: "Failed to update member" }, { status: 500 });
   }
 }

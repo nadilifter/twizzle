@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getEffectiveUser } from "@/lib/impersonation";
+import { getEffectiveUser, getCoachingMemberships } from "@/lib/impersonation";
 
 // GET /api/coach/athletes
-// Returns athletes from programs assigned to the current coach
-// (via ProgramStaff assignments or Event.coachId)
-// Supports superadmin impersonation via "view as user" feature
+// Returns athletes from programs assigned to the current coach across all coaching organizations
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
@@ -15,61 +13,57 @@ export async function GET(request: NextRequest) {
     }
 
     const effectiveUser = await getEffectiveUser(session);
-    if (!effectiveUser?.organizationId) {
+    if (!effectiveUser) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    const { userId, organizationId } = effectiveUser;
+    const { userId } = effectiveUser;
+    const coachingMemberships = await getCoachingMemberships(session);
+    if (coachingMemberships.length === 0) {
+      return NextResponse.json({ data: [], total: 0, limit: 100, offset: 0 });
+    }
+
+    const orgIds = coachingMemberships.map((m) => m.organizationId);
+    const memberIds = coachingMemberships.map((m) => m.memberId);
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const limit = parseInt(searchParams.get("limit") || "100");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    // First, get the user's staff profile
-    const staffProfile = await db.staffProfile.findUnique({
-      where: { userId },
+    // Find programs via ProgramStaff assignments
+    const programStaffAssignments = await db.programStaff.findMany({
+      where: { memberId: { in: memberIds } },
+      select: { programId: true },
     });
 
-    // Find programs via ProgramStaff assignments
-    const programStaffAssignments = staffProfile
-      ? await db.programStaff.findMany({
-          where: { staffProfileId: staffProfile.id },
-          select: { programId: true },
-        })
-      : [];
+    const programIdsFromStaff = programStaffAssignments.map((a) => a.programId);
 
-    const programIdsFromStaff = programStaffAssignments.map(a => a.programId);
-
-    // Get all events where this user is the coach
+    // Get events where this user is the coach across all coaching orgs
     const coachEvents = await db.event.findMany({
       where: {
         coachId: userId,
-        organizationId,
+        organizationId: { in: orgIds },
       },
-      select: {
-        id: true,
-        programId: true,
-      },
+      select: { id: true, programId: true },
     });
 
-    // Get unique program IDs from coach's events
-    const programIdsFromEvents = coachEvents.map(e => e.programId).filter((id): id is string => id !== null);
-    
-    // Combine and deduplicate program IDs
+    const programIdsFromEvents = coachEvents
+      .map((e) => e.programId)
+      .filter((id): id is string => id !== null);
+
     const programIds = Array.from(new Set([...programIdsFromStaff, ...programIdsFromEvents]));
 
     if (programIds.length === 0) {
       return NextResponse.json({ data: [], total: 0, limit, offset });
     }
 
-    // Get athletes enrolled in those programs
     const enrollments = await db.enrollment.findMany({
       where: {
         programId: { in: programIds },
         status: "ACTIVE",
         athlete: {
-          organizationAthletes: { some: { organizationId } },
+          organizationAthletes: { some: { organizationId: { in: orgIds } } },
           ...(search && {
             OR: [
               { name: { contains: search, mode: "insensitive" as const } },
@@ -91,6 +85,8 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+            organizationId: true,
+            organization: { select: { name: true } },
           },
         },
       },
@@ -98,30 +94,42 @@ export async function GET(request: NextRequest) {
       skip: offset,
     });
 
-    // Deduplicate athletes (athlete might be enrolled in multiple programs)
-    const athleteMap = new Map<string, any>();
+    // Deduplicate athletes
+    const athleteMap = new Map<string, {
+      id: string;
+      name: string;
+      email: string | null;
+      avatar: string | null;
+      programs: Array<{ id: string; name: string; organizationId: string; organizationName: string }>;
+    }>();
+
     for (const enrollment of enrollments) {
       const existing = athleteMap.get(enrollment.athlete.id);
+      const programInfo = {
+        id: enrollment.program.id,
+        name: enrollment.program.name,
+        organizationId: enrollment.program.organizationId,
+        organizationName: enrollment.program.organization.name,
+      };
+
       if (existing) {
-        // Add program to existing athlete's programs
-        existing.programs.push(enrollment.program);
+        existing.programs.push(programInfo);
       } else {
         athleteMap.set(enrollment.athlete.id, {
           ...enrollment.athlete,
-          programs: [enrollment.program],
+          programs: [programInfo],
         });
       }
     }
 
     const athletes = Array.from(athleteMap.values());
 
-    // Get total count
     const totalEnrollments = await db.enrollment.findMany({
       where: {
         programId: { in: programIds },
         status: "ACTIVE",
         athlete: {
-          organizationAthletes: { some: { organizationId } },
+          organizationAthletes: { some: { organizationId: { in: orgIds } } },
           ...(search && {
             OR: [
               { name: { contains: search, mode: "insensitive" as const } },
@@ -130,9 +138,7 @@ export async function GET(request: NextRequest) {
           }),
         },
       },
-      select: {
-        athleteId: true,
-      },
+      select: { athleteId: true },
       distinct: ["athleteId"],
     });
 

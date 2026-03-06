@@ -102,11 +102,10 @@ export async function GET(req: NextRequest) {
     const user = await db.user.findUnique({
       where: { email },
       include: {
-        organization: true,
-        permissions: true,
         memberships: {
           include: {
             organization: true,
+            permissions: true,
           },
         },
       },
@@ -119,16 +118,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Determine organization
-    let organizationId = user.organizationId;
-    let organizationName = user.organization?.name;
+    // Determine organization from memberships
+    let organizationId = "";
+    let organizationName = "";
+    let membership: (typeof user.memberships)[number] | undefined;
 
-    if (!organizationId && user.memberships.length === 1) {
-      organizationId = user.memberships[0].organizationId;
-      organizationName = user.memberships[0].organization.name;
-    } else if (!organizationId && user.memberships.length > 1) {
-      organizationId = "";
-      organizationName = "";
+    if (user.memberships.length === 1) {
+      membership = user.memberships[0];
+      organizationId = membership.organizationId;
+      organizationName = membership.organization.name;
+    }
+
+    // Resolve permissions from org membership (matching auth.ts logic)
+    let permissions: string[];
+    if (user.isSuperAdmin) {
+      permissions = ["*"];
+    } else if (membership) {
+      const memberPerms = membership.permissions.map((p) => p.permission);
+      permissions = memberPerms.length > 0 ? memberPerms : [];
+    } else {
+      permissions = [];
     }
 
     // Create the JWT token payload (matching auth.ts jwt callback)
@@ -137,10 +146,10 @@ export async function GET(req: NextRequest) {
       email: user.email,
       name: user.name,
       picture: user.avatar,
-      role: user.role,
-      organizationId: organizationId || "",
-      organizationName: organizationName || "",
-      permissions: user.permissions.map((p) => p.permission),
+      role: membership?.role || user.role,
+      organizationId,
+      organizationName,
+      permissions,
       isSuperAdmin: user.isSuperAdmin,
       sub: user.id,
     };

@@ -45,7 +45,6 @@ model Organization {
   statusLogs          OrganizationStatusLog[]
   membershipGroups    MembershipGroup[]
   members             OrganizationMember[]
-  users               User[] // Legacy relation, keep for now but rely on members
   programs            Program[]
   events              Event[]
   invoices            Invoice[]
@@ -78,8 +77,7 @@ model Organization {
   facilities Facility[]
   equipment  Equipment[]
 
-  // Staff & Scheduling
-  staffProfiles     StaffProfile[]
+  // Scheduling
   shifts            Shift[]
   scheduleTemplates ScheduleTemplate[]
 
@@ -149,8 +147,26 @@ model OrganizationMember {
   joinedAt       DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  // Employment (optional, per-org profile data)
+  employmentType   EmploymentType?
+  title            String?
+  hourlyRate       Decimal?       @db.Decimal(10, 2)
+  hireDate         DateTime?
+  certifications   Json?
+  phone            String?
+  emergencyContact Json?
+
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Org-scoped permissions (replaces global UserPermission)
+  permissions OrgMemberPermission[]
+
+  // Scheduling & assignments (migrated from StaffProfile)
+  availability       MemberAvailability[]
+  shifts             Shift[]
+  eventAssignments   EventStaff[]
+  programAssignments ProgramStaff[]
 
   @@unique([organizationId, userId])
 }
@@ -162,19 +178,18 @@ enum MemberStatus {
 }
 
 model User {
-  id             String     @id @default(cuid())
-  email          String     @unique
-  name           String
-  passwordHash   String?
-  avatar         String?
-  phone          String?
-  role           Role       @default(COACH) // Platform role or fallback
-  status         UserStatus @default(ACTIVE)
-  organizationId String? // Made optional - Last active organization
-  isSuperAdmin   Boolean    @default(false)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  lastActiveAt   DateTime?
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String?
+  avatar       String?
+  phone        String?
+  role         Role       @default(COACH)
+  status       UserStatus @default(ACTIVE)
+  isSuperAdmin Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  lastActiveAt DateTime?
 
   // SMS Preferences
   smsOptOut   Boolean   @default(false)
@@ -188,9 +203,7 @@ model User {
   balance Decimal @default(0) @db.Decimal(10, 2)
 
   // Relations
-  organization        Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   memberships         OrganizationMember[]
-  permissions         UserPermission[]
   lessonPlans         LessonPlan[]
   evaluations         Evaluation[]
   events              Event[]              @relation("EventCoach")
@@ -198,7 +211,6 @@ model User {
   accounts            Account[]
   media               Media[]
   facilityAssignments FacilityAssignment[]
-  staffProfile        StaffProfile?
 
   // Guardian/Ward system
   athleteGuardians      AthleteGuardian[]
@@ -314,14 +326,14 @@ model EmailVerificationCode {
   @@index([email, type])
 }
 
-model UserPermission {
+model OrgMemberPermission {
   id         String @id @default(cuid())
-  userId     String
-  permission String // e.g., "athletes.read", "financials.write"
+  memberId   String
+  permission String
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  member OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, permission])
+  @@unique([memberId, permission])
 }
 
 // Organization Invitations - tracks pending and accepted invitations
@@ -360,7 +372,6 @@ enum Role {
   ACCOUNTANT
   CUSTOM
   PARENT
-  STAFF
 }
 
 enum UserStatus {
@@ -1928,8 +1939,7 @@ enum AnnouncementPriority {
 model SmsMessage {
   id             String  @id @default(cuid())
   organizationId String
-  userId         String? // Recipient guardian user (if outbound)
-  staffProfileId String? // Recipient staff (if outbound)
+  userId         String? // Recipient user (if outbound)
   campaignId     String? // Part of a campaign
   conversationId String? // Part of a conversation thread
 
@@ -2901,39 +2911,6 @@ model OrganizationPaymentMethod {
 // PHASE 9: Staff & Scheduling
 // ============================================
 
-// Staff Profile - extends User with staff-specific data
-model StaffProfile {
-  id             String @id @default(cuid())
-  userId         String @unique
-  organizationId String
-
-  // Employment
-  employmentType EmploymentType @default(FULL_TIME)
-  title          String? // e.g., "Head Coach", "Assistant Coach"
-  hourlyRate     Decimal?       @db.Decimal(10, 2)
-  hireDate       DateTime?
-
-  // Certifications (JSON array for flexibility)
-  certifications Json? // [{ name, expiresAt, verified }]
-
-  // Contact (override user contact if needed)
-  phone            String?
-  emergencyContact Json? // { name, phone, relationship }
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  shifts             Shift[]
-  availability       StaffAvailability[]
-  eventAssignments   EventStaff[]
-  programAssignments ProgramStaff[]
-
-  @@index([organizationId])
-}
-
 enum EmploymentType {
   FULL_TIME
   PART_TIME
@@ -2943,21 +2920,21 @@ enum EmploymentType {
 
 // Event Staff - many-to-many with roles
 model EventStaff {
-  id             String         @id @default(cuid())
-  eventId        String
-  staffProfileId String
-  role           EventStaffRole @default(ASSISTANT)
-  notes          String?
+  id       String         @id @default(cuid())
+  eventId  String
+  memberId String
+  role     EventStaffRole @default(ASSISTANT)
+  notes    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+  event  Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@unique([eventId, staffProfileId])
+  @@unique([eventId, memberId])
   @@index([eventId])
-  @@index([staffProfileId])
+  @@index([memberId])
 }
 
 enum EventStaffRole {
@@ -2969,22 +2946,22 @@ enum EventStaffRole {
 
 // Program Staff - many-to-many with roles (coach assignments)
 model ProgramStaff {
-  id             String           @id @default(cuid())
-  programId      String
-  staffProfileId String
-  role           ProgramStaffRole @default(ASSISTANT_COACH)
-  isPrimary      Boolean          @default(false)
-  notes          String?
+  id        String           @id @default(cuid())
+  programId String
+  memberId  String
+  role      ProgramStaffRole @default(ASSISTANT_COACH)
+  isPrimary Boolean          @default(false)
+  notes     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
-  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+  program Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
+  member  OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@unique([programId, staffProfileId])
+  @@unique([programId, memberId])
   @@index([programId])
-  @@index([staffProfileId])
+  @@index([memberId])
 }
 
 enum ProgramStaffRole {
@@ -2998,7 +2975,7 @@ enum ProgramStaffRole {
 model Shift {
   id             String  @id @default(cuid())
   organizationId String
-  staffProfileId String
+  memberId       String
   facilityId     String?
 
   // Time
@@ -3016,12 +2993,12 @@ model Shift {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
-  facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  facility     Facility?          @relation(fields: [facilityId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
-  @@index([staffProfileId])
+  @@index([memberId])
   @@index([date])
 }
 
@@ -3054,12 +3031,12 @@ model ScheduleTemplateEntry {
   id         String @id @default(cuid())
   templateId String
 
-  dayOfWeek      Int // 0=Sunday, 1=Monday, ... 6=Saturday
-  startTime      String // "09:00"
-  endTime        String // "17:00"
-  shiftType      String // Role/position type
-  staffProfileId String? // Optional - can be unassigned
-  facilityId     String?
+  dayOfWeek  Int     // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime  String  // "09:00"
+  endTime    String  // "17:00"
+  shiftType  String  // Role/position type
+  memberId   String? // Optional - can be unassigned
+  facilityId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3069,23 +3046,23 @@ model ScheduleTemplateEntry {
   @@index([templateId])
 }
 
-// Staff Availability - personal weekly availability
-model StaffAvailability {
-  id             String @id @default(cuid())
-  staffProfileId String
+// Member Availability - personal weekly availability
+model MemberAvailability {
+  id       String @id @default(cuid())
+  memberId String
 
-  dayOfWeek   Int // 0=Sunday, 1=Monday, ... 6=Saturday
-  startTime   String // "09:00"
-  endTime     String // "17:00"
+  dayOfWeek   Int     // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime   String  // "09:00"
+  endTime     String  // "17:00"
   isAvailable Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  staffProfile StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+  member OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  @@unique([staffProfileId, dayOfWeek]) // One entry per day per staff
-  @@index([staffProfileId])
+  @@unique([memberId, dayOfWeek])
+  @@index([memberId])
 }
 
 // ============================================

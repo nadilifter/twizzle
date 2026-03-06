@@ -56,7 +56,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
             role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
           },
           include: {
-            staffProfile: {
+            member: {
               include: {
                 user: {
                   select: {
@@ -264,10 +264,10 @@ export default async function SitePage({ params }: { params: { slug: string } })
                 id: sa.id,
                 role: sa.role,
                 isPrimary: sa.isPrimary,
-                staffProfile: {
-                  id: sa.staffProfile.id,
-                  title: sa.staffProfile.title,
-                  user: sa.staffProfile.user,
+                member: {
+                  id: sa.member.id,
+                  title: sa.member.title,
+                  user: sa.member.user,
                 },
               })),
               requiredMemberships: program.requiredMemberships.map(m => ({

@@ -18,7 +18,7 @@ interface ProgramStaff {
   id: string;
   role: string;
   isPrimary: boolean;
-  staffProfile: {
+  member: {
     id: string;
     title: string | null;
     user: {
@@ -38,6 +38,7 @@ interface Program {
   myRole: string | null;
   isPrimaryCoach: boolean;
   staffAssignments: ProgramStaff[];
+  organization?: { id: string; name: string };
   _count: {
     enrollments: number;
     events: number;
@@ -151,6 +152,9 @@ export default function CoachProgramsPage() {
                         </Badge>
                       )}
                     </div>
+                    {program.organization && (
+                      <p className="text-xs text-muted-foreground">{program.organization.name}</p>
+                    )}
                     {program.description && (
                       <CardDescription>{program.description}</CardDescription>
                     )}
@@ -189,13 +193,13 @@ export default function CoachProgramsPage() {
                           className="flex items-center gap-2 bg-muted/50 rounded-full pl-1 pr-3 py-1"
                         >
                           <Avatar className="h-6 w-6">
-                            <AvatarImage src={assignment.staffProfile.user.avatar || ""} />
+                            <AvatarImage src={assignment.member.user.avatar || ""} />
                             <AvatarFallback className="text-xs">
                               <User className="h-3 w-3" />
                             </AvatarFallback>
                           </Avatar>
                           <span className="text-sm">
-                            {assignment.staffProfile.user.name}
+                            {assignment.member.user.name}
                             {assignment.isPrimary && (
                               <Star className="h-3 w-3 inline ml-1 text-amber-500" />
                             )}

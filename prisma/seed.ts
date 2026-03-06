@@ -535,55 +535,55 @@ async function main() {
   console.log("\n👤 Creating users...");
   const org1Admin = await prisma.user.upsert({
     where: { email: "admin@sunrise-gymnastics.com" },
-    update: { organizationId: ORG1_ID },
-    create: { email: "admin@sunrise-gymnastics.com", name: "Jennifer Walsh", passwordHash: null, role: "ADMIN", status: "ACTIVE", organizationId: ORG1_ID },
+    update: {},
+    create: { email: "admin@sunrise-gymnastics.com", name: "Jennifer Walsh", passwordHash: null, role: "ADMIN", status: "ACTIVE" },
   });
   const org1Coach1 = await prisma.user.upsert({
     where: { email: "coach.maria@sunrise-gymnastics.com" },
-    update: { organizationId: ORG1_ID },
-    create: { email: "coach.maria@sunrise-gymnastics.com", name: "Maria Rodriguez", passwordHash: null, role: "COACH", status: "ACTIVE", organizationId: ORG1_ID },
+    update: {},
+    create: { email: "coach.maria@sunrise-gymnastics.com", name: "Maria Rodriguez", passwordHash: null, role: "COACH", status: "ACTIVE" },
   });
   const org1Coach2 = await prisma.user.upsert({
     where: { email: "coach.james@sunrise-gymnastics.com" },
-    update: { organizationId: ORG1_ID },
-    create: { email: "coach.james@sunrise-gymnastics.com", name: "James Chen", passwordHash: null, role: "COACH", status: "ACTIVE", organizationId: ORG1_ID },
+    update: {},
+    create: { email: "coach.james@sunrise-gymnastics.com", name: "James Chen", passwordHash: null, role: "COACH", status: "ACTIVE" },
   });
   const org1Accountant = await prisma.user.upsert({
     where: { email: "finance@sunrise-gymnastics.com" },
-    update: { organizationId: ORG1_ID },
-    create: { email: "finance@sunrise-gymnastics.com", name: "Robert Kim", passwordHash: null, role: "ACCOUNTANT", status: "ACTIVE", organizationId: ORG1_ID },
+    update: {},
+    create: { email: "finance@sunrise-gymnastics.com", name: "Robert Kim", passwordHash: null, role: "ACCOUNTANT", status: "ACTIVE" },
   });
   const org2Admin = await prisma.user.upsert({
     where: { email: "admin@metro-sports.com" },
-    update: { organizationId: ORG2_ID },
-    create: { email: "admin@metro-sports.com", name: "Michael Thompson", passwordHash: null, role: "ADMIN", status: "ACTIVE", organizationId: ORG2_ID },
+    update: {},
+    create: { email: "admin@metro-sports.com", name: "Michael Thompson", passwordHash: null, role: "ADMIN", status: "ACTIVE" },
   });
   const org2Coach = await prisma.user.upsert({
     where: { email: "coach.sarah@metro-sports.com" },
-    update: { organizationId: ORG2_ID },
-    create: { email: "coach.sarah@metro-sports.com", name: "Sarah Martinez", passwordHash: null, role: "COACH", status: "ACTIVE", organizationId: ORG2_ID },
+    update: {},
+    create: { email: "coach.sarah@metro-sports.com", name: "Sarah Martinez", passwordHash: null, role: "COACH", status: "ACTIVE" },
   });
   const org2Volunteer = await prisma.user.upsert({
     where: { email: "volunteer@metro-sports.com" },
-    update: { organizationId: ORG2_ID },
-    create: { email: "volunteer@metro-sports.com", name: "David Lee", passwordHash: null, role: "VOLUNTEER", status: "ACTIVE", organizationId: ORG2_ID },
+    update: {},
+    create: { email: "volunteer@metro-sports.com", name: "David Lee", passwordHash: null, role: "VOLUNTEER", status: "ACTIVE" },
   });
   
   // Demo Gym and Uplifter users (from original seed.ts)
   const andrewUser = await prisma.user.upsert({
     where: { email: "andrewkarzel@uplifterinc.com" },
-    update: { isSuperAdmin: true, organizationId: orgUplifter.id },
-    create: { email: "andrewkarzel@uplifterinc.com", name: "Andrew Karzel", passwordHash: null, role: "ADMIN", status: "ACTIVE", organizationId: orgUplifter.id, isSuperAdmin: true },
+    update: { isSuperAdmin: true },
+    create: { email: "andrewkarzel@uplifterinc.com", name: "Andrew Karzel", passwordHash: null, role: "ADMIN", status: "ACTIVE", isSuperAdmin: true },
   });
   const demoAdmin = await prisma.user.upsert({
     where: { email: "admin@demo.com" },
-    update: { organizationId: orgDemo.id },
-    create: { email: "admin@demo.com", name: "Admin User", passwordHash: null, role: "ADMIN", status: "ACTIVE", organizationId: orgDemo.id },
+    update: {},
+    create: { email: "admin@demo.com", name: "Admin User", passwordHash: null, role: "ADMIN", status: "ACTIVE" },
   });
   const demoCoach = await prisma.user.upsert({
     where: { email: "coach@demo.com" },
-    update: { organizationId: orgDemo.id },
-    create: { email: "coach@demo.com", name: "Sarah Coach", passwordHash: null, role: "COACH", status: "ACTIVE", organizationId: orgDemo.id },
+    update: {},
+    create: { email: "coach@demo.com", name: "Sarah Coach", passwordHash: null, role: "COACH", status: "ACTIVE" },
   });
   console.log("  ✓ Created 10 users across all organizations");
 
@@ -591,76 +591,142 @@ async function main() {
   // ORGANIZATION MEMBERS
   // ============================================
   console.log("\n👥 Creating organization memberships...");
-  const membershipData = [
-    { orgId: ORG1_ID, userId: org1Admin.id, role: "ADMIN" as const },
-    { orgId: ORG1_ID, userId: org1Coach1.id, role: "COACH" as const },
-    { orgId: ORG1_ID, userId: org1Coach2.id, role: "COACH" as const },
-    { orgId: ORG1_ID, userId: org1Accountant.id, role: "ACCOUNTANT" as const },
-    { orgId: ORG2_ID, userId: org2Admin.id, role: "ADMIN" as const },
-    { orgId: ORG2_ID, userId: org2Coach.id, role: "COACH" as const },
-    { orgId: ORG2_ID, userId: org2Volunteer.id, role: "VOLUNTEER" as const },
-    // Demo Gym and Uplifter memberships
-    { orgId: orgUplifter.id, userId: andrewUser.id, role: "ADMIN" as const },
-    { orgId: orgDemo.id, userId: andrewUser.id, role: "ADMIN" as const }, // Andrew has access to Demo too
-    { orgId: orgDemo.id, userId: demoAdmin.id, role: "ADMIN" as const },
-    { orgId: orgDemo.id, userId: demoCoach.id, role: "COACH" as const },
-  ];
-  await Promise.all(membershipData.map((m) =>
-    prisma.organizationMember.upsert({
-      where: { organizationId_userId: { organizationId: m.orgId, userId: m.userId } },
-      update: { role: m.role, status: "ACTIVE" },
-      create: { organizationId: m.orgId, userId: m.userId, role: m.role, status: "ACTIVE" },
-    })
-  ));
-  console.log(`  ✓ Created ${membershipData.length} organization memberships`);
+  const org1AdminMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG1_ID, userId: org1Admin.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: { id: `${ORG1_ID}-member-admin`, organizationId: ORG1_ID, userId: org1Admin.id, role: "ADMIN", status: "ACTIVE" },
+  });
+  const org1Coach1Member = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG1_ID, userId: org1Coach1.id } },
+    update: { role: "COACH", status: "ACTIVE" },
+    create: { id: `${ORG1_ID}-staff-1`, organizationId: ORG1_ID, userId: org1Coach1.id, role: "COACH", status: "ACTIVE" },
+  });
+  const org1Coach2Member = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG1_ID, userId: org1Coach2.id } },
+    update: { role: "COACH", status: "ACTIVE" },
+    create: { id: `${ORG1_ID}-staff-2`, organizationId: ORG1_ID, userId: org1Coach2.id, role: "COACH", status: "ACTIVE" },
+  });
+  const org1AccountantMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG1_ID, userId: org1Accountant.id } },
+    update: { role: "ACCOUNTANT", status: "ACTIVE" },
+    create: { id: `${ORG1_ID}-staff-3`, organizationId: ORG1_ID, userId: org1Accountant.id, role: "ACCOUNTANT", status: "ACTIVE" },
+  });
+  const org2AdminMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG2_ID, userId: org2Admin.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: { id: `${ORG2_ID}-member-admin`, organizationId: ORG2_ID, userId: org2Admin.id, role: "ADMIN", status: "ACTIVE" },
+  });
+  const org2CoachMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG2_ID, userId: org2Coach.id } },
+    update: { role: "COACH", status: "ACTIVE" },
+    create: { id: `${ORG2_ID}-staff-1`, organizationId: ORG2_ID, userId: org2Coach.id, role: "COACH", status: "ACTIVE" },
+  });
+  const org2VolunteerMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG2_ID, userId: org2Volunteer.id } },
+    update: { role: "VOLUNTEER", status: "ACTIVE" },
+    create: { id: `${ORG2_ID}-staff-2`, organizationId: ORG2_ID, userId: org2Volunteer.id, role: "VOLUNTEER", status: "ACTIVE" },
+  });
+  // Maria Rodriguez coaches at both Sunrise and Metro
+  const org2MariaCoachMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: ORG2_ID, userId: org1Coach1.id } },
+    update: { role: "COACH", status: "ACTIVE" },
+    create: { id: `${ORG2_ID}-member-maria`, organizationId: ORG2_ID, userId: org1Coach1.id, role: "COACH", status: "ACTIVE" },
+  });
+  // Demo Gym and Uplifter memberships
+  const uplifterAndrewMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgUplifter.id, userId: andrewUser.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: { id: `${ORG_UPLIFTER_ID}-member-andrew`, organizationId: orgUplifter.id, userId: andrewUser.id, role: "ADMIN", status: "ACTIVE" },
+  });
+  const demoAndrewMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgDemo.id, userId: andrewUser.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: { id: `${ORG_DEMO_ID}-member-andrew`, organizationId: orgDemo.id, userId: andrewUser.id, role: "ADMIN", status: "ACTIVE" },
+  });
+  const demoAdminMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgDemo.id, userId: demoAdmin.id } },
+    update: { role: "ADMIN", status: "ACTIVE" },
+    create: { id: `${ORG_DEMO_ID}-member-admin`, organizationId: orgDemo.id, userId: demoAdmin.id, role: "ADMIN", status: "ACTIVE" },
+  });
+  const demoCoachMember = await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: orgDemo.id, userId: demoCoach.id } },
+    update: { role: "COACH", status: "ACTIVE" },
+    create: { id: `${ORG_DEMO_ID}-member-coach`, organizationId: orgDemo.id, userId: demoCoach.id, role: "COACH", status: "ACTIVE" },
+  });
+  console.log("  ✓ Created 12 organization memberships");
 
   // ============================================
-  // USER PERMISSIONS
+  // MEMBER PERMISSIONS
   // ============================================
-  console.log("\n🔐 Creating user permissions...");
+  console.log("\n🔐 Creating member permissions...");
   const permissionData = [
-    { userId: org1Admin.id, permission: "*" },
-    { userId: org2Admin.id, permission: "*" },
-    { userId: org1Coach1.id, permission: "dashboard.view" },
-    { userId: org1Coach1.id, permission: "athletes.view" },
-    { userId: org1Coach1.id, permission: "athletes.edit" },
-    { userId: org1Coach1.id, permission: "training.view" },
-    { userId: org1Coach1.id, permission: "training.create" },
-    { userId: org1Coach1.id, permission: "events.view" },
-    { userId: org1Coach2.id, permission: "dashboard.view" },
-    { userId: org1Coach2.id, permission: "athletes.view" },
-    { userId: org1Coach2.id, permission: "training.view" },
-    { userId: org2Coach.id, permission: "dashboard.view" },
-    { userId: org2Coach.id, permission: "athletes.view" },
-    { userId: org2Coach.id, permission: "events.view" },
-    { userId: org1Accountant.id, permission: "dashboard.view" },
-    { userId: org1Accountant.id, permission: "financials.view" },
-    { userId: org1Accountant.id, permission: "financials.edit" },
-    { userId: org1Accountant.id, permission: "invoices.view" },
-    { userId: org1Accountant.id, permission: "invoices.create" },
-    { userId: org2Volunteer.id, permission: "dashboard.view" },
-    { userId: org2Volunteer.id, permission: "events.view" },
+    { memberId: org1AdminMember.id, permission: "*" },
+    { memberId: org2AdminMember.id, permission: "*" },
+    { memberId: org1Coach1Member.id, permission: "dashboard.view" },
+    { memberId: org1Coach1Member.id, permission: "athletes.view" },
+    { memberId: org1Coach1Member.id, permission: "athletes.edit" },
+    { memberId: org1Coach1Member.id, permission: "training.view" },
+    { memberId: org1Coach1Member.id, permission: "training.create" },
+    { memberId: org1Coach1Member.id, permission: "events.view" },
+    { memberId: org1Coach1Member.id, permission: "coaching.portal" },
+    { memberId: org1Coach1Member.id, permission: "coaching.assign" },
+    { memberId: org1Coach1Member.id, permission: "coaching.attendance" },
+    { memberId: org1Coach1Member.id, permission: "coaching.evaluations" },
+    { memberId: org1Coach2Member.id, permission: "dashboard.view" },
+    { memberId: org1Coach2Member.id, permission: "athletes.view" },
+    { memberId: org1Coach2Member.id, permission: "training.view" },
+    { memberId: org1Coach2Member.id, permission: "coaching.portal" },
+    { memberId: org1Coach2Member.id, permission: "coaching.assign" },
+    { memberId: org1Coach2Member.id, permission: "coaching.attendance" },
+    { memberId: org2CoachMember.id, permission: "dashboard.view" },
+    { memberId: org2CoachMember.id, permission: "athletes.view" },
+    { memberId: org2CoachMember.id, permission: "events.view" },
+    { memberId: org2CoachMember.id, permission: "coaching.portal" },
+    { memberId: org2CoachMember.id, permission: "coaching.assign" },
+    { memberId: org2CoachMember.id, permission: "coaching.attendance" },
+    { memberId: org2CoachMember.id, permission: "coaching.evaluations" },
+    // Maria Rodriguez at Metro (multi-org coach)
+    { memberId: org2MariaCoachMember.id, permission: "dashboard.view" },
+    { memberId: org2MariaCoachMember.id, permission: "athletes.view" },
+    { memberId: org2MariaCoachMember.id, permission: "athletes.edit" },
+    { memberId: org2MariaCoachMember.id, permission: "events.view" },
+    { memberId: org2MariaCoachMember.id, permission: "coaching.portal" },
+    { memberId: org2MariaCoachMember.id, permission: "coaching.assign" },
+    { memberId: org2MariaCoachMember.id, permission: "coaching.attendance" },
+    { memberId: org2MariaCoachMember.id, permission: "coaching.evaluations" },
+    { memberId: org1AccountantMember.id, permission: "dashboard.view" },
+    { memberId: org1AccountantMember.id, permission: "financials.view" },
+    { memberId: org1AccountantMember.id, permission: "financials.edit" },
+    { memberId: org1AccountantMember.id, permission: "invoices.view" },
+    { memberId: org1AccountantMember.id, permission: "invoices.create" },
+    { memberId: org2VolunteerMember.id, permission: "dashboard.view" },
+    { memberId: org2VolunteerMember.id, permission: "events.view" },
     // Demo Gym and Uplifter permissions
-    { userId: andrewUser.id, permission: "*" },
-    { userId: demoAdmin.id, permission: "*" },
-    { userId: demoCoach.id, permission: "dashboard.view" },
-    { userId: demoCoach.id, permission: "athletes.view" },
-    { userId: demoCoach.id, permission: "athletes.edit" },
-    { userId: demoCoach.id, permission: "training.view" },
-    { userId: demoCoach.id, permission: "training.create" },
-    { userId: demoCoach.id, permission: "training.edit" },
-    { userId: demoCoach.id, permission: "events.view" },
-    { userId: demoCoach.id, permission: "events.create" },
-    { userId: demoCoach.id, permission: "events.edit" },
+    { memberId: uplifterAndrewMember.id, permission: "*" },
+    { memberId: demoAndrewMember.id, permission: "*" },
+    { memberId: demoAdminMember.id, permission: "*" },
+    { memberId: demoCoachMember.id, permission: "dashboard.view" },
+    { memberId: demoCoachMember.id, permission: "athletes.view" },
+    { memberId: demoCoachMember.id, permission: "athletes.edit" },
+    { memberId: demoCoachMember.id, permission: "training.view" },
+    { memberId: demoCoachMember.id, permission: "training.create" },
+    { memberId: demoCoachMember.id, permission: "training.edit" },
+    { memberId: demoCoachMember.id, permission: "events.view" },
+    { memberId: demoCoachMember.id, permission: "events.create" },
+    { memberId: demoCoachMember.id, permission: "events.edit" },
+    { memberId: demoCoachMember.id, permission: "coaching.portal" },
+    { memberId: demoCoachMember.id, permission: "coaching.assign" },
+    { memberId: demoCoachMember.id, permission: "coaching.attendance" },
+    { memberId: demoCoachMember.id, permission: "coaching.evaluations" },
   ];
   for (const p of permissionData) {
-    await prisma.userPermission.upsert({
-      where: { userId_permission: { userId: p.userId, permission: p.permission } },
+    await prisma.orgMemberPermission.upsert({
+      where: { memberId_permission: { memberId: p.memberId, permission: p.permission } },
       update: {},
-      create: { userId: p.userId, permission: p.permission },
+      create: { memberId: p.memberId, permission: p.permission },
     });
   }
-  console.log(`  ✓ Created ${permissionData.length} user permissions`);
+  console.log(`  ✓ Created ${permissionData.length} member permissions`);
 
   // ============================================
   // FACILITIES
@@ -859,15 +925,15 @@ async function main() {
   // GUARDIAN / PARENT USERS
   // ============================================
   console.log("\n👨‍👩‍👧‍👦 Creating guardian users...");
-  const org1Parent1 = await prisma.user.upsert({ where: { email: "michelle.anderson@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-1`, email: "michelle.anderson@email.com", name: "Michelle Anderson", passwordHash: null, phone: "(555) 101-1001", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 0 } });
-  const org1Parent2 = await prisma.user.upsert({ where: { email: "thomas.baker@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-2`, email: "thomas.baker@email.com", name: "Thomas Baker", passwordHash: null, phone: "(555) 102-1002", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 150.00 } });
-  const org1Parent3 = await prisma.user.upsert({ where: { email: "lisa.chen@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-3`, email: "lisa.chen@email.com", name: "Lisa Chen", passwordHash: null, phone: "(555) 103-1003", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: -25.00 } });
-  const org1Parent4 = await prisma.user.upsert({ where: { email: "marcus.davis@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-4`, email: "marcus.davis@email.com", name: "Marcus Davis", passwordHash: null, phone: "(555) 104-1004", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 0 } });
-  const org1Parent5 = await prisma.user.upsert({ where: { email: "nancy.evans@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-5`, email: "nancy.evans@email.com", name: "Nancy Evans", passwordHash: null, phone: "(555) 105-1005", role: "PARENT", status: "ACTIVE", organizationId: ORG1_ID, balance: 75.50 } });
-  const org2Parent1 = await prisma.user.upsert({ where: { email: "karen.foster@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-1`, email: "karen.foster@email.com", name: "Karen Foster", passwordHash: null, phone: "(555) 201-2001", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 0 } });
-  const org2Parent2 = await prisma.user.upsert({ where: { email: "carlos.garcia@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-2`, email: "carlos.garcia@email.com", name: "Carlos Garcia", passwordHash: null, phone: "(555) 202-2002", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 200.00 } });
-  const org2Parent3 = await prisma.user.upsert({ where: { email: "patricia.harris@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-3`, email: "patricia.harris@email.com", name: "Patricia Harris", passwordHash: null, phone: "(555) 203-2003", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: 0 } });
-  const org2Parent4 = await prisma.user.upsert({ where: { email: "john.irving@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-4`, email: "john.irving@email.com", name: "John Irving", passwordHash: null, phone: "(555) 204-2004", role: "PARENT", status: "ACTIVE", organizationId: ORG2_ID, balance: -50.00 } });
+  const org1Parent1 = await prisma.user.upsert({ where: { email: "michelle.anderson@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-1`, email: "michelle.anderson@email.com", name: "Michelle Anderson", passwordHash: null, phone: "(555) 101-1001", role: "PARENT", status: "ACTIVE", balance: 0 } });
+  const org1Parent2 = await prisma.user.upsert({ where: { email: "thomas.baker@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-2`, email: "thomas.baker@email.com", name: "Thomas Baker", passwordHash: null, phone: "(555) 102-1002", role: "PARENT", status: "ACTIVE", balance: 150.00 } });
+  const org1Parent3 = await prisma.user.upsert({ where: { email: "lisa.chen@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-3`, email: "lisa.chen@email.com", name: "Lisa Chen", passwordHash: null, phone: "(555) 103-1003", role: "PARENT", status: "ACTIVE", balance: -25.00 } });
+  const org1Parent4 = await prisma.user.upsert({ where: { email: "marcus.davis@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-4`, email: "marcus.davis@email.com", name: "Marcus Davis", passwordHash: null, phone: "(555) 104-1004", role: "PARENT", status: "ACTIVE", balance: 0 } });
+  const org1Parent5 = await prisma.user.upsert({ where: { email: "nancy.evans@email.com" }, update: {}, create: { id: `${ORG1_ID}-parent-5`, email: "nancy.evans@email.com", name: "Nancy Evans", passwordHash: null, phone: "(555) 105-1005", role: "PARENT", status: "ACTIVE", balance: 75.50 } });
+  const org2Parent1 = await prisma.user.upsert({ where: { email: "karen.foster@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-1`, email: "karen.foster@email.com", name: "Karen Foster", passwordHash: null, phone: "(555) 201-2001", role: "PARENT", status: "ACTIVE", balance: 0 } });
+  const org2Parent2 = await prisma.user.upsert({ where: { email: "carlos.garcia@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-2`, email: "carlos.garcia@email.com", name: "Carlos Garcia", passwordHash: null, phone: "(555) 202-2002", role: "PARENT", status: "ACTIVE", balance: 200.00 } });
+  const org2Parent3 = await prisma.user.upsert({ where: { email: "patricia.harris@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-3`, email: "patricia.harris@email.com", name: "Patricia Harris", passwordHash: null, phone: "(555) 203-2003", role: "PARENT", status: "ACTIVE", balance: 0 } });
+  const org2Parent4 = await prisma.user.upsert({ where: { email: "john.irving@email.com" }, update: {}, create: { id: `${ORG2_ID}-parent-4`, email: "john.irving@email.com", name: "John Irving", passwordHash: null, phone: "(555) 204-2004", role: "PARENT", status: "ACTIVE", balance: -50.00 } });
   console.log("  ✓ Created 9 guardian users");
 
   // ============================================
@@ -3034,121 +3100,119 @@ async function main() {
   console.log(`  ✓ Created ${mediaData.length} media items`);
 
   // ============================================
-  // STAFF PROFILES
+  // MEMBER EMPLOYMENT DATA
   // ============================================
-  console.log("\n👷 Creating staff profiles...");
-  const staffProfileData = [
-    // Org1 Staff Profiles
+  console.log("\n👷 Updating members with employment data...");
+  const employmentUpdates = [
     {
-      id: `${ORG1_ID}-staff-1`,
-      userId: org1Coach1.id,
-      organizationId: ORG1_ID,
-      employmentType: "FULL_TIME" as const,
-      title: "Head Coach",
-      hourlyRate: 35.00,
-      hireDate: daysAgo(365),
-      certifications: [
-        { name: "USAG Safety Certification", expiresAt: daysFromNow(180).toISOString(), verified: true },
-        { name: "CPR / First Aid", expiresAt: daysFromNow(365).toISOString(), verified: true },
-        { name: "SafeSport Trained", expiresAt: daysFromNow(730).toISOString(), verified: true },
-      ],
-      phone: "(555) 111-2222",
-      emergencyContact: { name: "John Rodriguez", phone: "(555) 111-3333", relationship: "Spouse" },
+      memberId: `${ORG1_ID}-staff-1`,
+      data: {
+        employmentType: "FULL_TIME" as const,
+        title: "Head Coach",
+        hourlyRate: 35.00,
+        hireDate: daysAgo(365),
+        certifications: [
+          { name: "USAG Safety Certification", expiresAt: daysFromNow(180).toISOString(), verified: true },
+          { name: "CPR / First Aid", expiresAt: daysFromNow(365).toISOString(), verified: true },
+          { name: "SafeSport Trained", expiresAt: daysFromNow(730).toISOString(), verified: true },
+        ],
+        phone: "(555) 111-2222",
+        emergencyContact: { name: "John Rodriguez", phone: "(555) 111-3333", relationship: "Spouse" },
+      },
     },
     {
-      id: `${ORG1_ID}-staff-2`,
-      userId: org1Coach2.id,
-      organizationId: ORG1_ID,
-      employmentType: "FULL_TIME" as const,
-      title: "JO Team Coach",
-      hourlyRate: 32.00,
-      hireDate: daysAgo(180),
-      certifications: [
-        { name: "USAG Safety Certification", expiresAt: daysFromNow(300).toISOString(), verified: true },
-        { name: "SafeSport Trained", expiresAt: daysFromNow(500).toISOString(), verified: true },
-      ],
-      phone: "(555) 111-4444",
-      emergencyContact: { name: "Lisa Chen", phone: "(555) 111-5555", relationship: "Parent" },
+      memberId: `${ORG1_ID}-staff-2`,
+      data: {
+        employmentType: "FULL_TIME" as const,
+        title: "JO Team Coach",
+        hourlyRate: 32.00,
+        hireDate: daysAgo(180),
+        certifications: [
+          { name: "USAG Safety Certification", expiresAt: daysFromNow(300).toISOString(), verified: true },
+          { name: "SafeSport Trained", expiresAt: daysFromNow(500).toISOString(), verified: true },
+        ],
+        phone: "(555) 111-4444",
+        emergencyContact: { name: "Lisa Chen", phone: "(555) 111-5555", relationship: "Parent" },
+      },
     },
     {
-      id: `${ORG1_ID}-staff-3`,
-      userId: org1Accountant.id,
-      organizationId: ORG1_ID,
-      employmentType: "PART_TIME" as const,
-      title: "Finance & Admin",
-      hourlyRate: 25.00,
-      hireDate: daysAgo(90),
-      certifications: [
-        { name: "Background Check Cleared", expiresAt: null, verified: true },
-      ],
-      phone: "(555) 111-6666",
-      emergencyContact: Prisma.DbNull,
-    },
-    // Org2 Staff Profiles
-    {
-      id: `${ORG2_ID}-staff-1`,
-      userId: org2Coach.id,
-      organizationId: ORG2_ID,
-      employmentType: "FULL_TIME" as const,
-      title: "Multi-Sport Coach",
-      hourlyRate: 28.00,
-      hireDate: daysAgo(200),
-      certifications: [
-        { name: "CPR / First Aid", expiresAt: daysFromNow(200).toISOString(), verified: true },
-        { name: "SafeSport Trained", expiresAt: daysFromNow(400).toISOString(), verified: true },
-      ],
-      phone: "(555) 222-1111",
-      emergencyContact: { name: "Carlos Martinez", phone: "(555) 222-2222", relationship: "Spouse" },
+      memberId: `${ORG1_ID}-staff-3`,
+      data: {
+        employmentType: "PART_TIME" as const,
+        title: "Finance & Admin",
+        hourlyRate: 25.00,
+        hireDate: daysAgo(90),
+        certifications: [
+          { name: "Background Check Cleared", expiresAt: null, verified: true },
+        ],
+        phone: "(555) 111-6666",
+        emergencyContact: Prisma.DbNull,
+      },
     },
     {
-      id: `${ORG2_ID}-staff-2`,
-      userId: org2Volunteer.id,
-      organizationId: ORG2_ID,
-      employmentType: "VOLUNTEER" as const,
-      title: "Assistant Coach",
-      hourlyRate: null,
-      hireDate: daysAgo(60),
-      certifications: [
-        { name: "Background Check Cleared", expiresAt: null, verified: true },
-      ],
-      phone: "(555) 222-3333",
-      emergencyContact: Prisma.DbNull,
+      memberId: `${ORG2_ID}-staff-1`,
+      data: {
+        employmentType: "FULL_TIME" as const,
+        title: "Multi-Sport Coach",
+        hourlyRate: 28.00,
+        hireDate: daysAgo(200),
+        certifications: [
+          { name: "CPR / First Aid", expiresAt: daysFromNow(200).toISOString(), verified: true },
+          { name: "SafeSport Trained", expiresAt: daysFromNow(400).toISOString(), verified: true },
+        ],
+        phone: "(555) 222-1111",
+        emergencyContact: { name: "Carlos Martinez", phone: "(555) 222-2222", relationship: "Spouse" },
+      },
+    },
+    {
+      memberId: `${ORG2_ID}-staff-2`,
+      data: {
+        employmentType: "VOLUNTEER" as const,
+        title: "Assistant Coach",
+        hourlyRate: null,
+        hireDate: daysAgo(60),
+        certifications: [
+          { name: "Background Check Cleared", expiresAt: null, verified: true },
+        ],
+        phone: "(555) 222-3333",
+        emergencyContact: Prisma.DbNull,
+      },
     },
   ];
-  for (const sp of staffProfileData) {
-    await prisma.staffProfile.upsert({ where: { id: sp.id }, update: {}, create: sp });
+  for (const emp of employmentUpdates) {
+    await prisma.organizationMember.update({ where: { id: emp.memberId }, data: emp.data });
   }
-  console.log(`  ✓ Created ${staffProfileData.length} staff profiles`);
+  console.log(`  ✓ Updated ${employmentUpdates.length} members with employment data`);
 
   // ============================================
-  // STAFF AVAILABILITY
+  // MEMBER AVAILABILITY
   // ============================================
-  console.log("\n📅 Creating staff availability...");
+  console.log("\n📅 Creating member availability...");
   const availabilityData = [
     // Org1 Coach 1 - Available weekdays 8am-6pm
-    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 1, startTime: "08:00", endTime: "18:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 2, startTime: "08:00", endTime: "18:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 3, startTime: "08:00", endTime: "18:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 4, startTime: "08:00", endTime: "18:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-1`, dayOfWeek: 5, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-1`, dayOfWeek: 1, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-1`, dayOfWeek: 2, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-1`, dayOfWeek: 3, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-1`, dayOfWeek: 4, startTime: "08:00", endTime: "18:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-1`, dayOfWeek: 5, startTime: "08:00", endTime: "18:00", isAvailable: true },
     // Org1 Coach 2 - Afternoons and evenings
-    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 1, startTime: "14:00", endTime: "21:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 2, startTime: "14:00", endTime: "21:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 3, startTime: "14:00", endTime: "21:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 4, startTime: "14:00", endTime: "21:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 5, startTime: "14:00", endTime: "21:00", isAvailable: true },
-    { staffProfileId: `${ORG1_ID}-staff-2`, dayOfWeek: 6, startTime: "09:00", endTime: "14:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-2`, dayOfWeek: 1, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-2`, dayOfWeek: 2, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-2`, dayOfWeek: 3, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-2`, dayOfWeek: 4, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-2`, dayOfWeek: 5, startTime: "14:00", endTime: "21:00", isAvailable: true },
+    { memberId: `${ORG1_ID}-staff-2`, dayOfWeek: 6, startTime: "09:00", endTime: "14:00", isAvailable: true },
     // Org2 Coach - Full availability
-    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 1, startTime: "09:00", endTime: "17:00", isAvailable: true },
-    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 2, startTime: "09:00", endTime: "17:00", isAvailable: true },
-    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 3, startTime: "09:00", endTime: "17:00", isAvailable: true },
-    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 4, startTime: "09:00", endTime: "17:00", isAvailable: true },
-    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 5, startTime: "09:00", endTime: "17:00", isAvailable: true },
-    { staffProfileId: `${ORG2_ID}-staff-1`, dayOfWeek: 6, startTime: "10:00", endTime: "15:00", isAvailable: true },
+    { memberId: `${ORG2_ID}-staff-1`, dayOfWeek: 1, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { memberId: `${ORG2_ID}-staff-1`, dayOfWeek: 2, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { memberId: `${ORG2_ID}-staff-1`, dayOfWeek: 3, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { memberId: `${ORG2_ID}-staff-1`, dayOfWeek: 4, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { memberId: `${ORG2_ID}-staff-1`, dayOfWeek: 5, startTime: "09:00", endTime: "17:00", isAvailable: true },
+    { memberId: `${ORG2_ID}-staff-1`, dayOfWeek: 6, startTime: "10:00", endTime: "15:00", isAvailable: true },
   ];
   for (const avail of availabilityData) {
-    await prisma.staffAvailability.upsert({
-      where: { staffProfileId_dayOfWeek: { staffProfileId: avail.staffProfileId, dayOfWeek: avail.dayOfWeek } },
+    await prisma.memberAvailability.upsert({
+      where: { memberId_dayOfWeek: { memberId: avail.memberId, dayOfWeek: avail.dayOfWeek } },
       update: {},
       create: avail,
     });
@@ -3161,18 +3225,18 @@ async function main() {
   console.log("\n⏰ Creating shifts...");
   const shiftData = [
     // Today and upcoming shifts for Org1
-    { id: `${ORG1_ID}-shift-1`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: today, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "IN_PROGRESS" as const },
-    { id: `${ORG1_ID}-shift-2`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: today, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "SCHEDULED" as const },
-    { id: `${ORG1_ID}-shift-3`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: daysFromNow(1), startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "SCHEDULED" as const },
-    { id: `${ORG1_ID}-shift-4`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: daysFromNow(1), startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "SCHEDULED" as const },
-    { id: `${ORG1_ID}-shift-5`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-3`, facilityId: org1Facility1.id, date: daysFromNow(2), startTime: "09:00", endTime: "14:00", shiftType: "Front Desk", status: "SCHEDULED" as const },
+    { id: `${ORG1_ID}-shift-1`, organizationId: ORG1_ID, memberId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: today, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "IN_PROGRESS" as const },
+    { id: `${ORG1_ID}-shift-2`, organizationId: ORG1_ID, memberId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: today, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "SCHEDULED" as const },
+    { id: `${ORG1_ID}-shift-3`, organizationId: ORG1_ID, memberId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: daysFromNow(1), startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "SCHEDULED" as const },
+    { id: `${ORG1_ID}-shift-4`, organizationId: ORG1_ID, memberId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: daysFromNow(1), startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "SCHEDULED" as const },
+    { id: `${ORG1_ID}-shift-5`, organizationId: ORG1_ID, memberId: `${ORG1_ID}-staff-3`, facilityId: org1Facility1.id, date: daysFromNow(2), startTime: "09:00", endTime: "14:00", shiftType: "Front Desk", status: "SCHEDULED" as const },
     // Historical shifts (completed)
-    { id: `${ORG1_ID}-shift-6`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: daysAgo(1), startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "COMPLETED" as const },
-    { id: `${ORG1_ID}-shift-7`, organizationId: ORG1_ID, staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: daysAgo(1), startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "COMPLETED" as const },
+    { id: `${ORG1_ID}-shift-6`, organizationId: ORG1_ID, memberId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id, date: daysAgo(1), startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", status: "COMPLETED" as const },
+    { id: `${ORG1_ID}-shift-7`, organizationId: ORG1_ID, memberId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id, date: daysAgo(1), startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", status: "COMPLETED" as const },
     // Org2 shifts
-    { id: `${ORG2_ID}-shift-1`, organizationId: ORG2_ID, staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id, date: today, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", status: "IN_PROGRESS" as const },
-    { id: `${ORG2_ID}-shift-2`, organizationId: ORG2_ID, staffProfileId: `${ORG2_ID}-staff-2`, facilityId: org2Facility.id, date: today, startTime: "14:00", endTime: "18:00", shiftType: "Assistant Coach", status: "SCHEDULED" as const },
-    { id: `${ORG2_ID}-shift-3`, organizationId: ORG2_ID, staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id, date: daysFromNow(1), startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", status: "SCHEDULED" as const },
+    { id: `${ORG2_ID}-shift-1`, organizationId: ORG2_ID, memberId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id, date: today, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", status: "IN_PROGRESS" as const },
+    { id: `${ORG2_ID}-shift-2`, organizationId: ORG2_ID, memberId: `${ORG2_ID}-staff-2`, facilityId: org2Facility.id, date: today, startTime: "14:00", endTime: "18:00", shiftType: "Assistant Coach", status: "SCHEDULED" as const },
+    { id: `${ORG2_ID}-shift-3`, organizationId: ORG2_ID, memberId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id, date: daysFromNow(1), startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", status: "SCHEDULED" as const },
   ];
   for (const shift of shiftData) {
     await prisma.shift.upsert({ where: { id: shift.id }, update: {}, create: shift });
@@ -3197,18 +3261,18 @@ async function main() {
   // Template entries
   const templateEntryData = [
     // Org1 Standard Week - Mon-Fri
-    { id: `${ORG1_ID}-tentry-1`, templateId: template1.id, dayOfWeek: 1, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
-    { id: `${ORG1_ID}-tentry-2`, templateId: template1.id, dayOfWeek: 1, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
-    { id: `${ORG1_ID}-tentry-3`, templateId: template1.id, dayOfWeek: 2, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
-    { id: `${ORG1_ID}-tentry-4`, templateId: template1.id, dayOfWeek: 2, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
-    { id: `${ORG1_ID}-tentry-5`, templateId: template1.id, dayOfWeek: 3, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", staffProfileId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
-    { id: `${ORG1_ID}-tentry-6`, templateId: template1.id, dayOfWeek: 3, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", staffProfileId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-1`, templateId: template1.id, dayOfWeek: 1, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", memberId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-2`, templateId: template1.id, dayOfWeek: 1, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", memberId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-3`, templateId: template1.id, dayOfWeek: 2, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", memberId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-4`, templateId: template1.id, dayOfWeek: 2, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", memberId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-5`, templateId: template1.id, dayOfWeek: 3, startTime: "08:00", endTime: "16:00", shiftType: "Opening Manager", memberId: `${ORG1_ID}-staff-1`, facilityId: org1Facility1.id },
+    { id: `${ORG1_ID}-tentry-6`, templateId: template1.id, dayOfWeek: 3, startTime: "16:00", endTime: "21:00", shiftType: "Closing Manager", memberId: `${ORG1_ID}-staff-2`, facilityId: org1Facility1.id },
     // Org2 Regular Schedule
-    { id: `${ORG2_ID}-tentry-1`, templateId: template2.id, dayOfWeek: 1, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
-    { id: `${ORG2_ID}-tentry-2`, templateId: template2.id, dayOfWeek: 2, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
-    { id: `${ORG2_ID}-tentry-3`, templateId: template2.id, dayOfWeek: 3, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
-    { id: `${ORG2_ID}-tentry-4`, templateId: template2.id, dayOfWeek: 4, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
-    { id: `${ORG2_ID}-tentry-5`, templateId: template2.id, dayOfWeek: 5, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", staffProfileId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-1`, templateId: template2.id, dayOfWeek: 1, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", memberId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-2`, templateId: template2.id, dayOfWeek: 2, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", memberId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-3`, templateId: template2.id, dayOfWeek: 3, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", memberId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-4`, templateId: template2.id, dayOfWeek: 4, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", memberId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
+    { id: `${ORG2_ID}-tentry-5`, templateId: template2.id, dayOfWeek: 5, startTime: "09:00", endTime: "17:00", shiftType: "Head Coach", memberId: `${ORG2_ID}-staff-1`, facilityId: org2Facility.id },
   ];
   for (const entry of templateEntryData) {
     await prisma.scheduleTemplateEntry.upsert({ where: { id: entry.id }, update: {}, create: entry });
@@ -3221,17 +3285,17 @@ async function main() {
   console.log("\n👥 Creating event staff assignments...");
   const eventStaffData = [
     // Org1 Event Staff
-    { id: `${ORG1_ID}-es-1`, eventId: `${ORG1_ID}-evt-1`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: "Lead instructor" },
-    { id: `${ORG1_ID}-es-2`, eventId: `${ORG1_ID}-evt-2`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: null },
-    { id: `${ORG1_ID}-es-3`, eventId: `${ORG1_ID}-evt-3`, staffProfileId: `${ORG1_ID}-staff-2`, role: "LEAD" as const, notes: "JO Team practice lead" },
-    { id: `${ORG1_ID}-es-4`, eventId: `${ORG1_ID}-evt-3`, staffProfileId: `${ORG1_ID}-staff-1`, role: "ASSISTANT" as const, notes: "Beam specialist" },
-    { id: `${ORG1_ID}-es-5`, eventId: `${ORG1_ID}-evt-4`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: "Competition director" },
-    { id: `${ORG1_ID}-es-6`, eventId: `${ORG1_ID}-evt-4`, staffProfileId: `${ORG1_ID}-staff-2`, role: "ASSISTANT" as const, notes: null },
+    { id: `${ORG1_ID}-es-1`, eventId: `${ORG1_ID}-evt-1`, memberId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: "Lead instructor" },
+    { id: `${ORG1_ID}-es-2`, eventId: `${ORG1_ID}-evt-2`, memberId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: null },
+    { id: `${ORG1_ID}-es-3`, eventId: `${ORG1_ID}-evt-3`, memberId: `${ORG1_ID}-staff-2`, role: "LEAD" as const, notes: "JO Team practice lead" },
+    { id: `${ORG1_ID}-es-4`, eventId: `${ORG1_ID}-evt-3`, memberId: `${ORG1_ID}-staff-1`, role: "ASSISTANT" as const, notes: "Beam specialist" },
+    { id: `${ORG1_ID}-es-5`, eventId: `${ORG1_ID}-evt-4`, memberId: `${ORG1_ID}-staff-1`, role: "LEAD" as const, notes: "Competition director" },
+    { id: `${ORG1_ID}-es-6`, eventId: `${ORG1_ID}-evt-4`, memberId: `${ORG1_ID}-staff-2`, role: "ASSISTANT" as const, notes: null },
     // Org2 Event Staff
-    { id: `${ORG2_ID}-es-1`, eventId: `${ORG2_ID}-evt-1`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: null },
-    { id: `${ORG2_ID}-es-2`, eventId: `${ORG2_ID}-evt-1`, staffProfileId: `${ORG2_ID}-staff-2`, role: "VOLUNTEER" as const, notes: "Equipment setup" },
-    { id: `${ORG2_ID}-es-3`, eventId: `${ORG2_ID}-evt-2`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: null },
-    { id: `${ORG2_ID}-es-4`, eventId: `${ORG2_ID}-evt-3`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: "Meet coordinator" },
+    { id: `${ORG2_ID}-es-1`, eventId: `${ORG2_ID}-evt-1`, memberId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: null },
+    { id: `${ORG2_ID}-es-2`, eventId: `${ORG2_ID}-evt-1`, memberId: `${ORG2_ID}-staff-2`, role: "VOLUNTEER" as const, notes: "Equipment setup" },
+    { id: `${ORG2_ID}-es-3`, eventId: `${ORG2_ID}-evt-2`, memberId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: null },
+    { id: `${ORG2_ID}-es-4`, eventId: `${ORG2_ID}-evt-3`, memberId: `${ORG2_ID}-staff-1`, role: "LEAD" as const, notes: "Meet coordinator" },
   ];
   for (const es of eventStaffData) {
     await prisma.eventStaff.upsert({ 
@@ -3248,19 +3312,19 @@ async function main() {
   console.log("\n🏅 Creating program staff assignments...");
   const programStaffData = [
     // Org1 Program Staff
-    { id: `${ORG1_ID}-ps-1`, programId: `${ORG1_ID}-prog-rec-bronze`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Primary coach for Bronze program" },
-    { id: `${ORG1_ID}-ps-2`, programId: `${ORG1_ID}-prog-rec-silver`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
-    { id: `${ORG1_ID}-ps-3`, programId: `${ORG1_ID}-prog-rec-gold`, staffProfileId: `${ORG1_ID}-staff-1`, role: "ASSISTANT_COACH" as const, isPrimary: false, notes: null },
-    { id: `${ORG1_ID}-ps-4`, programId: `${ORG1_ID}-prog-rec-gold`, staffProfileId: `${ORG1_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Primary coach for Gold program" },
-    { id: `${ORG1_ID}-ps-5`, programId: `${ORG1_ID}-prog-jo`, staffProfileId: `${ORG1_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "JO Team Head Coach" },
-    { id: `${ORG1_ID}-ps-6`, programId: `${ORG1_ID}-prog-jo`, staffProfileId: `${ORG1_ID}-staff-1`, role: "ASSISTANT_COACH" as const, isPrimary: false, notes: "Beam and floor specialist" },
-    { id: `${ORG1_ID}-ps-7`, programId: `${ORG1_ID}-prog-preschool`, staffProfileId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
+    { id: `${ORG1_ID}-ps-1`, programId: `${ORG1_ID}-prog-rec-bronze`, memberId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Primary coach for Bronze program" },
+    { id: `${ORG1_ID}-ps-2`, programId: `${ORG1_ID}-prog-rec-silver`, memberId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
+    { id: `${ORG1_ID}-ps-3`, programId: `${ORG1_ID}-prog-rec-gold`, memberId: `${ORG1_ID}-staff-1`, role: "ASSISTANT_COACH" as const, isPrimary: false, notes: null },
+    { id: `${ORG1_ID}-ps-4`, programId: `${ORG1_ID}-prog-rec-gold`, memberId: `${ORG1_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Primary coach for Gold program" },
+    { id: `${ORG1_ID}-ps-5`, programId: `${ORG1_ID}-prog-jo`, memberId: `${ORG1_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "JO Team Head Coach" },
+    { id: `${ORG1_ID}-ps-6`, programId: `${ORG1_ID}-prog-jo`, memberId: `${ORG1_ID}-staff-1`, role: "ASSISTANT_COACH" as const, isPrimary: false, notes: "Beam and floor specialist" },
+    { id: `${ORG1_ID}-ps-7`, programId: `${ORG1_ID}-prog-preschool`, memberId: `${ORG1_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
     // Org2 Program Staff
-    { id: `${ORG2_ID}-ps-1`, programId: `${ORG2_ID}-prog-soccer`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Soccer program lead" },
-    { id: `${ORG2_ID}-ps-2`, programId: `${ORG2_ID}-prog-soccer`, staffProfileId: `${ORG2_ID}-staff-2`, role: "VOLUNTEER" as const, isPrimary: false, notes: "Volunteer assistant" },
-    { id: `${ORG2_ID}-ps-3`, programId: `${ORG2_ID}-prog-basketball`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
-    { id: `${ORG2_ID}-ps-4`, programId: `${ORG2_ID}-prog-swim`, staffProfileId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Swim team head coach" },
-    { id: `${ORG2_ID}-ps-5`, programId: `${ORG2_ID}-prog-fitness`, staffProfileId: `${ORG2_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Kids fitness leader" },
+    { id: `${ORG2_ID}-ps-1`, programId: `${ORG2_ID}-prog-soccer`, memberId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Soccer program lead" },
+    { id: `${ORG2_ID}-ps-2`, programId: `${ORG2_ID}-prog-soccer`, memberId: `${ORG2_ID}-staff-2`, role: "VOLUNTEER" as const, isPrimary: false, notes: "Volunteer assistant" },
+    { id: `${ORG2_ID}-ps-3`, programId: `${ORG2_ID}-prog-basketball`, memberId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: null },
+    { id: `${ORG2_ID}-ps-4`, programId: `${ORG2_ID}-prog-swim`, memberId: `${ORG2_ID}-staff-1`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Swim team head coach" },
+    { id: `${ORG2_ID}-ps-5`, programId: `${ORG2_ID}-prog-fitness`, memberId: `${ORG2_ID}-staff-2`, role: "LEAD_COACH" as const, isPrimary: true, notes: "Kids fitness leader" },
   ];
   for (const ps of programStaffData) {
     await prisma.programStaff.upsert({

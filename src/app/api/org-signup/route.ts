@@ -167,7 +167,6 @@ export async function POST(request: NextRequest) {
           passwordHash,
           role: "ADMIN",
           status: "ACTIVE",
-          organizationId: organization.id,
         },
       })
 

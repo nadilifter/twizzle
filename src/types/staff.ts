@@ -18,7 +18,7 @@ export interface EmergencyContact {
   relationship?: string;
 }
 
-// User info included in staff profiles
+// User info included in member/staff profiles
 export interface StaffUser {
   id: string;
   name: string;
@@ -28,11 +28,14 @@ export interface StaffUser {
   status?: string;
 }
 
-// Staff Profile
-export interface StaffProfile {
+// Member Profile (replaces StaffProfile — now backed by OrganizationMember)
+export interface MemberProfile {
   id: string;
   userId: string;
   organizationId: string;
+  role: string;
+  status: string;
+  joinedAt: string;
   employmentType: EmploymentType;
   title: string | null;
   hourlyRate: number | null;
@@ -44,7 +47,7 @@ export interface StaffProfile {
   updatedAt: string;
 }
 
-export interface StaffProfileWithUser extends StaffProfile {
+export interface MemberWithUser extends MemberProfile {
   user: StaffUser;
   _count?: {
     shifts: number;
@@ -52,14 +55,14 @@ export interface StaffProfileWithUser extends StaffProfile {
   };
 }
 
-export interface StaffProfileWithAvailability extends StaffProfileWithUser {
-  availability: StaffAvailability[];
+export interface MemberWithAvailability extends MemberWithUser {
+  availability: MemberAvailability[];
 }
 
-// Staff Availability
-export interface StaffAvailability {
+// Member Availability (replaces StaffAvailability)
+export interface MemberAvailability {
   id: string;
-  staffProfileId: string;
+  memberId: string;
   dayOfWeek: number; // 0=Sunday, 6=Saturday
   startTime: string; // "HH:MM"
   endTime: string; // "HH:MM"
@@ -68,11 +71,21 @@ export interface StaffAvailability {
   updatedAt: string;
 }
 
+// Backward-compatible aliases
+/** @deprecated Use MemberProfile */
+export type StaffProfile = MemberProfile;
+/** @deprecated Use MemberWithUser */
+export type StaffProfileWithUser = MemberWithUser;
+/** @deprecated Use MemberWithAvailability */
+export type StaffProfileWithAvailability = MemberWithAvailability;
+/** @deprecated Use MemberAvailability */
+export type StaffAvailability = MemberAvailability;
+
 // Shift
 export interface Shift {
   id: string;
   organizationId: string;
-  staffProfileId: string;
+  memberId: string;
   facilityId: string | null;
   date: string;
   startTime: string;
@@ -85,7 +98,7 @@ export interface Shift {
 }
 
 export interface ShiftWithRelations extends Shift {
-  staffProfile: {
+  member: {
     id: string;
     title: string | null;
     user: StaffUser;
@@ -113,7 +126,7 @@ export interface ScheduleTemplateEntry {
   startTime: string;
   endTime: string;
   shiftType: string;
-  staffProfileId: string | null;
+  memberId: string | null;
   facilityId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -130,7 +143,7 @@ export interface ScheduleTemplateWithEntries extends ScheduleTemplate {
 export interface EventStaff {
   id: string;
   eventId: string;
-  staffProfileId: string;
+  memberId: string;
   role: EventStaffRole;
   notes: string | null;
   createdAt: string;
@@ -138,7 +151,7 @@ export interface EventStaff {
 }
 
 export interface EventStaffWithProfile extends EventStaff {
-  staffProfile: {
+  member: {
     id: string;
     title: string | null;
     user: StaffUser;
@@ -146,7 +159,7 @@ export interface EventStaffWithProfile extends EventStaff {
 }
 
 // Request payload types
-export interface CreateStaffPayload {
+export interface CreateMemberPayload {
   userId: string;
   employmentType?: EmploymentType;
   title?: string | null;
@@ -157,10 +170,15 @@ export interface CreateStaffPayload {
   emergencyContact?: EmergencyContact | null;
 }
 
-export interface UpdateStaffPayload extends Partial<Omit<CreateStaffPayload, "userId">> {}
+export interface UpdateMemberPayload extends Partial<Omit<CreateMemberPayload, "userId">> {}
+
+/** @deprecated Use CreateMemberPayload */
+export type CreateStaffPayload = CreateMemberPayload;
+/** @deprecated Use UpdateMemberPayload */
+export type UpdateStaffPayload = UpdateMemberPayload;
 
 export interface CreateShiftPayload {
-  staffProfileId: string;
+  memberId: string;
   facilityId?: string | null;
   date: string;
   startTime: string;
@@ -173,7 +191,7 @@ export interface CreateShiftPayload {
 export interface UpdateShiftPayload extends Partial<CreateShiftPayload> {}
 
 export interface ShiftsQueryParams {
-  staffProfileId?: string;
+  memberId?: string;
   facilityId?: string;
   startDate?: string;
   endDate?: string;
@@ -204,7 +222,7 @@ export interface GenerateShiftsResponse {
 }
 
 export interface AddEventStaffPayload {
-  staffProfileId: string;
+  memberId: string;
   role?: EventStaffRole;
   notes?: string | null;
 }
@@ -227,7 +245,7 @@ export type ProgramStaffRole = "LEAD_COACH" | "ASSISTANT_COACH" | "SUBSTITUTE" |
 export interface ProgramStaff {
   id: string;
   programId: string;
-  staffProfileId: string;
+  memberId: string;
   role: ProgramStaffRole;
   isPrimary: boolean;
   notes: string | null;
@@ -236,7 +254,7 @@ export interface ProgramStaff {
 }
 
 export interface ProgramStaffWithProfile extends ProgramStaff {
-  staffProfile: {
+  member: {
     id: string;
     title: string | null;
     user: StaffUser;
@@ -244,7 +262,7 @@ export interface ProgramStaffWithProfile extends ProgramStaff {
 }
 
 export interface AddProgramStaffPayload {
-  staffProfileId: string;
+  memberId: string;
   role?: ProgramStaffRole;
   isPrimary?: boolean;
   notes?: string | null;

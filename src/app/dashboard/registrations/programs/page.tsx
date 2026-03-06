@@ -241,7 +241,7 @@ export default function ProgramsPage() {
                       <div className="flex -space-x-1.5">
                         {staffAssignments.slice(0, 3).map((sa: any) => (
                           <Avatar key={sa.id} className="h-6 w-6 border-2 border-background">
-                            <AvatarImage src={sa.staffProfile?.user?.avatar || ""} />
+                            <AvatarImage src={sa.member?.user?.avatar || ""} />
                             <AvatarFallback className="text-[10px]">
                               <User className="h-3 w-3" />
                             </AvatarFallback>
@@ -252,7 +252,7 @@ export default function ProgramsPage() {
                         {staffAssignments.slice(0, 2).map((sa: any, i: number) => (
                           <span key={sa.id}>
                             {i > 0 && ", "}
-                            {sa.staffProfile?.user?.name}
+                            {sa.member?.user?.name}
                             {sa.isPrimary && <Star className="h-3 w-3 inline ml-0.5 text-amber-500" />}
                           </span>
                         ))}

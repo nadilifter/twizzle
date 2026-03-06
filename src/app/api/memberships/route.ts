@@ -117,21 +117,23 @@ export async function POST(request: NextRequest) {
 
     let permissions = session.user.permissions || [];
     
-    // Fallback: If no permissions in session, verify against DB
+    // Fallback: If no permissions in session, verify against DB via membership
     if (permissions.length === 0) {
-       const user = await db.user.findUnique({ 
-           where: { id: session.user.id },
+       const member = await db.organizationMember.findFirst({
+           where: { userId: session.user.id, organizationId: session.user.organizationId },
            include: { permissions: true }
-       }) ?? (session.user.email ? await db.user.findUnique({
-           where: { email: session.user.email },
-           include: { permissions: true }
-       }) : null);
+       });
 
-       if (user) {
-           permissions = user.permissions.map(p => p.permission);
-           if (user.isSuperAdmin && !permissions.includes("*")) {
-               permissions.push("*");
-           }
+       if (member) {
+           permissions = member.permissions.map(p => p.permission);
+       }
+
+       const user = await db.user.findUnique({
+           where: { id: session.user.id },
+           select: { isSuperAdmin: true },
+       });
+       if (user?.isSuperAdmin && !permissions.includes("*")) {
+           permissions.push("*");
        }
     }
 

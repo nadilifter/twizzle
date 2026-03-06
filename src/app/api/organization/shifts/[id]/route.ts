@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const updateShiftSchema = z.object({
-  staffProfileId: z.string().optional(),
+  memberId: z.string().optional(),
   facilityId: z.string().optional().nullable(),
   date: z.string().optional(),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "Start time must be in HH:MM format").optional(),
@@ -35,7 +35,7 @@ export async function GET(
     const shift = await db.shift.findFirst({
       where: { id, organizationId },
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {
@@ -105,13 +105,13 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateShiftSchema.parse(body);
 
-    // Verify staff profile if changing
-    if (validatedData.staffProfileId) {
-      const staffProfile = await db.staffProfile.findFirst({
-        where: { id: validatedData.staffProfileId, organizationId },
+    // Verify member if changing
+    if (validatedData.memberId) {
+      const member = await db.organizationMember.findFirst({
+        where: { id: validatedData.memberId, organizationId },
       });
-      if (!staffProfile) {
-        return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+      if (!member) {
+        return NextResponse.json({ error: "Member not found" }, { status: 404 });
       }
     }
 
@@ -127,7 +127,7 @@ export async function PATCH(
 
     // Build update data
     const updateData: Record<string, unknown> = {};
-    if (validatedData.staffProfileId !== undefined) updateData.staffProfileId = validatedData.staffProfileId;
+    if (validatedData.memberId !== undefined) updateData.memberId = validatedData.memberId;
     if (validatedData.facilityId !== undefined) updateData.facilityId = validatedData.facilityId;
     if (validatedData.date !== undefined) updateData.date = new Date(validatedData.date);
     if (validatedData.startTime !== undefined) updateData.startTime = validatedData.startTime;
@@ -140,7 +140,7 @@ export async function PATCH(
       where: { id },
       data: updateData,
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {

@@ -74,13 +74,13 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useStaff, useStaffAvailability } from "@/hooks/use-staff"
+import { useStaff, useMemberAvailability } from "@/hooks/use-staff"
 import { useShifts } from "@/hooks/use-shifts"
 import { api } from "@/lib/api-client"
 import type { 
   ShiftWithRelations, 
   ShiftStatus, 
-  StaffProfileWithUser,
+  MemberWithUser,
   AvailabilityEntry 
 } from "@/types/staff"
 
@@ -147,7 +147,7 @@ export default function SchedulesPage() {
   // Shift form state
   const [shiftSheetOpen, setShiftSheetOpen] = useState(false)
   const [editingShift, setEditingShift] = useState<ShiftWithRelations | null>(null)
-  const [formStaffId, setFormStaffId] = useState("")
+  const [formMemberId, setFormMemberId] = useState("")
   const [formFacilityId, setFormFacilityId] = useState("")
   const [formDate, setFormDate] = useState("")
   const [formStartTime, setFormStartTime] = useState("09:00")
@@ -160,7 +160,7 @@ export default function SchedulesPage() {
   const [shiftToDelete, setShiftToDelete] = useState<ShiftWithRelations | null>(null)
   
   // Availability editing
-  const [editingAvailabilityStaff, setEditingAvailabilityStaff] = useState<StaffProfileWithUser | null>(null)
+  const [editingAvailabilityMember, setEditingAvailabilityMember] = useState<MemberWithUser | null>(null)
   const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false)
 
   // Fetch facilities
@@ -181,7 +181,7 @@ export default function SchedulesPage() {
   }
 
   const resetShiftForm = () => {
-    setFormStaffId("")
+    setFormMemberId("")
     setFormFacilityId("")
     setFormDate("")
     setFormStartTime("09:00")
@@ -193,7 +193,7 @@ export default function SchedulesPage() {
 
   const openEditShift = (shift: ShiftWithRelations) => {
     setEditingShift(shift)
-    setFormStaffId(shift.staffProfileId)
+    setFormMemberId(shift.memberId)
     setFormFacilityId(shift.facilityId || "")
     setFormDate(new Date(shift.date).toISOString().split("T")[0])
     setFormStartTime(shift.startTime)
@@ -204,11 +204,11 @@ export default function SchedulesPage() {
   }
 
   const handleSubmitShift = async () => {
-    if (!formStaffId || !formDate || !formShiftType) return
+    if (!formMemberId || !formDate || !formShiftType) return
 
     if (editingShift) {
       const result = await updateShift(editingShift.id, {
-        staffProfileId: formStaffId,
+        memberId: formMemberId,
         facilityId: formFacilityId || null,
         date: formDate,
         startTime: formStartTime,
@@ -222,7 +222,7 @@ export default function SchedulesPage() {
       }
     } else {
       const result = await createShift({
-        staffProfileId: formStaffId,
+        memberId: formMemberId,
         facilityId: formFacilityId || null,
         date: formDate,
         startTime: formStartTime,
@@ -320,7 +320,7 @@ export default function SchedulesPage() {
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="staff">Employee</Label>
-                    <Select value={formStaffId} onValueChange={setFormStaffId}>
+                    <Select value={formMemberId} onValueChange={setFormMemberId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select employee" />
                       </SelectTrigger>
@@ -396,7 +396,7 @@ export default function SchedulesPage() {
                 <SheetFooter>
                   <Button 
                     onClick={handleSubmitShift}
-                    disabled={!formStaffId || !formDate || !formShiftType || isCreating || isUpdating}
+                    disabled={!formMemberId || !formDate || !formShiftType || isCreating || isUpdating}
                   >
                     {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {editingShift ? "Save Changes" : "Create Shift"}
@@ -447,10 +447,10 @@ export default function SchedulesPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
-                              <AvatarImage src={shift.staffProfile.user.avatar || undefined} />
-                              <AvatarFallback>{getInitials(shift.staffProfile.user.name)}</AvatarFallback>
+                              <AvatarImage src={shift.member.user.avatar || undefined} />
+                              <AvatarFallback>{getInitials(shift.member.user.name)}</AvatarFallback>
                             </Avatar>
-                            <span>{shift.staffProfile.user.name}</span>
+                            <span>{shift.member.user.name}</span>
                           </div>
                         </TableCell>
                         <TableCell>{shift.facility?.name || "—"}</TableCell>
@@ -532,7 +532,7 @@ export default function SchedulesPage() {
                   key={staffMember.id} 
                   staffMember={staffMember}
                   onEdit={() => {
-                    setEditingAvailabilityStaff(staffMember)
+                    setEditingAvailabilityMember(staffMember)
                     setAvailabilitySheetOpen(true)
                   }}
                 />
@@ -542,11 +542,11 @@ export default function SchedulesPage() {
           
           {/* Availability Edit Sheet */}
           <AvailabilityEditSheet
-            staffMember={editingAvailabilityStaff}
+            staffMember={editingAvailabilityMember}
             open={availabilitySheetOpen}
             onOpenChange={(open) => {
               setAvailabilitySheetOpen(open)
-              if (!open) setEditingAvailabilityStaff(null)
+              if (!open) setEditingAvailabilityMember(null)
             }}
           />
         </TabsContent>
@@ -609,10 +609,10 @@ function StaffAvailabilityCard({
   staffMember, 
   onEdit 
 }: { 
-  staffMember: StaffProfileWithUser
+  staffMember: MemberWithUser
   onEdit: () => void 
 }) {
-  const { availability, isLoading } = useStaffAvailability(staffMember.id)
+  const { availability, isLoading } = useMemberAvailability(staffMember.id)
 
   return (
     <Card>
@@ -671,11 +671,11 @@ function AvailabilityEditSheet({
   open,
   onOpenChange,
 }: {
-  staffMember: StaffProfileWithUser | null
+  staffMember: MemberWithUser | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { availability, saveAvailability, isSaving } = useStaffAvailability(staffMember?.id || null)
+  const { availability, saveAvailability, isSaving } = useMemberAvailability(staffMember?.id || null)
   const [formAvailability, setFormAvailability] = useState<AvailabilityEntry[]>([])
 
   useEffect(() => {
@@ -811,9 +811,9 @@ function FacilityUsageCard({
               >
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarFallback>{getInitials(shift.staffProfile.user.name)}</AvatarFallback>
+                    <AvatarFallback>{getInitials(shift.member.user.name)}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium">{shift.staffProfile.user.name}</span>
+                  <span className="text-sm font-medium">{shift.member.user.name}</span>
                   <Badge variant="outline" className="text-xs">{shift.shiftType}</Badge>
                 </div>
                 <span className="text-sm text-muted-foreground">
@@ -970,10 +970,10 @@ function WeeklyCalendarView({
                       <div className="flex items-center gap-1 mt-1">
                         <Avatar className="h-4 w-4">
                           <AvatarFallback className="text-[8px]">
-                            {getInitials(shift.staffProfile.user.name)}
+                            {getInitials(shift.member.user.name)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="truncate">{shift.staffProfile.user.name.split(" ")[0]}</span>
+                        <span className="truncate">{shift.member.user.name.split(" ")[0]}</span>
                       </div>
                       <div className="mt-1 truncate text-[10px] opacity-75">
                         {shift.shiftType}

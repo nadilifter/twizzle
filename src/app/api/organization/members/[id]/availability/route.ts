@@ -12,7 +12,6 @@ const availabilityEntrySchema = z.object({
 
 const updateAvailabilitySchema = z.array(availabilityEntrySchema);
 
-// GET - Get staff availability
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,13 +29,12 @@ export async function GET(
 
     const { id } = await params;
 
-    // Verify member exists in organization
     const member = await db.organizationMember.findFirst({
       where: { id, organizationId },
     });
 
     if (!member) {
-      return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
     const availability = await db.memberAvailability.findMany({
@@ -46,12 +44,11 @@ export async function GET(
 
     return NextResponse.json(availability);
   } catch (error) {
-    console.error("Error fetching staff availability:", error);
-    return NextResponse.json({ error: "Failed to fetch staff availability" }, { status: 500 });
+    console.error("Error fetching member availability:", error);
+    return NextResponse.json({ error: "Failed to fetch availability" }, { status: 500 });
   }
 }
 
-// PUT - Update staff availability (replace all entries)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -67,30 +64,26 @@ export async function PUT(
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    // Check permissions - staff can edit their own availability, or admin can edit any
     const { id } = await params;
 
-    // Verify member exists in organization
     const member = await db.organizationMember.findFirst({
       where: { id, organizationId },
     });
 
     if (!member) {
-      return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
-    // Allow staff to edit own availability, or require admin permission
     const isOwnProfile = member.userId === session.user.id;
-    if (!isOwnProfile && 
+    if (!isOwnProfile &&
         !session.user.permissions.includes("*") &&
-        !session.user.permissions.includes("staff.edit")) {
+        !session.user.permissions.includes("users.edit")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
     const validatedData = updateAvailabilitySchema.parse(body);
 
-    // Delete existing availability and create new entries
     await db.$transaction(async (tx) => {
       await tx.memberAvailability.deleteMany({
         where: { memberId: id },
@@ -119,7 +112,7 @@ export async function PUT(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error updating staff availability:", error);
-    return NextResponse.json({ error: "Failed to update staff availability" }, { status: 500 });
+    console.error("Error updating member availability:", error);
+    return NextResponse.json({ error: "Failed to update availability" }, { status: 500 });
   }
 }

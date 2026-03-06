@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { UserImpersonationBanner } from "@/components/user-impersonation-banner"
 import { getAuthSession } from "@/lib/auth"
+import { getCoachingMemberships } from "@/lib/impersonation"
 import { redirect } from "next/navigation"
 
 export default async function CoachLayout({
@@ -14,6 +15,13 @@ export default async function CoachLayout({
   
   if (!session) {
     redirect("/login?callbackUrl=/coach")
+  }
+
+  if (!session.user.isSuperAdmin) {
+    const coachingMemberships = await getCoachingMemberships(session)
+    if (coachingMemberships.length === 0) {
+      redirect("/dashboard")
+    }
   }
 
   return (

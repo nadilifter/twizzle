@@ -13,7 +13,7 @@ const sendSmsSchema = z.object({
     .enum(["GENERAL", "REMINDER", "ALERT", "BILLING", "EVENT", "NEWS"])
     .optional()
     .default("GENERAL"),
-  staffProfileId: z.string().optional(),
+  memberId: z.string().optional(),
 });
 
 // GET /api/sms - List SMS messages
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       to: validatedData.to,
       body: validatedData.body,
       classification: validatedData.classification,
-      staffProfileId: validatedData.staffProfileId,
+      memberId: validatedData.memberId,
     });
 
     if (!result.success) {

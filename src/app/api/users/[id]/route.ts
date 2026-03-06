@@ -22,30 +22,31 @@ export async function GET(
     }
 
     const { id } = await params;
-    const user = await db.user.findFirst({
+    const member = await db.organizationMember.findFirst({
       where: {
-        id,
+        userId: id,
         organizationId: session.user.organizationId,
       },
       include: {
+        user: true,
         permissions: true,
       },
     });
 
-    if (!user) {
+    if (!member) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      avatar: user.avatar,
-      role: user.role.toLowerCase(),
-      permissions: user.permissions.map((p) => p.permission),
-      status: user.status.toLowerCase(),
-      joinedDate: user.createdAt,
-      lastActive: user.lastActiveAt || user.createdAt,
+      id: member.user.id,
+      name: member.user.name,
+      email: member.user.email,
+      avatar: member.user.avatar,
+      role: member.role.toLowerCase(),
+      permissions: member.permissions.map((p) => p.permission),
+      status: member.status.toLowerCase(),
+      joinedDate: member.joinedAt,
+      lastActive: member.user.lastActiveAt || member.joinedAt,
     });
   } catch (error) {
     console.error("Error fetching user:", error);
@@ -79,65 +80,68 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateUserSchema.parse(body);
 
-    // Verify user belongs to same organization
-    const existingUser = await db.user.findFirst({
+    // Verify user belongs to same organization via membership
+    const membership = await db.organizationMember.findFirst({
       where: {
-        id,
+        userId: id,
         organizationId: session.user.organizationId,
       },
     });
 
-    if (!existingUser) {
+    if (!membership) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Build update data
-    const updateData: Record<string, unknown> = {};
-    if (validatedData.name) updateData.name = validatedData.name;
-    if (validatedData.email) updateData.email = validatedData.email;
-    if (validatedData.role) updateData.role = validatedData.role;
+    // Update user-level fields (name, email)
+    const userUpdateData: Record<string, unknown> = {};
+    if (validatedData.name) userUpdateData.name = validatedData.name;
+    if (validatedData.email) userUpdateData.email = validatedData.email;
 
-    // Update user
-    const user = await db.user.update({
-      where: { id },
-      data: updateData,
-      include: {
-        permissions: true,
-      },
-    });
+    if (Object.keys(userUpdateData).length > 0) {
+      await db.user.update({
+        where: { id },
+        data: userUpdateData,
+      });
+    }
 
-    // Update permissions if provided
+    // Update role on the membership
+    if (validatedData.role) {
+      await db.organizationMember.update({
+        where: { id: membership.id },
+        data: { role: validatedData.role },
+      });
+    }
+
+    // Update permissions on the membership
     if (validatedData.permissions) {
-      // Delete existing permissions
-      await db.userPermission.deleteMany({
-        where: { userId: id },
+      await db.orgMemberPermission.deleteMany({
+        where: { memberId: membership.id },
       });
 
-      // Create new permissions
-      await db.userPermission.createMany({
+      await db.orgMemberPermission.createMany({
         data: validatedData.permissions.map((p) => ({
-          userId: id,
+          memberId: membership.id,
           permission: p,
         })),
       });
     }
 
-    // Fetch updated user with permissions
-    const updatedUser = await db.user.findUnique({
-      where: { id },
-      include: { permissions: true },
+    // Fetch updated member with user and permissions
+    const updatedMember = await db.organizationMember.findUnique({
+      where: { id: membership.id },
+      include: { user: true, permissions: true },
     });
 
     return NextResponse.json({
-      id: updatedUser!.id,
-      name: updatedUser!.name,
-      email: updatedUser!.email,
-      avatar: updatedUser!.avatar,
-      role: updatedUser!.role.toLowerCase(),
-      permissions: updatedUser!.permissions.map((p) => p.permission),
-      status: updatedUser!.status.toLowerCase(),
-      joinedDate: updatedUser!.createdAt,
-      lastActive: updatedUser!.lastActiveAt || updatedUser!.createdAt,
+      id: updatedMember!.user.id,
+      name: updatedMember!.user.name,
+      email: updatedMember!.user.email,
+      avatar: updatedMember!.user.avatar,
+      role: updatedMember!.role.toLowerCase(),
+      permissions: updatedMember!.permissions.map((p) => p.permission),
+      status: updatedMember!.status.toLowerCase(),
+      joinedDate: updatedMember!.joinedAt,
+      lastActive: updatedMember!.user.lastActiveAt || updatedMember!.joinedAt,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -183,15 +187,15 @@ export async function DELETE(
       );
     }
 
-    // Verify user belongs to same organization
-    const existingUser = await db.user.findFirst({
+    // Verify user belongs to same organization via membership
+    const membership = await db.organizationMember.findFirst({
       where: {
-        id,
+        userId: id,
         organizationId: session.user.organizationId,
       },
     });
 
-    if (!existingUser) {
+    if (!membership) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 

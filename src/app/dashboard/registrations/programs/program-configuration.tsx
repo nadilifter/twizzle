@@ -85,10 +85,10 @@ interface MembershipInstance {
 }
 
 interface StaffAssignment {
-  staffProfileId: string
+  memberId: string
   role: ProgramStaffRole
   isPrimary: boolean
-  staffProfile?: {
+  member?: {
     id: string
     user: {
       name: string
@@ -180,10 +180,10 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
 
     // Staff
     staffAssignments: (program.staffAssignments?.map((sa: any) => ({
-      staffProfileId: sa.staffProfileId,
+      memberId: sa.memberId,
       role: sa.role as ProgramStaffRole,
       isPrimary: sa.isPrimary,
-      staffProfile: sa.staffProfile,
+      member: sa.member,
     })) || []) as StaffAssignment[],
     showCoachOnSite: program.showCoachOnSite ?? true,
   }))
@@ -332,25 +332,25 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
   const unassignedStaff = useMemo(() => {
     return (
       availableStaff?.filter(
-        (s) => !formData.staffAssignments.some((a) => a.staffProfileId === s.id)
+        (s) => !formData.staffAssignments.some((a) => a.memberId === s.id)
       ) || []
     )
   }, [availableStaff, formData.staffAssignments])
 
   // Staff handlers
   const handleAddStaff = useCallback(
-    (staffProfileId: string) => {
-      const staff = availableStaff?.find((s) => s.id === staffProfileId)
+    (memberId: string) => {
+      const staff = availableStaff?.find((s) => s.id === memberId)
       if (!staff) return
       setFormData((prev) => ({
         ...prev,
         staffAssignments: [
           ...prev.staffAssignments,
           {
-            staffProfileId: staff.id,
+            memberId: staff.id,
             role: "ASSISTANT_COACH" as ProgramStaffRole,
             isPrimary: prev.staffAssignments.length === 0,
-            staffProfile: {
+            member: {
               id: staff.id,
               user: {
                 name: staff.user?.name || "Unknown",
@@ -365,30 +365,30 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     [availableStaff]
   )
 
-  const handleRemoveStaff = (staffProfileId: string) => {
+  const handleRemoveStaff = (memberId: string) => {
     setFormData((prev) => ({
       ...prev,
       staffAssignments: prev.staffAssignments.filter(
-        (a) => a.staffProfileId !== staffProfileId
+        (a) => a.memberId !== memberId
       ),
     }))
   }
 
-  const handleUpdateStaffRole = (staffProfileId: string, role: ProgramStaffRole) => {
+  const handleUpdateStaffRole = (memberId: string, role: ProgramStaffRole) => {
     setFormData((prev) => ({
       ...prev,
       staffAssignments: prev.staffAssignments.map((a) =>
-        a.staffProfileId === staffProfileId ? { ...a, role } : a
+        a.memberId === memberId ? { ...a, role } : a
       ),
     }))
   }
 
-  const handleSetPrimary = (staffProfileId: string) => {
+  const handleSetPrimary = (memberId: string) => {
     setFormData((prev) => ({
       ...prev,
       staffAssignments: prev.staffAssignments.map((a) => ({
         ...a,
-        isPrimary: a.staffProfileId === staffProfileId,
+        isPrimary: a.memberId === memberId,
       })),
     }))
   }
@@ -557,7 +557,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     try {
       await updateProgram(program.id, {
         staffAssignments: formData.staffAssignments.map((sa) => ({
-          staffProfileId: sa.staffProfileId,
+          memberId: sa.memberId,
           role: sa.role,
           isPrimary: sa.isPrimary,
         })),
@@ -1802,11 +1802,11 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                 <div className="space-y-2">
                   {formData.staffAssignments.map((assignment) => (
                     <div
-                      key={assignment.staffProfileId}
+                      key={assignment.memberId}
                       className="flex items-center gap-3 rounded-lg border p-3 bg-card"
                     >
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={assignment.staffProfile?.user?.avatar || ""} />
+                        <AvatarImage src={assignment.member?.user?.avatar || ""} />
                         <AvatarFallback>
                           <User className="h-4 w-4" />
                         </AvatarFallback>
@@ -1815,7 +1815,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-medium truncate">
-                            {assignment.staffProfile?.user?.name || "Unknown"}
+                            {assignment.member?.user?.name || "Unknown"}
                           </span>
                           {assignment.isPrimary && (
                             <Badge variant="secondary" className="text-xs shrink-0">
@@ -1824,9 +1824,9 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                             </Badge>
                           )}
                         </div>
-                        {assignment.staffProfile?.title && (
+                        {assignment.member?.title && (
                           <p className="text-xs text-muted-foreground truncate">
-                            {assignment.staffProfile.title}
+                            {assignment.member.title}
                           </p>
                         )}
                       </div>
@@ -1834,7 +1834,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                       <Select
                         value={assignment.role}
                         onValueChange={(value: ProgramStaffRole) =>
-                          handleUpdateStaffRole(assignment.staffProfileId, value)
+                          handleUpdateStaffRole(assignment.memberId, value)
                         }
                       >
                         <SelectTrigger className="w-[150px]">
@@ -1854,7 +1854,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleSetPrimary(assignment.staffProfileId)}
+                            onClick={() => handleSetPrimary(assignment.memberId)}
                             title="Set as primary"
                           >
                             <Star className="h-4 w-4" />
@@ -1864,7 +1864,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveStaff(assignment.staffProfileId)}
+                          onClick={() => handleRemoveStaff(assignment.memberId)}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />

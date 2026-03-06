@@ -76,9 +76,9 @@ interface MembershipInstance {
 }
 
 interface StaffAssignment {
-  staffProfileId: string
+  memberId: string
   role: EventStaffRole
-  staffProfile?: {
+  member?: {
     id: string
     user: {
       name: string
@@ -260,7 +260,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
 
   const unassignedStaff = React.useMemo(() => {
     return availableStaff?.filter(
-      s => !formData.staffAssignments.some(a => a.staffProfileId === s.id)
+      s => !formData.staffAssignments.some(a => a.memberId === s.id)
     ) || []
   }, [availableStaff, formData.staffAssignments])
 
@@ -370,7 +370,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
           ? formData.membershipRequirementIds
           : [],
         staffAssignments: formData.staffAssignments.map(sa => ({
-          staffProfileId: sa.staffProfileId,
+          memberId: sa.memberId,
           role: sa.role,
         })),
       }
@@ -406,8 +406,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
     }
   }
 
-  const handleAddStaff = (staffProfileId: string) => {
-    const staff = availableStaff?.find(s => s.id === staffProfileId)
+  const handleAddStaff = (memberId: string) => {
+    const staff = availableStaff?.find(s => s.id === memberId)
     if (!staff) return
 
     setFormData(prev => ({
@@ -415,9 +415,9 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
       staffAssignments: [
         ...prev.staffAssignments,
         {
-          staffProfileId,
+          memberId,
           role: "ASSISTANT" as EventStaffRole,
-          staffProfile: {
+          member: {
             id: staff.id,
             user: {
               name: staff.user?.name || "Unknown",
@@ -430,18 +430,18 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
     }))
   }
 
-  const handleRemoveStaff = (staffProfileId: string) => {
+  const handleRemoveStaff = (memberId: string) => {
     setFormData(prev => ({
       ...prev,
-      staffAssignments: prev.staffAssignments.filter(a => a.staffProfileId !== staffProfileId),
+      staffAssignments: prev.staffAssignments.filter(a => a.memberId !== memberId),
     }))
   }
 
-  const handleUpdateStaffRole = (staffProfileId: string, role: EventStaffRole) => {
+  const handleUpdateStaffRole = (memberId: string, role: EventStaffRole) => {
     setFormData(prev => ({
       ...prev,
       staffAssignments: prev.staffAssignments.map(a =>
-        a.staffProfileId === staffProfileId ? { ...a, role } : a
+        a.memberId === memberId ? { ...a, role } : a
       ),
     }))
   }
@@ -1129,11 +1129,11 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   <div className="space-y-2">
                     {formData.staffAssignments.map(assignment => (
                       <div
-                        key={assignment.staffProfileId}
+                        key={assignment.memberId}
                         className="flex items-center gap-3 rounded-lg border p-3 bg-card"
                       >
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={assignment.staffProfile?.user?.avatar || ""} />
+                          <AvatarImage src={assignment.member?.user?.avatar || ""} />
                           <AvatarFallback>
                             <User className="h-4 w-4" />
                           </AvatarFallback>
@@ -1142,7 +1142,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium truncate">
-                              {assignment.staffProfile?.user?.name || "Unknown"}
+                              {assignment.member?.user?.name || "Unknown"}
                             </span>
                             {assignment.role === "LEAD" && (
                               <Badge variant="secondary" className="text-xs shrink-0">
@@ -1151,9 +1151,9 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                               </Badge>
                             )}
                           </div>
-                          {assignment.staffProfile?.title && (
+                          {assignment.member?.title && (
                             <p className="text-xs text-muted-foreground truncate">
-                              {assignment.staffProfile.title}
+                              {assignment.member.title}
                             </p>
                           )}
                         </div>
@@ -1161,7 +1161,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                         <Select
                           value={assignment.role}
                           onValueChange={(value: EventStaffRole) =>
-                            handleUpdateStaffRole(assignment.staffProfileId, value)
+                            handleUpdateStaffRole(assignment.memberId, value)
                           }
                         >
                           <SelectTrigger className="w-[130px]">
@@ -1179,7 +1179,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveStaff(assignment.staffProfileId)}
+                          onClick={() => handleRemoveStaff(assignment.memberId)}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />

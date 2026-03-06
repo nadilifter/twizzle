@@ -5,7 +5,7 @@ import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 
 const staffAssignmentSchema = z.object({
-  staffProfileId: z.string().min(1),
+  memberId: z.string().min(1),
   role: z.enum(["LEAD", "ASSISTANT", "VOLUNTEER", "OBSERVER"]).default("ASSISTANT"),
   notes: z.string().optional(),
 });
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
           },
           staffAssignments: {
             include: {
-              staffProfile: {
+              member: {
                 include: {
                   user: {
                     select: {
@@ -233,10 +233,11 @@ export async function POST(request: NextRequest) {
 
     // Verify coach if provided
     if (validatedData.coachId) {
-      const coach = await db.user.findFirst({
+      const coach = await db.organizationMember.findFirst({
         where: {
-          id: validatedData.coachId,
+          userId: validatedData.coachId,
           organizationId: session.user.organizationId,
+          status: "ACTIVE",
         },
       });
       if (!coach) {
@@ -284,7 +285,7 @@ export async function POST(request: NextRequest) {
     if (validatedData.staffAssignments && validatedData.staffAssignments.length > 0) {
         data.staffAssignments = {
             create: validatedData.staffAssignments.map(sa => ({
-                staffProfileId: sa.staffProfileId,
+                memberId: sa.memberId,
                 role: sa.role,
                 notes: sa.notes,
             })),
@@ -328,7 +329,7 @@ export async function POST(request: NextRequest) {
         },
         staffAssignments: {
             include: {
-              staffProfile: {
+              member: {
                 include: {
                   user: {
                     select: {

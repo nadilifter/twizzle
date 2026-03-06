@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ROLE_PERMISSIONS } from "@/lib/permissions";
 
 // GET /api/superadmin/organizations/[id]/coaches
-// Returns coaches (users with COACH role) in the organization for superadmin impersonation
+// Returns users with coaching permissions in the organization for superadmin impersonation
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,20 +12,16 @@ export async function GET(
   try {
     const session = await getAuthSession();
     
-    // Only superadmins can access this endpoint
     if (!session?.user?.isSuperAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id: organizationId } = await params;
 
-    // Get all members of the organization who are coaches (or have coach-like roles)
     const members = await db.organizationMember.findMany({
       where: {
         organizationId,
         status: "ACTIVE",
-        // Include COACH, ADMIN roles (admins often also act as coaches)
-        role: { in: ["COACH", "ADMIN", "STAFF"] },
       },
       include: {
         user: {
@@ -33,9 +30,9 @@ export async function GET(
             name: true,
             email: true,
             avatar: true,
-            role: true,
           },
         },
+        permissions: true,
       },
       orderBy: [
         { role: "asc" },
@@ -43,13 +40,28 @@ export async function GET(
       ],
     });
 
-    const coaches = members.map((m) => ({
-      id: m.user.id,
-      name: m.user.name,
-      email: m.user.email,
-      avatar: m.user.avatar,
-      role: m.role, // Use the membership role, not the user's global role
-    }));
+    // Filter to members who have coaching.portal permission
+    // either via explicit OrgMemberPermission or via their role template defaults
+    const coaches = members
+      .filter((m) => {
+        const explicitPerms = m.permissions.map((p) => p.permission);
+        if (explicitPerms.includes("*") || explicitPerms.includes("coaching.portal")) {
+          return true;
+        }
+        // Fall back to role template if no explicit permissions
+        if (explicitPerms.length === 0) {
+          const rolePerms = ROLE_PERMISSIONS[m.role] || [];
+          return rolePerms.includes("*" as never) || rolePerms.includes("coaching.portal" as never);
+        }
+        return false;
+      })
+      .map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        email: m.user.email,
+        avatar: m.user.avatar,
+        role: m.role,
+      }));
 
     return NextResponse.json({
       data: coaches,

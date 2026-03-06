@@ -91,7 +91,6 @@ const getRoleBadgeVariant = (role: string, isSuperAdmin: boolean): "default" | "
     case "ADMIN":
       return "destructive"
     case "COACH":
-    case "STAFF":
       return "default"
     case "VOLUNTEER":
     case "ACCOUNTANT":
@@ -152,7 +151,6 @@ const ROLE_OPTIONS = [
   { value: "SUPER_ADMIN", label: "Super Admin" },
   { value: "ADMIN", label: "Admin" },
   { value: "COACH", label: "Coach" },
-  { value: "STAFF", label: "Staff" },
   { value: "VOLUNTEER", label: "Volunteer" },
   { value: "ACCOUNTANT", label: "Accountant" },
   { value: "PARENT", label: "Parent" },
@@ -638,7 +636,6 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
                 <SelectContent>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                   <SelectItem value="COACH">Coach</SelectItem>
-                  <SelectItem value="STAFF">Staff</SelectItem>
                   <SelectItem value="VOLUNTEER">Volunteer</SelectItem>
                   <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
                   <SelectItem value="PARENT">Parent</SelectItem>

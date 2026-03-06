@@ -17,6 +17,7 @@ import {
   List,
   CalendarIcon,
   ClipboardCheck,
+  Building2,
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO } from "date-fns";
 import Link from "next/link";
@@ -203,6 +204,12 @@ export default function CoachSchedulePage() {
                             <Clock className="h-3 w-3" />
                             {event.startTime}
                           </div>
+                          {event.organization && (
+                            <div className="flex items-center gap-1 mt-0.5 opacity-70">
+                              <Building2 className="h-3 w-3" />
+                              <span className="truncate">{event.organization.name}</span>
+                            </div>
+                          )}
                         </div>
                       </Link>
                     ))
@@ -265,6 +272,12 @@ export default function CoachSchedulePage() {
                               <span className="flex items-center gap-1">
                                 <Users className="h-4 w-4" />
                                 {event.attendanceCount} registered
+                              </span>
+                            )}
+                            {event.organization && (
+                              <span className="flex items-center gap-1">
+                                <Building2 className="h-4 w-4" />
+                                {event.organization.name}
                               </span>
                             )}
                           </div>

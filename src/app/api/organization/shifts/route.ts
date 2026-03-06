@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const createShiftSchema = z.object({
-  staffProfileId: z.string().min(1, "Staff profile is required"),
+  memberId: z.string().min(1, "Member is required"),
   facilityId: z.string().optional().nullable(),
   date: z.string().min(1, "Date is required"), // ISO date string
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "Start time must be in HH:MM format"),
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const staffProfileId = searchParams.get("staffProfileId");
+    const memberId = searchParams.get("memberId");
     const facilityId = searchParams.get("facilityId");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const shifts = await db.shift.findMany({
       where: {
         organizationId,
-        ...(staffProfileId && { staffProfileId }),
+        ...(memberId && { memberId }),
         ...(facilityId && { facilityId }),
         ...(status && { status: status as "SCHEDULED" | "CONFIRMED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "NO_SHOW" }),
         ...(startDate && {
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         }),
       },
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {
@@ -116,13 +116,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createShiftSchema.parse(body);
 
-    // Verify staff profile belongs to organization
-    const staffProfile = await db.staffProfile.findFirst({
-      where: { id: validatedData.staffProfileId, organizationId },
+    // Verify member belongs to organization
+    const member = await db.organizationMember.findFirst({
+      where: { id: validatedData.memberId, organizationId },
     });
 
-    if (!staffProfile) {
-      return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+    if (!member) {
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
     // Verify facility belongs to organization if provided
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     const shift = await db.shift.create({
       data: {
         organizationId,
-        staffProfileId: validatedData.staffProfileId,
+        memberId: validatedData.memberId,
         facilityId: validatedData.facilityId ?? null,
         date: new Date(validatedData.date),
         startTime: validatedData.startTime,
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
         status: validatedData.status || "SCHEDULED",
       },
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {

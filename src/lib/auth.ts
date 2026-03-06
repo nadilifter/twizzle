@@ -26,48 +26,61 @@ function createBridgeToken(email: string, secret: string): string {
 }
 
 /**
- * Resolve the organization context and permissions for a user,
- * returning the shape expected by NextAuth callbacks.
+ * Resolve the organization context and permissions for a user.
+ * Permissions are now org-scoped via OrgMemberPermission on OrganizationMember.
  */
-async function buildAuthorizedUser(userId: string) {
+async function buildAuthorizedUser(userId: string, targetOrgId?: string | null) {
   const user = await db.user.findUnique({
     where: { id: userId },
     include: {
-      organization: true,
-      permissions: true,
-      memberships: { include: { organization: true } },
+      memberships: {
+        include: {
+          organization: true,
+          permissions: true,
+        },
+      },
     },
   });
 
   if (!user) return null;
 
-  let organizationId = user.organizationId;
-  let organizationName = user.organization?.name;
-
-  if (organizationId && !user.isSuperAdmin && user.organization && !user.organization.isActive) {
-    organizationId = null;
-    organizationName = undefined;
-  }
-
   const activeMemberships = user.isSuperAdmin
     ? user.memberships
     : user.memberships.filter((m) => m.organization.isActive);
 
-  if (!organizationId && activeMemberships.length === 1) {
-    organizationId = activeMemberships[0].organizationId;
-    organizationName = activeMemberships[0].organization.name;
-  } else if (!organizationId) {
-    organizationId = "";
-    organizationName = "";
+  let organizationId = targetOrgId || "";
+  let organizationName = "";
+  let membership: (typeof activeMemberships)[number] | undefined;
+
+  if (targetOrgId) {
+    membership = activeMemberships.find((m) => m.organizationId === targetOrgId);
+    if (membership) {
+      organizationName = membership.organization.name;
+    } else if (!user.isSuperAdmin) {
+      organizationId = "";
+    }
   }
 
-  const dbPermissions = user.permissions.map((p) => p.permission);
-  let permissions =
-    dbPermissions.length > 0
-      ? dbPermissions
-      : ROLE_PERMISSIONS[(user.role || "").toUpperCase()] ?? [];
-  if (user.isSuperAdmin && !permissions.includes("*")) {
+  if (!organizationId && activeMemberships.length === 1) {
+    membership = activeMemberships[0];
+    organizationId = membership.organizationId;
+    organizationName = membership.organization.name;
+  }
+
+  // Resolve permissions from the org membership
+  let permissions: string[];
+  const role = membership?.role || user.role;
+
+  if (user.isSuperAdmin) {
     permissions = ["*"];
+  } else if (membership) {
+    const memberPerms = membership.permissions.map((p) => p.permission);
+    permissions =
+      memberPerms.length > 0
+        ? memberPerms
+        : ROLE_PERMISSIONS[(membership.role || "").toUpperCase()] ?? [];
+  } else {
+    permissions = ROLE_PERMISSIONS[(user.role || "").toUpperCase()] ?? [];
   }
 
   return {
@@ -75,7 +88,7 @@ async function buildAuthorizedUser(userId: string) {
     email: user.email,
     name: user.name,
     image: user.avatar,
-    role: user.role,
+    role,
     organizationId: organizationId || "",
     organizationName: organizationName || "",
     permissions,
@@ -286,13 +299,7 @@ export const authOptions: NextAuthOptions = {
               },
             });
             
-            // Create wildcard permission for super admins
-            await db.userPermission.create({
-              data: {
-                userId: existingUser.id,
-                permission: "*",
-              },
-            });
+            // Super admins get wildcard via isSuperAdmin flag in buildAuthorizedUser
           } else if (!existingUser) {
             // Non-uplifter emails must have an existing account
             return "/login?error=NoAccount";
@@ -318,20 +325,7 @@ export const authOptions: NextAuthOptions = {
                 data: { isSuperAdmin: true },
               });
               
-              // Ensure they have wildcard permission
-              await db.userPermission.upsert({
-                where: {
-                  userId_permission: {
-                    userId: existingUser.id,
-                    permission: "*",
-                  },
-                },
-                create: {
-                  userId: existingUser.id,
-                  permission: "*",
-                },
-                update: {},
-              });
+              // Super admins get wildcard via isSuperAdmin flag in buildAuthorizedUser
             }
           }
 
@@ -366,53 +360,19 @@ export const authOptions: NextAuthOptions = {
           
           const dbUser = await db.user.findUnique({
             where: { email: user.email },
-            include: {
-              organization: true,
-              permissions: true,
-              memberships: {
-                include: {
-                  organization: true
-                }
-              }
-            },
+            select: { id: true },
           });
           
           if (dbUser) {
-            token.id = dbUser.id;
-            token.role = dbUser.role;
-            token.isSuperAdmin = dbUser.isSuperAdmin;
-            const dbPermissions = dbUser.permissions.map((p) => p.permission);
-            let permissions =
-              dbPermissions.length > 0
-                ? dbPermissions
-                : ROLE_PERMISSIONS[(dbUser.role || "").toUpperCase()] ?? [];
-            if (dbUser.isSuperAdmin && !permissions.includes("*")) {
-              permissions = ["*"];
+            const authUser = await buildAuthorizedUser(dbUser.id);
+            if (authUser) {
+              token.id = authUser.id;
+              token.role = authUser.role;
+              token.isSuperAdmin = authUser.isSuperAdmin;
+              token.permissions = authUser.permissions;
+              token.organizationId = authUser.organizationId;
+              token.organizationName = authUser.organizationName;
             }
-            token.permissions = permissions;
-
-            let organizationId = dbUser.organizationId;
-            let organizationName = dbUser.organization?.name;
-
-            if (organizationId && !dbUser.isSuperAdmin && dbUser.organization && !dbUser.organization.isActive) {
-              organizationId = null;
-              organizationName = undefined;
-            }
-
-            const activeMemberships = dbUser.isSuperAdmin
-              ? dbUser.memberships
-              : dbUser.memberships.filter((m) => m.organization.isActive);
-            
-            if (!organizationId && activeMemberships.length === 1) {
-              organizationId = activeMemberships[0].organizationId;
-              organizationName = activeMemberships[0].organization.name;
-            } else if (!organizationId) {
-              organizationId = "";
-              organizationName = "";
-            }
-            
-            token.organizationId = organizationId || "";
-            token.organizationName = organizationName || "";
           }
         }
 
@@ -420,10 +380,18 @@ export const authOptions: NextAuthOptions = {
         if (trigger === "update" && session) {
           console.log("JWT callback: Session update", session);
           
-          // Handle organization switching
+          // Handle organization switching -- re-resolve permissions for the new org
           if (session.organizationId !== undefined) {
-            token.organizationId = session.organizationId;
-            token.organizationName = session.organizationName;
+            const authUser = await buildAuthorizedUser(
+              token.id as string,
+              session.organizationId || null
+            );
+            if (authUser) {
+              token.organizationId = authUser.organizationId;
+              token.organizationName = authUser.organizationName;
+              token.permissions = authUser.permissions;
+              token.role = authUser.role;
+            }
           }
           
           // Handle impersonation (superadmin "view as user" feature)

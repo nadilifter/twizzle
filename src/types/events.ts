@@ -46,6 +46,7 @@ export interface Event {
 export interface EventWithRelations extends Event {
   program: EventProgram | null;
   coach: EventCoach | null;
+  organization?: { id: string; name: string };
   attendanceCount?: number;
   participants: string[];
 }

@@ -43,7 +43,7 @@ export default async function RegisterPage({ params }: { params: { slug: string 
                         role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
                     },
                     include: {
-                        staffProfile: {
+                        member: {
                             include: {
                                 user: {
                                     select: {
@@ -110,10 +110,10 @@ export default async function RegisterPage({ params }: { params: { slug: string 
             id: assignment.id,
             role: assignment.role,
             isPrimary: assignment.isPrimary,
-            staffProfile: {
-                id: assignment.staffProfile.id,
-                title: assignment.staffProfile.title,
-                user: assignment.staffProfile.user,
+            member: {
+                id: assignment.member.id,
+                title: assignment.member.title,
+                user: assignment.member.user,
             },
         })),
         requiredMemberships: program.requiredMemberships.map(membership => ({

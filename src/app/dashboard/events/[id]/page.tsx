@@ -445,17 +445,17 @@ export default function EventDetailPage() {
                     className="flex items-center gap-3 p-3 rounded-lg border"
                   >
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={sa.staffProfile?.user?.avatar || ""} />
+                      <AvatarImage src={sa.member?.user?.avatar || ""} />
                       <AvatarFallback>
-                        {sa.staffProfile?.user?.name
-                          ? getInitials(sa.staffProfile.user.name)
+                        {sa.member?.user?.name
+                          ? getInitials(sa.member.user.name)
                           : "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm truncate">
-                          {sa.staffProfile?.user?.name || "Unknown"}
+                          {sa.member?.user?.name || "Unknown"}
                         </span>
                         {sa.role === "LEAD" && (
                           <Badge variant="secondary" className="text-xs shrink-0">

@@ -6,7 +6,7 @@ interface StaffAssignment {
   id: string;
   role: string;
   isPrimary: boolean;
-  staffProfile: {
+  member: {
     id: string;
     title: string | null;
     user: {

@@ -98,6 +98,10 @@ const attemptStatusLabels: Record<SkillAttemptStatus, string> = {
 };
 
 export default function CoachEvaluationsPage() {
+  return <CoachEvaluationsContent />;
+}
+
+function CoachEvaluationsContent() {
   const { data: session } = useSession();
   const [evaluations, setEvaluations] = useState<EvaluationWithRelations[]>([]);
   const [templates, setTemplates] = useState<EvaluationTemplateWithSkills[]>([]);

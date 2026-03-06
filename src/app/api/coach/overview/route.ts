@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getEffectiveUser } from "@/lib/impersonation";
+import { getEffectiveUser, getCoachingMemberships } from "@/lib/impersonation";
 import { startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 
 export async function GET(request: NextRequest) {
@@ -12,11 +12,29 @@ export async function GET(request: NextRequest) {
     }
 
     const effectiveUser = await getEffectiveUser(session);
-    if (!effectiveUser?.organizationId) {
-      return NextResponse.json({ error: "No organization" }, { status: 400 });
+    if (!effectiveUser) {
+      return NextResponse.json({ error: "No user context" }, { status: 400 });
     }
 
-    const { userId, organizationId } = effectiveUser;
+    const { userId } = effectiveUser;
+    const coachingMemberships = await getCoachingMemberships(session);
+    if (coachingMemberships.length === 0) {
+      return NextResponse.json({
+        todayEvents: [],
+        todayEventCount: 0,
+        weekEventCount: 0,
+        pendingAttendanceCount: 0,
+        programs: [],
+        programCount: 0,
+        upcomingCompetitions: [],
+        competitionCount: 0,
+        nextEvent: null,
+        organizations: [],
+      });
+    }
+
+    const orgIds = coachingMemberships.map((m) => m.organizationId);
+    const memberIds = coachingMemberships.map((m) => m.memberId);
 
     const now = new Date();
     const todayStart = startOfDay(now);
@@ -24,21 +42,16 @@ export async function GET(request: NextRequest) {
     const weekStart = startOfWeek(now, { weekStartsOn: 0 });
     const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
 
-    const staffProfile = await db.staffProfile.findUnique({
-      where: { userId },
+    // Find programs via ProgramStaff assignments across all coaching orgs
+    const programStaffAssignments = await db.programStaff.findMany({
+      where: { memberId: { in: memberIds } },
+      select: { programId: true },
     });
-
-    const programStaffAssignments = staffProfile
-      ? await db.programStaff.findMany({
-          where: { staffProfileId: staffProfile.id },
-          select: { programId: true },
-        })
-      : [];
 
     const coachEventPrograms = await db.event.findMany({
       where: {
         coachId: userId,
-        organizationId,
+        organizationId: { in: orgIds },
         programId: { not: null },
       },
       select: { programId: true },
@@ -64,12 +77,13 @@ export async function GET(request: NextRequest) {
       db.event.findMany({
         where: {
           coachId: userId,
-          organizationId,
+          organizationId: { in: orgIds },
           date: { gte: todayStart, lte: todayEnd },
         },
         include: {
           program: { select: { id: true, name: true } },
           facility: { select: { id: true, name: true } },
+          organization: { select: { id: true, name: true } },
           _count: { select: { attendances: true } },
         },
         orderBy: { startTime: "asc" },
@@ -78,7 +92,7 @@ export async function GET(request: NextRequest) {
       db.event.count({
         where: {
           coachId: userId,
-          organizationId,
+          organizationId: { in: orgIds },
           date: { gte: weekStart, lte: weekEnd },
         },
       }),
@@ -87,12 +101,14 @@ export async function GET(request: NextRequest) {
         ? db.program.findMany({
             where: {
               id: { in: allProgramIds },
-              organizationId,
+              organizationId: { in: orgIds },
               status: "ACTIVE",
             },
             select: {
               id: true,
               name: true,
+              organizationId: true,
+              organization: { select: { name: true } },
               _count: {
                 select: {
                   enrollments: { where: { status: "ACTIVE" } },
@@ -106,7 +122,7 @@ export async function GET(request: NextRequest) {
 
       db.competition.findMany({
         where: {
-          organizationId,
+          organizationId: { in: orgIds },
           startDate: { gte: todayStart },
           status: { in: ["PUBLISHED", "REGISTRATION_OPEN"] },
         },
@@ -121,6 +137,7 @@ export async function GET(request: NextRequest) {
           city: true,
           stateProvince: true,
           facility: { select: { id: true, name: true } },
+          organization: { select: { id: true, name: true } },
           _count: { select: { entries: true, categories: true } },
         },
         orderBy: { startDate: "asc" },
@@ -130,7 +147,7 @@ export async function GET(request: NextRequest) {
       db.event.findMany({
         where: {
           coachId: userId,
-          organizationId,
+          organizationId: { in: orgIds },
           date: { gte: todayStart, lte: todayEnd },
           attendances: { none: {} },
         },
@@ -141,12 +158,13 @@ export async function GET(request: NextRequest) {
     const nextEvent = await db.event.findFirst({
       where: {
         coachId: userId,
-        organizationId,
+        organizationId: { in: orgIds },
         date: { gte: todayStart },
       },
       include: {
         program: { select: { id: true, name: true } },
         facility: { select: { id: true, name: true } },
+        organization: { select: { id: true, name: true } },
         _count: { select: { attendances: true } },
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
@@ -162,6 +180,7 @@ export async function GET(request: NextRequest) {
         type: e.type,
         program: e.program,
         facility: e.facility,
+        organization: e.organization,
         attendanceCount: e._count.attendances,
       })),
       todayEventCount: todayEvents.length,
@@ -170,6 +189,8 @@ export async function GET(request: NextRequest) {
       programs: activePrograms.map((p) => ({
         id: p.id,
         name: p.name,
+        organizationId: p.organizationId,
+        organizationName: p.organization.name,
         enrollmentCount: p._count.enrollments,
         eventCount: p._count.events,
       })),
@@ -185,6 +206,7 @@ export async function GET(request: NextRequest) {
         city: c.city,
         stateProvince: c.stateProvince,
         facility: c.facility,
+        organization: c.organization,
         entryCount: c._count.entries,
         categoryCount: c._count.categories,
       })),
@@ -199,9 +221,14 @@ export async function GET(request: NextRequest) {
             type: nextEvent.type,
             program: nextEvent.program,
             facility: nextEvent.facility,
+            organization: nextEvent.organization,
             attendanceCount: nextEvent._count.attendances,
           }
         : null,
+      organizations: coachingMemberships.map((m) => ({
+        id: m.organizationId,
+        name: m.organizationName,
+      })),
     });
   } catch (error) {
     console.error("Error fetching coach overview:", error);

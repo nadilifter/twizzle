@@ -54,7 +54,7 @@ export default async function ProgramDetailPage({
                     role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
                 },
                 include: {
-                    staffProfile: {
+                    member: {
                         include: {
                             user: {
                                 select: {
@@ -291,15 +291,15 @@ export default async function ProgramDetailPage({
                             <div className="flex -space-x-2">
                                 {program.staffAssignments.slice(0, 4).map((sa) => (
                                     <Avatar key={sa.id} className="h-8 w-8 border-2 border-white/30">
-                                        <AvatarImage src={sa.staffProfile.user.avatar || ""} />
+                                        <AvatarImage src={sa.member.user.avatar || ""} />
                                         <AvatarFallback className="text-xs bg-white/20 text-white">
-                                            {sa.staffProfile.user.name?.charAt(0) || "?"}
+                                            {sa.member.user.name?.charAt(0) || "?"}
                                         </AvatarFallback>
                                     </Avatar>
                                 ))}
                             </div>
                             <span className="text-sm text-white/70">
-                                {program.staffAssignments.slice(0, 2).map(sa => sa.staffProfile.user.name).join(", ")}
+                                {program.staffAssignments.slice(0, 2).map(sa => sa.member.user.name).join(", ")}
                                 {program.staffAssignments.length > 2 && ` +${program.staffAssignments.length - 2} more`}
                             </span>
                         </div>

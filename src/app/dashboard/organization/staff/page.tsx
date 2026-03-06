@@ -64,11 +64,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useStaff } from "@/hooks/use-staff"
 import { api } from "@/lib/api-client"
 import type { 
-  StaffProfileWithUser, 
+  MemberWithUser, 
   EmploymentType, 
   Certification,
-  CreateStaffPayload,
-  UpdateStaffPayload 
+  CreateMemberPayload,
+  UpdateMemberPayload 
 } from "@/types/staff"
 
 // Common certifications
@@ -107,9 +107,9 @@ export default function StaffPage() {
   const { staff, isLoading, isCreating, isUpdating, isDeleting, error, fetchStaff, createStaff, updateStaff, deleteStaff, clearError } = useStaff()
   const [searchQuery, setSearchQuery] = useState("")
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [editingStaff, setEditingStaff] = useState<StaffProfileWithUser | null>(null)
+  const [editingStaff, setEditingStaff] = useState<MemberWithUser | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [staffToDelete, setStaffToDelete] = useState<StaffProfileWithUser | null>(null)
+  const [staffToDelete, setStaffToDelete] = useState<MemberWithUser | null>(null)
   
   // Available users (users in org without staff profiles)
   const [availableUsers, setAvailableUsers] = useState<User[]>([])
@@ -160,7 +160,7 @@ export default function StaffPage() {
     setEditingStaff(null)
   }
 
-  const openEditSheet = (staffMember: StaffProfileWithUser) => {
+  const openEditSheet = (staffMember: MemberWithUser) => {
     setEditingStaff(staffMember)
     setFormTitle(staffMember.title || "")
     setFormEmploymentType(staffMember.employmentType)
@@ -175,7 +175,7 @@ export default function StaffPage() {
   const handleSubmit = async () => {
     if (editingStaff) {
       // Update existing staff
-      const data: UpdateStaffPayload = {
+      const data: UpdateMemberPayload = {
         title: formTitle || null,
         employmentType: formEmploymentType,
         phone: formPhone || null,
@@ -190,7 +190,7 @@ export default function StaffPage() {
     } else {
       // Create new staff
       if (!formUserId) return
-      const data: CreateStaffPayload = {
+      const data: CreateMemberPayload = {
         userId: formUserId,
         title: formTitle || null,
         employmentType: formEmploymentType,

@@ -83,7 +83,7 @@ export async function POST(
     // Generate shifts for each day in the range
     const shiftsToCreate: Array<{
       organizationId: string;
-      staffProfileId: string;
+      memberId: string;
       facilityId: string | null;
       date: Date;
       startTime: string;
@@ -101,10 +101,10 @@ export async function POST(
 
       for (const entry of entriesForDay) {
         // Only create shifts for entries that have staff assigned
-        if (entry.staffProfileId) {
+        if (entry.memberId) {
           shiftsToCreate.push({
             organizationId,
-            staffProfileId: entry.staffProfileId,
+            memberId: entry.memberId,
             facilityId: entry.facilityId,
             date: new Date(currentDate),
             startTime: entry.startTime,

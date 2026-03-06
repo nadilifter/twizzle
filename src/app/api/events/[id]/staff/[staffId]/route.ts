@@ -62,7 +62,7 @@ export async function PATCH(
         ...(validatedData.notes !== undefined && { notes: validatedData.notes }),
       },
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {

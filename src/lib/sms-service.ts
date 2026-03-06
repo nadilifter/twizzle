@@ -29,7 +29,7 @@ export interface SendSingleSmsParams {
   body: string;
   classification?: SmsClassification;
   userId?: string;
-  staffProfileId?: string;
+  memberId?: string;
   campaignId?: string;
 }
 
@@ -335,7 +335,6 @@ export async function sendSingleSms(
     body,
     classification = "GENERAL",
     userId,
-    staffProfileId,
     campaignId,
   } = params;
 
@@ -391,7 +390,6 @@ export async function sendSingleSms(
     data: {
       organizationId,
       userId,
-      staffProfileId,
       campaignId,
       to: normalizedPhone,
       from: process.env.TWILIO_PHONE_NUMBER || "",

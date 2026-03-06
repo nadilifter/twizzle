@@ -186,7 +186,6 @@ export async function POST(
         id: true, 
         passwordHash: true, 
         status: true,
-        organizationId: true,
       },
     });
 
@@ -236,13 +235,12 @@ export async function POST(
           },
         });
 
-        // Update user: set password, activate, set active organization
+        // Update user: set password and activate
         await tx.user.update({
           where: { id: user.id },
           data: {
             passwordHash,
             status: "ACTIVE",
-            organizationId: invitation.organizationId,
           },
         });
       });
@@ -305,13 +303,8 @@ export async function POST(
           },
         });
 
-        // Set user's active organization to the newly joined one
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            organizationId: invitation.organizationId,
-          },
-        });
+        // User is now an active member of the organization
+        // (membership status already updated above)
       });
 
       return NextResponse.json({

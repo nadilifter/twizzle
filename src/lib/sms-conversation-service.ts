@@ -405,17 +405,20 @@ export async function routeInboundMessage(params: {
     withoutCountryCode,
   ];
 
-  // Find users with this phone number (match any stored format)
-  const users = await db.user.findMany({
-    where: { phone: { in: phoneVariants } },
+  // Find org members with this phone number via their user
+  const members = await db.organizationMember.findMany({
+    where: {
+      user: { phone: { in: phoneVariants } },
+      status: "ACTIVE",
+    },
     select: {
-      id: true,
       organizationId: true,
-      name: true,
+      userId: true,
+      user: { select: { name: true } },
     },
   });
 
-  if (users.length === 0) {
+  if (members.length === 0) {
     // No matching user -- try to find by recent outbound messages
     const recentOutbound = await db.smsMessage.findFirst({
       where: {
@@ -464,19 +467,17 @@ export async function routeInboundMessage(params: {
     return;
   }
 
-  // Route to each matching user's conversation
-  for (const user of users) {
-    if (!user.organizationId) continue;
-
+  // Route to each matching member's conversation
+  for (const member of members) {
     const conversationId = await getOrCreateConversation(
-      user.organizationId,
-      user.id
+      member.organizationId,
+      member.userId
     );
 
     await db.smsMessage.create({
       data: {
-        organizationId: user.organizationId,
-        userId: user.id,
+        organizationId: member.organizationId,
+        userId: member.userId,
         conversationId,
         to,
         from: normalizedFrom,

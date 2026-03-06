@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const addProgramStaffSchema = z.object({
-  staffProfileId: z.string().min(1, "Staff profile is required"),
+  memberId: z.string().min(1, "Member is required"),
   role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).optional(),
   isPrimary: z.boolean().optional(),
   notes: z.string().optional().nullable(),
@@ -40,7 +40,7 @@ export async function GET(
     const programStaff = await db.programStaff.findMany({
       where: { programId },
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {
@@ -105,21 +105,21 @@ export async function POST(
     const body = await request.json();
     const validatedData = addProgramStaffSchema.parse(body);
 
-    // Verify staff profile belongs to organization
-    const staffProfile = await db.staffProfile.findFirst({
-      where: { id: validatedData.staffProfileId, organizationId },
+    // Verify member belongs to organization
+    const member = await db.organizationMember.findFirst({
+      where: { id: validatedData.memberId, organizationId },
     });
 
-    if (!staffProfile) {
-      return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+    if (!member) {
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
     // Check if staff is already assigned to program
     const existingAssignment = await db.programStaff.findUnique({
       where: {
-        programId_staffProfileId: {
+        programId_memberId: {
           programId,
-          staffProfileId: validatedData.staffProfileId,
+          memberId: validatedData.memberId,
         },
       },
     });
@@ -139,13 +139,13 @@ export async function POST(
     const programStaff = await db.programStaff.create({
       data: {
         programId,
-        staffProfileId: validatedData.staffProfileId,
+        memberId: validatedData.memberId,
         role: validatedData.role || "ASSISTANT_COACH",
         isPrimary: validatedData.isPrimary ?? false,
         notes: validatedData.notes ?? null,
       },
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {

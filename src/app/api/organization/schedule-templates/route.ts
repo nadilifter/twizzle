@@ -8,7 +8,7 @@ const templateEntrySchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format"),
   endTime: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format"),
   shiftType: z.string().min(1, "Shift type is required"),
-  staffProfileId: z.string().optional().nullable(),
+  memberId: z.string().optional().nullable(),
   facilityId: z.string().optional().nullable(),
 });
 
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
             startTime: entry.startTime,
             endTime: entry.endTime,
             shiftType: entry.shiftType,
-            staffProfileId: entry.staffProfileId ?? null,
+            memberId: entry.memberId ?? null,
             facilityId: entry.facilityId ?? null,
           })),
         } : undefined,

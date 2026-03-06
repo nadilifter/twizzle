@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
+import { useRouter } from "next/navigation"
 import { 
   MoreHorizontal, 
   Plus, 
@@ -64,7 +65,8 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { useFeatures } from "@/components/feature-context"
-import { PERMISSION_GROUPS, ROLE_PERMISSIONS } from "@/lib/permissions"
+import { PERMISSION_GROUPS, PERMISSION_FEATURE_MAP, ROLE_PERMISSIONS } from "@/lib/permissions"
+import type { FeatureKey } from "@/lib/feature-toggles"
 
 // --- Roles ---
 type RoleId = "admin" | "coach" | "volunteer" | "accountant" | "custom"
@@ -100,6 +102,7 @@ const ROLES: RoleDefinition[] = [
 
 interface User {
   id: string
+  memberId: string
   name: string
   email: string
   avatar?: string
@@ -108,18 +111,25 @@ interface User {
   status: "active" | "invited"
   joinedDate: string
   lastActive: string
+  title?: string | null
+  employmentType?: string | null
 }
 
 /**
- * Maps permission group categories to their required feature toggle keys.
- * Groups not listed here are always shown.
+ * Checks whether an individual permission is available based on feature flags.
+ * Permissions not in PERMISSION_FEATURE_MAP are always available.
  */
-const PERMISSION_CATEGORY_FEATURE_MAP: Record<string, import("@/lib/feature-toggles").FeatureKey> = {
-  Training: "training",
-  Events: "events",
+function isPermissionAvailable(
+  permissionId: string,
+  isFeatureEnabled: (key: FeatureKey) => boolean
+): boolean {
+  const requiredFeature = PERMISSION_FEATURE_MAP[permissionId as keyof typeof PERMISSION_FEATURE_MAP]
+  if (!requiredFeature) return true
+  return isFeatureEnabled(requiredFeature)
 }
 
 export default function UsersPage() {
+  const router = useRouter()
   const { isFeatureEnabled } = useFeatures()
   const [users, setUsers] = React.useState<User[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
@@ -156,12 +166,14 @@ export default function UsersPage() {
     }
   }
 
-  // Update permissions when role changes
+  // Update permissions when role changes, filtering by enabled features
   const handleRoleChange = (roleId: RoleId) => {
     setSelectedRole(roleId)
     if (roleId !== "custom") {
       const roleKey = roleId.toUpperCase()
-      const permissions = ROLE_PERMISSIONS[roleKey] || []
+      const permissions = (ROLE_PERMISSIONS[roleKey] || []).filter(
+        (p) => isPermissionAvailable(p, isFeatureEnabled)
+      )
       setSelectedPermissions([...permissions])
     }
   }
@@ -183,8 +195,12 @@ export default function UsersPage() {
   })
 
   const handleViewUser = (user: User) => {
-    setViewingUser(user)
-    setIsDetailsOpen(true)
+    if (user.memberId) {
+      router.push(`/dashboard/organization/users/${user.memberId}`)
+    } else {
+      setViewingUser(user)
+      setIsDetailsOpen(true)
+    }
   }
 
   const handleEditUser = (user: User) => {
@@ -360,22 +376,23 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead className="hidden md:table-cell">Title</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Joined</TableHead>
-                  <TableHead className="hidden md:table-cell">Last Active</TableHead>
+                  <TableHead className="hidden lg:table-cell">Joined</TableHead>
+                  <TableHead className="hidden lg:table-cell">Last Active</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       No users found.
                     </TableCell>
                   </TableRow>
@@ -406,6 +423,9 @@ export default function UsersPage() {
                            {ROLES.find(r => r.id === user.role)?.name || user.role}
                          </Badge>
                       </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                        {user.title || "—"}
+                      </TableCell>
                       <TableCell>
                         {user.status === "active" ? (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
@@ -413,10 +433,10 @@ export default function UsersPage() {
                           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Invited</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground" suppressHydrationWarning>
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground" suppressHydrationWarning>
                         {format(new Date(user.joinedDate), "MMM d, yyyy")}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground" suppressHydrationWarning>
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground" suppressHydrationWarning>
                         {format(new Date(user.lastActive), "MMM d, h:mm a")}
                       </TableCell>
                       <TableCell className="text-right">
@@ -586,43 +606,46 @@ export default function UsersPage() {
 
                   <div className="space-y-4">
                     <Label className="text-base">Granular Permissions</Label>
-                    {PERMISSION_GROUPS.filter((group) => {
-                      const requiredFeature = PERMISSION_CATEGORY_FEATURE_MAP[group.category]
-                      return !requiredFeature || isFeatureEnabled(requiredFeature)
-                    }).map((group) => (
-                      <div key={group.category} className="space-y-3">
-                        <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{group.category}</h4>
-                        <div className="grid grid-cols-1 gap-2">
-                          {group.items.map((perm) => {
-                            const isChecked = selectedPermissions.includes(perm.id) || selectedPermissions.includes("*")
-                            return (
-                              <div 
-                                key={perm.id} 
-                                className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"
-                              >
-                                <div className="space-y-0.5">
-                                  <Label 
-                                    htmlFor={`perm-${perm.id}`}
-                                    className="text-base font-medium cursor-pointer"
-                                  >
-                                    {perm.label}
-                                  </Label>
-                                  <p className="text-sm text-muted-foreground">
-                                    {perm.description}
-                                  </p>
+                    {PERMISSION_GROUPS.map((group) => {
+                      const availableItems = group.items.filter((perm) =>
+                        isPermissionAvailable(perm.id, isFeatureEnabled)
+                      )
+                      if (availableItems.length === 0) return null
+                      return (
+                        <div key={group.category} className="space-y-3">
+                          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{group.category}</h4>
+                          <div className="grid grid-cols-1 gap-2">
+                            {availableItems.map((perm) => {
+                              const isChecked = selectedPermissions.includes(perm.id) || selectedPermissions.includes("*")
+                              return (
+                                <div 
+                                  key={perm.id} 
+                                  className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"
+                                >
+                                  <div className="space-y-0.5">
+                                    <Label 
+                                      htmlFor={`perm-${perm.id}`}
+                                      className="text-base font-medium cursor-pointer"
+                                    >
+                                      {perm.label}
+                                    </Label>
+                                    <p className="text-sm text-muted-foreground">
+                                      {perm.description}
+                                    </p>
+                                  </div>
+                                  <Switch
+                                    id={`perm-${perm.id}`}
+                                    checked={isChecked}
+                                    onCheckedChange={() => togglePermission(perm.id)}
+                                    disabled={selectedPermissions.includes("*")}
+                                  />
                                 </div>
-                                <Switch
-                                  id={`perm-${perm.id}`}
-                                  checked={isChecked}
-                                  onCheckedChange={() => togglePermission(perm.id)}
-                                  disabled={selectedPermissions.includes("*")}
-                                />
-                              </div>
-                            )
-                          })}
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>

@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
 
-    const staffProfiles = await db.staffProfile.findMany({
+    const members = await db.organizationMember.findMany({
       where: {
         organizationId,
         ...(search && {
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    return NextResponse.json(staffProfiles);
+    return NextResponse.json(members);
   } catch (error) {
     console.error("Error fetching staff:", error);
     return NextResponse.json({ error: "Failed to fetch staff" }, { status: 500 });
@@ -111,28 +111,57 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createStaffSchema.parse(body);
 
-    // Check if user exists and belongs to organization
-    const user = await db.user.findFirst({
-      where: {
-        id: validatedData.userId,
-        organizationId,
-      },
+    // Check if member already exists for this user+org
+    const existingMember = await db.organizationMember.findUnique({
+      where: { organizationId_userId: { organizationId, userId: validatedData.userId } },
+    });
+
+    if (existingMember) {
+      // Update existing member with staff fields
+      const updatedMember = await db.organizationMember.update({
+        where: { id: existingMember.id },
+        data: {
+          employmentType: validatedData.employmentType || existingMember.employmentType || "FULL_TIME",
+          title: validatedData.title ?? existingMember.title,
+          hourlyRate: validatedData.hourlyRate ?? existingMember.hourlyRate,
+          hireDate: validatedData.hireDate ? new Date(validatedData.hireDate) : existingMember.hireDate,
+          certifications: validatedData.certifications ?? existingMember.certifications ?? undefined,
+          phone: validatedData.phone ?? existingMember.phone,
+          emergencyContact: validatedData.emergencyContact ?? existingMember.emergencyContact ?? undefined,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              role: true,
+              status: true,
+            },
+          },
+          _count: {
+            select: {
+              shifts: true,
+              eventAssignments: true,
+            },
+          },
+        },
+      });
+
+      return NextResponse.json(updatedMember, { status: 200 });
+    }
+
+    // Verify user exists
+    const user = await db.user.findUnique({
+      where: { id: validatedData.userId },
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found in this organization" }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if staff profile already exists for this user
-    const existingProfile = await db.staffProfile.findUnique({
-      where: { userId: validatedData.userId },
-    });
-
-    if (existingProfile) {
-      return NextResponse.json({ error: "Staff profile already exists for this user" }, { status: 400 });
-    }
-
-    const staffProfile = await db.staffProfile.create({
+    const member = await db.organizationMember.create({
       data: {
         organizationId,
         userId: validatedData.userId,
@@ -164,7 +193,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(staffProfile, { status: 201 });
+    return NextResponse.json(member, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });

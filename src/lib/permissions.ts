@@ -1,5 +1,7 @@
 // Permission constants and helpers for RBAC
 
+import type { FeatureKey } from "./feature-toggles";
+
 export const PERMISSIONS = {
   // General
   DASHBOARD_VIEW: "dashboard.view",
@@ -30,12 +32,18 @@ export const PERMISSIONS = {
   EVENTS_EDIT: "events.edit",
   EVENTS_DELETE: "events.delete",
 
+  // Coaching
+  COACHING_PORTAL: "coaching.portal",
+  COACHING_ASSIGN: "coaching.assign",
+  COACHING_ATTENDANCE: "coaching.attendance",
+  COACHING_EVALUATIONS: "coaching.evaluations",
+
   // Financials
   FINANCIALS_VIEW: "financials.view",
   FINANCIALS_CREATE: "financials.create",
   FINANCIALS_EDIT: "financials.edit",
   FINANCIALS_DELETE: "financials.delete",
-  FINANCIALS_ADMIN: "financials.admin", // Full financial access
+  FINANCIALS_ADMIN: "financials.admin",
 
   // Users
   USERS_VIEW: "users.view",
@@ -53,7 +61,7 @@ export const PERMISSIONS = {
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
-// Default permissions for each role
+// Default permissions for each role template
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: [PERMISSIONS.ALL],
   COACH: [
@@ -67,6 +75,10 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.EVENTS_VIEW,
     PERMISSIONS.EVENTS_CREATE,
     PERMISSIONS.EVENTS_EDIT,
+    PERMISSIONS.COACHING_PORTAL,
+    PERMISSIONS.COACHING_ASSIGN,
+    PERMISSIONS.COACHING_ATTENDANCE,
+    PERMISSIONS.COACHING_EVALUATIONS,
     PERMISSIONS.COMMUNICATION_VIEW,
     PERMISSIONS.COMMUNICATION_SEND,
   ],
@@ -82,7 +94,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.FINANCIALS_EDIT,
     PERMISSIONS.FAMILIES_VIEW,
   ],
-  CUSTOM: [], // Custom roles start with no permissions
+  CUSTOM: [],
 };
 
 // Permission groups for UI display
@@ -132,6 +144,15 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    category: "Coaching",
+    items: [
+      { id: PERMISSIONS.COACHING_PORTAL, label: "Access Coach Portal", description: "View the coaching portal" },
+      { id: PERMISSIONS.COACHING_ASSIGN, label: "Coach Assignment", description: "Be assignable as a coach for classes and programs" },
+      { id: PERMISSIONS.COACHING_ATTENDANCE, label: "Manage Attendance", description: "Take and view attendance records" },
+      { id: PERMISSIONS.COACHING_EVALUATIONS, label: "Manage Evaluations", description: "Fill out and view evaluations" },
+    ],
+  },
+  {
     category: "Financials",
     items: [
       { id: PERMISSIONS.FINANCIALS_VIEW, label: "View Financials", description: "View invoices and transactions" },
@@ -144,7 +165,7 @@ export const PERMISSION_GROUPS = [
   {
     category: "Users",
     items: [
-      { id: PERMISSIONS.USERS_VIEW, label: "View Users", description: "View staff and users" },
+      { id: PERMISSIONS.USERS_VIEW, label: "View Users", description: "View users in the organization" },
       { id: PERMISSIONS.USERS_CREATE, label: "Create Users", description: "Invite new users" },
       { id: PERMISSIONS.USERS_EDIT, label: "Edit Users", description: "Modify user roles and permissions" },
       { id: PERMISSIONS.USERS_DELETE, label: "Delete Users", description: "Remove users from organization" },
@@ -158,6 +179,25 @@ export const PERMISSION_GROUPS = [
     ],
   },
 ];
+
+/**
+ * Maps permissions to the feature flag that controls their visibility.
+ * Permissions not in this map are always available.
+ */
+export const PERMISSION_FEATURE_MAP: Partial<Record<Permission, FeatureKey>> = {
+  [PERMISSIONS.TRAINING_VIEW]: "training",
+  [PERMISSIONS.TRAINING_CREATE]: "training",
+  [PERMISSIONS.TRAINING_EDIT]: "training",
+  [PERMISSIONS.TRAINING_DELETE]: "training",
+  [PERMISSIONS.EVENTS_VIEW]: "events",
+  [PERMISSIONS.EVENTS_CREATE]: "events",
+  [PERMISSIONS.EVENTS_EDIT]: "events",
+  [PERMISSIONS.EVENTS_DELETE]: "events",
+  [PERMISSIONS.COACHING_EVALUATIONS]: "training",
+  [PERMISSIONS.COACHING_ATTENDANCE]: "training",
+  [PERMISSIONS.COMMUNICATION_VIEW]: "sms",
+  [PERMISSIONS.COMMUNICATION_SEND]: "sms",
+};
 
 // Helper to check if user has permission
 export function hasPermission(userPermissions: string[], requiredPermission: Permission): boolean {

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const addEventStaffSchema = z.object({
-  staffProfileId: z.string().min(1, "Staff profile is required"),
+  memberId: z.string().min(1, "Member is required"),
   role: z.enum(["LEAD", "ASSISTANT", "VOLUNTEER", "OBSERVER"]).optional(),
   notes: z.string().optional().nullable(),
 });
@@ -39,7 +39,7 @@ export async function GET(
     const eventStaff = await db.eventStaff.findMany({
       where: { eventId },
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {
@@ -103,21 +103,21 @@ export async function POST(
     const body = await request.json();
     const validatedData = addEventStaffSchema.parse(body);
 
-    // Verify staff profile belongs to organization
-    const staffProfile = await db.staffProfile.findFirst({
-      where: { id: validatedData.staffProfileId, organizationId },
+    // Verify member belongs to organization
+    const member = await db.organizationMember.findFirst({
+      where: { id: validatedData.memberId, organizationId },
     });
 
-    if (!staffProfile) {
-      return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+    if (!member) {
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
     // Check if staff is already assigned to event
     const existingAssignment = await db.eventStaff.findUnique({
       where: {
-        eventId_staffProfileId: {
+        eventId_memberId: {
           eventId,
-          staffProfileId: validatedData.staffProfileId,
+          memberId: validatedData.memberId,
         },
       },
     });
@@ -129,12 +129,12 @@ export async function POST(
     const eventStaff = await db.eventStaff.create({
       data: {
         eventId,
-        staffProfileId: validatedData.staffProfileId,
+        memberId: validatedData.memberId,
         role: validatedData.role || "ASSISTANT",
         notes: validatedData.notes ?? null,
       },
       include: {
-        staffProfile: {
+        member: {
           include: {
             user: {
               select: {

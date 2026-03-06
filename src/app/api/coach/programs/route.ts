@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getEffectiveUser } from "@/lib/impersonation";
+import { getEffectiveUser, getCoachingMemberships } from "@/lib/impersonation";
 
 // GET /api/coach/programs
-// Returns programs assigned to the current coach (via ProgramStaff or Event.coachId)
-// Supports superadmin impersonation via "view as user" feature
+// Returns programs assigned to the current coach across all coaching organizations
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
@@ -14,61 +13,58 @@ export async function GET(request: NextRequest) {
     }
 
     const effectiveUser = await getEffectiveUser(session);
-    if (!effectiveUser?.organizationId) {
+    if (!effectiveUser) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    const { userId, organizationId } = effectiveUser;
+    const { userId } = effectiveUser;
+    const coachingMemberships = await getCoachingMemberships(session);
+    if (coachingMemberships.length === 0) {
+      return NextResponse.json({ data: [], total: 0 });
+    }
 
-    // First, get the user's staff profile
-    const staffProfile = await db.staffProfile.findUnique({
-      where: { userId },
+    const orgIds = coachingMemberships.map((m) => m.organizationId);
+    const memberIds = coachingMemberships.map((m) => m.memberId);
+
+    // Find programs via ProgramStaff assignments across all coaching orgs
+    const programStaffAssignments = await db.programStaff.findMany({
+      where: { memberId: { in: memberIds } },
+      select: { programId: true, role: true, isPrimary: true },
     });
 
-    // Find programs via ProgramStaff assignments
-    const programStaffAssignments = staffProfile
-      ? await db.programStaff.findMany({
-          where: { staffProfileId: staffProfile.id },
-          select: { programId: true, role: true, isPrimary: true },
-        })
-      : [];
+    const programIdsFromStaff = programStaffAssignments.map((a) => a.programId);
 
-    const programIdsFromStaff = programStaffAssignments.map(a => a.programId);
-
-    // Find programs via Event.coachId
+    // Find programs via Event.coachId across all coaching orgs
     const coachEvents = await db.event.findMany({
       where: {
         coachId: userId,
-        organizationId,
+        organizationId: { in: orgIds },
         programId: { not: null },
       },
-      select: {
-        programId: true,
-      },
+      select: { programId: true },
       distinct: ["programId"],
     });
 
     const programIdsFromEvents = coachEvents
-      .map(e => e.programId)
+      .map((e) => e.programId)
       .filter((id): id is string => id !== null);
 
-    // Combine and deduplicate program IDs
     const allProgramIds = Array.from(new Set([...programIdsFromStaff, ...programIdsFromEvents]));
 
     if (allProgramIds.length === 0) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    // Fetch full program details
     const programs = await db.program.findMany({
       where: {
         id: { in: allProgramIds },
-        organizationId,
+        organizationId: { in: orgIds },
       },
       include: {
+        organization: { select: { id: true, name: true } },
         staffAssignments: {
           include: {
-            staffProfile: {
+            member: {
               include: {
                 user: {
                   select: {
@@ -80,10 +76,7 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          orderBy: [
-            { isPrimary: "desc" },
-            { role: "asc" },
-          ],
+          orderBy: [{ isPrimary: "desc" }, { role: "asc" }],
         },
         _count: {
           select: {
@@ -95,9 +88,8 @@ export async function GET(request: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    // Add assignment info to each program
-    const programsWithMeta = programs.map(program => {
-      const staffAssignment = programStaffAssignments.find(a => a.programId === program.id);
+    const programsWithMeta = programs.map((program) => {
+      const staffAssignment = programStaffAssignments.find((a) => a.programId === program.id);
       return {
         ...program,
         assignmentSource: staffAssignment ? "staff" : "event",

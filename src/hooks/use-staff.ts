@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import type {
-  StaffProfileWithUser,
-  StaffProfileWithAvailability,
-  StaffAvailability,
-  CreateStaffPayload,
-  UpdateStaffPayload,
+  MemberWithUser,
+  MemberWithAvailability,
+  MemberAvailability,
+  CreateMemberPayload,
+  UpdateMemberPayload,
   AvailabilityEntry,
 } from "@/types/staff";
 
@@ -17,15 +17,15 @@ interface UseStaffOptions {
 }
 
 interface UseStaffReturn {
-  staff: StaffProfileWithUser[];
+  staff: MemberWithUser[];
   isLoading: boolean;
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
   error: string | null;
   fetchStaff: (search?: string) => Promise<void>;
-  createStaff: (data: CreateStaffPayload) => Promise<StaffProfileWithUser | null>;
-  updateStaff: (id: string, data: UpdateStaffPayload) => Promise<StaffProfileWithUser | null>;
+  createStaff: (data: CreateMemberPayload) => Promise<MemberWithUser | null>;
+  updateStaff: (id: string, data: UpdateMemberPayload) => Promise<MemberWithUser | null>;
   deleteStaff: (id: string) => Promise<boolean>;
   refresh: () => Promise<void>;
   clearError: () => void;
@@ -34,7 +34,7 @@ interface UseStaffReturn {
 export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
   const { autoFetch = true, search: initialSearch = "" } = options;
 
-  const [staff, setStaff] = useState<StaffProfileWithUser[]>([]);
+  const [staff, setStaff] = useState<MemberWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -55,7 +55,7 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
 
     try {
       const params = searchQuery ? { search: searchQuery } : {};
-      const response = await api.get<StaffProfileWithUser[]>("/api/organization/staff", params);
+      const response = await api.get<MemberWithUser[]>("/api/organization/staff", params);
       setStaff(response);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch staff";
@@ -66,12 +66,12 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
     }
   }, []);
 
-  const createStaff = useCallback(async (data: CreateStaffPayload): Promise<StaffProfileWithUser | null> => {
+  const createStaff = useCallback(async (data: CreateMemberPayload): Promise<MemberWithUser | null> => {
     setIsCreating(true);
     setError(null);
 
     try {
-      const newStaff = await api.post<StaffProfileWithUser>("/api/organization/staff", data);
+      const newStaff = await api.post<MemberWithUser>("/api/organization/staff", data);
       setStaff((prev) => [...prev, newStaff]);
       return newStaff;
     } catch (err) {
@@ -86,13 +86,13 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
 
   const updateStaff = useCallback(async (
     id: string,
-    data: UpdateStaffPayload
-  ): Promise<StaffProfileWithUser | null> => {
+    data: UpdateMemberPayload
+  ): Promise<MemberWithUser | null> => {
     setIsUpdating(true);
     setError(null);
 
     try {
-      const updatedStaff = await api.patch<StaffProfileWithUser>(`/api/organization/staff/${id}`, data);
+      const updatedStaff = await api.patch<MemberWithUser>(`/api/organization/staff/${id}`, data);
       setStaff((prev) =>
         prev.map((s) => (s.id === id ? updatedStaff : s))
       );
@@ -156,53 +156,56 @@ export function useStaff(options: UseStaffOptions = {}): UseStaffReturn {
   };
 }
 
-// Hook for single staff profile with availability
-export function useStaffProfile(id: string | null) {
-  const [staffProfile, setStaffProfile] = useState<StaffProfileWithAvailability | null>(null);
+// Hook for single member profile with availability
+export function useMemberProfile(id: string | null) {
+  const [memberProfile, setMemberProfile] = useState<MemberWithAvailability | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStaffProfile = useCallback(async () => {
+  const fetchMemberProfile = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
     setError(null);
     try {
-      const data = await api.get<StaffProfileWithAvailability>(`/api/organization/staff/${id}`);
-      setStaffProfile(data);
+      const data = await api.get<MemberWithAvailability>(`/api/organization/staff/${id}`);
+      setMemberProfile(data);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Failed to fetch staff profile";
+      const message = err instanceof ApiError ? err.message : "Failed to fetch member profile";
       setError(message);
-      console.error("Error fetching staff profile:", err);
+      console.error("Error fetching member profile:", err);
     } finally {
       setIsLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
-    fetchStaffProfile();
-  }, [fetchStaffProfile]);
+    fetchMemberProfile();
+  }, [fetchMemberProfile]);
 
   return {
-    staffProfile,
+    memberProfile,
     isLoading,
     error,
-    fetchStaffProfile,
+    fetchMemberProfile,
   };
 }
 
-// Hook for staff availability
-export function useStaffAvailability(staffProfileId: string | null) {
-  const [availability, setAvailability] = useState<StaffAvailability[]>([]);
+/** @deprecated Use useMemberProfile */
+export const useStaffProfile = useMemberProfile;
+
+// Hook for member availability
+export function useMemberAvailability(memberId: string | null) {
+  const [availability, setAvailability] = useState<MemberAvailability[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAvailability = useCallback(async () => {
-    if (!staffProfileId) return;
+    if (!memberId) return;
     setIsLoading(true);
     setError(null);
     try {
-      const data = await api.get<StaffAvailability[]>(`/api/organization/staff/${staffProfileId}/availability`);
+      const data = await api.get<MemberAvailability[]>(`/api/organization/staff/${memberId}/availability`);
       setAvailability(data);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to fetch availability";
@@ -211,14 +214,14 @@ export function useStaffAvailability(staffProfileId: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [staffProfileId]);
+  }, [memberId]);
 
   const saveAvailability = useCallback(async (entries: AvailabilityEntry[]): Promise<boolean> => {
-    if (!staffProfileId) return false;
+    if (!memberId) return false;
     setIsSaving(true);
     setError(null);
     try {
-      const data = await api.put<StaffAvailability[]>(`/api/organization/staff/${staffProfileId}/availability`, entries);
+      const data = await api.put<MemberAvailability[]>(`/api/organization/staff/${memberId}/availability`, entries);
       setAvailability(data);
       return true;
     } catch (err) {
@@ -229,7 +232,7 @@ export function useStaffAvailability(staffProfileId: string | null) {
     } finally {
       setIsSaving(false);
     }
-  }, [staffProfileId]);
+  }, [memberId]);
 
   useEffect(() => {
     fetchAvailability();
@@ -244,3 +247,6 @@ export function useStaffAvailability(staffProfileId: string | null) {
     saveAvailability,
   };
 }
+
+/** @deprecated Use useMemberAvailability */
+export const useStaffAvailability = useMemberAvailability;

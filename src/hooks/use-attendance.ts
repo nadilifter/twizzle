@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import type {
   AttendanceWithRelations,
@@ -28,7 +28,9 @@ interface UseAttendanceReturn {
 }
 
 export function useAttendance(options: UseAttendanceOptions = {}): UseAttendanceReturn {
-  const { autoFetch = false, initialParams = {} } = options;
+  const { autoFetch = false, initialParams } = options;
+  const initialParamsRef = useRef(initialParams);
+  initialParamsRef.current = initialParams;
 
   const [attendances, setAttendances] = useState<AttendanceWithRelations[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,8 +41,7 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     setIsLoading(true);
     setError(null);
     try {
-      const queryParams = { ...initialParams, ...params };
-      // Filter out undefined values
+      const queryParams = { ...initialParamsRef.current, ...params };
       const cleanParams = Object.fromEntries(
         Object.entries(queryParams).filter(([_, v]) => v !== undefined)
       );
@@ -54,7 +55,7 @@ export function useAttendance(options: UseAttendanceOptions = {}): UseAttendance
     } finally {
       setIsLoading(false);
     }
-  }, [initialParams]);
+  }, []);
 
   const markAttendance = useCallback(async (data: CreateAttendancePayload) => {
     setIsUpdating(true);

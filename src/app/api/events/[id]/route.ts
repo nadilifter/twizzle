@@ -69,7 +69,7 @@ export async function GET(
         },
         staffAssignments: {
           include: {
-            staffProfile: {
+            member: {
               include: {
                 user: {
                   select: {

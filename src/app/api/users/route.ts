@@ -28,11 +28,8 @@ export async function GET() {
         organizationId: session.user.organizationId,
       },
       include: {
-        user: {
-          include: {
-            permissions: true,
-          },
-        },
+        user: true,
+        permissions: true,
       },
       orderBy: {
         joinedAt: "desc",
@@ -44,14 +41,17 @@ export async function GET() {
       .filter((m) => !m.user.email.endsWith("@uplifterinc.com"))
       .map((member) => ({
         id: member.user.id,
+        memberId: member.id,
         name: member.user.name,
         email: member.user.email,
         avatar: member.user.avatar,
         role: member.role.toLowerCase(),
-        permissions: member.user.permissions.map((p) => p.permission),
+        permissions: member.permissions.map((p) => p.permission),
         status: member.status.toLowerCase(),
         joinedDate: member.joinedAt,
         lastActive: member.user.lastActiveAt || member.joinedAt,
+        title: member.title,
+        employmentType: member.employmentType,
       }));
 
     return NextResponse.json(transformedUsers);
@@ -183,13 +183,6 @@ export async function POST(request: NextRequest) {
             email: validatedData.email,
             role: validatedData.role as "ADMIN" | "COACH" | "VOLUNTEER" | "ACCOUNTANT" | "CUSTOM",
             status: "INVITED",
-            organizationId: session.user.organizationId,
-            permissions: {
-              create: permissions.map((p) => ({ permission: p })),
-            },
-          },
-          include: {
-            permissions: true,
           },
         });
 
@@ -199,6 +192,9 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             role: validatedData.role as "ADMIN" | "COACH" | "VOLUNTEER" | "ACCOUNTANT" | "CUSTOM",
             status: "INVITED",
+            permissions: {
+              create: permissions.map((p) => ({ permission: p })),
+            },
           },
         });
 
@@ -228,7 +224,7 @@ export async function POST(request: NextRequest) {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role.toLowerCase(),
-        permissions: newUser.permissions.map((p) => p.permission),
+        permissions,
         status: newUser.status.toLowerCase(),
         joinedDate: newUser.createdAt,
         lastActive: newUser.createdAt,

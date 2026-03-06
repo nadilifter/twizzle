@@ -44,7 +44,7 @@ interface Program {
     id: string;
     role: string;
     isPrimary: boolean;
-    staffProfile: {
+    member: {
       id: string;
       title: string | null;
       user: { id: string; name: string; avatar: string | null };
@@ -138,7 +138,7 @@ export function FilterableProgramList({
     const map = new Map<string, Coach>();
     for (const program of programs) {
       for (const sa of program.staffAssignments ?? []) {
-        const user = sa.staffProfile.user;
+        const user = sa.member.user;
         if (!map.has(user.id)) {
           map.set(user.id, { id: user.id, name: user.name, avatar: user.avatar });
         }
@@ -217,7 +217,7 @@ export function FilterableProgramList({
       // Coach filter: show programs that have ANY of the selected coaches assigned
       if (filters.selectedCoaches.length > 0) {
         const hasMatchingCoach = (program.staffAssignments ?? []).some((sa) =>
-          filters.selectedCoaches.includes(sa.staffProfile.user.id)
+          filters.selectedCoaches.includes(sa.member.user.id)
         );
         if (!hasMatchingCoach) {
           return false;

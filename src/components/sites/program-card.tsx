@@ -12,7 +12,7 @@ interface StaffAssignment {
   id: string;
   role: string;
   isPrimary: boolean;
-  staffProfile: {
+  member: {
     id: string;
     title: string | null;
     user: {
@@ -298,7 +298,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
               <div className="flex -space-x-2">
                 {staffAssignments.slice(0, 3).map((assignment) => (
                   <Avatar key={assignment.id} className="h-7 w-7 border-2 border-background">
-                    <AvatarImage src={assignment.staffProfile.user.avatar || ""} />
+                    <AvatarImage src={assignment.member.user.avatar || ""} />
                     <AvatarFallback className="text-xs">
                       <User className="h-3 w-3" />
                     </AvatarFallback>
@@ -309,7 +309,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
                 {staffAssignments.slice(0, 2).map((a, i) => (
                   <span key={a.id}>
                     {i > 0 && ", "}
-                    {a.staffProfile.user.name}
+                    {a.member.user.name}
                     {a.isPrimary && <Star className="h-3 w-3 inline ml-0.5 text-amber-500" />}
                   </span>
                 ))}

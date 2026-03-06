@@ -491,7 +491,7 @@ export async function getRecipients(
 
     case "INTERNAL_USERS": {
       // Get internal staff/admin users
-      const userRoles = filters.userRoles || ["ADMIN", "COACH", "STAFF"];
+      const userRoles = filters.userRoles || ["ADMIN", "COACH"];
 
       const members = await db.organizationMember.findMany({
         where: {

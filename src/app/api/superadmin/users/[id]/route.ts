@@ -6,7 +6,7 @@ import { z } from "zod";
 const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  role: z.enum(["ADMIN", "COACH", "STAFF", "VOLUNTEER", "ACCOUNTANT", "PARENT", "CUSTOM"]).optional(),
+  role: z.enum(["ADMIN", "COACH", "VOLUNTEER", "ACCOUNTANT", "PARENT", "CUSTOM"]).optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "INVITED"]).optional(),
   isSuperAdmin: z.boolean().optional(),
 });
@@ -31,12 +31,12 @@ export async function GET(
     const user = await db.user.findUnique({
       where: { id },
       include: {
-        permissions: true,
         memberships: {
           include: {
             organization: {
               select: { id: true, name: true },
             },
+            permissions: true,
           },
         },
       },
@@ -54,7 +54,7 @@ export async function GET(
       role: user.role,
       status: user.status,
       isSuperAdmin: user.isSuperAdmin,
-      permissions: user.permissions.map((p) => p.permission),
+      permissions: user.memberships.flatMap((m) => m.permissions.map((p) => p.permission)),
       memberships: user.memberships.map((m) => ({
         id: m.id,
         role: m.role,
@@ -125,33 +125,16 @@ export async function PATCH(
       where: { id },
       data: updateData,
       include: {
-        permissions: true,
         memberships: {
           include: {
             organization: {
               select: { id: true, name: true },
             },
+            permissions: true,
           },
         },
       },
     });
-
-    // If granting superadmin status, ensure wildcard permission exists
-    if (validatedData.isSuperAdmin === true) {
-      await db.userPermission.upsert({
-        where: {
-          userId_permission: {
-            userId: id,
-            permission: "*",
-          },
-        },
-        create: {
-          userId: id,
-          permission: "*",
-        },
-        update: {},
-      });
-    }
 
     return NextResponse.json({
       id: updatedUser.id,
@@ -161,7 +144,7 @@ export async function PATCH(
       role: updatedUser.role,
       status: updatedUser.status,
       isSuperAdmin: updatedUser.isSuperAdmin,
-      permissions: updatedUser.permissions.map((p) => p.permission),
+      permissions: updatedUser.memberships.flatMap((m) => m.permissions.map((p) => p.permission)),
       memberships: updatedUser.memberships.map((m) => ({
         id: m.id,
         role: m.role,

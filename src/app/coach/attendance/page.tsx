@@ -40,6 +40,7 @@ import {
   Shield,
   GraduationCap,
   ArrowLeft,
+  Building2,
 } from "lucide-react";
 import { format, subDays, addDays, isToday, isBefore, startOfDay } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -66,6 +67,10 @@ const EVENT_TYPE_STYLES: Record<string, string> = {
 };
 
 export default function CoachAttendancePage() {
+  return <CoachAttendanceContent />;
+}
+
+function CoachAttendanceContent() {
   const searchParams = useSearchParams();
   const initialEventId = searchParams.get("eventId");
 
@@ -271,6 +276,12 @@ export default function CoachAttendancePage() {
                 <span className="flex items-center gap-1">
                   <GraduationCap className="h-3.5 w-3.5" />
                   {selectedEvent.program.name}
+                </span>
+              )}
+              {selectedEvent.organization && (
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-3.5 w-3.5" />
+                  {selectedEvent.organization.name}
                 </span>
               )}
             </div>
@@ -629,6 +640,12 @@ export default function CoachAttendancePage() {
                                   <span className="flex items-center gap-1">
                                     <GraduationCap className="h-3.5 w-3.5" />
                                     {event.program.name}
+                                  </span>
+                                )}
+                                {event.organization && (
+                                  <span className="flex items-center gap-1">
+                                    <Building2 className="h-3.5 w-3.5" />
+                                    {event.organization.name}
                                   </span>
                                 )}
                                 {(event.attendanceCount ?? 0) > 0 && (

@@ -25,9 +25,8 @@ interface UseCoachEventsReturn {
 }
 
 /**
- * Hook for fetching events assigned to the current coach.
- * Automatically filters by the logged-in user's ID as coachId.
- * Supports superadmin impersonation via "view as user" feature.
+ * Hook for fetching events assigned to the current coach across all coaching organizations.
+ * Uses the dedicated coach events endpoint for multi-org support.
  */
 export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEventsReturn {
   const { autoFetch = true, initialParams = {} } = options;
@@ -70,11 +69,7 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
     setError(null);
 
     try {
-      // Add coachId to filter by current user (or impersonated coach)
-      const response = await api.get<EventsListResponse>("/api/events", {
-        ...queryParams,
-        coachId: effectiveCoachId,
-      });
+      const response = await api.get<EventsListResponse>("/api/coach/events", queryParams);
       setEvents(response.data);
       setTotal(response.total);
     } catch (err) {
@@ -113,8 +108,7 @@ export function useCoachEvents(options: UseCoachEventsOptions = {}): UseCoachEve
 }
 
 /**
- * Hook for fetching today's events for the coach.
- * Useful for attendance marking.
+ * Hook for fetching today's events for the coach across all coaching orgs.
  */
 export function useCoachTodayEvents() {
   const today = new Date();

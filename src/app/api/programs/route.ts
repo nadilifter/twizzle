@@ -49,7 +49,7 @@ const createProgramSchema = z.object({
   waiverRequirementIds: z.array(z.string()).optional(),
   trainingZoneIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
-    staffProfileId: z.string(),
+    memberId: z.string(),
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
     isPrimary: z.boolean().default(false),
   })).optional(),
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
           },
           staffAssignments: {
             include: {
-              staffProfile: {
+              member: {
                 include: {
                   user: {
                     select: { id: true, name: true, avatar: true },
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
         await tx.programStaff.createMany({
           data: validatedData.staffAssignments.map(sa => ({
             programId: newProgram.id,
-            staffProfileId: sa.staffProfileId,
+            memberId: sa.memberId,
             role: sa.role,
             isPrimary: sa.isPrimary,
           })),
@@ -390,7 +390,7 @@ export async function POST(request: NextRequest) {
           },
           staffAssignments: {
             include: {
-              staffProfile: {
+              member: {
                 include: {
                   user: {
                     select: { id: true, name: true, avatar: true },

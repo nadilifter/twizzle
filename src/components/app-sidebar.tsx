@@ -274,10 +274,6 @@ const data = {
           url: "/dashboard/organization/schedules",
         },
         {
-          title: "Staff",
-          url: "/dashboard/organization/staff",
-        },
-        {
           title: "Store",
           url: "/dashboard/organization/store",
         },

@@ -25,17 +25,24 @@ export async function getEffectiveUser(session: Session | null): Promise<Effecti
   if (user.isSuperAdmin && user.viewingAsUserId) {
     const targetUser = await db.user.findUnique({
       where: { id: user.viewingAsUserId },
-      include: { organization: true },
+      include: {
+        memberships: {
+          include: { organization: true },
+          take: 1,
+        },
+      },
     });
 
     if (!targetUser) {
       return null;
     }
 
+    const targetMembership = targetUser.memberships[0];
+
     return {
       userId: targetUser.id,
-      organizationId: targetUser.organizationId || "",
-      organizationName: targetUser.organization?.name || "",
+      organizationId: targetMembership?.organizationId || "",
+      organizationName: targetMembership?.organization?.name || "",
       isImpersonating: true,
     };
   }
@@ -72,4 +79,45 @@ export async function getEffectiveOrganizationId(session: Session | null): Promi
 export function isImpersonating(session: Session | null): boolean {
   if (!session?.user) return false;
   return !!(session.user.isSuperAdmin && session.user.viewingAsUserId);
+}
+
+/**
+ * Get all organization memberships where the user has coaching.portal permission.
+ * Returns memberId + organizationId pairs for multi-org coach queries.
+ */
+export async function getCoachingMemberships(session: Session | null): Promise<
+  Array<{ memberId: string; organizationId: string; organizationName: string }>
+> {
+  const effective = await getEffectiveUser(session);
+  if (!effective) return [];
+
+  const { ROLE_PERMISSIONS } = await import("./permissions");
+
+  const memberships = await db.organizationMember.findMany({
+    where: {
+      userId: effective.userId,
+      status: "ACTIVE",
+      organization: { isActive: true },
+    },
+    include: {
+      permissions: true,
+      organization: { select: { name: true } },
+    },
+  });
+
+  return memberships
+    .filter((m) => {
+      const explicit = m.permissions.map((p) => p.permission);
+      if (explicit.includes("*") || explicit.includes("coaching.portal")) return true;
+      if (explicit.length === 0) {
+        const rolePerms = ROLE_PERMISSIONS[m.role] || [];
+        return (rolePerms as string[]).includes("*") || (rolePerms as string[]).includes("coaching.portal");
+      }
+      return false;
+    })
+    .map((m) => ({
+      memberId: m.id,
+      organizationId: m.organizationId,
+      organizationName: m.organization.name,
+    }));
 }

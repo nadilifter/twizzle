@@ -87,7 +87,6 @@ export async function POST(
           passwordHash,
           role: "PARENT",
           status: "ACTIVE",
-          organizationId,
         },
       });
 

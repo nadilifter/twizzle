@@ -44,7 +44,6 @@ const getRoleBadgeVariant = (role: string, isSuperAdmin: boolean): "default" | "
     case "ADMIN":
       return "destructive"
     case "COACH":
-    case "STAFF":
       return "default"
     case "VOLUNTEER":
     case "ACCOUNTANT":

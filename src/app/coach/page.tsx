@@ -16,6 +16,7 @@ import {
   Users,
   ArrowRight,
   AlertCircle,
+  Building2,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
@@ -30,12 +31,15 @@ interface OverviewEvent {
   type: string;
   program: { id: string; name: string } | null;
   facility: { id: string; name: string } | null;
+  organization?: { id: string; name: string };
   attendanceCount: number;
 }
 
 interface OverviewProgram {
   id: string;
   name: string;
+  organizationId?: string;
+  organizationName?: string;
   enrollmentCount: number;
   eventCount: number;
 }
@@ -55,6 +59,11 @@ interface OverviewCompetition {
   categoryCount: number;
 }
 
+interface CoachingOrg {
+  id: string;
+  name: string;
+}
+
 interface OverviewData {
   todayEvents: OverviewEvent[];
   todayEventCount: number;
@@ -65,6 +74,7 @@ interface OverviewData {
   upcomingCompetitions: OverviewCompetition[];
   competitionCount: number;
   nextEvent: OverviewEvent | null;
+  organizations?: CoachingOrg[];
 }
 
 const EVENT_TYPE_STYLES: Record<string, string> = {
@@ -314,6 +324,12 @@ export default function CoachDashboard() {
                               {event.facility.name}
                             </span>
                           )}
+                          {event.organization && (
+                            <span className="flex items-center gap-1">
+                              <Building2 className="h-3.5 w-3.5" />
+                              {event.organization.name}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-bold whitespace-nowrap ml-2">
@@ -371,6 +387,12 @@ export default function CoachDashboard() {
                     <div className="min-w-0">
                       <h3 className="font-semibold truncate">{program.name}</h3>
                       <div className="flex gap-3 text-sm text-muted-foreground mt-0.5">
+                        {program.organizationName && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3.5 w-3.5" />
+                            {program.organizationName}
+                          </span>
+                        )}
                         <span className="flex items-center gap-1">
                           <Users className="h-3.5 w-3.5" />
                           {program.enrollmentCount} enrolled

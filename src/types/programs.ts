@@ -263,7 +263,7 @@ export interface CreateProgramPayload {
   waitlistCapacity?: number | null;
   // For staff assignments during creation
   staffAssignments?: Array<{
-    staffProfileId: string;
+    memberId: string;
     role: string;
     isPrimary: boolean;
   }>;
@@ -309,7 +309,7 @@ export interface UpdateProgramPayload {
   waitlistCapacity?: number | null;
   // For staff assignments
   staffAssignments?: Array<{
-    staffProfileId: string;
+    memberId: string;
     role: string;
     isPrimary: boolean;
   }>;
