@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const createDiscountSchema = z.object({
@@ -167,8 +168,8 @@ export async function POST(request: NextRequest) {
         code: validatedData.code,
         type: validatedData.type,
         amount: validatedData.amount,
-        validFrom: new Date(validatedData.validFrom),
-        validTo: validatedData.validTo ? new Date(validatedData.validTo) : null,
+        validFrom: parseDateOnly(validatedData.validFrom)!,
+        validTo: validatedData.validTo ? parseDateOnly(validatedData.validTo) : null,
         userScope: validatedData.userScope,
         productScope: validatedData.productScope,
         usageLimit: validatedData.usageLimit ?? undefined,

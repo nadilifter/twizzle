@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const updateInstanceSchema = z.object({
   name: z.string().min(1).optional(),
   price: z.number().min(0).optional(),
   billingInterval: z.enum(["ONE_TIME", "MONTHLY", "YEARLY", "SESSION"]).optional(),
-  startDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
-  endDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
-  autoRenewDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? new Date(val) : undefined),
-  purchaseStartDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? new Date(val) : undefined),
-  purchaseEndDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? new Date(val) : undefined),
+  startDate: z.string().optional().transform((str) => str ? parseDateOnly(str) ?? undefined : undefined),
+  endDate: z.string().optional().transform((str) => str ? parseDateOnly(str) ?? undefined : undefined),
+  autoRenewDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? parseDateOnly(val) ?? undefined : undefined),
+  purchaseStartDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? parseDateOnly(val) ?? undefined : undefined),
+  purchaseEndDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? parseDateOnly(val) ?? undefined : undefined),
   capacity: z.number().int().min(0).nullable().optional(),
   status: z.enum(["DRAFT", "ACTIVE", "EXPIRED", "CANCELLED", "ARCHIVED"]).optional(),
 });

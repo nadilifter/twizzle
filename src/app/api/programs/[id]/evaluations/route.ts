@@ -232,7 +232,7 @@ export async function POST(
       });
     }
 
-    const evaluationDate = validatedData.date ? new Date(validatedData.date) : new Date();
+    const evaluationDate = validatedData.date ? parseDateOnly(validatedData.date)! : new Date();
 
     // Create evaluations in a transaction
     const createdEvaluations = await db.$transaction(async (tx) => {

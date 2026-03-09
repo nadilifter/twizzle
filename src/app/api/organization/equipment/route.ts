@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const createEquipmentSchema = z.object({
@@ -107,8 +108,8 @@ export async function POST(request: NextRequest) {
         status: validatedData.status ?? "ACTIVE",
         facilityId: validatedData.facilityId ?? null,
         trainingZoneId: validatedData.trainingZoneId ?? null,
-        purchaseDate: validatedData.purchaseDate ? new Date(validatedData.purchaseDate) : null,
-        lastInspectionDate: validatedData.lastInspectionDate ? new Date(validatedData.lastInspectionDate) : null,
+        purchaseDate: validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null,
+        lastInspectionDate: validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null,
         notes: validatedData.notes ?? null,
       },
       include: {

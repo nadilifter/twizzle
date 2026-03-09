@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const rotationSchema = z.object({
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: validatedData.name,
         programId: validatedData.programId,
-        date: validatedData.date ? new Date(validatedData.date) : null,
+        date: validatedData.date ? parseDateOnly(validatedData.date) : null,
         authorId: session.user.id,
         status: validatedData.status,
         theme: validatedData.theme,

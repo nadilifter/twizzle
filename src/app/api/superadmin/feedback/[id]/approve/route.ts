@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { parseDateOnly } from "@/lib/date-utils"
 import { sendEmail } from "@/lib/email"
 import { getEnvConfig } from "@/lib/env-domains"
 import { z } from "zod"
@@ -53,7 +54,7 @@ export async function POST(
         statusChangedAt: new Date(),
         ...(validatedData.categories && { categories: validatedData.categories }),
         ...(validatedData.targetDate !== undefined && {
-          targetDate: validatedData.targetDate ? new Date(validatedData.targetDate) : null,
+          targetDate: validatedData.targetDate ? parseDateOnly(validatedData.targetDate) : null,
         }),
       },
     })

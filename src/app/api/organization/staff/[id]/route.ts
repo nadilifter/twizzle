@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const updateStaffSchema = z.object({
@@ -119,7 +120,7 @@ export async function PATCH(
     if (validatedData.employmentType !== undefined) updateData.employmentType = validatedData.employmentType;
     if (validatedData.title !== undefined) updateData.title = validatedData.title;
     if (validatedData.hourlyRate !== undefined) updateData.hourlyRate = validatedData.hourlyRate;
-    if (validatedData.hireDate !== undefined) updateData.hireDate = validatedData.hireDate ? new Date(validatedData.hireDate) : null;
+    if (validatedData.hireDate !== undefined) updateData.hireDate = validatedData.hireDate ? parseDateOnly(validatedData.hireDate) : null;
     if (validatedData.certifications !== undefined) updateData.certifications = validatedData.certifications;
     if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
     if (validatedData.emergencyContact !== undefined) updateData.emergencyContact = validatedData.emergencyContact;

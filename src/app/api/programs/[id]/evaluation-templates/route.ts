@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const assignTemplateSchema = z.object({
@@ -156,7 +157,7 @@ export async function POST(
         programId,
         templateId: validatedData.templateId,
         isRequired: validatedData.isRequired,
-        dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
+        dueDate: validatedData.dueDate ? parseDateOnly(validatedData.dueDate) : null,
       },
       include: {
         template: {
@@ -349,7 +350,7 @@ export async function PATCH(
           isRequired: validatedData.isRequired,
         }),
         ...(validatedData.dueDate !== undefined && {
-          dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
+          dueDate: validatedData.dueDate ? parseDateOnly(validatedData.dueDate) : null,
         }),
       },
       include: {

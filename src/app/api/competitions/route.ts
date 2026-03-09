@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAuthSession } from "@/lib/auth"
 import { checkFeatureGate } from "@/lib/feature-resolver"
 import { db } from "@/lib/db"
+import { parseDateOnly } from "@/lib/date-utils"
 import { z } from "zod"
 
 const competitionInclude = {
@@ -191,8 +192,8 @@ export async function POST(request: NextRequest) {
         postalCode: data.postalCode,
 
         // Dates
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
+        startDate: parseDateOnly(String(data.startDate))!,
+        endDate: parseDateOnly(String(data.endDate))!,
         startTime: data.startTime,
         endTime: data.endTime,
 
@@ -221,7 +222,7 @@ export async function POST(request: NextRequest) {
 
         // Publishing
         publishStatus: data.publishStatus,
-        scheduledGoLiveDate: data.scheduledGoLiveDate ? new Date(data.scheduledGoLiveDate) : null,
+        scheduledGoLiveDate: data.scheduledGoLiveDate ? parseDateOnly(String(data.scheduledGoLiveDate)) : null,
         scheduledGoLiveTime: data.scheduledGoLiveTime || null,
 
         // Pricing tiers (for TIERED mode)

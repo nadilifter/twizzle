@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const updateEquipmentSchema = z.object({
@@ -101,10 +102,10 @@ export async function PATCH(
     const updateData: Record<string, unknown> = { ...validatedData };
     
     if (validatedData.purchaseDate !== undefined) {
-      updateData.purchaseDate = validatedData.purchaseDate ? new Date(validatedData.purchaseDate) : null;
+      updateData.purchaseDate = validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null;
     }
     if (validatedData.lastInspectionDate !== undefined) {
-      updateData.lastInspectionDate = validatedData.lastInspectionDate ? new Date(validatedData.lastInspectionDate) : null;
+      updateData.lastInspectionDate = validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null;
     }
 
     // If facility is being cleared, also clear training zone

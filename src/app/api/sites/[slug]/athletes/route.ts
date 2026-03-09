@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
+import { parseDateOnly } from "@/lib/date-utils";
 
 /**
  * GET /api/sites/[slug]/athletes
@@ -169,7 +170,7 @@ export async function POST(
     const userName = session.user.name || `${firstName} ${lastName}`;
 
     // Duplicate detection: check for matching athlete in the same org
-    const parsedBirthDate = new Date(birthDate);
+    const parsedBirthDate = parseDateOnly(birthDate)!;
     const startOfDay = new Date(parsedBirthDate);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(parsedBirthDate);

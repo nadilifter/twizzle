@@ -54,8 +54,8 @@ export async function POST(
     const body = await request.json();
     const validatedData = generateShiftsSchema.parse(body);
 
-    const startDate = new Date(validatedData.startDate);
-    const endDate = new Date(validatedData.endDate);
+    const startDate = parseDateOnly(validatedData.startDate)!;
+    const endDate = parseDateOnly(validatedData.endDate)!;
 
     if (startDate > endDate) {
       return NextResponse.json({ error: "Start date must be before end date" }, { status: 400 });

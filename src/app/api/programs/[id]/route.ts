@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 import { RRule } from "rrule";
 import { format, addMinutes } from "date-fns";
@@ -278,8 +279,8 @@ export async function PATCH(
       // New calendar scheduling fields
       if (validatedData.recurrenceType !== undefined) updateData.recurrenceType = validatedData.recurrenceType;
       if (validatedData.registrationType !== undefined) updateData.registrationType = validatedData.registrationType;
-      if (validatedData.startDate !== undefined) updateData.startDate = validatedData.startDate ? new Date(validatedData.startDate) : null;
-      if (validatedData.endDate !== undefined) updateData.endDate = validatedData.endDate ? new Date(validatedData.endDate) : null;
+      if (validatedData.startDate !== undefined) updateData.startDate = validatedData.startDate ? parseDateOnly(validatedData.startDate) : null;
+      if (validatedData.endDate !== undefined) updateData.endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate) : null;
       if (validatedData.startTime !== undefined) updateData.startTime = validatedData.startTime;
       if (validatedData.duration !== undefined) updateData.duration = validatedData.duration;
       if (validatedData.rrule !== undefined) updateData.rrule = validatedData.rrule;
@@ -320,10 +321,10 @@ export async function PATCH(
 
         // Generate new instances
         const startDate = validatedData.startDate 
-          ? new Date(validatedData.startDate) 
+          ? parseDateOnly(validatedData.startDate) 
           : existing.startDate;
         const endDate = validatedData.endDate 
-          ? new Date(validatedData.endDate) 
+          ? parseDateOnly(validatedData.endDate) 
           : existing.endDate;
         const startTime = validatedData.startTime ?? (existing as any).startTime;
         const duration = validatedData.duration ?? (existing as any).duration;

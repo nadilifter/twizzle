@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAuthSession } from "@/lib/auth"
 import { checkFeatureGate } from "@/lib/feature-resolver"
 import { db } from "@/lib/db"
+import { parseDateOnly } from "@/lib/date-utils"
 import { z } from "zod"
 
 const competitionInclude = {
@@ -220,8 +221,8 @@ export async function PATCH(
     if (data.city !== undefined) updateData.city = data.city
     if (data.streetAddress !== undefined) updateData.streetAddress = data.streetAddress
     if (data.postalCode !== undefined) updateData.postalCode = data.postalCode
-    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate)
-    if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate)
+    if (data.startDate !== undefined) updateData.startDate = parseDateOnly(String(data.startDate))
+    if (data.endDate !== undefined) updateData.endDate = parseDateOnly(String(data.endDate))
     if (data.startTime !== undefined) updateData.startTime = data.startTime
     if (data.endTime !== undefined) updateData.endTime = data.endTime
     if (data.categoryMode !== undefined) updateData.categoryMode = data.categoryMode
@@ -259,7 +260,7 @@ export async function PATCH(
         updateData.status = statusMap[data.publishStatus]
       }
     }
-    if (data.scheduledGoLiveDate !== undefined) updateData.scheduledGoLiveDate = data.scheduledGoLiveDate ? new Date(data.scheduledGoLiveDate) : null
+    if (data.scheduledGoLiveDate !== undefined) updateData.scheduledGoLiveDate = data.scheduledGoLiveDate ? parseDateOnly(String(data.scheduledGoLiveDate)) : null
     if (data.scheduledGoLiveTime !== undefined) updateData.scheduledGoLiveTime = data.scheduledGoLiveTime
 
     const competition = await db.competition.update({

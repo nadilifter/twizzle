@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 import { RRule } from "rrule";
 import { format, addMinutes, parse } from "date-fns";
@@ -252,8 +253,8 @@ export async function POST(request: NextRequest) {
           // New calendar scheduling fields
           recurrenceType: validatedData.recurrenceType,
           registrationType: validatedData.registrationType,
-          startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
-          endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
+          startDate: validatedData.startDate ? parseDateOnly(validatedData.startDate) : null,
+          endDate: validatedData.endDate ? parseDateOnly(validatedData.endDate) : null,
           startTime: validatedData.startTime,
           duration: validatedData.duration,
           rrule: validatedData.rrule,
@@ -327,8 +328,8 @@ export async function POST(request: NextRequest) {
 
       // Generate program instances based on schedule
       if (validatedData.startDate && validatedData.startTime && validatedData.duration) {
-        const startDate = new Date(validatedData.startDate);
-        const endDate = validatedData.endDate ? new Date(validatedData.endDate) : startDate;
+        const startDate = parseDateOnly(validatedData.startDate)!;
+        const endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate)! : startDate;
         const endTime = calculateEndTime(validatedData.startTime, validatedData.duration);
         
         // Generate dates based on recurrence type

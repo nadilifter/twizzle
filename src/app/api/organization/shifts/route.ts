@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const createShiftSchema = z.object({
@@ -50,12 +51,12 @@ export async function GET(request: NextRequest) {
         ...(status && { status: status as "SCHEDULED" | "CONFIRMED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "NO_SHOW" }),
         ...(startDate && {
           date: {
-            gte: new Date(startDate),
+            gte: parseDateOnly(startDate)!,
           },
         }),
         ...(endDate && {
           date: {
-            lte: new Date(endDate),
+            lte: parseDateOnly(endDate)!,
           },
         }),
       },
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
         organizationId,
         memberId: validatedData.memberId,
         facilityId: validatedData.facilityId ?? null,
-        date: new Date(validatedData.date),
+        date: parseDateOnly(validatedData.date)!,
         startTime: validatedData.startTime,
         endTime: validatedData.endTime,
         shiftType: validatedData.shiftType,

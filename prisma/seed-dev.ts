@@ -53,6 +53,13 @@ const ORG_UPLIFTER_ID = "seed-org-uplifter";
 
 const daysFromNow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+/** Parse a YYYY-MM-DD string as noon UTC to prevent timezone date shifts */
+function noonUTC(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+}
+
 async function main() {
   console.log("🌱 Starting development seed...\n");
 
@@ -595,20 +602,20 @@ async function main() {
   // ============================================
   console.log("\n🏃 Creating athletes...");
   await Promise.all([
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-1` }, update: {}, create: { id: `${ORG1_ID}-ath-1`, name: "Emily Anderson", email: "emily.a@email.com", birthDate: new Date("2016-03-15"), medicalDetails: { allergies: ["peanuts"], conditions: [], emergencyContact: { name: "Michelle Anderson", phone: "(555) 101-1001" } } } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-2` }, update: {}, create: { id: `${ORG1_ID}-ath-2`, name: "Sophie Anderson", email: "sophie.a@email.com", birthDate: new Date("2014-07-22") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-3` }, update: {}, create: { id: `${ORG1_ID}-ath-3`, name: "Olivia Baker", birthDate: new Date("2013-11-08") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-4` }, update: {}, create: { id: `${ORG1_ID}-ath-4`, name: "Lily Chen", birthDate: new Date("2017-01-30") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-5` }, update: {}, create: { id: `${ORG1_ID}-ath-5`, name: "Mia Chen", birthDate: new Date("2012-09-14") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-6` }, update: {}, create: { id: `${ORG1_ID}-ath-6`, name: "Grace Davis", birthDate: new Date("2011-05-20") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-7` }, update: {}, create: { id: `${ORG1_ID}-ath-7`, name: "Ava Evans", birthDate: new Date("2015-12-03") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-8` }, update: {}, create: { id: `${ORG1_ID}-ath-8`, name: "Hannah Evans", birthDate: new Date("2019-08-11") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-1` }, update: {}, create: { id: `${ORG2_ID}-ath-1`, name: "Jake Foster", email: "jake.f@email.com", birthDate: new Date("2014-04-18") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-2` }, update: {}, create: { id: `${ORG2_ID}-ath-2`, name: "Ethan Foster", birthDate: new Date("2010-10-25") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-3` }, update: {}, create: { id: `${ORG2_ID}-ath-3`, name: "Sofia Garcia", birthDate: new Date("2016-06-12") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-4` }, update: {}, create: { id: `${ORG2_ID}-ath-4`, name: "Lucas Garcia", birthDate: new Date("2011-02-28") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-5` }, update: {}, create: { id: `${ORG2_ID}-ath-5`, name: "Chloe Harris", birthDate: new Date("2015-09-07") } }),
-    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-6` }, update: {}, create: { id: `${ORG2_ID}-ath-6`, name: "Noah Irving", birthDate: new Date("2012-11-19") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-1` }, update: {}, create: { id: `${ORG1_ID}-ath-1`, name: "Emily Anderson", email: "emily.a@email.com", birthDate: noonUTC("2016-03-15"), medicalDetails: { allergies: ["peanuts"], conditions: [], emergencyContact: { name: "Michelle Anderson", phone: "(555) 101-1001" } } } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-2` }, update: {}, create: { id: `${ORG1_ID}-ath-2`, name: "Sophie Anderson", email: "sophie.a@email.com", birthDate: noonUTC("2014-07-22") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-3` }, update: {}, create: { id: `${ORG1_ID}-ath-3`, name: "Olivia Baker", birthDate: noonUTC("2013-11-08") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-4` }, update: {}, create: { id: `${ORG1_ID}-ath-4`, name: "Lily Chen", birthDate: noonUTC("2017-01-30") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-5` }, update: {}, create: { id: `${ORG1_ID}-ath-5`, name: "Mia Chen", birthDate: noonUTC("2012-09-14") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-6` }, update: {}, create: { id: `${ORG1_ID}-ath-6`, name: "Grace Davis", birthDate: noonUTC("2011-05-20") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-7` }, update: {}, create: { id: `${ORG1_ID}-ath-7`, name: "Ava Evans", birthDate: noonUTC("2015-12-03") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG1_ID}-ath-8` }, update: {}, create: { id: `${ORG1_ID}-ath-8`, name: "Hannah Evans", birthDate: noonUTC("2019-08-11") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-1` }, update: {}, create: { id: `${ORG2_ID}-ath-1`, name: "Jake Foster", email: "jake.f@email.com", birthDate: noonUTC("2014-04-18") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-2` }, update: {}, create: { id: `${ORG2_ID}-ath-2`, name: "Ethan Foster", birthDate: noonUTC("2010-10-25") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-3` }, update: {}, create: { id: `${ORG2_ID}-ath-3`, name: "Sofia Garcia", birthDate: noonUTC("2016-06-12") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-4` }, update: {}, create: { id: `${ORG2_ID}-ath-4`, name: "Lucas Garcia", birthDate: noonUTC("2011-02-28") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-5` }, update: {}, create: { id: `${ORG2_ID}-ath-5`, name: "Chloe Harris", birthDate: noonUTC("2015-09-07") } }),
+    prisma.athlete.upsert({ where: { id: `${ORG2_ID}-ath-6` }, update: {}, create: { id: `${ORG2_ID}-ath-6`, name: "Noah Irving", birthDate: noonUTC("2012-11-19") } }),
   ]);
   console.log("  ✓ Created 14 athletes");
 
@@ -828,9 +835,9 @@ async function main() {
     },
   });
   await Promise.all([
-    prisma.membershipInstance.upsert({ where: { id: `${ORG1_ID}-mi-2026` }, update: {}, create: { id: `${ORG1_ID}-mi-2026`, membershipGroupId: org1MembershipGroup.id, name: "2025-2026 Season", price: 75, billingInterval: "YEARLY", startDate: new Date("2025-09-01"), endDate: new Date("2026-08-31"), autoRenewDate: new Date("2026-07-01"), status: "ACTIVE", isAutoGenerated: false } }),
-    prisma.membershipInstance.upsert({ where: { id: `${ORG2_ID}-mi-winter26` }, update: {}, create: { id: `${ORG2_ID}-mi-winter26`, membershipGroupId: org2MembershipGroup.id, name: "Winter 2026", price: 150, billingInterval: "SESSION", startDate: new Date("2026-01-01"), endDate: new Date("2026-03-31"), status: "ACTIVE", isAutoGenerated: false } }),
-    prisma.membershipInstance.upsert({ where: { id: `${ORG2_ID}-mi-spring26` }, update: {}, create: { id: `${ORG2_ID}-mi-spring26`, membershipGroupId: org2MembershipGroup.id, name: "Spring 2026", price: 150, billingInterval: "SESSION", startDate: new Date("2026-04-01"), endDate: new Date("2026-06-30"), status: "DRAFT", isAutoGenerated: true } }),
+    prisma.membershipInstance.upsert({ where: { id: `${ORG1_ID}-mi-2026` }, update: {}, create: { id: `${ORG1_ID}-mi-2026`, membershipGroupId: org1MembershipGroup.id, name: "2025-2026 Season", price: 75, billingInterval: "YEARLY", startDate: noonUTC("2025-09-01"), endDate: noonUTC("2026-08-31"), autoRenewDate: noonUTC("2026-07-01"), status: "ACTIVE", isAutoGenerated: false } }),
+    prisma.membershipInstance.upsert({ where: { id: `${ORG2_ID}-mi-winter26` }, update: {}, create: { id: `${ORG2_ID}-mi-winter26`, membershipGroupId: org2MembershipGroup.id, name: "Winter 2026", price: 150, billingInterval: "SESSION", startDate: noonUTC("2026-01-01"), endDate: noonUTC("2026-03-31"), status: "ACTIVE", isAutoGenerated: false } }),
+    prisma.membershipInstance.upsert({ where: { id: `${ORG2_ID}-mi-spring26` }, update: {}, create: { id: `${ORG2_ID}-mi-spring26`, membershipGroupId: org2MembershipGroup.id, name: "Spring 2026", price: 150, billingInterval: "SESSION", startDate: noonUTC("2026-04-01"), endDate: noonUTC("2026-06-30"), status: "DRAFT", isAutoGenerated: true } }),
   ]);
   console.log("  ✓ Created 2 membership groups and 3 instances");
 
@@ -839,13 +846,13 @@ async function main() {
   // ============================================
   console.log("\n🎟️ Creating athlete memberships...");
   const athleteMembershipData = [
-    { id: `${ORG1_ID}-am-1`, athleteId: `${ORG1_ID}-ath-1`, membershipInstanceId: `${ORG1_ID}-mi-2026`, startDate: new Date("2025-09-01"), status: "ACTIVE" as const, autoRenew: true },
-    { id: `${ORG1_ID}-am-2`, athleteId: `${ORG1_ID}-ath-2`, membershipInstanceId: `${ORG1_ID}-mi-2026`, startDate: new Date("2025-09-01"), status: "ACTIVE" as const, autoRenew: true },
-    { id: `${ORG1_ID}-am-3`, athleteId: `${ORG1_ID}-ath-3`, membershipInstanceId: `${ORG1_ID}-mi-2026`, startDate: new Date("2025-09-01"), status: "ACTIVE" as const, autoRenew: false },
-    { id: `${ORG1_ID}-am-4`, athleteId: `${ORG1_ID}-ath-4`, membershipInstanceId: `${ORG1_ID}-mi-2026`, startDate: new Date("2025-09-15"), status: "ACTIVE" as const, autoRenew: true },
-    { id: `${ORG2_ID}-am-1`, athleteId: `${ORG2_ID}-ath-1`, membershipInstanceId: `${ORG2_ID}-mi-winter26`, startDate: new Date("2026-01-01"), status: "ACTIVE" as const, autoRenew: false },
-    { id: `${ORG2_ID}-am-2`, athleteId: `${ORG2_ID}-ath-2`, membershipInstanceId: `${ORG2_ID}-mi-winter26`, startDate: new Date("2026-01-01"), status: "ACTIVE" as const, autoRenew: false },
-    { id: `${ORG2_ID}-am-3`, athleteId: `${ORG2_ID}-ath-3`, membershipInstanceId: `${ORG2_ID}-mi-winter26`, startDate: new Date("2026-01-15"), status: "ACTIVE" as const, autoRenew: false },
+    { id: `${ORG1_ID}-am-1`, athleteId: `${ORG1_ID}-ath-1`, membershipInstanceId: `${ORG1_ID}-mi-2026`, startDate: noonUTC("2025-09-01"), status: "ACTIVE" as const, autoRenew: true },
+    { id: `${ORG1_ID}-am-2`, athleteId: `${ORG1_ID}-ath-2`, membershipInstanceId: `${ORG1_ID}-mi-2026`, startDate: noonUTC("2025-09-01"), status: "ACTIVE" as const, autoRenew: true },
+    { id: `${ORG1_ID}-am-3`, athleteId: `${ORG1_ID}-ath-3`, membershipInstanceId: `${ORG1_ID}-mi-2026`, startDate: noonUTC("2025-09-01"), status: "ACTIVE" as const, autoRenew: false },
+    { id: `${ORG1_ID}-am-4`, athleteId: `${ORG1_ID}-ath-4`, membershipInstanceId: `${ORG1_ID}-mi-2026`, startDate: noonUTC("2025-09-15"), status: "ACTIVE" as const, autoRenew: true },
+    { id: `${ORG2_ID}-am-1`, athleteId: `${ORG2_ID}-ath-1`, membershipInstanceId: `${ORG2_ID}-mi-winter26`, startDate: noonUTC("2026-01-01"), status: "ACTIVE" as const, autoRenew: false },
+    { id: `${ORG2_ID}-am-2`, athleteId: `${ORG2_ID}-ath-2`, membershipInstanceId: `${ORG2_ID}-mi-winter26`, startDate: noonUTC("2026-01-01"), status: "ACTIVE" as const, autoRenew: false },
+    { id: `${ORG2_ID}-am-3`, athleteId: `${ORG2_ID}-ath-3`, membershipInstanceId: `${ORG2_ID}-mi-winter26`, startDate: noonUTC("2026-01-15"), status: "ACTIVE" as const, autoRenew: false },
   ];
   for (const am of athleteMembershipData) {
     await prisma.athleteMembership.upsert({ where: { id: am.id }, update: {}, create: am });

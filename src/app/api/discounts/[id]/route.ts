@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const updateDiscountSchema = z.object({
@@ -170,8 +171,8 @@ export async function PATCH(
     if (validatedData.code !== undefined) updateData.code = validatedData.code;
     if (validatedData.type !== undefined) updateData.type = validatedData.type;
     if (validatedData.amount !== undefined) updateData.amount = validatedData.amount;
-    if (validatedData.validFrom !== undefined) updateData.validFrom = new Date(validatedData.validFrom);
-    if (validatedData.validTo !== undefined) updateData.validTo = validatedData.validTo ? new Date(validatedData.validTo) : null;
+    if (validatedData.validFrom !== undefined) updateData.validFrom = parseDateOnly(validatedData.validFrom);
+    if (validatedData.validTo !== undefined) updateData.validTo = validatedData.validTo ? parseDateOnly(validatedData.validTo) : null;
     if (validatedData.userScope !== undefined) updateData.userScope = validatedData.userScope;
     if (validatedData.productScope !== undefined) updateData.productScope = validatedData.productScope;
     if (validatedData.usageLimit !== undefined) updateData.usageLimit = validatedData.usageLimit;

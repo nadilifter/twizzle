@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const createRecurringChargeSchema = z.object({
@@ -215,7 +216,7 @@ export async function POST(request: NextRequest) {
         description: validatedData.description,
         amount: validatedData.amount,
         frequency: validatedData.frequency,
-        nextChargeDate: new Date(validatedData.nextChargeDate),
+        nextChargeDate: parseDateOnly(validatedData.nextChargeDate)!,
         paymentMethodId: validatedData.paymentMethodId,
         status: validatedData.status,
       },
@@ -335,7 +336,7 @@ export async function PATCH(request: NextRequest) {
           ...(validatedData.description && { description: validatedData.description }),
           ...(validatedData.amount && { amount: validatedData.amount }),
           ...(validatedData.frequency && { frequency: validatedData.frequency }),
-          ...(validatedData.nextChargeDate && { nextChargeDate: new Date(validatedData.nextChargeDate) }),
+          ...(validatedData.nextChargeDate && { nextChargeDate: parseDateOnly(validatedData.nextChargeDate)! }),
           ...(validatedData.paymentMethodId !== undefined && { paymentMethodId: validatedData.paymentMethodId }),
           ...(validatedData.status && { status: validatedData.status }),
         },

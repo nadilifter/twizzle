@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const updateShiftSchema = z.object({
@@ -129,7 +130,7 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {};
     if (validatedData.memberId !== undefined) updateData.memberId = validatedData.memberId;
     if (validatedData.facilityId !== undefined) updateData.facilityId = validatedData.facilityId;
-    if (validatedData.date !== undefined) updateData.date = new Date(validatedData.date);
+    if (validatedData.date !== undefined) updateData.date = parseDateOnly(validatedData.date);
     if (validatedData.startTime !== undefined) updateData.startTime = validatedData.startTime;
     if (validatedData.endTime !== undefined) updateData.endTime = validatedData.endTime;
     if (validatedData.shiftType !== undefined) updateData.shiftType = validatedData.shiftType;

@@ -109,8 +109,8 @@ export async function POST(
         condition: validatedData.condition ?? "GOOD",
         status: validatedData.status ?? "ACTIVE",
         trainingZoneId: validatedData.trainingZoneId ?? null,
-        purchaseDate: validatedData.purchaseDate ? new Date(validatedData.purchaseDate) : null,
-        lastInspectionDate: validatedData.lastInspectionDate ? new Date(validatedData.lastInspectionDate) : null,
+        purchaseDate: validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null,
+        lastInspectionDate: validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null,
         notes: validatedData.notes ?? null,
       },
       include: {

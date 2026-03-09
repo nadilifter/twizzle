@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
@@ -367,7 +368,7 @@ export async function POST(request: NextRequest) {
         templateId: validatedData.templateId,
         programId: validatedData.programId,
         programInstanceId: validatedData.programInstanceId,
-        date: new Date(validatedData.date),
+        date: parseDateOnly(validatedData.date)!,
         levelId: levelId ?? undefined,
         overallScore: validatedData.overallScore || 0,
         status: validatedData.status || "PENDING",
@@ -435,7 +436,7 @@ export async function POST(request: NextRequest) {
             sr.attemptStatus || "NOT_ATTEMPTED",
             sr.passed,
             evaluation.id,
-            new Date(validatedData.date)
+            parseDateOnly(validatedData.date)!
           );
         }
       }

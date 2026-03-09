@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const updateEventSchema = z.object({
@@ -183,7 +184,7 @@ export async function PATCH(
         details: validatedData.details ?? undefined,
         programId: validatedData.programId,
         coachId: validatedData.coachId,
-        date: validatedData.date ? new Date(validatedData.date) : undefined,
+        date: validatedData.date ? parseDateOnly(validatedData.date) ?? undefined : undefined,
       },
       include: {
         program: true,

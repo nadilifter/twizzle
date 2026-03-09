@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const createEnrollmentSchema = z.object({
@@ -151,8 +152,8 @@ export async function POST(request: NextRequest) {
       data: {
         athleteId: validatedData.athleteId,
         programId: validatedData.programId,
-        startDate: new Date(validatedData.startDate),
-        endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
+        startDate: parseDateOnly(validatedData.startDate)!,
+        endDate: validatedData.endDate ? parseDateOnly(validatedData.endDate) : null,
         status: validatedData.status,
         ...(userId != null ? { userId } : {}),
       },

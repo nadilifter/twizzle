@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
         reference,
         userId: validatedData.userId,
         status: validatedData.status,
-        dueDate: new Date(validatedData.dueDate),
+        dueDate: parseDateOnly(validatedData.dueDate)!,
         subtotal,
         total,
         notes: validatedData.notes,

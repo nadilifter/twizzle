@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
 import { checkAndAwardAchievements } from "@/lib/services/achievement";
@@ -381,7 +382,7 @@ export async function PUT(
     const newStatus = validatedData.status || existingEvaluation.status;
     if (skillRatingsWithPassed && newStatus !== "PENDING" && evaluation) {
       const evalDate = validatedData.date 
-        ? new Date(validatedData.date) 
+        ? parseDateOnly(validatedData.date)! 
         : existingEvaluation.date;
         
       for (const sr of skillRatingsWithPassed) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 import { promoteFromWaitlist } from "@/lib/waitlist-promotion";
 
@@ -95,7 +96,7 @@ export async function PATCH(
       data: {
         ...(validatedData.status && { status: validatedData.status }),
         ...(validatedData.endDate !== undefined && {
-          endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
+          endDate: validatedData.endDate ? parseDateOnly(validatedData.endDate) : null,
         }),
       },
       include: {

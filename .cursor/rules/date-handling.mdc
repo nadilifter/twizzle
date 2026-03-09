@@ -1,0 +1,89 @@
+---
+description: Date-only field handling conventions to prevent timezone shift bugs
+globs:
+  - src/app/api/**/*.ts
+  - prisma/seed*.ts
+  - src/app/dashboard/**/*.tsx
+  - src/components/**/*.tsx
+---
+
+# Date-Only Field Handling
+
+All date-only fields (no time component) MUST be stored at **noon UTC** (`T12:00:00.000Z`) to prevent day-off-by-one bugs in timezones west of UTC.
+
+## The Problem
+
+`new Date("2026-01-23")` produces `2026-01-23T00:00:00.000Z` (midnight UTC). In `America/New_York` (UTC-5), `format(new Date("2026-01-23T00:00:00.000Z"), "MMM d, yyyy")` displays **"Jan 22, 2026"** — one day earlier than intended.
+
+## Required Patterns
+
+### API routes — storing date-only values
+
+Use `parseDateOnly()` from `@/lib/date-utils`. NEVER use `new Date(dateString)` for date-only fields.
+
+```typescript
+import { parseDateOnly } from "@/lib/date-utils";
+
+// Correct
+startDate: parseDateOnly(validatedData.startDate)!,
+endDate: validatedData.endDate ? parseDateOnly(validatedData.endDate) : null,
+
+// WRONG — produces midnight UTC
+startDate: new Date(validatedData.startDate),
+```
+
+### Seed files — constructing date literals
+
+Use the local `noonUTC()` helper:
+
+```typescript
+function noonUTC(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+}
+
+birthDate: noonUTC("2016-03-15"),
+```
+
+### Frontend forms — `<input type="date">` handlers
+
+Parse the `YYYY-MM-DD` value to noon UTC, or keep it as a string and let the API handle parsing:
+
+```typescript
+// Option A: construct noon UTC in the handler
+const [y, m, d] = e.target.value.split("-").map(Number);
+const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+
+// Option B (preferred): keep as string, send YYYY-MM-DD to API
+setFormData(prev => ({ ...prev, startDate: e.target.value }));
+```
+
+### Frontend display — constructing dates from strings for formatting
+
+Append `T12:00:00Z` instead of `T00:00:00`:
+
+```typescript
+// Correct
+const dateObj = new Date(dateString + "T12:00:00Z");
+
+// WRONG — may shift in western timezones
+const dateObj = new Date(dateString + "T00:00:00");
+```
+
+## Date-only vs. datetime fields
+
+**Date-only** (use `parseDateOnly` / noon UTC): `birthDate`, `startDate`, `endDate`, `dueDate`, `hireDate`, `date` (events/shifts/evaluations), `validFrom`, `validTo`, `purchaseDate`, `lastInspectionDate`, `autoRenewDate`, `targetDate`, `nextChargeDate`, `scheduledGoLiveDate`
+
+**True datetimes** (use `new Date()` as-is): `createdAt`, `updatedAt`, `lastActiveAt`, `scheduledAt` (campaigns), `checkedIn`, `settledAt`, `paidAt`, `expiresAt` (tokens/sessions)
+
+## Canonical utilities
+
+All date utilities live in `src/lib/date-utils.ts`:
+
+| Function | Purpose |
+|---|---|
+| `parseDateOnly(str)` | Parse `YYYY-MM-DD` → noon UTC Date |
+| `normalizeToNoonUTC(date)` | Fix midnight UTC → noon UTC |
+| `formatDateOnly(date, tz?)` | Format Date → `YYYY-MM-DD` |
+| `getTodayNoonUTC()` | Today at noon UTC |
+| `isSameDay(d1, d2)` | Compare calendar days in UTC |

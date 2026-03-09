@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const createInstanceSchema = z.object({
   name: z.string().min(1, "Name is required"),
   price: z.number().min(0),
   billingInterval: z.enum(["ONE_TIME", "MONTHLY", "YEARLY", "SESSION"]),
-  startDate: z.string().transform((str) => new Date(str)),
-  endDate: z.string().transform((str) => new Date(str)),
-  autoRenewDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
-  purchaseStartDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
-  purchaseEndDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
+  startDate: z.string().transform((str) => parseDateOnly(str)!),
+  endDate: z.string().transform((str) => parseDateOnly(str)!),
+  autoRenewDate: z.string().optional().transform((str) => str ? parseDateOnly(str) ?? undefined : undefined),
+  purchaseStartDate: z.string().optional().transform((str) => str ? parseDateOnly(str) ?? undefined : undefined),
+  purchaseEndDate: z.string().optional().transform((str) => str ? parseDateOnly(str) ?? undefined : undefined),
   capacity: z.number().int().min(0).optional(),
   status: z.enum(["DRAFT", "ACTIVE"]).default("DRAFT"),
 });

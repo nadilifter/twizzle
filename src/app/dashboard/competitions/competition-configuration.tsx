@@ -695,11 +695,11 @@ export function CompetitionConfiguration({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Start Date</Label>
-                    <Input type="date" value={formData.startDate ? format(formData.startDate, "yyyy-MM-dd") : ""} onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value ? new Date(e.target.value) : null }))} />
+                    <Input type="date" value={formData.startDate ? format(formData.startDate, "yyyy-MM-dd") : ""} onChange={e => { const [y, m, d] = (e.target.value || "").split("-").map(Number); setFormData(prev => ({ ...prev, startDate: e.target.value ? new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)) : null })); }} />
                 </div>
                 <div className="space-y-2">
                     <Label>End Date</Label>
-                    <Input type="date" value={formData.endDate ? format(formData.endDate, "yyyy-MM-dd") : ""} onChange={e => setFormData(prev => ({ ...prev, endDate: e.target.value ? new Date(e.target.value) : null }))} />
+                    <Input type="date" value={formData.endDate ? format(formData.endDate, "yyyy-MM-dd") : ""} onChange={e => { const [y, m, d] = (e.target.value || "").split("-").map(Number); setFormData(prev => ({ ...prev, endDate: e.target.value ? new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)) : null })); }} />
                 </div>
             </div>
 
@@ -1324,7 +1324,7 @@ export function CompetitionConfiguration({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Date</Label>
-                            <Input type="date" value={formData.scheduledGoLiveDate ? format(formData.scheduledGoLiveDate, "yyyy-MM-dd") : ""} onChange={e => setFormData(prev => ({ ...prev, scheduledGoLiveDate: new Date(e.target.value) }))} />
+                            <Input type="date" value={formData.scheduledGoLiveDate ? format(formData.scheduledGoLiveDate, "yyyy-MM-dd") : ""} onChange={e => { const [y, m, d] = (e.target.value || "").split("-").map(Number); setFormData(prev => ({ ...prev, scheduledGoLiveDate: e.target.value ? new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)) : null })); }} />
                         </div>
                         <div className="space-y-2">
                             <Label>Time</Label>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb, db } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const staffAssignmentSchema = z.object({
@@ -87,8 +88,8 @@ export async function GET(request: NextRequest) {
       ...(coachId && { coachId }),
       ...(startDate && endDate && {
         date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
+          gte: parseDateOnly(startDate)!,
+          lte: parseDateOnly(endDate)!,
         },
       }),
     };
@@ -260,7 +261,7 @@ export async function POST(request: NextRequest) {
     
     const data: any = {
         title: validatedData.title,
-        date: new Date(validatedData.date),
+        date: parseDateOnly(validatedData.date)!,
         startTime: validatedData.startTime,
         endTime: validatedData.endTime,
         type: validatedData.type,

@@ -573,8 +573,8 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
   }
 
   // Derived values for schedule tab
-  const startDateObj = formData.startDate ? new Date(formData.startDate + "T00:00:00") : null
-  const endDateObj = formData.endDate ? new Date(formData.endDate + "T00:00:00") : null
+  const startDateObj = formData.startDate ? new Date(formData.startDate + "T12:00:00Z") : null
+  const endDateObj = formData.endDate ? new Date(formData.endDate + "T12:00:00Z") : null
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -1030,7 +1030,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                                 ) : hasConflicts && zone.totalConflicts <= 3 ? (
                                   <Badge variant="secondary" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
                                     <AlertTriangle className="h-3 w-3 mr-1" />
-                                    Full on {zone.conflictDates.map(c => format(new Date(c.date + "T00:00:00"), "MMM d")).join(", ")}
+                                    Full on {zone.conflictDates.map(c => format(new Date(c.date + "T12:00:00Z"), "MMM d")).join(", ")}
                                   </Badge>
                                 ) : hasConflicts ? (
                                   <Badge
@@ -1087,7 +1087,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                               <div className="max-h-64 overflow-y-auto rounded border divide-y">
                                 {zone.conflictDates.map(c => (
                                   <div key={c.date} className="flex items-center justify-between px-3 py-2 text-sm">
-                                    <span>{format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")}</span>
+                                    <span>{format(new Date(c.date + "T12:00:00Z"), "EEE, MMM d, yyyy")}</span>
                                     <span className="text-destructive font-medium">{c.used}/{zone.capacity} used</span>
                                   </div>
                                 ))}
@@ -1143,13 +1143,13 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                                         <ul className="mt-1 space-y-0.5 text-sm">
                                           {zone.conflictDates.map(c => (
                                             <li key={c.date} className="text-destructive">
-                                              {format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")} ({c.used}/{zone.capacity} used)
+                                              {format(new Date(c.date + "T12:00:00Z"), "EEE, MMM d, yyyy")} ({c.used}/{zone.capacity} used)
                                             </li>
                                           ))}
                                         </ul>
                                       ) : (
                                         <p className="text-sm text-muted-foreground">
-                                          {zone.totalConflicts} dates at capacity, from {format(new Date(zone.conflictDates[0].date + "T00:00:00"), "MMM d")} through {format(new Date(zone.conflictDates[zone.conflictDates.length - 1].date + "T00:00:00"), "MMM d, yyyy")}.
+                                          {zone.totalConflicts} dates at capacity, from {format(new Date(zone.conflictDates[0].date + "T12:00:00Z"), "MMM d")} through {format(new Date(zone.conflictDates[zone.conflictDates.length - 1].date + "T12:00:00Z"), "MMM d, yyyy")}.
                                         </p>
                                       )}
                                     </div>

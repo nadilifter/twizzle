@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { parseDateOnly } from "@/lib/date-utils"
 import { z } from "zod"
 
 const createFeatureSchema = z.object({
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
         status: validatedData.status,
         isPublic: validatedData.isPublic,
         categories: validatedData.categories,
-        targetDate: validatedData.targetDate ? new Date(validatedData.targetDate) : null,
+        targetDate: validatedData.targetDate ? parseDateOnly(validatedData.targetDate) : null,
         statusChangedAt: new Date(),
         userId: session.user.id, // Created by superadmin
       },

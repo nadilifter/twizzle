@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const createStaffSchema = z.object({
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
           employmentType: validatedData.employmentType || existingMember.employmentType || "FULL_TIME",
           title: validatedData.title ?? existingMember.title,
           hourlyRate: validatedData.hourlyRate ?? existingMember.hourlyRate,
-          hireDate: validatedData.hireDate ? new Date(validatedData.hireDate) : existingMember.hireDate,
+          hireDate: validatedData.hireDate ? parseDateOnly(validatedData.hireDate) : existingMember.hireDate,
           certifications: validatedData.certifications ?? existingMember.certifications ?? undefined,
           phone: validatedData.phone ?? existingMember.phone,
           emergencyContact: validatedData.emergencyContact ?? existingMember.emergencyContact ?? undefined,
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
         employmentType: validatedData.employmentType || "FULL_TIME",
         title: validatedData.title ?? null,
         hourlyRate: validatedData.hourlyRate ?? null,
-        hireDate: validatedData.hireDate ? new Date(validatedData.hireDate) : null,
+        hireDate: validatedData.hireDate ? parseDateOnly(validatedData.hireDate) : null,
         certifications: validatedData.certifications ?? undefined,
         phone: validatedData.phone ?? null,
         emergencyContact: validatedData.emergencyContact ?? undefined,

@@ -105,7 +105,7 @@ export async function PATCH(
       where: { id },
       data: {
         ...validatedData,
-        dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : undefined,
+        dueDate: validatedData.dueDate ? parseDateOnly(validatedData.dueDate) ?? undefined : undefined,
       },
       include: {
         lineItems: true,
