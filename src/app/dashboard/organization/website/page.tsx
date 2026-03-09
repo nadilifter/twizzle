@@ -19,6 +19,7 @@ import { useFeatures } from "@/components/feature-context";
 export default function WebsitePage() {
   const { isFeatureEnabled } = useFeatures();
   const customDomainsEnabled = isFeatureEnabled("customDomains");
+  const competitionsEnabled = isFeatureEnabled("competitions");
   const [config, setConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -557,18 +558,21 @@ export default function WebsitePage() {
             />
           </div>
           
-          <Separator />
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Show Competitions</Label>
-              <p className="text-sm text-muted-foreground">Display the competitions page for event registration.</p>
-            </div>
-            <Switch 
-              checked={config.showCompetitions === true} 
-              onCheckedChange={(c) => updateConfig("showCompetitions", c)} 
-            />
-          </div>
+          {competitionsEnabled && (
+            <>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Show Competitions</Label>
+                  <p className="text-sm text-muted-foreground">Display the competitions page for event registration.</p>
+                </div>
+                <Switch 
+                  checked={config.showCompetitions === true} 
+                  onCheckedChange={(c) => updateConfig("showCompetitions", c)} 
+                />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
