@@ -168,14 +168,15 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Organization Check
+    // Organization Check - redirect to org selection if no org is set
     if (
       token && 
       !token.organizationId && 
       !path.startsWith("/switch-organization") && 
       !path.startsWith("/onboarding")
     ) {
-        // Allow pass-through to dashboard logic
+        const adminHost = getSubdomainHost("admin");
+        return NextResponse.redirect(`${protocol}//${adminHost}/switch-organization`);
     }
 
     // Redirects for moved pages (sidebar refactor)
@@ -188,6 +189,11 @@ export async function middleware(req: NextRequest) {
     if (redirectTarget) {
       const adminHost = getSubdomainHost("admin");
       return NextResponse.redirect(`${protocol}//${adminHost}${redirectTarget}`);
+    }
+
+    // /switch-organization resolves to the (auth) route group, not /dashboard
+    if (path.startsWith("/switch-organization")) {
+        return NextResponse.rewrite(url);
     }
 
     // Rewrite to /dashboard directory

@@ -61,7 +61,7 @@ async function buildAuthorizedUser(userId: string, targetOrgId?: string | null) 
     }
   }
 
-  if (!organizationId && activeMemberships.length === 1) {
+  if (!organizationId && activeMemberships.length >= 1) {
     membership = activeMemberships[0];
     organizationId = membership.organizationId;
     organizationName = membership.organization.name;
