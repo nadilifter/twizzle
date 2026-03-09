@@ -370,6 +370,10 @@ const data = {
           title: "SMS",
           url: "/dashboard/usage/sms",
         },
+        {
+          title: "Storage",
+          url: "/dashboard/usage/storage",
+        },
       ],
     },
     {

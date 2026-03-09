@@ -101,14 +101,22 @@ export default async function BillingPage() {
     checkEmailUsageLimits(session.user.organizationId),
   ])
 
-  // Get Storage usage (aggregate Media.fileSize)
-  const storageUsage = await db.media.aggregate({
-    where: { organizationId: session.user.organizationId },
-    _sum: { fileSize: true },
-    _count: true,
-  })
-  const storageUsedBytes = storageUsage._sum.fileSize || 0
+  // Get Storage usage (aggregate Media.fileSize + RegistrationFile.fileSize)
+  const [mediaStorageUsage, regFileStorageUsage] = await Promise.all([
+    db.media.aggregate({
+      where: { organizationId: session.user.organizationId },
+      _sum: { fileSize: true },
+      _count: true,
+    }),
+    db.registrationFile.aggregate({
+      where: { organizationId: session.user.organizationId },
+      _sum: { fileSize: true },
+      _count: true,
+    }),
+  ])
+  const storageUsedBytes = (mediaStorageUsage._sum.fileSize || 0) + (regFileStorageUsage._sum.fileSize || 0)
   const storageUsedMB = Math.round(storageUsedBytes / (1024 * 1024) * 100) / 100
+  const totalFileCount = mediaStorageUsage._count + regFileStorageUsage._count
 
   // Get Membership types count
   const membershipTypesCount = await db.membershipGroup.count({
@@ -518,7 +526,7 @@ export default async function BillingPage() {
             <div className="grid grid-cols-2 gap-4 pt-2">
               <div className="text-center">
                 <div className="text-2xl font-bold">
-                  {storageUsage._count}
+                  {totalFileCount}
                 </div>
                 <div className="text-xs text-muted-foreground">Total Files</div>
               </div>
