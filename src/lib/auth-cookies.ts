@@ -39,29 +39,39 @@ export function getAuthCookies(): CookiesOptions {
   // Cookie name prefix: __Secure- for HTTPS, none for local dev
   const cookiePrefix = useSecureCookies ? "__Secure-" : "";
   
-  // Cookie domain: shared domain for cloud envs, undefined for local
-  // undefined means the cookie is set for the exact hostname only
-  // Leading dot (e.g., .upliftergymnastics.com) enables subdomain sharing
-  const cookieDomain = env === 'local' ? undefined : config.cookieDomain;
-  
-  // Default options shared by all cookies
+  // Cookie domain for cloud envs (production/staging)
+  const cloudDomain = env === 'local' ? undefined : config.cookieDomain;
+
+  // Session cookie domain: ALWAYS use the shared parent domain so the cookie
+  // is visible across all subdomains (login, admin, athletes, etc.).
+  //
+  // In local dev this is ".uplifterinc.localhost". Credentials login happens
+  // on login.uplifterinc.localhost which is a subdomain of uplifterinc.localhost,
+  // so the browser accepts the domain attribute. For OAuth through localhost:3000,
+  // the browser rejects this domain (different TLD), but that's fine — session-bridge
+  // sets the real cookie from the correct domain afterward.
+  const sessionDomain = env === 'local' ? '.uplifterinc.localhost' : cloudDomain;
+
+  // Other cookies (CSRF, callback-url, state, PKCE, nonce) stay hostname-scoped
+  // in local dev. OAuth flows go through localhost:3000, which can't set cookies
+  // on .uplifterinc.localhost. These cookies are only needed during the auth
+  // handshake on the same hostname, so hostname-scoping is correct.
   const defaultOptions = {
     httpOnly: true,
     sameSite: "lax" as const,
     path: "/",
     secure: useSecureCookies,
-    domain: cookieDomain,
+    domain: cloudDomain,
   };
 
   return {
-    // Session token - the main authentication cookie
+    // Session token — uses the shared domain so it's visible across all subdomains
     sessionToken: {
       name: `${cookiePrefix}next-auth.session-token`,
-      options: defaultOptions,
+      options: { ...defaultOptions, domain: sessionDomain },
     },
     
     // Callback URL - tracks where to redirect after auth
-    // Not httpOnly so client JS can read it if needed
     callbackUrl: {
       name: `${cookiePrefix}next-auth.callback-url`,
       options: { 
@@ -77,8 +87,6 @@ export function getAuthCookies(): CookiesOptions {
     },
     
     // PKCE code verifier - critical for OAuth security
-    // Must be shared across subdomains for OAuth callback to work
-    // maxAge: 15 minutes (900 seconds) - same as NextAuth default
     pkceCodeVerifier: {
       name: `${cookiePrefix}next-auth.pkce.code_verifier`,
       options: { 
@@ -88,8 +96,6 @@ export function getAuthCookies(): CookiesOptions {
     },
     
     // OAuth state - prevents CSRF in OAuth flows
-    // Must be shared across subdomains for OAuth callback to work
-    // maxAge: 15 minutes (900 seconds) - same as NextAuth default
     state: {
       name: `${cookiePrefix}next-auth.state`,
       options: { 
@@ -99,8 +105,6 @@ export function getAuthCookies(): CookiesOptions {
     },
     
     // Nonce - used by some OAuth providers (OIDC)
-    // Must be shared across subdomains for OAuth callback to work
-    // maxAge: 15 minutes (900 seconds) - same as NextAuth default
     nonce: {
       name: `${cookiePrefix}next-auth.nonce`,
       options: { 

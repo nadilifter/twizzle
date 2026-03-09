@@ -169,6 +169,17 @@ export async function POST(
     const userEmail = session.user.email;
     const userName = session.user.name || `${firstName} ${lastName}`;
 
+    const userExists = await db.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!userExists) {
+      return NextResponse.json(
+        { error: "Your user account was not found. Please sign out and sign back in." },
+        { status: 401 }
+      );
+    }
+
     // Duplicate detection: check for matching athlete in the same org
     const parsedBirthDate = parseDateOnly(birthDate)!;
     const startOfDay = new Date(parsedBirthDate);
