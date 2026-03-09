@@ -13,6 +13,7 @@ import {
   type FilePresetKey,
   type FileRequirementConfig,
   resolveAcceptedExtensions,
+  isKnownExtension,
 } from "@/types/file-requirements"
 
 interface FileRequirementConfigEditorProps {
@@ -27,6 +28,7 @@ export function FileRequirementConfigEditor({
   onChange,
 }: FileRequirementConfigEditorProps) {
   const [newExtension, setNewExtension] = useState("")
+  const [extensionError, setExtensionError] = useState<string | null>(null)
 
   const togglePreset = (preset: FilePresetKey) => {
     const current = config.acceptedPresets || []
@@ -40,7 +42,23 @@ export function FileRequirementConfigEditor({
     const ext = newExtension.trim().toLowerCase()
     if (!ext) return
     const normalized = ext.startsWith(".") ? ext : `.${ext}`
-    if (config.acceptedExtensions.includes(normalized)) return
+
+    if (!/^\.[a-z0-9]{1,10}$/.test(normalized)) {
+      setExtensionError("Enter a valid extension like .mp3 or .pdf")
+      return
+    }
+
+    if (!isKnownExtension(normalized)) {
+      setExtensionError(`"${normalized}" is not a recognized file type`)
+      return
+    }
+
+    if (config.acceptedExtensions.includes(normalized)) {
+      setExtensionError(`"${normalized}" is already added`)
+      return
+    }
+
+    setExtensionError(null)
     onChange({
       ...config,
       acceptedExtensions: [...config.acceptedExtensions, normalized],
@@ -115,7 +133,10 @@ export function FileRequirementConfigEditor({
           <Input
             placeholder=".mp3"
             value={newExtension}
-            onChange={(e) => setNewExtension(e.target.value)}
+            onChange={(e) => {
+              setNewExtension(e.target.value)
+              if (extensionError) setExtensionError(null)
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault()
@@ -135,6 +156,9 @@ export function FileRequirementConfigEditor({
             Add
           </Button>
         </div>
+        {extensionError && (
+          <p className="text-xs text-destructive">{extensionError}</p>
+        )}
         {config.acceptedExtensions.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-1">
             {config.acceptedExtensions.map((ext) => (
