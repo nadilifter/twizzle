@@ -5,6 +5,7 @@ import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
+  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -54,6 +55,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
 import { MoreHorizontal, Plus, Search, Calendar as CalendarIcon, Wand2, Loader2 } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -89,8 +93,8 @@ export default function DiscountsPage() {
   const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
-  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 })
   
   // Dialog state
   const [open, setOpen] = React.useState(false)
@@ -228,7 +232,7 @@ export default function DiscountsPage() {
     },
     {
       accessorKey: "name",
-      header: "Name",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
       cell: ({ row }) => (
         <div className="flex flex-col">
           <span className="font-medium">{row.getValue("name")}</span>
@@ -251,7 +255,7 @@ export default function DiscountsPage() {
     },
     {
       accessorKey: "scopes",
-      header: "Scope",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Scope" />,
       cell: ({ row }) => (
         <div className="flex flex-col gap-1 text-xs">
           <span className="text-muted-foreground">User: <span className="font-medium text-foreground">{row.original.userScope}</span></span>
@@ -261,7 +265,7 @@ export default function DiscountsPage() {
     },
     {
       accessorKey: "validity",
-      header: "Validity",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Validity" />,
       cell: ({ row }) => {
         const from = formatDateString(row.original.validFrom)
         const to = row.original.validTo ? formatDateString(row.original.validTo) : "Indefinite"
@@ -274,7 +278,7 @@ export default function DiscountsPage() {
     },
     {
       accessorKey: "usageCount",
-      header: "Uses",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Uses" />,
       cell: ({ row }) => (
         <div className="text-center">
           {row.getValue("usageCount")}
@@ -284,7 +288,7 @@ export default function DiscountsPage() {
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         return (
@@ -330,13 +334,16 @@ export default function DiscountsPage() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
+      columnVisibility,
       rowSelection,
-      pagination,
+    },
+    initialState: {
+      pagination: { pageSize: 20 },
     },
   })
 
@@ -540,9 +547,10 @@ export default function DiscountsPage() {
             className="pl-8"
           />
         </div>
+        <DataTableViewOptions table={table} />
       </div>
 
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -575,17 +583,7 @@ export default function DiscountsPage() {
         </Table>
       </div>
       
-      <div className="flex items-center justify-end space-x-2">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-          Previous
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-          Next
-        </Button>
-      </div>
+      <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
     </div>
   )
 }

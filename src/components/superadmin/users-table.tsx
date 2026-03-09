@@ -7,6 +7,7 @@ import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
+  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -14,7 +15,11 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Users, MoreHorizontal, KeyRound, Pencil } from "lucide-react"
+import { Search, Users, MoreHorizontal, KeyRound, Pencil } from "lucide-react"
+
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
 import { formatDistanceToNow } from "date-fns"
 
 import { Badge } from "@/components/ui/badge"
@@ -168,6 +173,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState<string>("all")
   const [orgFilter, setOrgFilter] = React.useState<string>("all")
@@ -279,7 +285,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
   const columns: ColumnDef<User>[] = [
     {
       accessorKey: "name",
-      header: "Name",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
       cell: ({ row }) => {
         const user = row.original
         return (
@@ -300,11 +306,11 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
     },
     {
       accessorKey: "email",
-      header: "Email",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Email" />,
     },
     {
       accessorKey: "role",
-      header: "Role (Platform)",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Role (Platform)" />,
       cell: ({ row }) => {
         const user = row.original
         const displayRole = user.isSuperAdmin ? "Super Admin" : user.role
@@ -317,7 +323,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
     },
     {
       accessorKey: "memberships",
-      header: "Organizations",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Organizations" />,
       cell: ({ row }) => {
         const memberships = row.original.memberships
         if (memberships.length === 0) {
@@ -341,7 +347,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         return (
           <Badge variant={getStatusBadgeVariant(row.original.status)}>
@@ -352,7 +358,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
     },
     {
       accessorKey: "lastActiveAt",
-      header: "Last Login",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Last Login" />,
       cell: ({ row }) => {
         return (
           <span className="text-sm text-muted-foreground">
@@ -363,7 +369,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
     },
     {
       accessorKey: "createdAt",
-      header: "Created",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
       cell: ({ row }) => {
         return (
           <span className="text-sm text-muted-foreground">
@@ -409,16 +415,18 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
     state: {
       sorting,
       columnFilters,
+      columnVisibility,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: 20,
       },
     },
   })
@@ -478,6 +486,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
               ))}
             </SelectContent>
           </Select>
+          <DataTableViewOptions table={table} />
         </div>
       </div>
 
@@ -487,7 +496,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -539,55 +548,7 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronsLeft className="h-4 w-4" />
-            <span className="sr-only">First page</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">Previous page</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronRight className="h-4 w-4" />
-            <span className="sr-only">Next page</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronsRight className="h-4 w-4" />
-            <span className="sr-only">Last page</span>
-          </Button>
-        </div>
-      </div>
+      <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
 
       {/* Edit User Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

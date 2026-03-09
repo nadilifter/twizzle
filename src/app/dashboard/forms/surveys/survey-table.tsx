@@ -13,8 +13,11 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Plus, Search } from "lucide-react"
+import { MoreHorizontal, Plus } from "lucide-react"
 
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -46,12 +49,12 @@ export type Survey = {
 export const columns: ColumnDef<Survey>[] = [
   {
     accessorKey: "title",
-    header: "Title",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Title" />,
     cell: ({ row }) => <div className="font-medium">{row.getValue("title")}</div>,
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => {
       const status = row.getValue("status") as string
       return (
@@ -63,12 +66,12 @@ export const columns: ColumnDef<Survey>[] = [
   },
   {
     accessorKey: "responses",
-    header: "Responses",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Responses" />,
     cell: ({ row }) => <div className="text-center">{row.getValue("responses")}</div>,
   },
   {
     accessorKey: "createdAt",
-    header: "Created At",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Created At" />,
     cell: ({ row }) => <div>{row.getValue("createdAt")}</div>,
   },
   {
@@ -129,11 +132,14 @@ export function SurveyTable({ data }: { data: Survey[] }) {
       columnVisibility,
       rowSelection,
     },
+    initialState: {
+      pagination: { pageSize: 20 },
+    },
   })
 
   return (
-    <div className="w-full">
-      <div className="flex items-center py-4 justify-between">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-2">
         <Input
           placeholder="Filter surveys..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
@@ -142,13 +148,16 @@ export function SurveyTable({ data }: { data: Survey[] }) {
           }
           className="max-w-sm"
         />
-        <Button asChild>
-          <a href="/dashboard/forms/surveys/new">
-            <Plus className="mr-2 h-4 w-4" /> Create Survey
-          </a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <DataTableViewOptions table={table} />
+          <Button asChild>
+            <a href="/dashboard/forms/surveys/new">
+              <Plus className="mr-2 h-4 w-4" /> Create Survey
+            </a>
+          </Button>
+        </div>
       </div>
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -198,27 +207,7 @@ export function SurveyTable({ data }: { data: Survey[] }) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
     </div>
   )
 }
-

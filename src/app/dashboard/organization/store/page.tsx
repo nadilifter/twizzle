@@ -6,6 +6,7 @@ import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
+  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -52,6 +53,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options"
 import { 
   MoreHorizontal, 
   Plus, 
@@ -114,8 +118,8 @@ export default function StorePage() {
   const [isLoading, setIsLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
-  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 20 })
   
   // Dialog state
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -325,7 +329,7 @@ export default function StorePage() {
     },
     {
       accessorKey: "name",
-      header: "Product",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
       cell: ({ row }) => {
         const product = row.original
         return (
@@ -355,14 +359,14 @@ export default function StorePage() {
     },
     {
       accessorKey: "category",
-      header: "Category",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
       cell: ({ row }) => (
         <Badge variant="outline">{row.getValue("category")}</Badge>
       ),
     },
     {
       accessorKey: "price",
-      header: "Price",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Price" />,
       cell: ({ row }) => {
         const price = Number(row.getValue("price"))
         return <span className="font-medium">${price.toFixed(2)}</span>
@@ -370,7 +374,7 @@ export default function StorePage() {
     },
     {
       accessorKey: "inventory",
-      header: "Inventory",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Inventory" />,
       cell: ({ row }) => {
         const product = row.original
         const status = getInventoryStatus(product)
@@ -397,7 +401,7 @@ export default function StorePage() {
     },
     {
       accessorKey: "isActive",
-      header: "Status",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => (
         <Badge variant={row.getValue("isActive") ? "default" : "secondary"}>
           {row.getValue("isActive") ? "Active" : "Inactive"}
@@ -449,13 +453,16 @@ export default function StorePage() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
+      columnVisibility,
       rowSelection,
-      pagination,
+    },
+    initialState: {
+      pagination: { pageSize: 20 },
     },
   })
 
@@ -728,9 +735,10 @@ export default function StorePage() {
             ))}
           </SelectContent>
         </Select>
+        <DataTableViewOptions table={table} />
       </div>
 
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -775,17 +783,7 @@ export default function StorePage() {
         </Table>
       </div>
       
-      <div className="flex items-center justify-end space-x-2">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-          Previous
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-          Next
-        </Button>
-      </div>
+      <DataTablePagination table={table} pageSizeOptions={[10, 20, 30, 50]} />
     </div>
   )
 }

@@ -282,28 +282,6 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/waivers", "/api/waivers/[id]", "/api/waivers/[id]/sign", "/api/waivers/check"],
   },
 
-  // Campaigns Section
-  "/campaigns": {
-    status: "demo",
-    description: "Campaigns overview uses sample data",
-  },
-  "/campaigns/advertising": {
-    status: "demo",
-    description: "Advertising campaigns use sample data",
-  },
-  "/campaigns/donation": {
-    status: "demo",
-    description: "Donation campaigns use sample data",
-  },
-  "/campaigns/merchandise": {
-    status: "demo",
-    description: "Merchandise store uses sample data",
-  },
-  "/campaigns/sponsorship": {
-    status: "demo",
-    description: "Sponsorship management uses sample data",
-  },
-
   // Usage Section
   "/dashboard/usage/billing": {
     status: "live",
