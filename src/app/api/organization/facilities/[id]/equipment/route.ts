@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
 const createEquipmentSchema = z.object({
