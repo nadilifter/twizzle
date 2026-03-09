@@ -1,11 +1,10 @@
 import { WaiverBuilder } from "../waiver-builder"
+import { DashboardPageHeader } from "@/components/dashboard-page-header"
 
 export default function NewWaiverPage() {
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Create New Waiver</h1>
-      </div>
+    <div className="flex flex-col gap-6 p-6">
+      <DashboardPageHeader title="Create New Waiver" variant="small" />
       <WaiverBuilder />
     </div>
   )

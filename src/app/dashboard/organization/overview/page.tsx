@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
+import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import { cn } from "@/lib/utils"
 
 interface OrgDetails {
@@ -142,7 +143,7 @@ export default function OrganizationOverviewPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 p-4">
+      <div className="flex flex-col gap-6 p-6">
         <Skeleton className="h-8 w-48" />
         <div className="grid gap-4 md:grid-cols-3">
           <Skeleton className="h-28" />
@@ -176,13 +177,11 @@ export default function OrganizationOverviewPage() {
     .join(", ")
 
   return (
-    <div className="flex flex-col gap-6 p-4">
-      <div>
-        <h1 className="text-2xl font-bold">Organization Overview</h1>
-        <p className="text-muted-foreground">
-          View and manage your organization details.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6 p-6">
+      <DashboardPageHeader
+        title="Organization Overview"
+        description="View and manage your organization details."
+      />
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-3">

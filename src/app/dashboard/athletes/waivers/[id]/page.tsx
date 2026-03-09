@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { WaiverBuilder } from "../waiver-builder"
 import { Loader2 } from "lucide-react"
+import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import type { Waiver } from "@/types/waivers"
 
 export default function EditWaiverPage() {
@@ -38,17 +39,15 @@ export default function EditWaiverPage() {
 
   if (!waiver) {
     return (
-      <div className="p-4">
+      <div className="flex flex-col gap-6 p-6">
         <p className="text-muted-foreground">Waiver not found.</p>
       </div>
     )
   }
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Edit Waiver</h1>
-      </div>
+    <div className="flex flex-col gap-6 p-6">
+      <DashboardPageHeader title="Edit Waiver" variant="small" />
       <WaiverBuilder waiver={waiver} />
     </div>
   )

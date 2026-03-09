@@ -98,6 +98,7 @@ import { useRouter } from "next/navigation"
 import { useAthletes } from "@/hooks/use-athletes"
 import { useGuardians } from "@/hooks/use-guardians"
 import { useLevels } from "@/hooks/use-levels"
+import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import type { AthleteWithRelations, CreateAthletePayload, UpdateAthletePayload, AthleteStatus } from "@/types/athletes"
 
 // Transform status for display
@@ -484,21 +485,18 @@ export default function AthletesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">Athlete Directory</h1>
-          <p className="text-muted-foreground">
-            Manage your club&apos;s gymnasts, levels, and group assignments.
-          </p>
-        </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Athlete
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+      <DashboardPageHeader
+        title="Athlete Directory"
+        description="Manage your club's gymnasts, levels, and group assignments."
+        actions={
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Athlete
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Add New Athlete</DialogTitle>
               <DialogDescription>
@@ -610,8 +608,10 @@ export default function AthletesPage() {
               </TabsContent>
             </Tabs>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        )
+      }
+      />
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">

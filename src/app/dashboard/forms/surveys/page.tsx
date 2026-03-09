@@ -1,4 +1,5 @@
 import { Survey, SurveyTable } from "./survey-table"
+import { DashboardPageHeader } from "@/components/dashboard-page-header"
 
 const data: Survey[] = [
   {
@@ -26,10 +27,8 @@ const data: Survey[] = [
 
 export default function SurveysPage() {
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Surveys</h1>
-      </div>
+    <div className="flex flex-col gap-6 p-6">
+      <DashboardPageHeader title="Surveys" />
       <div className="flex-1 rounded-xl md:min-h-min">
         <SurveyTable data={data} />
       </div>

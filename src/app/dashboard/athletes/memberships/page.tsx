@@ -52,6 +52,7 @@ import { Separator } from "@/components/ui/separator"
 import { useMemberships } from "@/hooks/use-memberships"
 import { useMembershipGroup } from "@/hooks/use-membership-group"
 import { useFeatures } from "@/components/feature-context"
+import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import { toast } from "sonner"
 import type { MembershipGroup, MembershipInstance, BillingInterval, MembershipInstanceStatus } from "@/types/memberships"
 
@@ -98,18 +99,16 @@ export default function MembershipsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">Memberships</h1>
-          <p className="text-muted-foreground">
-            Manage membership groups, instances, and restrictions.
-          </p>
-        </div>
-        <Button onClick={() => setIsCreateGroupOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Membership Group
-        </Button>
-      </div>
+      <DashboardPageHeader
+        title="Memberships"
+        description="Manage membership groups, instances, and restrictions."
+        actions={
+          <Button onClick={() => setIsCreateGroupOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Membership Group
+          </Button>
+        }
+      />
 
       {isLoading && memberships.length === 0 && (
         <div className="flex items-center justify-center h-64">
