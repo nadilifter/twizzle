@@ -228,7 +228,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
 
   // Financials Section
   "/dashboard/financials": {
-    status: "live",
+    status: "demo",
     description: "Financial overview with real-time metrics",
     apiRoutes: ["/api/financials/overview"],
   },
@@ -256,12 +256,12 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Payment onboarding preview",
   },
   "/dashboard/financials/payouts": {
-    status: "live",
+    status: "demo",
     description: "Payout tracking and settlement history",
     apiRoutes: ["/api/payouts"],
   },
   "/dashboard/financials/recurring": {
-    status: "live",
+    status: "demo",
     description: "Recurring billing management",
     apiRoutes: ["/api/recurring"],
   },
