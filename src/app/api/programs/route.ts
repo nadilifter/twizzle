@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { checkMemberCertifications, type CertCheckFailure } from "@/lib/services/certification-check";
 import { z } from "zod";
 import { RRule } from "rrule";
+
+class CertificationError extends Error {
+  memberId: string;
+  missing: CertCheckFailure[];
+  constructor(memberId: string, missing: CertCheckFailure[]) {
+    super("Missing required certifications");
+    this.memberId = memberId;
+    this.missing = missing;
+  }
+}
 import { format, addMinutes, parse } from "date-fns";
 
 const createProgramSchema = z.object({
@@ -308,8 +319,19 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create staff assignments if provided
+      // Create staff assignments if provided (with certification enforcement)
       if (validatedData.staffAssignments?.length) {
+        for (const sa of validatedData.staffAssignments) {
+          const certResult = await checkMemberCertifications(
+            session.user.organizationId!,
+            sa.memberId,
+            "programs"
+          );
+          if (!certResult.valid) {
+            throw new CertificationError(sa.memberId, certResult.missing);
+          }
+        }
+
         await tx.programStaff.createMany({
           data: validatedData.staffAssignments.map(sa => ({
             programId: newProgram.id,
@@ -439,6 +461,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(program);
   } catch (error) {
+    if (error instanceof CertificationError) {
+      return NextResponse.json(
+        { error: "Missing required certifications", certifications: error.missing },
+        { status: 422 }
+      );
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },

@@ -16,6 +16,10 @@ import {
   Save,
   Check,
   AlertCircle,
+  ShieldCheck,
+  ShieldAlert,
+  MoreHorizontal,
+  Trash2,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -41,6 +45,22 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { toast } from "sonner"
 import { useFeatures } from "@/components/feature-context"
 import {
@@ -142,7 +162,33 @@ export default function UserDetailPage() {
   const [emergencyContactPhone, setEmergencyContactPhone] = React.useState("")
   const [emergencyContactRelationship, setEmergencyContactRelationship] = React.useState("")
 
-  // Certifications state
+  // Certifications state (normalized)
+  const [certStatuses, setCertStatuses] = React.useState<
+    Array<{
+      certification: {
+        id: string; name: string; evaluationMethod: string;
+        pointScaleMin?: number; pointScaleMax?: number; passThreshold?: number;
+        renewalPeriodMonths: number | null; requiredForPrograms: boolean; requiredForEvents: boolean
+      }
+      memberCertification: { id: string; passed: boolean; score: number | null; grantedAt: string; expiresAt: string | null; notes: string | null } | null
+      status: "active" | "expired" | "failed" | "not_granted"
+    }>
+  >([])
+
+  // Grant/revoke certification dialog state
+  const [grantDialogOpen, setGrantDialogOpen] = React.useState(false)
+  const [grantingCert, setGrantingCert] = React.useState<{
+    id: string; name: string; evaluationMethod: string;
+    pointScaleMin?: number; pointScaleMax?: number; passThreshold?: number;
+  } | null>(null)
+  const [grantForm, setGrantForm] = React.useState({
+    passed: true,
+    score: null as number | null,
+    notes: "",
+    grantedAt: new Date().toISOString().split("T")[0],
+  })
+
+  // Legacy certifications state (kept for backward compatibility during migration)
   const [certifications, setCertifications] = React.useState<
     Array<{ name: string; expiresAt: string; verified: boolean }>
   >([])
@@ -156,8 +202,81 @@ export default function UserDetailPage() {
     Array<{ dayOfWeek: number; startTime: string; endTime: string; isAvailable: boolean }>
   >([])
 
+  const fetchCertStatuses = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/organization/members/${memberId}/certifications`)
+      if (res.ok) {
+        const data = await res.json()
+        setCertStatuses(data)
+      }
+    } catch {
+      // Silently fail - cert statuses are supplementary
+    }
+  }, [memberId])
+
+  const openGrantDialog = (cert: typeof certStatuses[number]["certification"]) => {
+    setGrantingCert(cert)
+    setGrantForm({
+      passed: true,
+      score: null,
+      notes: "",
+      grantedAt: new Date().toISOString().split("T")[0],
+    })
+    setGrantDialogOpen(true)
+  }
+
+  const handleGrantCert = async () => {
+    if (!grantingCert || !memberId) return
+    setIsSaving(true)
+    try {
+      const res = await fetch(
+        `/api/organization/certifications/${grantingCert.id}/members`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            memberId,
+            passed: grantForm.passed,
+            score: grantForm.score,
+            notes: grantForm.notes || null,
+            grantedAt: grantForm.grantedAt,
+          }),
+        }
+      )
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Failed to grant certification")
+      }
+      toast.success("Certification granted")
+      setGrantDialogOpen(false)
+      fetchCertStatuses()
+    } catch (error) {
+      toast.error((error as Error).message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleRevokeCert = async (certId: string) => {
+    setIsSaving(true)
+    try {
+      const res = await fetch(
+        `/api/organization/certifications/${certId}/members/${memberId}`,
+        { method: "DELETE" }
+      )
+      if (!res.ok) throw new Error("Failed to revoke certification")
+      toast.success("Certification revoked")
+      fetchCertStatuses()
+    } catch {
+      toast.error("Failed to revoke certification")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   React.useEffect(() => {
     fetchMember()
+    fetchCertStatuses()
   }, [memberId])
 
   const fetchMember = async () => {
@@ -662,68 +781,114 @@ export default function UserDetailPage() {
             <CardHeader>
               <CardTitle>Certifications</CardTitle>
               <CardDescription>
-                Track certifications and their expiration dates.
+                Grant, view, and revoke certifications for this member.
+                Certification definitions are managed on the{" "}
+                <Link href="/dashboard/organization/certifications" className="text-primary underline">
+                  Certifications page
+                </Link>.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {CERTIFICATIONS_LIST.map((certName) => {
-                const cert = certifications.find((c) => c.name === certName)
-                const isActive = !!cert
-                return (
+              {certStatuses.length === 0 ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  No certifications configured for this organization.
+                </div>
+              ) : (
+                certStatuses.map((cs) => (
                   <div
-                    key={certName}
+                    key={cs.certification.id}
                     className="flex flex-row items-center justify-between rounded-lg border p-4"
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <div
                         className={`flex items-center justify-center h-8 w-8 rounded-full ${
-                          isActive ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
+                          cs.status === "active"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : cs.status === "expired"
+                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                              : "bg-muted text-muted-foreground"
                         }`}
                       >
-                        {isActive ? (
-                          <Check className="h-4 w-4" />
+                        {cs.status === "active" ? (
+                          <ShieldCheck className="h-4 w-4" />
+                        ) : cs.status === "expired" ? (
+                          <ShieldAlert className="h-4 w-4" />
                         ) : (
                           <AlertCircle className="h-4 w-4" />
                         )}
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium">{certName}</div>
-                        {isActive && cert.expiresAt && (
-                          <div className="text-xs text-muted-foreground" suppressHydrationWarning>
-                            Expires: {format(new Date(cert.expiresAt), "MMM d, yyyy")}
+                        <div className="font-medium">{cs.certification.name}</div>
+                        <div className="flex gap-1 mt-0.5">
+                          {cs.certification.requiredForPrograms && (
+                            <Badge variant="outline" className="text-xs py-0">Programs</Badge>
+                          )}
+                          {cs.certification.requiredForEvents && (
+                            <Badge variant="outline" className="text-xs py-0">Events</Badge>
+                          )}
+                        </div>
+                        {cs.memberCertification?.grantedAt && (
+                          <div className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
+                            Granted: {format(new Date(cs.memberCertification.grantedAt), "MMM d, yyyy")}
+                            {cs.memberCertification.expiresAt && (
+                              <> &middot; Expires: {format(new Date(cs.memberCertification.expiresAt), "MMM d, yyyy")}</>
+                            )}
+                          </div>
+                        )}
+                        {cs.memberCertification?.score !== null && cs.memberCertification?.score !== undefined && (
+                          <div className="text-xs text-muted-foreground">
+                            Score: {cs.memberCertification.score}
+                          </div>
+                        )}
+                        {cs.memberCertification?.notes && (
+                          <div className="text-xs text-muted-foreground">
+                            Notes: {cs.memberCertification.notes}
                           </div>
                         )}
                       </div>
-                      {isActive && (
-                        <Input
-                          type="date"
-                          className="w-40"
-                          value={cert.expiresAt}
-                          onChange={(e) => {
-                            setCertifications((prev) =>
-                              prev.map((c) =>
-                                c.name === certName ? { ...c, expiresAt: e.target.value } : c
-                              )
-                            )
-                          }}
-                          placeholder="Expiry date"
-                        />
-                      )}
                     </div>
-                    <Switch
-                      checked={isActive}
-                      onCheckedChange={() => toggleCertification(certName)}
-                    />
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          cs.status === "active" ? "default"
+                          : cs.status === "expired" ? "destructive"
+                          : "secondary"
+                        }
+                        className={cs.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : ""}
+                      >
+                        {cs.status === "active" ? "Active"
+                         : cs.status === "expired" ? "Expired"
+                         : cs.status === "failed" ? "Failed"
+                         : "Not Granted"}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {cs.status === "not_granted" || cs.status === "expired" || cs.status === "failed" ? (
+                            <DropdownMenuItem onClick={() => openGrantDialog(cs.certification)}>
+                              <Award className="mr-2 h-4 w-4" />
+                              {cs.status === "not_granted" ? "Grant" : "Re-grant"}
+                            </DropdownMenuItem>
+                          ) : null}
+                          {cs.memberCertification && (
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleRevokeCert(cs.certification.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Revoke
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                )
-              })}
-
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleSaveCertifications} disabled={isSaving}>
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save Certifications
-                </Button>
-              </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -866,6 +1031,92 @@ export default function UserDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Grant Certification Dialog */}
+      <Dialog open={grantDialogOpen} onOpenChange={setGrantDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grant Certification</DialogTitle>
+            <DialogDescription>
+              Record a &ldquo;{grantingCert?.name}&rdquo; certification result for this member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {grantingCert?.evaluationMethod === "PASS_FAIL" ? (
+              <div className="grid gap-2">
+                <Label>Result</Label>
+                <RadioGroup
+                  value={grantForm.passed ? "pass" : "fail"}
+                  onValueChange={(val) =>
+                    setGrantForm((prev) => ({ ...prev, passed: val === "pass" }))
+                  }
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pass" id="grant_pass" />
+                    <Label htmlFor="grant_pass" className="font-normal">Pass</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="fail" id="grant_fail" />
+                    <Label htmlFor="grant_fail" className="font-normal">Fail</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            ) : grantingCert?.evaluationMethod === "POINT_SCALE" ? (
+              <div className="grid gap-2">
+                <Label>
+                  Score ({grantingCert.pointScaleMin ?? 1}-{grantingCert.pointScaleMax ?? 10}, pass: {grantingCert.passThreshold ?? 7})
+                </Label>
+                <Input
+                  type="number"
+                  min={grantingCert.pointScaleMin ?? 1}
+                  max={grantingCert.pointScaleMax ?? 10}
+                  value={grantForm.score ?? ""}
+                  onChange={(e) => {
+                    const score = e.target.value ? parseInt(e.target.value) : null
+                    setGrantForm((prev) => ({
+                      ...prev,
+                      score,
+                      passed: score !== null ? score >= (grantingCert?.passThreshold ?? 0) : false,
+                    }))
+                  }}
+                />
+              </div>
+            ) : null}
+
+            <div className="grid gap-2">
+              <Label>Granted Date</Label>
+              <Input
+                type="date"
+                value={grantForm.grantedAt}
+                onChange={(e) =>
+                  setGrantForm((prev) => ({ ...prev, grantedAt: e.target.value }))
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={grantForm.notes}
+                onChange={(e) =>
+                  setGrantForm((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                placeholder="Optional notes about this certification"
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGrantDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleGrantCert} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Grant Certification
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

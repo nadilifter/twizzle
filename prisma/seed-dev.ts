@@ -2547,11 +2547,6 @@ async function main() {
         title: "Head Coach",
         hourlyRate: 35.00,
         hireDate: daysAgo(365),
-        certifications: [
-          { name: "USAG Safety Certification", expiresAt: daysFromNow(180).toISOString(), verified: true },
-          { name: "CPR / First Aid", expiresAt: daysFromNow(365).toISOString(), verified: true },
-          { name: "SafeSport Trained", expiresAt: daysFromNow(730).toISOString(), verified: true },
-        ],
         phone: "(555) 111-2222",
         emergencyContact: { name: "John Rodriguez", phone: "(555) 111-3333", relationship: "Spouse" },
       },
@@ -2563,10 +2558,6 @@ async function main() {
         title: "JO Team Coach",
         hourlyRate: 32.00,
         hireDate: daysAgo(180),
-        certifications: [
-          { name: "USAG Safety Certification", expiresAt: daysFromNow(300).toISOString(), verified: true },
-          { name: "SafeSport Trained", expiresAt: daysFromNow(500).toISOString(), verified: true },
-        ],
         phone: "(555) 111-4444",
         emergencyContact: { name: "Lisa Chen", phone: "(555) 111-5555", relationship: "Parent" },
       },
@@ -2578,9 +2569,6 @@ async function main() {
         title: "Finance & Admin",
         hourlyRate: 25.00,
         hireDate: daysAgo(90),
-        certifications: [
-          { name: "Background Check Cleared", expiresAt: null, verified: true },
-        ],
         phone: "(555) 111-6666",
         emergencyContact: Prisma.DbNull,
       },
@@ -2592,10 +2580,6 @@ async function main() {
         title: "Multi-Sport Coach",
         hourlyRate: 28.00,
         hireDate: daysAgo(200),
-        certifications: [
-          { name: "CPR / First Aid", expiresAt: daysFromNow(200).toISOString(), verified: true },
-          { name: "SafeSport Trained", expiresAt: daysFromNow(400).toISOString(), verified: true },
-        ],
         phone: "(555) 222-1111",
         emergencyContact: { name: "Carlos Martinez", phone: "(555) 222-2222", relationship: "Spouse" },
       },
@@ -2607,9 +2591,6 @@ async function main() {
         title: "Assistant Coach",
         hourlyRate: null,
         hireDate: daysAgo(60),
-        certifications: [
-          { name: "Background Check Cleared", expiresAt: null, verified: true },
-        ],
         phone: "(555) 222-3333",
         emergencyContact: Prisma.DbNull,
       },
@@ -2619,6 +2600,67 @@ async function main() {
     await prisma.organizationMember.update({ where: { id: emp.memberId }, data: emp.data });
   }
   console.log(`  ✓ Updated ${employmentUpdates.length} members with employment data`);
+
+  // ============================================
+  // CERTIFICATION DEFINITIONS & MEMBER CERTIFICATIONS
+  // ============================================
+  console.log("\n🏅 Creating certifications...");
+
+  const certDefs = [
+    { id: `${ORG1_ID}-cert-usag`, orgId: ORG1_ID, name: "USAG Safety Certification", criteria: "Complete USAG Safety & Risk Management course", renewalPeriodMonths: 12 },
+    { id: `${ORG1_ID}-cert-cpr`, orgId: ORG1_ID, name: "CPR / First Aid", criteria: "Complete ARC CPR/First Aid course and pass practical exam", renewalPeriodMonths: 24 },
+    { id: `${ORG1_ID}-cert-safesport`, orgId: ORG1_ID, name: "SafeSport Trained", criteria: "Complete U.S. Center for SafeSport training", renewalPeriodMonths: 12 },
+    { id: `${ORG1_ID}-cert-bgcheck`, orgId: ORG1_ID, name: "Background Check Cleared", criteria: "Pass national background check", renewalPeriodMonths: null },
+    { id: `${ORG2_ID}-cert-cpr`, orgId: ORG2_ID, name: "CPR / First Aid", criteria: "Complete ARC CPR/First Aid course and pass practical exam", renewalPeriodMonths: 24 },
+    { id: `${ORG2_ID}-cert-safesport`, orgId: ORG2_ID, name: "SafeSport Trained", criteria: "Complete U.S. Center for SafeSport training", renewalPeriodMonths: 12 },
+    { id: `${ORG2_ID}-cert-bgcheck`, orgId: ORG2_ID, name: "Background Check Cleared", criteria: "Pass national background check", renewalPeriodMonths: null },
+  ];
+
+  for (const cd of certDefs) {
+    await prisma.certification.upsert({
+      where: { id: cd.id },
+      update: {},
+      create: {
+        id: cd.id,
+        organizationId: cd.orgId,
+        name: cd.name,
+        criteria: cd.criteria,
+        evaluationMethod: "PASS_FAIL",
+        renewalPeriodMonths: cd.renewalPeriodMonths,
+        requiredForPrograms: true,
+        requiredForEvents: true,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`  ✓ Created ${certDefs.length} certification definitions`);
+
+  const memberCerts = [
+    { certId: `${ORG1_ID}-cert-usag`, memberId: `${ORG1_ID}-staff-1`, grantedAt: daysAgo(90), expiresAt: daysFromNow(180) },
+    { certId: `${ORG1_ID}-cert-cpr`, memberId: `${ORG1_ID}-staff-1`, grantedAt: daysAgo(90), expiresAt: daysFromNow(365) },
+    { certId: `${ORG1_ID}-cert-safesport`, memberId: `${ORG1_ID}-staff-1`, grantedAt: daysAgo(90), expiresAt: daysFromNow(730) },
+    { certId: `${ORG1_ID}-cert-usag`, memberId: `${ORG1_ID}-staff-2`, grantedAt: daysAgo(60), expiresAt: daysFromNow(300) },
+    { certId: `${ORG1_ID}-cert-safesport`, memberId: `${ORG1_ID}-staff-2`, grantedAt: daysAgo(60), expiresAt: daysFromNow(500) },
+    { certId: `${ORG1_ID}-cert-bgcheck`, memberId: `${ORG1_ID}-staff-3`, grantedAt: daysAgo(90), expiresAt: null },
+    { certId: `${ORG2_ID}-cert-cpr`, memberId: `${ORG2_ID}-staff-1`, grantedAt: daysAgo(60), expiresAt: daysFromNow(200) },
+    { certId: `${ORG2_ID}-cert-safesport`, memberId: `${ORG2_ID}-staff-1`, grantedAt: daysAgo(60), expiresAt: daysFromNow(400) },
+    { certId: `${ORG2_ID}-cert-bgcheck`, memberId: `${ORG2_ID}-staff-2`, grantedAt: daysAgo(60), expiresAt: null },
+  ];
+
+  for (const mc of memberCerts) {
+    await prisma.memberCertification.upsert({
+      where: { certificationId_memberId: { certificationId: mc.certId, memberId: mc.memberId } },
+      update: {},
+      create: {
+        certificationId: mc.certId,
+        memberId: mc.memberId,
+        passed: true,
+        grantedAt: mc.grantedAt,
+        expiresAt: mc.expiresAt,
+      },
+    });
+  }
+  console.log(`  ✓ Created ${memberCerts.length} member certifications`);
 
   // ============================================
   // MEMBER AVAILABILITY

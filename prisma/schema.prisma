@@ -54,6 +54,7 @@ model Organization {
   websiteConfig       WebsiteConfig?
   evaluationTemplates EvaluationTemplate[]
   achievements        Achievement[]
+  certifications      Certification[]
 
   // Financials
   discounts        Discount[]
@@ -168,6 +169,10 @@ model OrganizationMember {
   shifts             Shift[]
   eventAssignments   EventStaff[]
   programAssignments ProgramStaff[]
+
+  // Certifications
+  memberCertifications MemberCertification[]
+  certGrantedBy        MemberCertification[] @relation("CertGrantedBy")
 
   @@unique([organizationId, userId])
 }
@@ -4125,4 +4130,64 @@ model RegistrationFile {
   @@unique([athleteId, eventId])
   @@index([organizationId])
   @@index([athleteId])
+}
+
+// ─── Certifications ──────────────────────────────────────────────────────────
+
+model Certification {
+  id             String @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  criteria       String?
+
+  evaluationMethod CertificationEvaluationMethod @default(PASS_FAIL)
+  pointScaleMin    Int                           @default(1)
+  pointScaleMax    Int                           @default(10)
+  passThreshold    Int                           @default(7)
+
+  renewalPeriodMonths Int?
+
+  requiredForPrograms     Boolean @default(false)
+  requiredForEvents       Boolean @default(false)
+  requiredForCompetitions Boolean @default(false)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberCertifications MemberCertification[]
+
+  @@index([organizationId])
+}
+
+model MemberCertification {
+  id              String  @id @default(cuid())
+  certificationId String
+  memberId        String
+  grantedById     String?
+
+  passed Boolean
+  score  Int?
+  notes  String?
+
+  grantedAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  certification Certification      @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  member        OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  grantedBy     OrganizationMember? @relation("CertGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+
+  @@unique([certificationId, memberId])
+  @@index([certificationId])
+  @@index([memberId])
+}
+
+enum CertificationEvaluationMethod {
+  PASS_FAIL
+  POINT_SCALE
 }

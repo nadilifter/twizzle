@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { checkMemberCertifications } from "@/lib/services/certification-check";
 
 const addEventStaffSchema = z.object({
   memberId: z.string().min(1, "Member is required"),
@@ -110,6 +111,26 @@ export async function POST(
 
     if (!member) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
+    }
+
+    // Certification enforcement (skip with ?skipCertCheck=true)
+    const url = new URL(request.url);
+    const skipCertCheck = url.searchParams.get("skipCertCheck") === "true";
+    if (!skipCertCheck) {
+      const certResult = await checkMemberCertifications(
+        organizationId,
+        validatedData.memberId,
+        "events"
+      );
+      if (!certResult.valid) {
+        return NextResponse.json(
+          {
+            error: "Missing required certifications",
+            certifications: certResult.missing,
+          },
+          { status: 422 }
+        );
+      }
     }
 
     // Check if staff is already assigned to event

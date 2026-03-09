@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { checkMemberCertifications } from "@/lib/services/certification-check";
 import { z } from "zod";
 import { RRule } from "rrule";
 import { format, addMinutes } from "date-fns";
@@ -406,8 +407,22 @@ export async function PATCH(
         }
       }
 
-      // Update staff assignments if provided
+      // Update staff assignments if provided (with certification enforcement)
       if (validatedData.staffAssignments !== undefined) {
+        for (const sa of validatedData.staffAssignments) {
+          const certResult = await checkMemberCertifications(
+            session.user.organizationId!,
+            sa.memberId,
+            "programs"
+          );
+          if (!certResult.valid) {
+            return NextResponse.json(
+              { error: "Missing required certifications", certifications: certResult.missing },
+              { status: 422 }
+            );
+          }
+        }
+
         await tx.programStaff.deleteMany({
           where: { programId: id },
         });

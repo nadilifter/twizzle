@@ -53,12 +53,14 @@ import {
   Heart,
   AlertTriangle,
   ClipboardList,
+  ShieldAlert,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
 import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useFeatures } from "@/components/feature-context"
 import { useStaff } from "@/hooks/use-staff"
+import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
 import { useMemberships } from "@/hooks/use-memberships"
 import type { ProgramStaffRole } from "@/types/staff"
 import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, TrainingZoneWithAvailability } from "@/types/programs"
@@ -192,6 +194,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   // Hooks for data
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
+  const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("programs")
   
   // Levels state
   const [levels, setLevels] = React.useState<Level[]>([])
@@ -675,6 +678,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       
       if (!response.ok) {
         const error = await response.json()
+        if (response.status === 422 && error.certifications) {
+          const names = error.certifications.map((c: { certificationName: string }) => c.certificationName).join(", ")
+          throw new Error(`Staff missing required certifications: ${names}`)
+        }
         throw new Error(error.error || "Failed to save program")
       }
       
@@ -2095,24 +2102,45 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                       } />
                     </SelectTrigger>
                     <SelectContent>
-                      {unassignedStaff.map(s => (
-                        <SelectItem key={s.id} value={s.id}>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={s.user?.avatar || ""} />
-                              <AvatarFallback>
-                                <User className="h-3 w-3" />
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{s.user?.name || "Unknown"}</span>
-                            {s.title && <span className="text-muted-foreground">({s.title})</span>}
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {unassignedStaff.map(s => {
+                        const certResult = getMemberStatus(s.id)
+                        return (
+                          <SelectItem key={s.id} value={s.id} disabled={!certResult.valid}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={s.user?.avatar || ""} />
+                                <AvatarFallback>
+                                  <User className="h-3 w-3" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{s.user?.name || "Unknown"}</span>
+                              {s.title && <span className="text-muted-foreground">({s.title})</span>}
+                              {!certResult.valid && (
+                                <span className="text-destructive text-xs ml-1 shrink-0">
+                                  Missing: {certResult.missing.map(m => m.certificationName).join(", ")}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+
+              {hasCertRequirements && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
+                  <ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <div className="text-sm text-amber-800 dark:text-amber-300">
+                    <span className="font-medium">Required certifications: </span>
+                    {requiredCertNames.join(", ")}
+                    <span className="block text-xs mt-0.5 text-amber-600 dark:text-amber-400">
+                      Staff missing these certifications cannot be assigned.
+                    </span>
+                  </div>
+                </div>
+              )}
               
               {/* Assigned Staff List */}
               <div className="space-y-3">

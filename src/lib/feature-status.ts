@@ -190,6 +190,10 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "demo",
     description: "App configuration uses sample data",
   },
+  "/dashboard/organization/certifications": {
+    status: "live",
+    description: "Certification management with CRUD and member assignment",
+  },
   "/dashboard/organization/facilities": {
     status: "live",
     description: "Facility management with full CRUD operations",
@@ -243,7 +247,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/invoices"],
   },
   "/dashboard/financials/ledgers": {
-    status: "live",
+    status: "demo",
     description: "General ledger and GL codes management",
     apiRoutes: ["/api/ledgers", "/api/ledgers/entries"],
   },

@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { getScopedDb, db } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { parseDateOnly } from "@/lib/date-utils";
+import { checkMemberCertifications } from "@/lib/services/certification-check";
 import { z } from "zod";
 
 const staffAssignmentSchema = z.object({
@@ -288,6 +289,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (validatedData.staffAssignments && validatedData.staffAssignments.length > 0) {
+        for (const sa of validatedData.staffAssignments) {
+          const certResult = await checkMemberCertifications(
+            session.user.organizationId,
+            sa.memberId,
+            "events"
+          );
+          if (!certResult.valid) {
+            return NextResponse.json(
+              { error: "Missing required certifications", certifications: certResult.missing },
+              { status: 422 }
+            );
+          }
+        }
+
         data.staffAssignments = {
             create: validatedData.staffAssignments.map(sa => ({
                 memberId: sa.memberId,

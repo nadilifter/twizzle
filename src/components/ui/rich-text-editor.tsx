@@ -71,7 +71,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     editorProps: {
       attributes: {
         class:
-          "min-h-[150px] w-full border rounded-md bg-background py-2 px-3 text-sm outline-none overflow-y-auto [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_blockquote]:border-l-2 [&_blockquote]:border-primary [&_blockquote]:pl-4 [&_blockquote]:italic [&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:font-mono",
+          "min-h-[150px] w-full py-2 px-3 text-sm outline-none overflow-y-auto [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_blockquote]:border-l-2 [&_blockquote]:border-primary [&_blockquote]:pl-4 [&_blockquote]:italic [&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:font-mono",
       },
     },
   });

@@ -274,6 +274,10 @@ const data = {
           url: "/dashboard/organization/schedules",
         },
         {
+          title: "Certifications",
+          url: "/dashboard/organization/certifications",
+        },
+        {
           title: "Store",
           url: "/dashboard/organization/store",
         },
