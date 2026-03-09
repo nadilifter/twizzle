@@ -488,7 +488,7 @@ export default function AthletesPage() {
       <DashboardPageHeader
         title="Athlete Directory"
         description="Manage your club's gymnasts, levels, and group assignments."
-        actions={
+        actions={(
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
