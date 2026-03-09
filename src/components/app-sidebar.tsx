@@ -278,16 +278,8 @@ const data = {
           url: "/dashboard/organization/store",
         },
         {
-          title: "Users",
-          url: "/dashboard/organization/users",
-        },
-        {
           title: "Website",
           url: "/dashboard/organization/website",
-        },
-        {
-          title: "Features",
-          url: "/dashboard/organization/features",
         },
       ],
     },
@@ -367,16 +359,30 @@ const data = {
       url: "/dashboard/usage",
       items: [
         {
-          title: "Billing",
-          url: "/dashboard/usage/billing",
-        },
-        {
           title: "Email",
           url: "/dashboard/usage/email",
         },
         {
           title: "SMS",
           url: "/dashboard/usage/sms",
+        },
+      ],
+    },
+    {
+      title: "Settings",
+      url: "/dashboard/settings",
+      items: [
+        {
+          title: "Billing",
+          url: "/dashboard/usage/billing",
+        },
+        {
+          title: "Features",
+          url: "/dashboard/organization/features",
+        },
+        {
+          title: "Users",
+          url: "/dashboard/organization/users",
         },
       ],
     },
@@ -590,7 +596,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Collapsible
                   key={item.title}
                   asChild
-                  defaultOpen={isMobile ? pathname.startsWith(item.url) : true}
+                  defaultOpen={isMobile ? (pathname.startsWith(item.url) || item.items?.some(sub => pathname.startsWith(sub.url))) : true}
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>
