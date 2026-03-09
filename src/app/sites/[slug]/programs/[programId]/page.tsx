@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProgramRegistrationFlow } from "@/components/sites/program-registration-flow";
+import type { FileRequirementConfig } from "@/types/file-requirements";
 
 export default async function ProgramDetailPage({ 
     params,
@@ -158,6 +159,8 @@ export default async function ProgramDetailPage({
         maxAge: program.maxAge,
         hasWaiverRestriction: program.hasWaiverRestriction,
         hasMedicalRequirement: program.hasMedicalRequirement,
+        hasFileRequirement: program.hasFileRequirement,
+        fileRequirementConfig: program.fileRequirementConfig as FileRequirementConfig | null,
         hasMembershipRestriction: program.hasMembershipRestriction,
         organizationId: config.organizationId,
         capacity: program.capacity,

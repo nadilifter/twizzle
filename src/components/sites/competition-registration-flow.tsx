@@ -30,7 +30,9 @@ import {
 } from "@/components/ui/select"
 import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad"
 import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
+import { FileUploadStep } from "@/components/sites/file-upload-step"
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
+import type { FileRequirementConfig } from "@/types/file-requirements"
 import {
   User,
   Calendar,
@@ -115,6 +117,8 @@ interface CompetitionData {
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
+  hasFileRequirement: boolean
+  fileRequirementConfig: FileRequirementConfig | null
   organizationId: string
   categories: CompetitionCategory[]
   pricingTiers: PricingTier[]
@@ -173,6 +177,7 @@ const { useStepper } = defineStepper(
   { id: "seedMarks", title: "Seed Marks" },
   { id: "waivers", title: "Sign Waivers" },
   { id: "medical", title: "Medical Info" },
+  { id: "files", title: "File Upload" },
   { id: "review", title: "Review & Add to Cart" }
 )
 
@@ -366,12 +371,16 @@ export function CompetitionRegistrationFlow({
   const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false)
   const [needsMedical, setNeedsMedical] = useState(false)
 
+  // File upload state
+  const [uploadedFileId, setUploadedFileId] = useState<string | null>(null)
+
   // Navigation direction: only auto-skip completed steps on the first forward pass
   const isNavigatingBackRef = useRef(false)
 
   // Determine which steps are visible based on competition settings
   const needsWaivers = competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0
   const needsMedicalStep = competition.hasMedicalRequirement
+  const needsFiles = competition.hasFileRequirement && !!competition.fileRequirementConfig
 
   const needsSeedMarks = useMemo(() => {
     return competition.categories.some(
@@ -385,9 +394,10 @@ export function CompetitionRegistrationFlow({
     if (needsSeedMarks) ids.push("seedMarks")
     if (needsWaivers) ids.push("waivers")
     if (needsMedicalStep) ids.push("medical")
+    if (needsFiles) ids.push("files")
     ids.push("review")
     return ids
-  }, [needsSeedMarks, needsWaivers, needsMedicalStep])
+  }, [needsSeedMarks, needsWaivers, needsMedicalStep, needsFiles])
 
   // Navigation helpers that skip invisible steps
   const getNextStepId = useCallback(
@@ -927,6 +937,7 @@ export function CompetitionRegistrationFlow({
         entryFee: competition.entryFee,
         requiredMemberships: selectedMembership ? [selectedMembership.id] : [],
         ...(Object.keys(structuredSeedMarks).length > 0 && { seedMarks: structuredSeedMarks }),
+        ...(uploadedFileId && { fileUploadId: uploadedFileId }),
       },
     })
 
@@ -1671,6 +1682,25 @@ export function CompetitionRegistrationFlow({
           }}
           onBack={() => {
             const prevId = getPreviousStepId("medical")
+            if (prevId) stepper.navigation.goTo(prevId as any)
+          }}
+        />
+      )}
+
+      {/* Step: File Upload */}
+      {currentStepId === "files" && needsFiles && competition.fileRequirementConfig && (
+        <FileUploadStep
+          config={competition.fileRequirementConfig}
+          organizationId={competition.organizationId}
+          athleteId={selectedAthlete?.id || ""}
+          competitionId={competition.id}
+          onComplete={(fileId) => {
+            setUploadedFileId(fileId)
+            const nextId = getNextStepId("files")
+            if (nextId) stepper.navigation.goTo(nextId as any)
+          }}
+          onBack={() => {
+            const prevId = getPreviousStepId("files")
             if (prevId) stepper.navigation.goTo(prevId as any)
           }}
         />

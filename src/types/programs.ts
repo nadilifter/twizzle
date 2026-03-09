@@ -256,6 +256,8 @@ export interface CreateProgramPayload {
   hasMembershipRestriction?: boolean;
   hasWaiverRestriction?: boolean;
   hasMedicalRequirement?: boolean;
+  hasFileRequirement?: boolean;
+  fileRequirementConfig?: unknown;
   hasTrainingZoneRestriction?: boolean;
   trainingZoneCapacityMode?: TrainingZoneCapacityMode;
   waitlistEnabled?: boolean;
@@ -302,6 +304,8 @@ export interface UpdateProgramPayload {
   hasMembershipRestriction?: boolean;
   hasWaiverRestriction?: boolean;
   hasMedicalRequirement?: boolean;
+  hasFileRequirement?: boolean;
+  fileRequirementConfig?: unknown;
   hasTrainingZoneRestriction?: boolean;
   trainingZoneCapacityMode?: TrainingZoneCapacityMode;
   waitlistEnabled?: boolean;

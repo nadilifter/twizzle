@@ -42,6 +42,8 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
+import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
+import type { FileRequirementConfig } from "@/types/file-requirements"
 import { usePrograms } from "@/hooks/use-programs"
 import { useStaff } from "@/hooks/use-staff"
 import { useMemberships } from "@/hooks/use-memberships"
@@ -172,6 +174,8 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     hasWaiverRestriction: (program as any).hasWaiverRestriction || false,
     waiverRequirementIds: ((program as any).waiverRequirements?.map((wr: any) => wr.waiverId) || []) as string[],
     hasMedicalRequirement: (program as any).hasMedicalRequirement || false,
+    hasFileRequirement: (program as any).hasFileRequirement || false,
+    fileRequirementConfig: ((program as any).fileRequirementConfig || null) as FileRequirementConfig | null,
 
     // Waitlist
     waitlistEnabled: program.waitlistEnabled || false,
@@ -503,6 +507,17 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
       toast.error("Select at least one waiver when waiver restriction is enabled")
       return
     }
+    if (formData.hasFileRequirement && (!formData.fileRequirementConfig?.label?.trim())) {
+      toast.error("Provide a label for the file upload requirement")
+      return
+    }
+    if (formData.hasFileRequirement && formData.fileRequirementConfig) {
+      const { acceptedPresets, acceptedExtensions } = formData.fileRequirementConfig
+      if (acceptedPresets.length === 0 && acceptedExtensions.length === 0) {
+        toast.error("Select at least one file type preset or add a custom extension")
+        return
+      }
+    }
 
     setIsSaving(true)
     try {
@@ -523,6 +538,8 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
           ? formData.waiverRequirementIds
           : [],
         hasMedicalRequirement: formData.hasMedicalRequirement,
+        hasFileRequirement: formData.hasFileRequirement,
+        fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
         hasTrainingZoneRestriction: formData.hasTrainingZoneRestriction,
         trainingZoneCapacityMode: formData.trainingZoneCapacityMode,
       } as any)
@@ -1666,6 +1683,37 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                 </div>
               )}
             </div>
+
+            {/* File Upload Requirement */}
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-base font-medium">File Upload Requirement</Label>
+                <p className="text-sm text-muted-foreground">
+                  Require athletes to upload a file during registration (e.g. routine music)
+                </p>
+              </div>
+              <Switch
+                checked={formData.hasFileRequirement}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    hasFileRequirement: checked,
+                    fileRequirementConfig: checked && !prev.fileRequirementConfig
+                      ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
+                      : prev.fileRequirementConfig,
+                  }))
+                }
+              />
+            </div>
+
+            {formData.hasFileRequirement && formData.fileRequirementConfig && (
+              <div className="pt-2 border-t">
+                <FileRequirementConfigEditor
+                  config={formData.fileRequirementConfig}
+                  onChange={(config) => setFormData((prev) => ({ ...prev, fileRequirementConfig: config }))}
+                />
+              </div>
+            )}
 
             {/* Save */}
             <div className="pt-4 flex justify-end">

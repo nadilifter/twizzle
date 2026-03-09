@@ -44,6 +44,8 @@ import {
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
+import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useFeatures } from "@/components/feature-context"
 import { useMemberships } from "@/hooks/use-memberships"
 import { cn } from "@/lib/utils"
@@ -186,6 +188,8 @@ interface CompetitionFormData {
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
+  hasFileRequirement: boolean
+  fileRequirementConfig: FileRequirementConfig | null
 
   // Step 4: Results
   categoryResults: CategoryResultConfig[]
@@ -290,6 +294,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
     hasWaiverRestriction: false,
     waiverRequirementIds: [],
     hasMedicalRequirement: false,
+    hasFileRequirement: false,
+    fileRequirementConfig: null,
 
     // Step 4: Results
     categoryResults: [],
@@ -400,6 +406,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           hasWaiverRestriction: data.hasWaiverRestriction ?? false,
           waiverRequirementIds: data.waiverRequirementIds || [],
           hasMedicalRequirement: data.hasMedicalRequirement ?? false,
+          hasFileRequirement: data.hasFileRequirement ?? false,
+          fileRequirementConfig: data.fileRequirementConfig ?? null,
 
           categoryResults,
 
@@ -800,6 +808,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         hasWaiverRestriction: formData.hasWaiverRestriction,
         waiverRequirementIds: formData.waiverRequirementIds,
         hasMedicalRequirement: formData.hasMedicalRequirement,
+        hasFileRequirement: formData.hasFileRequirement,
+        fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
         categoryResults: formData.categoryResults.map((c, i) => ({
           combinationEntryId: c.combinationEntryId,
           individualEntryId: c.individualEntryId,
@@ -1824,6 +1834,35 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   </div>
                 )}
               </div>
+
+              {/* File Upload Requirement */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base">File Upload Requirement</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require athletes to upload a file during registration (e.g. routine music)
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasFileRequirement}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    hasFileRequirement: checked,
+                    fileRequirementConfig: checked && !prev.fileRequirementConfig
+                      ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
+                      : prev.fileRequirementConfig,
+                  }))}
+                />
+              </div>
+
+              {formData.hasFileRequirement && formData.fileRequirementConfig && (
+                <div className="pt-2 border-t">
+                  <FileRequirementConfigEditor
+                    config={formData.fileRequirementConfig}
+                    onChange={(config) => setFormData(prev => ({ ...prev, fileRequirementConfig: config }))}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

@@ -71,7 +71,8 @@ model Organization {
   products Product[]
 
   // Media
-  media Media[]
+  media             Media[]
+  registrationFiles RegistrationFile[]
 
   // Facilities
   facilities Facility[]
@@ -210,6 +211,7 @@ model User {
   sessions            Session[]
   accounts            Account[]
   media               Media[]
+  registrationFiles   RegistrationFile[]  @relation("UserRegistrationFiles")
   facilityAssignments FacilityAssignment[]
 
   // Guardian/Ward system
@@ -409,9 +411,10 @@ model Athlete {
   attendances      Attendance[]
   evaluations      Evaluation[]
   lineItems        LineItem[]
-  memberships      AthleteMembership[]
-  media            Media[]
-  recurringCharges RecurringCharge[]
+  memberships       AthleteMembership[]
+  media             Media[]
+  registrationFiles RegistrationFile[]
+  recurringCharges  RecurringCharge[]
   skillProgress    AthleteSkillProgress[]
   achievements     AthleteAchievement[]
 
@@ -770,6 +773,8 @@ model Program {
   hasMembershipRestriction Boolean @default(false)
   hasWaiverRestriction     Boolean @default(false)
   hasMedicalRequirement    Boolean @default(false)
+  hasFileRequirement       Boolean @default(false)
+  fileRequirementConfig    Json?
 
   // Gender Restriction Values
   allowedGenders GenderDeclaration[] // empty = unrestricted
@@ -790,6 +795,7 @@ model Program {
   waiverRequirements  ProgramWaiverRequirement[]
   instances           ProgramInstance[]
   trainingZones       ProgramTrainingZone[]
+  registrationFiles   RegistrationFile[]
 
   // Registration Queue
   queueConfigs      RegistrationQueueConfig[]
@@ -1161,19 +1167,22 @@ model Event {
   coachId             String?
   facilityId          String? // Optional - links to a Facility for scheduling
   requiredMemberships MembershipInstance[]
+  hasFileRequirement  Boolean              @default(false)
+  fileRequirementConfig Json?
   organizationId      String
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
   // Relations
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  program          Program?     @relation(fields: [programId], references: [id])
-  coach            User?        @relation("EventCoach", fields: [coachId], references: [id])
-  facility         Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  attendances      Attendance[]
-  lineItems        LineItem[]
-  media            Media[]
-  staffAssignments EventStaff[]
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  program           Program?     @relation(fields: [programId], references: [id])
+  coach             User?        @relation("EventCoach", fields: [coachId], references: [id])
+  facility          Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  attendances       Attendance[]
+  lineItems         LineItem[]
+  media             Media[]
+  staffAssignments  EventStaff[]
+  registrationFiles RegistrationFile[]
 }
 
 enum EventType {
@@ -3863,6 +3872,8 @@ model Competition {
   hasWaiverRestriction     Boolean  @default(false)
   waiverRequirementIds     String[] // Array of Waiver IDs
   hasMedicalRequirement    Boolean  @default(false)
+  hasFileRequirement       Boolean  @default(false)
+  fileRequirementConfig    Json?
 
   // Pricing
   pricingMode CompetitionPricingMode @default(FREE)
@@ -3880,12 +3891,13 @@ model Competition {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
 
-  categories   CompetitionCategory[]
-  entries      CompetitionEntry[]
-  results      CompetitionResult[]
-  teams        CompetitionTeam[]
-  pricingTiers CompetitionPricingTier[]
-  lineItems    LineItem[]
+  categories        CompetitionCategory[]
+  entries           CompetitionEntry[]
+  results           CompetitionResult[]
+  teams             CompetitionTeam[]
+  pricingTiers      CompetitionPricingTier[]
+  lineItems         LineItem[]
+  registrationFiles RegistrationFile[]
 
   @@index([organizationId])
   @@index([status])
@@ -4080,4 +4092,37 @@ model OrganizationStatusLog {
   user         User         @relation("StatusLogPerformer", fields: [performedBy], references: [id])
 
   @@index([organizationId])
+}
+
+model RegistrationFile {
+  id             String @id @default(cuid())
+  organizationId String
+  athleteId      String
+  uploadedById   String
+
+  programId     String?
+  competitionId String?
+  eventId       String?
+
+  fileName    String
+  fileSize    Int
+  contentType String
+  storageKey  String?
+  url         String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  athlete      Athlete      @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation("UserRegistrationFiles", fields: [uploadedById], references: [id], onDelete: Cascade)
+  program      Program?     @relation(fields: [programId], references: [id], onDelete: Cascade)
+  competition  Competition? @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  event        Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([athleteId, programId])
+  @@unique([athleteId, competitionId])
+  @@unique([athleteId, eventId])
+  @@index([organizationId])
+  @@index([athleteId])
 }

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { format } from "date-fns"
 import { Trophy, CalendarDays, MapPin, Clock } from "lucide-react"
 import { CompetitionRegistrationFlow } from "@/components/sites/competition-registration-flow"
+import type { FileRequirementConfig } from "@/types/file-requirements"
 
 export default async function CompetitionDetailPage({
   params,
@@ -86,6 +87,8 @@ export default async function CompetitionDetailPage({
     hasWaiverRestriction: competition.hasWaiverRestriction,
     waiverRequirementIds: competition.waiverRequirementIds,
     hasMedicalRequirement: competition.hasMedicalRequirement,
+    hasFileRequirement: competition.hasFileRequirement,
+    fileRequirementConfig: competition.fileRequirementConfig as FileRequirementConfig | null,
     organizationId: competition.organizationId,
     categories: competition.categories.map((cat) => ({
       id: cat.id,

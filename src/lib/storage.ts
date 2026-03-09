@@ -94,6 +94,21 @@ export function getUserDocumentKey(
   return `users/${userId}/documents/${sanitizedType}-${timestamp}${ext ? `.${ext}` : ''}`;
 }
 
+/**
+ * Generate a storage key for registration file uploads (music, photos, etc.)
+ */
+export function getRegistrationFileKey(
+  organizationId: string,
+  athleteId: string,
+  entityType: 'program' | 'competition' | 'event',
+  entityId: string,
+  filename: string
+): string {
+  const timestamp = Date.now();
+  const ext = filename.includes('.') ? filename.split('.').pop() : '';
+  return `organizations/${organizationId}/registration-files/${entityType}/${entityId}/${athleteId}-${timestamp}${ext ? `.${ext}` : ''}`;
+}
+
 export interface UploadOptions {
   /** Content type (MIME type) */
   contentType?: string;

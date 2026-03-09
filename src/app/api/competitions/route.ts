@@ -109,6 +109,8 @@ const createCompetitionSchema = z.object({
   hasWaiverRestriction: z.boolean().default(false),
   waiverRequirementIds: z.array(z.string()).optional().default([]),
   hasMedicalRequirement: z.boolean().default(false),
+  hasFileRequirement: z.boolean().default(false),
+  fileRequirementConfig: z.any().optional().nullable(),
 
   // Results configuration per category
   categoryResults: z.array(z.object({
@@ -213,6 +215,8 @@ export async function POST(request: NextRequest) {
         hasWaiverRestriction: data.hasWaiverRestriction,
         waiverRequirementIds: data.waiverRequirementIds,
         hasMedicalRequirement: data.hasMedicalRequirement,
+        hasFileRequirement: data.hasFileRequirement,
+        fileRequirementConfig: data.fileRequirementConfig ?? undefined,
 
         // Pricing
         pricingMode: data.pricingMode,

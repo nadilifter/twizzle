@@ -42,6 +42,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
+import { RegistrationFileViewer } from "@/components/registration-file-viewer"
 import {
   Table,
   TableBody,
@@ -420,6 +421,24 @@ export default function CompetitionAthleteDetailPage() {
           )}
         </div>
       )}
+
+      {/* Registration File */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Registration File
+          </CardTitle>
+          <CardDescription>File uploaded during registration</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RegistrationFileViewer
+            athleteId={athlete.id}
+            competitionId={competitionId}
+            editable={false}
+          />
+        </CardContent>
+      </Card>
 
       {/* Waiver Viewer Dialog */}
       <WaiverViewerDialog

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { RegistrationFilesSection } from "@/components/registration-files-section";
 
 interface Guardian {
   id: string;
@@ -295,6 +296,15 @@ export default function AthleteDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Registration Files */}
+      {athlete?.organizationId && (
+        <RegistrationFilesSection
+          athleteId={athleteId}
+          organizationId={athlete.organizationId}
+          canDelete={false}
+        />
+      )}
 
       {/* Registrations section */}
       <Card>

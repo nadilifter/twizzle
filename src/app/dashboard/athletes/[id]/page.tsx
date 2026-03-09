@@ -86,6 +86,7 @@ import type {
   AttendanceWithEvent,
 } from "@/types/athletes"
 import type { EvaluationWithRelations, EvaluationStatus } from "@/types/evaluations"
+import { RegistrationFilesSection } from "@/components/registration-files-section"
 
 interface RegistrationItem {
   id: string
@@ -535,6 +536,11 @@ export default function AthleteProfilePage() {
                 />
               </CardContent>
             </Card>
+            {/* Registration Files */}
+            <RegistrationFilesSection
+              athleteId={athlete.id}
+              canDelete={true}
+            />
           </div>
         </TabsContent>
 

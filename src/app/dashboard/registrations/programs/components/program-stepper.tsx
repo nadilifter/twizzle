@@ -55,6 +55,8 @@ import {
   ClipboardList,
 } from "lucide-react"
 import { toast } from "sonner"
+import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
+import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useFeatures } from "@/components/feature-context"
 import { useStaff } from "@/hooks/use-staff"
 import { useMemberships } from "@/hooks/use-memberships"
@@ -142,6 +144,8 @@ interface ProgramFormData {
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
+  hasFileRequirement: boolean
+  fileRequirementConfig: FileRequirementConfig | null
 
   // Waitlist
   waitlistEnabled: boolean
@@ -270,6 +274,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     hasWaiverRestriction: (program as any)?.hasWaiverRestriction || false,
     waiverRequirementIds: (program as any)?.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
     hasMedicalRequirement: program?.hasMedicalRequirement || false,
+    hasFileRequirement: (program as any)?.hasFileRequirement || false,
+    fileRequirementConfig: (program as any)?.fileRequirementConfig || null,
 
     // Waitlist
     waitlistEnabled: (program as any)?.waitlistEnabled || false,
@@ -556,6 +562,17 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           toast.error("Select at least one waiver when waiver restriction is enabled")
           return false
         }
+        if (formData.hasFileRequirement && (!formData.fileRequirementConfig?.label?.trim())) {
+          toast.error("Provide a label for the file upload requirement")
+          return false
+        }
+        if (formData.hasFileRequirement && formData.fileRequirementConfig) {
+          const { acceptedPresets, acceptedExtensions } = formData.fileRequirementConfig
+          if (acceptedPresets.length === 0 && acceptedExtensions.length === 0) {
+            toast.error("Select at least one file type preset or add a custom extension")
+            return false
+          }
+        }
         return true
       case "evaluation":
         return true
@@ -625,6 +642,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         hasMembershipRestriction: formData.hasMembershipRestriction,
         hasWaiverRestriction: formData.hasWaiverRestriction,
         hasMedicalRequirement: formData.hasMedicalRequirement,
+        hasFileRequirement: formData.hasFileRequirement,
+        fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
         hasTrainingZoneRestriction: formData.hasTrainingZoneRestriction,
         trainingZoneCapacityMode: formData.trainingZoneCapacityMode,
         capacity: formData.hasCapacityRestriction ? formData.capacity : null,
@@ -1834,6 +1853,35 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   </div>
                 )}
               </div>
+
+              {/* File Upload Requirement */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base">File Upload Requirement</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require athletes to upload a file during registration (e.g. routine music)
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasFileRequirement}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    hasFileRequirement: checked,
+                    fileRequirementConfig: checked && !prev.fileRequirementConfig
+                      ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
+                      : prev.fileRequirementConfig,
+                  }))}
+                />
+              </div>
+
+              {formData.hasFileRequirement && formData.fileRequirementConfig && (
+                <div className="pt-2 border-t">
+                  <FileRequirementConfigEditor
+                    config={formData.fileRequirementConfig}
+                    onChange={(config) => setFormData(prev => ({ ...prev, fileRequirementConfig: config }))}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

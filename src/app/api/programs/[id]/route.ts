@@ -38,6 +38,8 @@ const updateProgramSchema = z.object({
   hasMembershipRestriction: z.boolean().optional(),
   hasWaiverRestriction: z.boolean().optional(),
   hasMedicalRequirement: z.boolean().optional(),
+  hasFileRequirement: z.boolean().optional(),
+  fileRequirementConfig: z.any().optional().nullable(),
   // Gender restriction values
   allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional(),
   // Waitlist
@@ -296,6 +298,8 @@ export async function PATCH(
       if (validatedData.hasMembershipRestriction !== undefined) updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
       if (validatedData.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = validatedData.hasWaiverRestriction;
       if (validatedData.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
+      if (validatedData.hasFileRequirement !== undefined) updateData.hasFileRequirement = validatedData.hasFileRequirement;
+      if (validatedData.fileRequirementConfig !== undefined) updateData.fileRequirementConfig = validatedData.fileRequirementConfig;
       if (validatedData.hasTrainingZoneRestriction !== undefined) updateData.hasTrainingZoneRestriction = validatedData.hasTrainingZoneRestriction;
       if (validatedData.trainingZoneCapacityMode !== undefined) updateData.trainingZoneCapacityMode = validatedData.trainingZoneCapacityMode;
       if (validatedData.waitlistEnabled !== undefined) updateData.waitlistEnabled = validatedData.waitlistEnabled;

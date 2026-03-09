@@ -188,6 +188,36 @@ export async function POST(
           }
         }
       }
+
+      // File requirement validation for programs
+      const programsWithFiles = await db.program.findMany({
+        where: {
+          id: { in: programIds },
+          organizationId,
+          hasFileRequirement: true,
+        },
+        select: { id: true },
+      });
+
+      if (programsWithFiles.length > 0) {
+        const fileProgramIds = new Set(programsWithFiles.map((p) => p.id));
+        for (const item of programItems) {
+          const pid = item.details?.programId || item.referenceId;
+          const athleteId = item.athleteId || item.details?.athleteId;
+          if (pid && fileProgramIds.has(pid) && athleteId) {
+            const regFile = await db.registrationFile.findFirst({
+              where: { athleteId, programId: pid },
+              select: { id: true },
+            });
+            if (!regFile) {
+              return NextResponse.json(
+                { error: `A required file upload is missing for ${item.athleteName || "an athlete"}. Please complete the file upload step before proceeding.` },
+                { status: 400 }
+              );
+            }
+          }
+        }
+      }
     }
 
     // 2c. Server-side membership restriction validation
@@ -547,6 +577,20 @@ export async function POST(
           if (!medicalInfo) {
             return NextResponse.json(
               { error: `Medical information is required for athlete ${athleteLabel} for "${competition.name}". Please complete the medical form before proceeding.` },
+              { status: 400 }
+            );
+          }
+        }
+
+        // File requirement validation for competition
+        if (competition.hasFileRequirement) {
+          const regFile = await db.registrationFile.findFirst({
+            where: { athleteId, competitionId: competition.id },
+            select: { id: true },
+          });
+          if (!regFile) {
+            return NextResponse.json(
+              { error: `A required file upload is missing for athlete ${athleteLabel} for "${competition.name}". Please complete the file upload step before proceeding.` },
               { status: 400 }
             );
           }

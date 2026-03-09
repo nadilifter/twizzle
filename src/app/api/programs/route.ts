@@ -38,6 +38,8 @@ const createProgramSchema = z.object({
   hasMembershipRestriction: z.boolean().default(false),
   hasWaiverRestriction: z.boolean().default(false),
   hasMedicalRequirement: z.boolean().default(false),
+  hasFileRequirement: z.boolean().default(false),
+  fileRequirementConfig: z.any().optional().nullable(),
   // Gender restriction values
   allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).default([]),
   // Waitlist
@@ -271,6 +273,8 @@ export async function POST(request: NextRequest) {
           hasMembershipRestriction: validatedData.hasMembershipRestriction,
           hasWaiverRestriction: validatedData.hasWaiverRestriction,
           hasMedicalRequirement: validatedData.hasMedicalRequirement,
+          hasFileRequirement: validatedData.hasFileRequirement,
+          fileRequirementConfig: validatedData.fileRequirementConfig ?? undefined,
           waitlistEnabled: validatedData.waitlistEnabled,
           waitlistAutoPromote: validatedData.waitlistAutoPromote,
           waitlistCapacity: validatedData.waitlistCapacity,

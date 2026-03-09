@@ -41,6 +41,8 @@ import {
   Heart,
 } from "lucide-react"
 import { toast } from "sonner"
+import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
+import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useFeatures } from "@/components/feature-context"
 import { useStaff } from "@/hooks/use-staff"
 import { useMemberships } from "@/hooks/use-memberships"
@@ -114,6 +116,8 @@ interface EventFormData {
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
+  hasFileRequirement: boolean
+  fileRequirementConfig: FileRequirementConfig | null
 
   // Step 4: Staff
   staffAssignments: StaffAssignment[]
@@ -189,6 +193,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
     hasWaiverRestriction: false,
     waiverRequirementIds: [],
     hasMedicalRequirement: false,
+    hasFileRequirement: (event as any)?.hasFileRequirement || false,
+    fileRequirementConfig: (event as any)?.fileRequirementConfig || null,
 
     staffAssignments: [],
   }))
@@ -329,6 +335,17 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
           toast.error("Select at least one waiver when waiver restriction is enabled")
           return false
         }
+        if (formData.hasFileRequirement && (!formData.fileRequirementConfig?.label?.trim())) {
+          toast.error("Provide a label for the file upload requirement")
+          return false
+        }
+        if (formData.hasFileRequirement && formData.fileRequirementConfig) {
+          const { acceptedPresets, acceptedExtensions } = formData.fileRequirementConfig
+          if (acceptedPresets.length === 0 && acceptedExtensions.length === 0) {
+            toast.error("Select at least one file type preset or add a custom extension")
+            return false
+          }
+        }
         return true
       case "staff":
         return true
@@ -369,6 +386,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
         requiredMembershipInstanceIds: formData.hasMembershipRestriction
           ? formData.membershipRequirementIds
           : [],
+        hasFileRequirement: formData.hasFileRequirement,
+        fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
         staffAssignments: formData.staffAssignments.map(sa => ({
           memberId: sa.memberId,
           role: sa.role,
@@ -1059,6 +1078,35 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   </div>
                 )}
               </div>
+
+              {/* File Upload Requirement */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base">File Upload Requirement</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require athletes to upload a file during registration (e.g. routine music)
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasFileRequirement}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    hasFileRequirement: checked,
+                    fileRequirementConfig: checked && !prev.fileRequirementConfig
+                      ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
+                      : prev.fileRequirementConfig,
+                  }))}
+                />
+              </div>
+
+              {formData.hasFileRequirement && formData.fileRequirementConfig && (
+                <div className="pt-2 border-t">
+                  <FileRequirementConfigEditor
+                    config={formData.fileRequirementConfig}
+                    onChange={(config) => setFormData(prev => ({ ...prev, fileRequirementConfig: config }))}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

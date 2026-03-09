@@ -25,6 +25,8 @@ const updateEventSchema = z.object({
   }).optional().nullable(),
   programId: z.string().optional().nullable(),
   coachId: z.string().optional().nullable(),
+  hasFileRequirement: z.boolean().optional(),
+  fileRequirementConfig: z.any().optional().nullable(),
 });
 
 // GET /api/events/[id]
@@ -185,6 +187,8 @@ export async function PATCH(
         programId: validatedData.programId,
         coachId: validatedData.coachId,
         date: validatedData.date ? parseDateOnly(validatedData.date) ?? undefined : undefined,
+        ...(validatedData.hasFileRequirement !== undefined && { hasFileRequirement: validatedData.hasFileRequirement }),
+        ...(validatedData.fileRequirementConfig !== undefined && { fileRequirementConfig: validatedData.fileRequirementConfig }),
       },
       include: {
         program: true,

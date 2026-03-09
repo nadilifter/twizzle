@@ -31,6 +31,8 @@ import {
   FileText,
 } from "lucide-react"
 import { toast } from "sonner"
+import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
+import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useMemberships } from "@/hooks/use-memberships"
 import { cn } from "@/lib/utils"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -175,6 +177,8 @@ interface CompetitionFormData {
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
+  hasFileRequirement: boolean
+  fileRequirementConfig: FileRequirementConfig | null
 
   // Step 4: Results
   categoryResults: CategoryResultConfig[]
@@ -249,6 +253,8 @@ export function CompetitionConfiguration({
     hasWaiverRestriction: false,
     waiverRequirementIds: [],
     hasMedicalRequirement: false,
+    hasFileRequirement: false,
+    fileRequirementConfig: null,
     categoryResults: [],
     pricingMode: "FREE",
     entryFee: null,
@@ -362,6 +368,8 @@ export function CompetitionConfiguration({
           hasWaiverRestriction: compData.hasWaiverRestriction ?? false,
           waiverRequirementIds: compData.waiverRequirementIds || [],
           hasMedicalRequirement: compData.hasMedicalRequirement ?? false,
+          hasFileRequirement: compData.hasFileRequirement ?? false,
+          fileRequirementConfig: compData.fileRequirementConfig ?? null,
           categoryResults,
           pricingMode: compData.pricingMode || "FREE",
           entryFee: compData.entryFee != null ? (typeof compData.entryFee === "string" ? parseFloat(compData.entryFee) : compData.entryFee) : null,
@@ -593,6 +601,8 @@ export function CompetitionConfiguration({
             hasWaiverRestriction: formData.hasWaiverRestriction,
             waiverRequirementIds: formData.waiverRequirementIds,
             hasMedicalRequirement: formData.hasMedicalRequirement,
+            hasFileRequirement: formData.hasFileRequirement,
+            fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
             categoryResults: categoryResultsToSave.map((c, i) => ({
               combinationEntryId: c.combinationEntryId,
               individualEntryId: c.individualEntryId,
@@ -1114,6 +1124,35 @@ export function CompetitionConfiguration({
                 </div>
               )}
             </div>
+
+            {/* File Upload Requirement */}
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-base font-medium">File Upload Requirement</Label>
+                <p className="text-sm text-muted-foreground">
+                  Require athletes to upload a file during registration (e.g. routine music)
+                </p>
+              </div>
+              <Switch
+                checked={formData.hasFileRequirement}
+                onCheckedChange={checked => setFormData(prev => ({
+                  ...prev,
+                  hasFileRequirement: checked,
+                  fileRequirementConfig: checked && !prev.fileRequirementConfig
+                    ? { label: "", acceptedPresets: [], acceptedExtensions: [] }
+                    : prev.fileRequirementConfig,
+                }))}
+              />
+            </div>
+
+            {formData.hasFileRequirement && formData.fileRequirementConfig && (
+              <div className="pt-2 border-t">
+                <FileRequirementConfigEditor
+                  config={formData.fileRequirementConfig}
+                  onChange={(config) => setFormData(prev => ({ ...prev, fileRequirementConfig: config }))}
+                />
+              </div>
+            )}
 
           </TabsContent>
 

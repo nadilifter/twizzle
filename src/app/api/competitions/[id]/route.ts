@@ -171,6 +171,8 @@ const updateCompetitionSchema = z.object({
   hasWaiverRestriction: z.boolean().optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
   hasMedicalRequirement: z.boolean().optional(),
+  hasFileRequirement: z.boolean().optional(),
+  fileRequirementConfig: z.any().optional().nullable(),
 
   publishStatus: z.enum(["DRAFT", "LIVE", "SCHEDULED", "CLOSED", "COMPLETED"]).optional(),
   scheduledGoLiveDate: z.string().or(z.date()).nullable().optional(),
@@ -238,6 +240,8 @@ export async function PATCH(
     if (data.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = data.hasWaiverRestriction
     if (data.waiverRequirementIds !== undefined) updateData.waiverRequirementIds = data.waiverRequirementIds
     if (data.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = data.hasMedicalRequirement
+    if (data.hasFileRequirement !== undefined) updateData.hasFileRequirement = data.hasFileRequirement
+    if (data.fileRequirementConfig !== undefined) updateData.fileRequirementConfig = data.fileRequirementConfig
     if (data.publishStatus !== undefined) {
       const currentPublishStatus = existing.publishStatus
       if (currentPublishStatus === "LIVE" && data.publishStatus === "DRAFT") {

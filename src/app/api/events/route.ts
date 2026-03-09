@@ -36,6 +36,8 @@ const createEventSchema = z.object({
   programId: z.string().optional().nullable(),
   coachId: z.string().optional().nullable(),
   requiredMembershipInstanceIds: z.array(z.string()).optional(),
+  hasFileRequirement: z.boolean().optional(),
+  fileRequirementConfig: z.any().optional().nullable(),
   staffAssignments: z.array(staffAssignmentSchema).optional(),
 }).refine((data) => {
   const dateTimeString = `${data.date}T${data.startTime}`;
@@ -274,6 +276,8 @@ export async function POST(request: NextRequest) {
         facilityId: validatedData.facilityId || null,
         timezone: validatedData.timezone,
         capacity: validatedData.capacity,
+        hasFileRequirement: validatedData.hasFileRequirement ?? false,
+        fileRequirementConfig: validatedData.fileRequirementConfig ?? undefined,
         organizationId: session.user.organizationId,
     };
 

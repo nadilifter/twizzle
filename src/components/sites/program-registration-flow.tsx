@@ -31,7 +31,9 @@ import {
 } from "@/components/ui/select"
 import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad"
 import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
+import { FileUploadStep } from "@/components/sites/file-upload-step"
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
+import type { FileRequirementConfig } from "@/types/file-requirements"
 import {
   User,
   Calendar,
@@ -112,6 +114,8 @@ interface ProgramData {
   maxAge: number | null
   hasWaiverRestriction: boolean
   hasMedicalRequirement: boolean
+  hasFileRequirement: boolean
+  fileRequirementConfig: FileRequirementConfig | null
   hasMembershipRestriction: boolean
   organizationId: string
   capacity: number | null
@@ -139,6 +143,7 @@ const { useStepper } = defineStepper(
   { id: "membership", title: "Membership" },
   { id: "waivers", title: "Sign Waivers" },
   { id: "medical", title: "Medical Info" },
+  { id: "files", title: "File Upload" },
   { id: "review", title: "Review & Register" },
 )
 
@@ -176,6 +181,7 @@ export function ProgramRegistrationFlow({
   const isPerInstance = program.registrationType === "PER_INSTANCE"
   const needsWaivers = program.hasWaiverRestriction && program.waiverRequirements.length > 0
   const needsMedicalStep = program.hasMedicalRequirement
+  const needsFiles = program.hasFileRequirement && !!program.fileRequirementConfig
   const needsMembership = program.hasMembershipRestriction && program.requiredMemberships.length > 0
 
   const programIsFull = program.hasCapacityRestriction
@@ -231,6 +237,9 @@ export function ProgramRegistrationFlow({
   const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false)
   const [needsMedical, setNeedsMedical] = useState(false)
 
+  // File upload state
+  const [uploadedFileId, setUploadedFileId] = useState<string | null>(null)
+
   // Navigation direction: only auto-skip completed steps on the first forward pass
   const isNavigatingBackRef = useRef(false)
 
@@ -242,9 +251,10 @@ export function ProgramRegistrationFlow({
     if (needsMembership) ids.push("membership")
     if (needsWaivers) ids.push("waivers")
     if (needsMedicalStep) ids.push("medical")
+    if (needsFiles) ids.push("files")
     ids.push("review")
     return ids
-  }, [isPerInstance, needsMembership, needsWaivers, needsMedicalStep])
+  }, [isPerInstance, needsMembership, needsWaivers, needsMedicalStep, needsFiles])
 
   const getNextStepId = useCallback(
     (currentId: string): string | null => {
@@ -682,6 +692,7 @@ export function ProgramRegistrationFlow({
             startTime: instance.startTime,
             waitlist: instanceIsFull && program.waitlistEnabled,
             endTime: instance.endTime,
+            ...(uploadedFileId && { fileUploadId: uploadedFileId }),
           },
         })
       }
@@ -700,6 +711,7 @@ export function ProgramRegistrationFlow({
           pricingModel: program.pricingModel,
           requiredMemberships: program.requiredMemberships.map(m => m.id),
           waitlist: isWaitlistMode,
+          ...(uploadedFileId && { fileUploadId: uploadedFileId }),
         },
       })
     }
@@ -1262,6 +1274,25 @@ export function ProgramRegistrationFlow({
           }}
           onBack={() => {
             const prevId = getPreviousStepId("medical")
+            if (prevId) stepper.navigation.goTo(prevId as any)
+          }}
+        />
+      )}
+
+      {/* Step: File Upload */}
+      {currentStepId === "files" && needsFiles && program.fileRequirementConfig && (
+        <FileUploadStep
+          config={program.fileRequirementConfig}
+          organizationId={program.organizationId}
+          athleteId={selectedAthlete?.id || ""}
+          programId={program.id}
+          onComplete={(fileId) => {
+            setUploadedFileId(fileId)
+            const nextId = getNextStepId("files")
+            if (nextId) stepper.navigation.goTo(nextId as any)
+          }}
+          onBack={() => {
+            const prevId = getPreviousStepId("files")
             if (prevId) stepper.navigation.goTo(prevId as any)
           }}
         />
