@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+            color: true,
             recurrenceType: true,
             registrationType: true,
           },
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
       capacity: null,
       registrationCount: 0,
       attendanceCount: 0,
-      color: "#3b82f6",
+      color: instance.program.color,
       levelName: null,
       recurrenceType: instance.program.recurrenceType,
       registrationType: instance.program.registrationType,

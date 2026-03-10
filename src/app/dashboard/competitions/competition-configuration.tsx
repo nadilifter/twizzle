@@ -35,6 +35,7 @@ import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-co
 import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useMemberships } from "@/hooks/use-memberships"
 import { cn } from "@/lib/utils"
+import { ColorSelector } from "@/components/color-selector"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
@@ -149,6 +150,7 @@ const EVENT_GROUP_LABELS: Record<string, string> = {
 interface CompetitionFormData {
   // Step 1: General
   name: string
+  color: string
   competitionType: string | null
   facilityId: string | null
   country: string
@@ -229,6 +231,7 @@ export function CompetitionConfiguration({
   // Form state
   const [formData, setFormData] = useState<CompetitionFormData>({
     name: "",
+    color: "#3b82f6",
     competitionType: null,
     facilityId: null,
     country: "",
@@ -344,6 +347,7 @@ export function CompetitionConfiguration({
 
         setFormData({
           name: compData.name || "",
+          color: compData.color || "#3b82f6",
           competitionType: compData.competitionType || null,
           facilityId: compData.facilityId || null,
           country: compData.country || "",
@@ -577,6 +581,7 @@ export function CompetitionConfiguration({
     try {
         const payload = {
             name: formData.name,
+            color: formData.color,
             competitionType: formData.competitionType,
             facilityId: formData.facilityId,
             country: formData.country,
@@ -683,6 +688,11 @@ export function CompetitionConfiguration({
                 onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
               />
             </div>
+
+            <ColorSelector
+              value={formData.color}
+              onChange={(color) => setFormData(prev => ({ ...prev, color }))}
+            />
 
             <div className="space-y-2">
                 <Label>Facility</Label>

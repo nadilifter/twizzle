@@ -53,6 +53,7 @@ export interface Program {
   id: string;
   name: string;
   description: string | null;
+  color: string;
   status: ProgramStatus;
   organizationId: string;
   createdAt: string;
@@ -234,6 +235,7 @@ export interface ProgramsListResponse {
 export interface CreateProgramPayload {
   name: string;
   description?: string;
+  color?: string;
   status?: ProgramStatus;
   pricingModel?: PricingModel;
   basePrice?: number | null;
@@ -282,6 +284,7 @@ export interface CreateProgramPayload {
 export interface UpdateProgramPayload {
   name?: string;
   description?: string;
+  color?: string;
   status?: ProgramStatus;
   pricingModel?: PricingModel;
   basePrice?: number | null;

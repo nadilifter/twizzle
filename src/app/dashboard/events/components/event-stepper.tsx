@@ -51,6 +51,7 @@ import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
 import { useMemberships } from "@/hooks/use-memberships"
 import { cn } from "@/lib/utils"
 import { CopySettingsDialog } from "@/components/copy-settings-dialog"
+import { ColorSelector } from "@/components/color-selector"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -98,6 +99,7 @@ interface EventFormData {
   // Step 1: General
   name: string
   description: string
+  color: string
   type: EventType
   price: number | null
 
@@ -178,6 +180,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
   const [formData, setFormData] = React.useState<EventFormData>(() => ({
     name: (event as any)?.title || "",
     description: (event as any)?.description || "",
+    color: (event as any)?.color || "#3b82f6",
     type: (event as any)?.type || "CLASS",
     price: null,
 
@@ -217,6 +220,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
       setFormData(prev => ({
         ...prev,
         description: data.description || "",
+        color: data.color || "#3b82f6",
         type: data.type || "CLASS",
         price: null,
         date: data.date ? new Date(data.date) : null,
@@ -423,6 +427,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
       const payload: any = {
         title: formData.name,
         description: formData.description || undefined,
+        color: formData.color,
         type: formData.type,
         date: dateStr,
         startTime: formData.startTime,
@@ -597,6 +602,11 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   placeholder="Describe what this event is about, who it's for, and what to expect..."
                 />
               </div>
+
+              <ColorSelector
+                value={formData.color}
+                onChange={(color) => setFormData(prev => ({ ...prev, color }))}
+              />
 
               {/* Event Type Selection */}
               <div className="space-y-4">

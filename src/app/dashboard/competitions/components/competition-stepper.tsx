@@ -51,6 +51,7 @@ import { useFeatures } from "@/components/feature-context"
 import { useMemberships } from "@/hooks/use-memberships"
 import { cn } from "@/lib/utils"
 import { CopySettingsDialog } from "@/components/copy-settings-dialog"
+import { ColorSelector } from "@/components/color-selector"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -161,6 +162,7 @@ const EVENT_GROUP_LABELS: Record<string, string> = {
 interface CompetitionFormData {
   // Step 1: General
   name: string
+  color: string
   competitionType: string | null
   facilityId: string | null
   country: string
@@ -267,6 +269,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
   const [formData, setFormData] = React.useState<CompetitionFormData>({
     // Step 1: General
     name: "",
+    color: "#3b82f6",
     competitionType: null,
     facilityId: null,
     country: "",
@@ -372,6 +375,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
       setFormData(prev => ({
         ...prev,
+        color: data.color || "#3b82f6",
         competitionType: data.competitionType || null,
         facilityId: data.facilityId || null,
         country: data.country || "",
@@ -480,6 +484,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
         setFormData({
           name: data.name || "",
+          color: data.color || "#3b82f6",
           competitionType: data.competitionType || null,
           facilityId: data.facilityId || null,
           country: data.country || "",
@@ -884,6 +889,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
     try {
       const payload = {
         name: formData.name,
+        color: formData.color,
         competitionType: formData.competitionType,
         facilityId: formData.facilityId,
         country: formData.country,
@@ -1048,6 +1054,11 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
+
+              <ColorSelector
+                value={formData.color}
+                onChange={(color) => setFormData(prev => ({ ...prev, color }))}
+              />
 
               {/* Competition Type */}
               {(() => {

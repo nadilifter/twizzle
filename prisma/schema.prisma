@@ -727,6 +727,7 @@ model Program {
   id             String        @id @default(cuid())
   name           String
   description    String?
+  color          String        @default("#3b82f6")
   status         ProgramStatus @default(ACTIVE)
   organizationId String
   createdAt      DateTime      @default(now())
@@ -1158,6 +1159,7 @@ model InstanceAttendance {
 model Event {
   id                  String               @id @default(cuid())
   title               String
+  color               String               @default("#3b82f6")
   date                DateTime
   startTime           String
   endTime             String
@@ -3844,6 +3846,7 @@ model Competition {
   id              String            @id @default(cuid())
   organizationId  String
   name            String
+  color           String            @default("#3b82f6")
   competitionType String // e.g. "GYMNASTICS", "TRACK_AND_FIELD"
   status          CompetitionStatus @default(DRAFT)
 

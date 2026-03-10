@@ -10,6 +10,7 @@ import { format, addMinutes } from "date-fns";
 const updateProgramSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).optional(),
   basePrice: z.number().min(0).optional().nullable(),
@@ -275,6 +276,7 @@ export async function PATCH(
       
       if (validatedData.name !== undefined) updateData.name = validatedData.name;
       if (validatedData.description !== undefined) updateData.description = validatedData.description;
+      if (validatedData.color !== undefined) updateData.color = validatedData.color;
       if (validatedData.status !== undefined) updateData.status = validatedData.status;
       if (validatedData.pricingModel !== undefined) updateData.pricingModel = validatedData.pricingModel;
       if (validatedData.basePrice !== undefined) updateData.basePrice = validatedData.basePrice;

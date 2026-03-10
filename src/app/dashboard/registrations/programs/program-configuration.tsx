@@ -52,6 +52,7 @@ import { useMemberships } from "@/hooks/use-memberships"
 import type { ProgramStaffRole } from "@/types/staff"
 import type { TrainingZoneWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
+import { ColorSelector } from "@/components/color-selector"
 import { RecurrencePicker, parseRRule } from "@/components/ui/recurrence-picker"
 import {
   Dialog,
@@ -145,6 +146,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     // General
     name: program.name || "",
     description: program.description || "",
+    color: program.color || "#3b82f6",
     recurrenceType: (program.recurrenceType || "RECURRING") as "NON_RECURRING" | "RECURRING",
     registrationType: (program.registrationType || "ALL_INSTANCES") as "ALL_INSTANCES" | "PER_INSTANCE" | null,
     price: (() => {
@@ -424,6 +426,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
       await updateProgram(program.id, {
         name: formData.name,
         description: formData.description || undefined,
+        color: formData.color,
         recurrenceType: formData.recurrenceType as any,
         registrationType:
           formData.recurrenceType === "RECURRING"
@@ -646,6 +649,11 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
                 placeholder="Describe what this program offers, who it's for, and what participants will learn..."
               />
             </div>
+
+            <ColorSelector
+              value={formData.color}
+              onChange={(color) => setFormData((prev) => ({ ...prev, color }))}
+            />
 
             {/* Schedule Type */}
             <div className="space-y-4">

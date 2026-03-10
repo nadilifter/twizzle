@@ -6,6 +6,7 @@ import { z } from "zod";
 
 const updateEventSchema = z.object({
   title: z.string().min(1).optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
   date: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
@@ -177,6 +178,7 @@ export async function PATCH(
       where: { id },
       data: {
         title: validatedData.title,
+        color: validatedData.color,
         startTime: validatedData.startTime,
         endTime: validatedData.endTime,
         type: validatedData.type,

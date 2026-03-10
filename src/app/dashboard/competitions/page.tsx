@@ -58,6 +58,7 @@ function formatPrice(price: number | string | null | undefined): string {
 interface Competition {
   id: string
   name: string
+  color: string
   competitionType: string
   status: string
   startDate: string
@@ -252,6 +253,12 @@ export default function CompetitionsPage() {
                       <CardTitle className="text-base font-semibold leading-tight line-clamp-2 pt-1">
                         {competition.name}
                       </CardTitle>
+                      <div className="flex items-center gap-1 pt-0.5">
+                        <div
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ backgroundColor: competition.color || "#3b82f6" }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>

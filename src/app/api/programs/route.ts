@@ -20,6 +20,7 @@ import { format, addMinutes, parse } from "date-fns";
 const createProgramSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).default("ACTIVE"),
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).default("FLAT_RATE"),
   basePrice: z.number().min(0).optional().nullable(),
@@ -259,6 +260,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: validatedData.name,
           description: validatedData.description,
+          color: validatedData.color,
           status: validatedData.status,
           pricingModel: validatedData.pricingModel,
           basePrice: validatedData.basePrice,

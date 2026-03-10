@@ -36,8 +36,6 @@ import {
   Pencil,
   Trash2,
   GripVertical,
-  Palette,
-  Check,
 } from "lucide-react"
 import {
   Table,
@@ -72,6 +70,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { api } from "@/lib/api-client"
+import { ColorSelector } from "@/components/color-selector"
 
 interface Level {
   id: string
@@ -98,23 +97,6 @@ const initialFormData: LevelFormData = {
   isDefault: false,
 }
 
-const colorPresets = [
-  "#ef4444", // red
-  "#f97316", // orange
-  "#f59e0b", // amber
-  "#eab308", // yellow
-  "#84cc16", // lime
-  "#22c55e", // green
-  "#14b8a6", // teal
-  "#06b6d4", // cyan
-  "#3b82f6", // blue
-  "#6366f1", // indigo
-  "#8b5cf6", // violet
-  "#a855f7", // purple
-  "#d946ef", // fuchsia
-  "#ec4899", // pink
-  "#64748b", // slate
-]
 
 function SortableLevelRow({
   level,
@@ -365,38 +347,10 @@ export default function LevelsPage() {
                   rows={3}
                 />
               </div>
-              <div className="grid gap-2">
-                <Label>Color</Label>
-                <div className="flex flex-wrap gap-2">
-                  {colorPresets.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-transform hover:scale-110"
-                      style={{ 
-                        backgroundColor: color,
-                        borderColor: formData.color === color ? "white" : "transparent",
-                        boxShadow: formData.color === color ? `0 0 0 2px ${color}` : "none"
-                      }}
-                      onClick={() => setFormData({ ...formData, color })}
-                    >
-                      {formData.color === color && (
-                        <Check className="h-4 w-4 text-white" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <Palette className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="color"
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    className="w-12 h-8 p-1 cursor-pointer"
-                  />
-                  <span className="text-sm text-muted-foreground">{formData.color}</span>
-                </div>
-              </div>
+              <ColorSelector
+                value={formData.color}
+                onChange={(color) => setFormData({ ...formData, color })}
+              />
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isDefault"

@@ -146,21 +146,22 @@ export default function ProgramsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1.5 min-w-0">
                       <CardTitle className="leading-tight">{program.name}</CardTitle>
-                      {/* Level requirement badges */}
-                      {levelReqs.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {levelReqs.map((lr: any) => (
-                            <Badge 
-                              key={lr.id}
-                              variant="secondary" 
-                              className="text-[10px] px-1.5 py-0"
-                              style={lr.level?.color ? { backgroundColor: `${lr.level.color}15`, color: lr.level.color, borderColor: `${lr.level.color}40` } : undefined}
-                            >
-                              {lr.level?.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex flex-wrap items-center gap-1">
+                        <div
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ backgroundColor: program.color || "#3b82f6" }}
+                        />
+                        {levelReqs.map((lr: any) => (
+                          <Badge 
+                            key={lr.id}
+                            variant="secondary" 
+                            className="text-[10px] px-1.5 py-0"
+                            style={lr.level?.color ? { backgroundColor: `${lr.level.color}15`, color: lr.level.color, borderColor: `${lr.level.color}40` } : undefined}
+                          >
+                            {lr.level?.name}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <Badge variant={program.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px]">

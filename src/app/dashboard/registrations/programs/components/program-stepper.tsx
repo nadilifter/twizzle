@@ -67,6 +67,7 @@ import type { ProgramStaffRole } from "@/types/staff"
 import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, TrainingZoneWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
 import { CopySettingsDialog } from "@/components/copy-settings-dialog"
+import { ColorSelector } from "@/components/color-selector"
 import { RecurrencePicker, type RecurrenceConfig, configToRRule, parseRRule } from "@/components/ui/recurrence-picker"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -119,6 +120,7 @@ interface ProgramFormData {
   // Step 1: General
   name: string
   description: string
+  color: string
   recurrenceType: "NON_RECURRING" | "RECURRING"
   registrationType: "ALL_INSTANCES" | "PER_INSTANCE" | null
   /** Single price: per-session (single session or per-class) or flat rate (entire program). Null/0 = free. */
@@ -245,6 +247,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     // Step 1: General
     name: program?.name || "",
     description: program?.description || "",
+    color: (program as any)?.color || "#3b82f6",
     recurrenceType: (program as any)?.recurrenceType || "RECURRING",
     registrationType: (program as any)?.registrationType || "ALL_INSTANCES",
     price: (() => {
@@ -329,6 +332,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       setFormData(prev => ({
         ...prev,
         description: data.description || "",
+        color: data.color || "#3b82f6",
         recurrenceType: data.recurrenceType || "RECURRING",
         registrationType: data.registrationType || "ALL_INSTANCES",
         price: priceVal != null ? Number(priceVal) : null,
@@ -698,6 +702,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       const payload: CreateProgramPayload | UpdateProgramPayload = {
         name: formData.name,
         description: formData.description || undefined,
+        color: formData.color,
         recurrenceType: formData.recurrenceType,
         registrationType: formData.recurrenceType === "RECURRING" ? formData.registrationType : null,
         pricingModel: isFlatRate ? "FLAT_RATE" : "PER_SESSION",
@@ -938,6 +943,11 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   placeholder="Describe what this program offers, who it's for, and what participants will learn..."
                 />
               </div>
+
+              <ColorSelector
+                value={formData.color}
+                onChange={(color) => setFormData(prev => ({ ...prev, color }))}
+              />
               
               {/* Schedule Type Selection */}
               <div className="space-y-4">

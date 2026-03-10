@@ -142,6 +142,7 @@ export async function GET(
 
 const updateCompetitionSchema = z.object({
   name: z.string().min(1).optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
   competitionType: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "REGISTRATION_OPEN", "REGISTRATION_CLOSED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
 
@@ -215,6 +216,7 @@ export async function PATCH(
 
     const updateData: Record<string, unknown> = {}
     if (data.name !== undefined) updateData.name = data.name
+    if (data.color !== undefined) updateData.color = data.color
     if (data.competitionType !== undefined) updateData.competitionType = data.competitionType
     if (data.status !== undefined) updateData.status = data.status
     if (data.facilityId !== undefined) updateData.facilityId = data.facilityId

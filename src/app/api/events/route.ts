@@ -14,6 +14,7 @@ const staffAssignmentSchema = z.object({
 
 const createEventSchema = z.object({
   title: z.string().min(1, "Title is required"),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color").optional(),
   date: z.string().min(1, "Date is required"),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
@@ -264,6 +265,7 @@ export async function POST(request: NextRequest) {
     
     const data: any = {
         title: validatedData.title,
+        color: validatedData.color,
         date: parseDateOnly(validatedData.date)!,
         startTime: validatedData.startTime,
         endTime: validatedData.endTime,
