@@ -1,6 +1,24 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers"
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -98,6 +116,84 @@ const colorPresets = [
   "#64748b", // slate
 ]
 
+function SortableLevelRow({
+  level,
+  onEdit,
+  onDelete,
+}: {
+  level: Level
+  onEdit: (level: Level) => void
+  onDelete: (level: Level) => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: level.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? "opacity-50" : ""}
+    >
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <div
+            className="w-4 h-4 rounded-full"
+            style={{ backgroundColor: level.color || "#64748b" }}
+          />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{level.name}</span>
+          {level.isDefault && (
+            <Badge variant="secondary" className="text-xs">Default</Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="text-muted-foreground max-w-xs truncate">
+        {level.description || "—"}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(level)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(level)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  )
+}
+
 export default function LevelsPage() {
   const [levels, setLevels] = useState<Level[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -109,6 +205,13 @@ export default function LevelsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [levelToDelete, setLevelToDelete] = useState<Level | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSavingOrder, setIsSavingOrder] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {}),
+    useSensor(TouchSensor, {}),
+    useSensor(KeyboardSensor, {})
+  )
 
   const fetchLevels = useCallback(async () => {
     try {
@@ -189,6 +292,32 @@ export default function LevelsPage() {
   const openDeleteDialog = (level: Level) => {
     setLevelToDelete(level)
     setDeleteDialogOpen(true)
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = levels.findIndex((l) => l.id === active.id)
+    const newIndex = levels.findIndex((l) => l.id === over.id)
+    const reordered = arrayMove(levels, oldIndex, newIndex)
+    setLevels(reordered)
+
+    setIsSavingOrder(true)
+    try {
+      const updates = reordered.map((level, index) => ({
+        id: level.id,
+        order: index,
+      }))
+      await api.post("/api/levels/reorder", { levels: updates })
+      toast.success("Level order updated")
+    } catch (error) {
+      console.error("Error saving level order:", error)
+      toast.error("Failed to save level order")
+      fetchLevels()
+    } finally {
+      setIsSavingOrder(false)
+    }
   }
 
   return (
@@ -303,6 +432,12 @@ export default function LevelsPage() {
           <CardTitle>All Levels</CardTitle>
           <CardDescription>
             Levels are sorted from lowest to highest. Drag to reorder.
+            {isSavingOrder && (
+              <span className="ml-2 inline-flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Saving...
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -341,61 +476,38 @@ export default function LevelsPage() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {levels.map((level) => (
-                  <TableRow key={level.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: level.color || "#64748b" }}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{level.name}</span>
-                        {level.isDefault && (
-                          <Badge variant="secondary" className="text-xs">Default</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground max-w-xs truncate">
-                      {level.description || "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenSheet(level)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDeleteDialog(level)}
-                          
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={levels.map((l) => l.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {levels.map((level) => (
+                      <SortableLevelRow
+                        key={level.id}
+                        level={level}
+                        onEdit={handleOpenSheet}
+                        onDelete={openDeleteDialog}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </SortableContext>
+            </DndContext>
           )}
         </CardContent>
       </Card>
