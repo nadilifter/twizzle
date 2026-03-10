@@ -252,6 +252,14 @@ export default function SignupPage() {
     }
   }
 
+  const handleEmailBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    const trimmed = value.trim()
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setErrors(prev => ({ ...prev, [name]: "Please enter a valid email" }))
+    }
+  }
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
@@ -439,6 +447,7 @@ export default function SignupPage() {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleInputChange}
+                  onBlur={handleEmailBlur}
                   className={errors.email ? "border-destructive" : ""}
                 />
                 {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
@@ -507,6 +516,7 @@ export default function SignupPage() {
                   placeholder="info@yourclub.com"
                   value={formData.orgEmail}
                   onChange={handleInputChange}
+                  onBlur={handleEmailBlur}
                   className={errors.orgEmail ? "border-destructive" : ""}
                 />
                 {errors.orgEmail && <p className="text-sm text-destructive">{errors.orgEmail}</p>}
