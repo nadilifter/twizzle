@@ -42,6 +42,7 @@ import {
   DollarSign,
   Plus,
   Trash2,
+  Copy,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -49,6 +50,7 @@ import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useFeatures } from "@/components/feature-context"
 import { useMemberships } from "@/hooks/use-memberships"
 import { cn } from "@/lib/utils"
+import { CopySettingsDialog } from "@/components/copy-settings-dialog"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -314,7 +316,106 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
   const [isSaving, setIsSaving] = React.useState(false)
   const [loadingCompetition, setLoadingCompetition] = React.useState(!!competitionId)
+  const [copyDialogOpen, setCopyDialogOpen] = React.useState(false)
   const stepper = useStepper()
+
+  const handleCopyFromCompetition = React.useCallback(async (sourceId: string) => {
+    try {
+      const response = await fetch(`/api/competitions/${sourceId}`)
+      if (!response.ok) throw new Error("Failed to fetch competition")
+      const data = await response.json()
+
+      const categoryResults: CategoryResultConfig[] = (data.categories || []).map((cat: any) => ({
+        combinationEntryId: cat.combinationEntryId || null,
+        individualEntryId: cat.individualEntryId || null,
+        sportEventId: cat.sportEventId || null,
+        ageCategoryId: cat.ageCategoryId || null,
+        label: [cat.sportEvent?.name, cat.ageCategory?.code].filter(Boolean).join(" - ") || cat.id,
+        resultType: cat.resultType || "TIME",
+        sortDirection: cat.sortDirection || "ASC",
+        precision: cat.precision ?? 3,
+        seedMarkRequired: cat.seedMarkRequired ?? false,
+        submissionMode: cat.submissionMode || "NONE",
+        qualifyingMark: cat.qualifyingMark ?? null,
+        isTeamEvent: cat.isTeamEvent ?? false,
+        teamSize: cat.teamSize ?? null,
+        collectResults: true,
+      }))
+
+      const combos = new Set<string>()
+      for (const cat of data.categories || []) {
+        if (cat.sportEventId && cat.ageCategoryId) {
+          combos.add(`${cat.sportEventId}:${cat.ageCategoryId}`)
+        }
+      }
+      setSelectedCombos(combos)
+
+      const pricingTiers = (data.pricingTiers || []).length > 0
+        ? data.pricingTiers.map((t: any) => ({
+            minEvents: t.minEvents,
+            maxEvents: t.maxEvents ?? null,
+            pricePerEvent: typeof t.pricePerEvent === "string" ? parseFloat(t.pricePerEvent) : t.pricePerEvent,
+          }))
+        : [{ minEvents: 1, maxEvents: 3, pricePerEvent: 20 }, { minEvents: 4, maxEvents: null, pricePerEvent: 15 }]
+
+      const categoryPrices: Record<string, number> = {}
+      for (const cat of data.categories || []) {
+        if (cat.price != null) {
+          const key = cat.sportEventId && cat.ageCategoryId
+            ? `${cat.sportEventId}:${cat.ageCategoryId}`
+            : cat.combinationEntryId || cat.individualEntryId || ""
+          if (key) {
+            categoryPrices[key] = typeof cat.price === "string" ? parseFloat(cat.price) : cat.price
+          }
+        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        competitionType: data.competitionType || null,
+        facilityId: data.facilityId || null,
+        country: data.country || "",
+        stateProvince: data.stateProvince || "",
+        city: data.city || "",
+        streetAddress: data.streetAddress || "",
+        postalCode: data.postalCode || "",
+        startDate: data.startDate ? new Date(data.startDate) : null,
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        startTime: data.startTime || "09:00",
+        endTime: data.endTime || "17:00",
+        categoryMode: data.categoryMode || "ALL",
+        selectedCategoryIds: [],
+        hasLevelRestriction: data.hasLevelRestriction ?? false,
+        levelRequirementIds: data.levelRequirementIds || [],
+        hasCapacityRestriction: data.hasCapacityRestriction ?? false,
+        capacity: data.capacity ?? null,
+        hasAgeRestriction: data.hasAgeRestriction ?? false,
+        minAge: data.minAge ?? null,
+        maxAge: data.maxAge ?? null,
+        hasMembershipRestriction: data.hasMembershipRestriction ?? false,
+        membershipRequirementIds: data.membershipRequirementIds || [],
+        hasWaiverRestriction: data.hasWaiverRestriction ?? false,
+        waiverRequirementIds: data.waiverRequirementIds || [],
+        hasMedicalRequirement: data.hasMedicalRequirement ?? false,
+        hasFileRequirement: data.hasFileRequirement ?? false,
+        fileRequirementConfig: data.fileRequirementConfig ?? null,
+        categoryResults,
+        pricingMode: data.pricingMode || "FREE",
+        entryFee: data.entryFee != null ? (typeof data.entryFee === "string" ? parseFloat(data.entryFee) : data.entryFee) : null,
+        pricingTiers,
+        categoryPrices,
+        publishStatus: "DRAFT",
+        scheduledGoLiveDate: null,
+        scheduledGoLiveTime: "09:00",
+      }))
+
+      toast.success(`Settings copied from "${data.name}"`)
+    } catch (error) {
+      console.error("Failed to copy competition settings:", error)
+      toast.error("Failed to copy competition settings")
+      throw error
+    }
+  }, [])
 
   // Fetch existing competition data when editing
   React.useEffect(() => {
@@ -905,14 +1006,37 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         {stepper.state.current.data.id === "general" && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Competition Details
-              </CardTitle>
-              <CardDescription>
-                Enter the basic information about your competition
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1.5">
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5" />
+                    Competition Details
+                  </CardTitle>
+                  <CardDescription>
+                    Enter the basic information about your competition
+                  </CardDescription>
+                </div>
+                {!isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCopyDialogOpen(true)}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy from Existing
+                  </Button>
+                )}
+              </div>
             </CardHeader>
+
+            <CopySettingsDialog
+              entityType="competition"
+              open={copyDialogOpen}
+              onOpenChange={setCopyDialogOpen}
+              onSelect={handleCopyFromCompetition}
+            />
+
             <CardContent className="space-y-6">
               {/* Competition Name */}
               <div className="space-y-2">

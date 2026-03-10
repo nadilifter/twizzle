@@ -54,6 +54,7 @@ import {
   AlertTriangle,
   ClipboardList,
   ShieldAlert,
+  Copy,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -65,6 +66,7 @@ import { useMemberships } from "@/hooks/use-memberships"
 import type { ProgramStaffRole } from "@/types/staff"
 import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, TrainingZoneWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
+import { CopySettingsDialog } from "@/components/copy-settings-dialog"
 import { RecurrencePicker, type RecurrenceConfig, configToRRule, parseRRule } from "@/components/ui/recurrence-picker"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -299,8 +301,76 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   }))
   
   const [isSaving, setIsSaving] = React.useState(false)
+  const [copyDialogOpen, setCopyDialogOpen] = React.useState(false)
   const stepper = useStepper()
-  
+
+  const handleCopyFromProgram = React.useCallback(async (sourceId: string) => {
+    try {
+      const response = await fetch(`/api/programs/${sourceId}`)
+      if (!response.ok) throw new Error("Failed to fetch program")
+      const data = await response.json()
+
+      let evalTemplateId: string | null = null
+      if (trainingEnabled) {
+        try {
+          const evalRes = await fetch(`/api/programs/${sourceId}/evaluation-templates`)
+          if (evalRes.ok) {
+            const evalData = await evalRes.json()
+            if (evalData.templates?.length > 0) {
+              evalTemplateId = evalData.templates[0].templateId
+            }
+          }
+        } catch {}
+      }
+
+      const isFlat = data.pricingModel === "FLAT_RATE"
+      const priceVal = isFlat ? data.basePrice : data.perSessionPrice
+
+      setFormData(prev => ({
+        ...prev,
+        description: data.description || "",
+        recurrenceType: data.recurrenceType || "RECURRING",
+        registrationType: data.registrationType || "ALL_INSTANCES",
+        price: priceVal != null ? Number(priceVal) : null,
+        startDate: data.startDate ? new Date(data.startDate) : null,
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        startTime: data.startTime || "09:00",
+        duration: data.duration || 60,
+        facilityId: data.facilityId || null,
+        rrule: data.rrule || null,
+        trainingZoneIds: data.trainingZones?.map((tz: any) => tz.trainingZoneId) || [],
+        hasLevelRestriction: data.hasLevelRestriction || false,
+        levelRequirementIds: data.levelRequirements?.map((lr: any) => lr.levelId) || [],
+        hasCapacityRestriction: data.hasCapacityRestriction || false,
+        hasTrainingZoneRestriction: data.hasTrainingZoneRestriction || false,
+        trainingZoneCapacityMode: data.trainingZoneCapacityMode || "MINIMUM",
+        capacity: data.capacity || null,
+        hasAgeRestriction: data.hasAgeRestriction || false,
+        minAge: data.minAge || null,
+        maxAge: data.maxAge || null,
+        hasMembershipRestriction: data.hasMembershipRestriction || false,
+        membershipRequirementIds: data.requiredMemberships?.map((m: any) => m.id) || [],
+        hasWaiverRestriction: data.hasWaiverRestriction || false,
+        waiverRequirementIds: data.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
+        hasMedicalRequirement: data.hasMedicalRequirement || false,
+        hasFileRequirement: data.hasFileRequirement || false,
+        fileRequirementConfig: data.fileRequirementConfig || null,
+        waitlistEnabled: data.waitlistEnabled || false,
+        waitlistAutoPromote: data.waitlistAutoPromote || false,
+        waitlistCapacity: data.waitlistCapacity || null,
+        evaluationTemplateId: evalTemplateId,
+        staffAssignments: [],
+        showCoachOnSite: true,
+      }))
+
+      toast.success(`Settings copied from "${data.name}"`)
+    } catch (error) {
+      console.error("Failed to copy program settings:", error)
+      toast.error("Failed to copy program settings")
+      throw error
+    }
+  }, [trainingEnabled])
+
   // Fetch levels
   React.useEffect(() => {
     const fetchLevels = async () => {
@@ -818,14 +888,37 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         {stepper.state.current.data.id === "general" && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5" />
-                Program Details
-              </CardTitle>
-              <CardDescription>
-                Enter the basic information about your program
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1.5">
+                  <CardTitle className="flex items-center gap-2">
+                    <Layers className="h-5 w-5" />
+                    Program Details
+                  </CardTitle>
+                  <CardDescription>
+                    Enter the basic information about your program
+                  </CardDescription>
+                </div>
+                {!isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCopyDialogOpen(true)}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy from Existing
+                  </Button>
+                )}
+              </div>
             </CardHeader>
+
+            <CopySettingsDialog
+              entityType="program"
+              open={copyDialogOpen}
+              onOpenChange={setCopyDialogOpen}
+              onSelect={handleCopyFromProgram}
+            />
+
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="name">Program Name *</Label>

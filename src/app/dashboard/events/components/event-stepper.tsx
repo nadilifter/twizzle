@@ -40,6 +40,7 @@ import {
   FileText,
   Heart,
   ShieldAlert,
+  Copy,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -49,6 +50,7 @@ import { useStaff } from "@/hooks/use-staff"
 import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
 import { useMemberships } from "@/hooks/use-memberships"
 import { cn } from "@/lib/utils"
+import { CopySettingsDialog } from "@/components/copy-settings-dialog"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -203,7 +205,48 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
   }))
 
   const [isSaving, setIsSaving] = React.useState(false)
+  const [copyDialogOpen, setCopyDialogOpen] = React.useState(false)
   const stepper = useStepper()
+
+  const handleCopyFromEvent = React.useCallback(async (sourceId: string) => {
+    try {
+      const response = await fetch(`/api/events/${sourceId}`)
+      if (!response.ok) throw new Error("Failed to fetch event")
+      const data = await response.json()
+
+      setFormData(prev => ({
+        ...prev,
+        description: data.description || "",
+        type: data.type || "CLASS",
+        price: null,
+        date: data.date ? new Date(data.date) : null,
+        startTime: data.startTime || "09:00",
+        endTime: data.endTime || "10:00",
+        facilityId: data.facilityId || null,
+        hasLevelRestriction: false,
+        levelRequirementIds: [],
+        hasCapacityRestriction: data.capacity ? true : false,
+        capacity: data.capacity || null,
+        hasAgeRestriction: false,
+        minAge: null,
+        maxAge: null,
+        hasMembershipRestriction: (data.requiredMemberships?.length || 0) > 0,
+        membershipRequirementIds: data.requiredMemberships?.map((m: any) => m.id) || [],
+        hasWaiverRestriction: false,
+        waiverRequirementIds: [],
+        hasMedicalRequirement: false,
+        hasFileRequirement: data.hasFileRequirement || false,
+        fileRequirementConfig: data.fileRequirementConfig || null,
+        staffAssignments: [],
+      }))
+
+      toast.success(`Settings copied from "${data.title}"`)
+    } catch (error) {
+      console.error("Failed to copy event settings:", error)
+      toast.error("Failed to copy event settings")
+      throw error
+    }
+  }, [])
 
   React.useEffect(() => {
     const fetchLevels = async () => {
@@ -504,14 +547,37 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
         {stepper.state.current.data.id === "general" && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5" />
-                Event Details
-              </CardTitle>
-              <CardDescription>
-                Enter the basic information about your event
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1.5">
+                  <CardTitle className="flex items-center gap-2">
+                    <Layers className="h-5 w-5" />
+                    Event Details
+                  </CardTitle>
+                  <CardDescription>
+                    Enter the basic information about your event
+                  </CardDescription>
+                </div>
+                {!isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCopyDialogOpen(true)}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy from Existing
+                  </Button>
+                )}
+              </div>
             </CardHeader>
+
+            <CopySettingsDialog
+              entityType="event"
+              open={copyDialogOpen}
+              onOpenChange={setCopyDialogOpen}
+              onSelect={handleCopyFromEvent}
+            />
+
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="name">Event Name *</Label>
