@@ -247,8 +247,8 @@ export default function AthleteProfilePage() {
         <h1 className="text-2xl font-bold">Error Loading Profile</h1>
         <p className="text-muted-foreground">{error}</p>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.back()}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
             Go Back
           </Button>
           <Button onClick={() => fetchAthlete()}>Try Again</Button>
@@ -262,9 +262,9 @@ export default function AthleteProfilePage() {
       <div className="flex flex-col items-center justify-center h-full p-6">
         <h1 className="text-2xl font-bold">Athlete Not Found</h1>
         <p className="text-muted-foreground">The athlete you are looking for does not exist.</p>
-        <Button className="mt-4" variant="outline" asChild>
+        <Button className="mt-4" variant="outline" size="sm" asChild>
           <Link href="/dashboard/athletes">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" />
             Back to Athletes
           </Link>
         </Button>
@@ -345,8 +345,8 @@ export default function AthleteProfilePage() {
             </div>
           </div>
         </div>
-        <Button onClick={() => setIsEditOpen(true)} className="shrink-0">
-          <Settings className="mr-2 h-4 w-4" />
+        <Button size="sm" onClick={() => setIsEditOpen(true)} className="shrink-0">
+          <Settings className="h-4 w-4" />
           Edit Profile
         </Button>
       </div>
@@ -555,7 +555,7 @@ export default function AthleteProfilePage() {
                               className="h-7 px-2 text-xs"
                               onClick={() => setViewingWaiver(w)}
                             >
-                              <Eye className="h-3.5 w-3.5 mr-1" />
+                              <Eye className="h-3.5 w-3.5" />
                               View
                             </Button>
                           </div>
@@ -957,7 +957,7 @@ function AthleteProgramsTab({
               </CardDescription>
             </div>
             <Button size="sm" onClick={() => setIsEnrollDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4" />
               Enroll in Program
             </Button>
           </div>
@@ -983,7 +983,7 @@ function AthleteProgramsTab({
                 className="mt-4"
                 onClick={() => setIsEnrollDialogOpen(true)}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4" />
                 Enroll in Program
               </Button>
             </div>
@@ -1122,7 +1122,7 @@ function EnrollInProgramDialog({
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Enrolling...
                 </>
               ) : (
