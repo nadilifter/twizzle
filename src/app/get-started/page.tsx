@@ -181,6 +181,9 @@ export default function SignupPage() {
     const withDashes = value.replace(/\s/g, "-")
     const normalized = withDashes.toLowerCase().replace(/[^a-z0-9-]/g, "")
     setFormData(prev => ({ ...prev, subdomain: normalized }))
+    if (errors.subdomain) {
+      setErrors(prev => ({ ...prev, subdomain: "" }))
+    }
     
     if (subdomainCheckTimeout.current) {
       clearTimeout(subdomainCheckTimeout.current)
