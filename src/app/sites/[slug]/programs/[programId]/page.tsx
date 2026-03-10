@@ -215,9 +215,10 @@ export default async function ProgramDetailPage({
                     </div>
 
                     {program.description && (
-                        <p className="text-white/80 leading-relaxed max-w-2xl mb-6 whitespace-pre-line">
-                            {program.description}
-                        </p>
+                        <div
+                            className="text-white/80 leading-relaxed max-w-2xl mb-6 prose prose-invert prose-p:my-1 [&>p]:text-white/80"
+                            dangerouslySetInnerHTML={{ __html: program.description }}
+                        />
                     )}
 
                     <div className="flex flex-wrap gap-x-6 gap-y-2 text-white/80">
