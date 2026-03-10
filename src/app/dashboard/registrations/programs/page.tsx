@@ -171,9 +171,10 @@ export default function ProgramsPage() {
                 </CardHeader>
                 <CardContent className="flex-1 pb-3">
                   {program.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {program.description}
-                    </p>
+                    <div
+                      className="text-sm text-muted-foreground line-clamp-2 mb-3 [&>p]:m-0"
+                      dangerouslySetInnerHTML={{ __html: program.description }}
+                    />
                   )}
 
                   {/* Info grid */}

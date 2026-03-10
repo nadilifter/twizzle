@@ -347,7 +347,10 @@ export default function ProgramDetailPage() {
                             )}
                         </div>
                         {program.description && (
-                            <p className="text-muted-foreground mt-1">{program.description}</p>
+                            <div
+                                className="text-muted-foreground mt-1 [&>p]:m-0"
+                                dangerouslySetInnerHTML={{ __html: program.description }}
+                            />
                         )}
                     </div>
                 </div>

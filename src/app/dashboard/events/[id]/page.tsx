@@ -225,7 +225,10 @@ export default function EventDetailPage() {
               </Badge>
             </div>
             {event.description && (
-              <p className="text-muted-foreground mt-1 line-clamp-2">{event.description}</p>
+              <div
+                className="text-muted-foreground mt-1 line-clamp-2 [&>p]:m-0"
+                dangerouslySetInnerHTML={{ __html: event.description }}
+              />
             )}
           </div>
         </div>

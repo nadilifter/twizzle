@@ -122,9 +122,10 @@ export default function EventsPage() {
                 </CardHeader>
                 <CardContent className="flex-1 pb-3">
                   {event.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {event.description}
-                    </p>
+                    <div
+                      className="text-sm text-muted-foreground line-clamp-2 mb-3 [&>p]:m-0"
+                      dangerouslySetInnerHTML={{ __html: event.description }}
+                    />
                   )}
 
                   <div className="space-y-1.5">

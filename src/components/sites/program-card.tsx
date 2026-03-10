@@ -188,9 +188,10 @@ export function ProgramCard({ program }: ProgramCardProps) {
 
       <CardContent className="flex-1 pb-4">
         {program.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {program.description}
-          </p>
+          <div
+            className="text-sm text-muted-foreground line-clamp-2 [&>p]:m-0"
+            dangerouslySetInnerHTML={{ __html: program.description }}
+          />
         )}
 
         {(program.startDate || program.startTime || program.facility || program.duration) && (
