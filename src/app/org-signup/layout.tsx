@@ -4,6 +4,7 @@ import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 import { UplifterLogo } from "@/components/uplifter-logo"
 import Link from "next/link"
 import { getLoginUrlForHost } from "@/lib/env-domains"
+import { getAuthSession } from "@/lib/auth"
 
 export const metadata = {
   title: "Sign Up - Uplifter",
@@ -18,7 +19,7 @@ export default async function SignupsLayout({
 }: {
   children: React.ReactNode
 }) {
-  const headersList = await headers()
+  const [headersList, session] = await Promise.all([headers(), getAuthSession()])
   const loginUrl = getLoginUrlForHost(headersList.get("host"))
 
   return (
@@ -32,12 +33,14 @@ export default async function SignupsLayout({
             <UplifterLogo width={90} height={24} className="h-6" />
           </Link>
           <div className="flex items-center gap-4">
-            <Link 
-              href={loginUrl} 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Already have an account? Sign in
-            </Link>
+            {!session?.user && (
+              <Link 
+                href={loginUrl} 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Already have an account? Sign in
+              </Link>
+            )}
             <AnimatedThemeToggler />
           </div>
         </div>

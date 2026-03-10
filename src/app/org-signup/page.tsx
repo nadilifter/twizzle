@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { 
   Loader2, 
   Check, 
@@ -9,6 +10,7 @@ import {
   Info, 
   Building2, 
   User, 
+  UserCheck,
   Globe, 
   CreditCard, 
   Palette, 
@@ -21,6 +23,7 @@ import {
   HardDrive,
   Tag,
   Trophy,
+  ArrowRight,
 } from "lucide-react"
 import { toast } from "sonner"
 import { validatePassword, PASSWORD_MESSAGES, PASSWORD_MIN_LENGTH } from "@/lib/password"
@@ -105,13 +108,28 @@ function isValidPostalCode(value: string, country: string): boolean {
   return true // no country selected yet
 }
 
+type SignupMode = "choosing" | "existingAccount" | "newAccount"
+
 export default function SignupPage() {
   const router = useRouter()
+  const { data: session, status: sessionStatus } = useSession()
+  const [signupMode, setSignupMode] = React.useState<SignupMode | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
   const [plans, setPlans] = React.useState<SubscriptionPlan[]>([])
   const [plansLoading, setPlansLoading] = React.useState(true)
   const [sports, setSports] = React.useState<Sport[]>([])
   const [sportsLoading, setSportsLoading] = React.useState(true)
+
+  const useExistingAccount = signupMode === "existingAccount"
+
+  React.useEffect(() => {
+    if (sessionStatus === "loading") return
+    if (sessionStatus === "authenticated") {
+      setSignupMode("choosing")
+    } else {
+      setSignupMode("newAccount")
+    }
+  }, [sessionStatus])
   
   // Subdomain availability check
   const [subdomainStatus, setSubdomainStatus] = React.useState<"idle" | "checking" | "available" | "taken">("idle")
@@ -263,25 +281,27 @@ export default function SignupPage() {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    // User account validation
-    if (!formData.name.trim()) {
-      newErrors.name = "Your name is required"
-    } else if (formData.name.length > MAX_NAME_LENGTH) {
-      newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or less`
-    }
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email"
-    }
-    if (!formData.password) {
-      newErrors.password = "Password is required"
-    } else {
-      const pwError = validatePassword(formData.password)
-      if (pwError) newErrors.password = pwError
-    }
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = PASSWORD_MESSAGES.mismatch
+    if (!useExistingAccount) {
+      // User account validation (only when creating a new account)
+      if (!formData.name.trim()) {
+        newErrors.name = "Your name is required"
+      } else if (formData.name.length > MAX_NAME_LENGTH) {
+        newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or less`
+      }
+      if (!formData.email.trim()) {
+        newErrors.email = "Email is required"
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = "Please enter a valid email"
+      }
+      if (!formData.password) {
+        newErrors.password = "Password is required"
+      } else {
+        const pwError = validatePassword(formData.password)
+        if (pwError) newErrors.password = pwError
+      }
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = PASSWORD_MESSAGES.mismatch
+      }
     }
 
     // Organization validation
@@ -357,25 +377,31 @@ export default function SignupPage() {
     const selectedPlan = plans.find(p => p.id === formData.planId)
     const isPaidPlan = selectedPlan && Number(selectedPlan.monthlyPrice) > 0
 
+    const submitData = useExistingAccount
+      ? (() => {
+          const { email, password, confirmPassword, name, ...orgFields } = formData
+          return { ...orgFields, useExistingAccount: true as const }
+        })()
+      : formData
+
     if (isPaidPlan) {
-      // Store form data in session storage and redirect to payment page
       const signupData = {
-        ...formData,
+        ...submitData,
         planName: selectedPlan.name,
         planPrice: selectedPlan.monthlyPrice,
+        ...(useExistingAccount ? { email: session?.user?.email ?? "" } : {}),
       }
       sessionStorage.setItem("org-signup-data", JSON.stringify(signupData))
       router.push("/org-signup/payment")
       return
     }
 
-    // For free plans, proceed directly with signup
     setIsLoading(true)
     try {
       const response = await fetch("/api/org-signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       })
 
       const data = await response.json()
@@ -400,6 +426,70 @@ export default function SignupPage() {
     }).format(Number(amount))
   }
 
+  if (signupMode === null || sessionStatus === "loading") {
+    return (
+      <div className="w-full max-w-5xl mx-auto flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (signupMode === "choosing") {
+    return (
+      <div className="w-full max-w-lg mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">Create Your Organization</h1>
+          <p className="text-muted-foreground">
+            Choose how you&apos;d like to set up your new organization.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <Card
+            className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+            onClick={() => setSignupMode("existingAccount")}
+          >
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <UserCheck className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold">Continue as {session?.user?.name || "current user"}</p>
+                <p className="text-sm text-muted-foreground truncate">{session?.user?.email}</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            </CardContent>
+          </Card>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          <Card
+            className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+            onClick={() => setSignupMode("newAccount")}
+          >
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                <UserPlus className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold">Use a different account</p>
+                <p className="text-sm text-muted-foreground">Create a new account for this organization</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <TooltipProvider>
       <div className="w-full max-w-5xl mx-auto">
@@ -413,6 +503,27 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <fieldset disabled={isLoading} className="space-y-6">
           {/* Section 1: Your Account */}
+          {useExistingAccount ? (
+            <Card>
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">{session?.user?.name}</p>
+                  <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSignupMode("choosing")}
+                >
+                  Change
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -482,6 +593,7 @@ export default function SignupPage() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Section 2: Organization Details */}
           <Card>
@@ -1010,7 +1122,7 @@ export default function SignupPage() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            By creating an account, you agree to our{" "}
+            By {useExistingAccount ? "creating this organization" : "creating an account"}, you agree to our{" "}
             <a href="#" className="underline hover:text-foreground">Terms of Service</a>
             {" "}and{" "}
             <a href="#" className="underline hover:text-foreground">Privacy Policy</a>.

@@ -17,10 +17,11 @@ import { toast } from "sonner"
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 
 interface SignupData {
-  email: string
-  password: string
-  confirmPassword: string
-  name: string
+  useExistingAccount?: boolean
+  email?: string
+  password?: string
+  confirmPassword?: string
+  name?: string
   orgName: string
   orgEmail: string
   phone: string
@@ -62,7 +63,7 @@ export default function PaymentPage() {
       return
     }
 
-    if (!data.email || !data.subdomain || !data.planId) {
+    if ((!data.email && !data.useExistingAccount) || !data.subdomain || !data.planId) {
       router.replace("/org-signup")
       return
     }
@@ -81,7 +82,7 @@ export default function PaymentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           signupReference,
-          email: data.email,
+          email: data.email || data.orgEmail,
           returnUrl: `${window.location.origin}/org-signup/payment`,
         }),
       })

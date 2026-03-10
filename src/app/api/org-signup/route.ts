@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { hashPassword } from "@/lib/auth"
+import { hashPassword, getAuthSession } from "@/lib/auth"
 import { z } from "zod"
 import { passwordSchema } from "@/lib/password"
 import { isSubdomainReserved } from "@/lib/reserved-domains"
@@ -18,12 +18,15 @@ function isValidPostalCode(value: string, country: string): boolean {
 }
 
 const signupSchema = z.object({
-  // User account
+  // Existing account mode
+  useExistingAccount: z.boolean().optional(),
+
+  // User account (required only when creating a new account)
   name: z.string()
-    .min(1, "Name is required")
-    .max(MAX_NAME_LENGTH, `Name must be ${MAX_NAME_LENGTH} characters or less`),
-  email: z.string().email("Invalid email address"),
-  password: passwordSchema,
+    .max(MAX_NAME_LENGTH, `Name must be ${MAX_NAME_LENGTH} characters or less`)
+    .optional(),
+  email: z.string().email("Invalid email address").optional(),
+  password: passwordSchema.optional(),
 
   // Organization
   orgName: z.string().min(1, "Organization name is required"),
@@ -57,7 +60,19 @@ const signupSchema = z.object({
 }).refine(
   (data) => isValidPostalCode(data.postalCode, data.country),
   { message: "Postal code must be a valid US ZIP or Canadian postal code", path: ["postalCode"] }
-)
+).superRefine((data, ctx) => {
+  if (!data.useExistingAccount) {
+    if (!data.name || data.name.trim().length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Name is required", path: ["name"] })
+    }
+    if (!data.email) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Email is required", path: ["email"] })
+    }
+    if (!data.password) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Password is required", path: ["password"] })
+    }
+  }
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,7 +92,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if subdomain is reserved (database-driven with EXACT and PREFIX matching)
     const reservedCheck = await isSubdomainReserved(validatedData.subdomain.toLowerCase())
     if (reservedCheck.reserved) {
       return NextResponse.json(
@@ -86,16 +100,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if email already exists
-    const existingUser = await db.user.findUnique({
-      where: { email: validatedData.email },
-    })
+    // Resolve the user: either from existing session or create a new one
+    let userId: string
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "An account with this email already exists" },
-        { status: 400 }
-      )
+    if (validatedData.useExistingAccount) {
+      const session = await getAuthSession()
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { error: "You must be logged in to use your existing account" },
+          { status: 401 }
+        )
+      }
+      userId = session.user.id
+    } else {
+      // New account flow: check for duplicate email
+      const existingUser = await db.user.findUnique({
+        where: { email: validatedData.email! },
+      })
+
+      if (existingUser) {
+        return NextResponse.json(
+          { error: "An account with this email already exists" },
+          { status: 400 }
+        )
+      }
     }
 
     // Check if subdomain is already taken
@@ -111,7 +139,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if organization slug is taken
-    const orgSlug = validatedData.subdomain // Use subdomain as slug
+    const orgSlug = validatedData.subdomain
     const existingOrg = await db.organization.findUnique({
       where: { slug: orgSlug },
     })
@@ -135,14 +163,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash password
-    const passwordHash = await hashPassword(validatedData.password)
-
-    // Calculate trial end date (30 days from now)
     const now = new Date()
     const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
-    // Create everything in a transaction
     const result = await db.$transaction(async (tx) => {
       // 1. Create the organization
       const organization = await tx.organization.create({
@@ -159,22 +182,29 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // 2. Create the user
-      const user = await tx.user.create({
-        data: {
-          email: validatedData.email,
-          name: validatedData.name,
-          passwordHash,
-          role: "ADMIN",
-          status: "ACTIVE",
-        },
-      })
+      // 2. Resolve the user ID: reuse existing or create new
+      let resolvedUserId: string
+      if (validatedData.useExistingAccount) {
+        resolvedUserId = userId
+      } else {
+        const passwordHash = await hashPassword(validatedData.password!)
+        const user = await tx.user.create({
+          data: {
+            email: validatedData.email!,
+            name: validatedData.name!,
+            passwordHash,
+            role: "ADMIN",
+            status: "ACTIVE",
+          },
+        })
+        resolvedUserId = user.id
+      }
 
       // 3. Create the organization member relationship
       await tx.organizationMember.create({
         data: {
           organizationId: organization.id,
-          userId: user.id,
+          userId: resolvedUserId,
           role: "ADMIN",
           status: "ACTIVE",
         },
@@ -194,9 +224,8 @@ export async function POST(request: NextRequest) {
       })
 
       // 5. Create the subscription (trial)
-      // Generate the permanent Adyen shopper reference using the org ID
       const adyenShopperRef = validatedData.adyenShopperReference 
-        ? `org-${organization.id}` // Convert temporary signup reference to permanent org reference
+        ? `org-${organization.id}`
         : null
       
       await tx.organizationSubscription.create({
@@ -208,7 +237,6 @@ export async function POST(request: NextRequest) {
           currentPeriodStart: now,
           currentPeriodEnd: trialEndsAt,
           trialEndsAt: trialEndsAt,
-          // Store Adyen reference if payment method was collected
           adyenShopperReference: adyenShopperRef,
         },
       })
@@ -244,7 +272,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      return { organization, user }
+      return { organization, userId: resolvedUserId }
     })
 
     // If a payment method was collected during signup, claim any tokens
@@ -266,7 +294,6 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // If we found tokens, set the first one as the recurring detail ref
         if (orphanedMethods.length > 0) {
           await db.organizationSubscription.updateMany({
             where: { organizationId: result.organization.id },
@@ -281,7 +308,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       organizationId: result.organization.id,
-      userId: result.user.id,
+      userId: result.userId,
       subdomain: validatedData.subdomain,
     }, { status: 201 })
 
