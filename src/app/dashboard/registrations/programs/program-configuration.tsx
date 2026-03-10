@@ -65,6 +65,7 @@ import { format } from "date-fns"
 interface ProgramConfigProps {
   program: any
   onClose: () => void
+  onUpdated?: () => Promise<void> | void
 }
 
 interface Level {
@@ -110,8 +111,8 @@ const ROLE_LABELS: Record<ProgramStaffRole, string> = {
   VOLUNTEER: "Volunteer",
 }
 
-export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
-  const { updateProgram, fetchPrograms } = usePrograms()
+export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramConfigProps) {
+  const { updateProgram } = usePrograms()
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
   const membershipsEnabled = isFeatureEnabled("memberships")
@@ -512,7 +513,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
         showCoachOnSite: formData.showCoachOnSite,
       } as any)
       toast.success("Program saved")
-      await fetchPrograms()
+      if (onUpdated) await onUpdated()
       onClose()
     } catch (error: any) {
       if (error?.status === 422 && error?.data?.certifications) {

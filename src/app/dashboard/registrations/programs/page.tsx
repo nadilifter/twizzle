@@ -106,7 +106,8 @@ export default function ProgramsPage() {
             {selectedProgram ? (
                 <ProgramConfiguration 
                     program={selectedProgram} 
-                    onClose={() => setIsConfigOpen(false)} 
+                    onClose={() => setIsConfigOpen(false)}
+                    onUpdated={() => fetchPrograms()}
                 />
             ) : (
                 <div className="p-6">
