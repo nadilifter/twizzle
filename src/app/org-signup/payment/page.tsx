@@ -134,7 +134,6 @@ export default function PaymentPage() {
     } catch (error: any) {
       console.error("Failed to create organization:", error)
       toast.error(error.message || "Payment succeeded but organization creation failed. Please contact support.")
-    } finally {
       setIsCreatingOrg(false)
     }
   }

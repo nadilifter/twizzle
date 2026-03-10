@@ -289,7 +289,6 @@ export default function SignupPage() {
       router.push(`/org-signup/success?subdomain=${formData.subdomain}&orgName=${encodeURIComponent(formData.orgName)}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong")
-    } finally {
       setIsLoading(false)
     }
   }
@@ -313,6 +312,7 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <fieldset disabled={isLoading} className="space-y-6">
           {/* Section 1: Your Account */}
           <Card>
             <CardHeader>
@@ -730,6 +730,7 @@ export default function SignupPage() {
             {" "}and{" "}
             <a href="#" className="underline hover:text-foreground">Privacy Policy</a>.
           </p>
+          </fieldset>
         </form>
       </div>
     </TooltipProvider>
