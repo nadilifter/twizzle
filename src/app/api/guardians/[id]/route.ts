@@ -45,6 +45,10 @@ export async function GET(
                 lastName: true,
                 birthDate: true,
                 gender: true,
+                organizationAthletes: {
+                  where: { organizationId },
+                  select: { level: true, status: true },
+                },
               },
             },
           },
@@ -84,11 +88,17 @@ export async function GET(
 
     return NextResponse.json({
       ...user,
-      athletes: user.athleteGuardians.map((ag) => ({
-        ...ag.athlete,
-        isPrimary: ag.isPrimary,
-        relationship: ag.relationship,
-      })),
+      athletes: user.athleteGuardians.map((ag) => {
+        const { organizationAthletes, ...athleteRest } = ag.athlete;
+        const orgAthlete = organizationAthletes[0];
+        return {
+          ...athleteRest,
+          level: orgAthlete?.level ?? "Unassigned",
+          status: orgAthlete?.status ?? "ACTIVE",
+          isPrimary: ag.isPrimary,
+          relationship: ag.relationship,
+        };
+      }),
     });
   } catch (error) {
     console.error("Error fetching guardian:", error);

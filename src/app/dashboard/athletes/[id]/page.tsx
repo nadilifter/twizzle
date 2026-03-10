@@ -36,6 +36,7 @@ import {
   Target,
   UserCheck,
   UserX,
+  Users,
 } from "lucide-react"
 import { calculateAge } from "@/lib/age-utils"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
@@ -272,7 +273,8 @@ export default function AthleteProfilePage() {
   }
 
   const age = calculateAge(athlete.birthDate)
-  const primaryGuardianUser = (athlete as any).guardians?.[0]?.user as { id: string; name: string | null; email: string } | null
+  const guardians = ((athlete as any).guardians ?? []) as { id: string; userId: string; isPrimary: boolean; relationship: string | null; user: { id: string; name: string | null; email: string } | null }[]
+  const primaryGuardianUser = guardians[0]?.user ?? null
   const levelInfo = (athlete as any).levelInfo as { id: string; name: string; color: string | null } | null
   const memberships = ((athlete as any).memberships ?? []) as AthleteMembershipSummary[]
   const waivers = ((athlete as any).waivers ?? []) as AthleteWaiverSummary[]
@@ -418,6 +420,57 @@ export default function AthleteProfilePage() {
         {/* ===== OVERVIEW TAB ===== */}
         <TabsContent value="overview">
           <div className="flex flex-col gap-6">
+            {/* Guardians */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="h-5 w-5" />
+                  Guardians
+                </CardTitle>
+                <CardDescription>
+                  {guardians.length} guardian{guardians.length === 1 ? "" : "s"} linked to this athlete
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {guardians.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {guardians.map((g) => (
+                      <div key={g.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarFallback className="text-xs bg-primary/10">
+                            {getInitials(g.user?.name ?? g.user?.email ?? "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <Link
+                              href={`/dashboard/athletes/guardians/${g.user?.id ?? g.userId}`}
+                              className="text-sm font-medium truncate hover:underline text-primary"
+                            >
+                              {g.user?.name ?? g.user?.email ?? "Unknown"}
+                            </Link>
+                            {g.isPrimary && (
+                              <Badge variant="secondary" className="text-[10px] h-4 px-1 shrink-0">
+                                Primary
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {g.user?.email ?? "No email"}
+                            {g.relationship && ` · ${g.relationship}`}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No guardians linked to this athlete.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Medical + Memberships + Waivers row */}
             <div className="grid gap-6 lg:grid-cols-3">
               {/* Medical Card */}

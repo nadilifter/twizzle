@@ -345,9 +345,16 @@ export default function AthletesPage() {
         const guardian = row.original.guardians?.[0]
         const name = guardian?.user?.name ?? row.original.parent
         const email = guardian?.user?.email
+        const guardianUserId = guardian?.user?.id
         return (
           <div className="flex flex-col">
-            <span>{name ?? "N/A"}</span>
+            {guardianUserId ? (
+              <Link href={`/dashboard/athletes/guardians/${guardianUserId}`} className="font-medium hover:underline">
+                {name ?? "N/A"}
+              </Link>
+            ) : (
+              <span>{name ?? "N/A"}</span>
+            )}
             {email && <span className="text-xs text-muted-foreground">{email}</span>}
           </div>
         )
