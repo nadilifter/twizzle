@@ -298,13 +298,16 @@ export async function GET(
 
     const registrations: RegistrationItem[] = []
 
+    const formatStatusLabel = (s: string) =>
+      s.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+
     for (const entry of competitionEntries) {
       registrations.push({
         id: `comp-${entry.id}`,
         type: "competition",
         name: entry.competition.name,
         detail: getCategoryLabel(entry.category),
-        status: entry.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        status: formatStatusLabel(entry.status),
         date: entry.createdAt.toISOString(),
         link: `/dashboard/competitions/${entry.competition.id}/athletes/${id}`,
       })
@@ -316,7 +319,7 @@ export async function GET(
         type: "program",
         name: enrollment.program?.name ?? "Unknown Program",
         detail: null,
-        status: enrollment.status.charAt(0) + enrollment.status.slice(1).toLowerCase(),
+        status: formatStatusLabel(enrollment.status),
         date: enrollment.createdAt.toISOString(),
         link: null,
       })
@@ -328,7 +331,7 @@ export async function GET(
         type: "membership",
         name: m.instance.group.name,
         detail: m.instance.name,
-        status: m.status.charAt(0) + m.status.slice(1).toLowerCase(),
+        status: formatStatusLabel(m.status),
         date: m.createdAt.toISOString(),
         link: null,
       })
