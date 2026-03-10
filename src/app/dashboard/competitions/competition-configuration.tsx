@@ -642,6 +642,7 @@ export function CompetitionConfiguration({
         
         toast.success(`${sectionName} saved`)
         if (onUpdated) await onUpdated()
+        onClose()
     } catch (error) {
         console.error("Save error:", error)
         toast.error("Failed to save changes")
@@ -1389,7 +1390,7 @@ export function CompetitionConfiguration({
         </div>
       </Tabs>
 
-      <div className="p-4 border-t flex justify-between bg-background">
+      <div className="p-4 border-t flex justify-end gap-2 bg-background">
         <Button variant="outline" onClick={onClose}>
           Close
         </Button>

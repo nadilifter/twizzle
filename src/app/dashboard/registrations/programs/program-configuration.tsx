@@ -402,8 +402,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
     }))
   }
 
-  // --- Save handlers per tab ---
-  const handleSaveGeneral = async () => {
+  const handleSaveAll = async () => {
     if (!formData.name.trim()) {
       toast.error("Program name is required")
       return
@@ -412,78 +411,6 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
       toast.error("Price cannot be negative")
       return
     }
-
-    setIsSaving(true)
-    try {
-      const isFlatRate =
-        formData.recurrenceType === "RECURRING" &&
-        formData.registrationType === "ALL_INSTANCES"
-      const priceValue =
-        formData.price != null
-          ? Math.max(0, Math.round(formData.price * 100) / 100)
-          : null
-
-      await updateProgram(program.id, {
-        name: formData.name,
-        description: formData.description || undefined,
-        color: formData.color,
-        recurrenceType: formData.recurrenceType as any,
-        registrationType:
-          formData.recurrenceType === "RECURRING"
-            ? (formData.registrationType as any)
-            : null,
-        pricingModel: isFlatRate ? ("FLAT_RATE" as any) : ("PER_SESSION" as any),
-        basePrice: isFlatRate ? priceValue : null,
-        perSessionPrice: !isFlatRate ? priceValue : null,
-      })
-      toast.success("General settings saved")
-      fetchPrograms()
-    } catch (error) {
-      toast.error("Failed to save general settings")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleSaveSchedule = async () => {
-    if (!formData.startDate) {
-      toast.error("Start date is required")
-      return
-    }
-    if (formData.recurrenceType === "RECURRING" && !formData.endDate) {
-      toast.error("End date is required for recurring programs")
-      return
-    }
-    if (!formData.startTime) {
-      toast.error("Start time is required")
-      return
-    }
-    if (!formData.duration || formData.duration < 1) {
-      toast.error("Duration must be at least 1 minute")
-      return
-    }
-
-    setIsSaving(true)
-    try {
-      await updateProgram(program.id, {
-        startDate: formData.startDate || null,
-        endDate: formData.endDate || null,
-        startTime: formData.startTime,
-        duration: formData.duration,
-        facilityId: formData.facilityId,
-        rrule: formData.rrule,
-        trainingZoneIds: formData.trainingZoneIds,
-      } as any)
-      toast.success("Schedule saved")
-      fetchPrograms()
-    } catch (error) {
-      toast.error("Failed to save schedule")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleSaveRequirements = async () => {
     if (
       formData.hasCapacityRestriction &&
       (!formData.capacity || formData.capacity < 1)
@@ -527,7 +454,33 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
 
     setIsSaving(true)
     try {
+      const isFlatRate =
+        formData.recurrenceType === "RECURRING" &&
+        formData.registrationType === "ALL_INSTANCES"
+      const priceValue =
+        formData.price != null
+          ? Math.max(0, Math.round(formData.price * 100) / 100)
+          : null
+
       await updateProgram(program.id, {
+        name: formData.name,
+        description: formData.description || undefined,
+        color: formData.color,
+        recurrenceType: formData.recurrenceType as any,
+        registrationType:
+          formData.recurrenceType === "RECURRING"
+            ? (formData.registrationType as any)
+            : null,
+        pricingModel: isFlatRate ? ("FLAT_RATE" as any) : ("PER_SESSION" as any),
+        basePrice: isFlatRate ? priceValue : null,
+        perSessionPrice: !isFlatRate ? priceValue : null,
+        startDate: formData.startDate || null,
+        endDate: formData.endDate || null,
+        startTime: formData.startTime,
+        duration: formData.duration,
+        facilityId: formData.facilityId,
+        rrule: formData.rrule,
+        trainingZoneIds: formData.trainingZoneIds,
         hasLevelRestriction: formData.hasLevelRestriction,
         levelRequirementIds: formData.hasLevelRestriction ? formData.levelRequirementIds : [],
         hasCapacityRestriction: formData.hasCapacityRestriction,
@@ -548,37 +501,9 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
         fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
         hasTrainingZoneRestriction: formData.hasTrainingZoneRestriction,
         trainingZoneCapacityMode: formData.trainingZoneCapacityMode,
-      } as any)
-      toast.success("Requirements saved")
-      fetchPrograms()
-    } catch (error) {
-      toast.error("Failed to save requirements")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleSaveWaitlist = async () => {
-    setIsSaving(true)
-    try {
-      await updateProgram(program.id, {
         waitlistEnabled: formData.waitlistEnabled,
         waitlistAutoPromote: formData.waitlistEnabled ? formData.waitlistAutoPromote : false,
         waitlistCapacity: formData.waitlistEnabled ? formData.waitlistCapacity : null,
-      } as any)
-      toast.success("Waitlist settings saved")
-      fetchPrograms()
-    } catch (error) {
-      toast.error("Failed to save waitlist settings")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleSaveStaff = async () => {
-    setIsSaving(true)
-    try {
-      await updateProgram(program.id, {
         staffAssignments: formData.staffAssignments.map((sa) => ({
           memberId: sa.memberId,
           role: sa.role,
@@ -586,8 +511,9 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
         })),
         showCoachOnSite: formData.showCoachOnSite,
       } as any)
-      toast.success("Staff settings saved")
-      fetchPrograms()
+      toast.success("Program saved")
+      await fetchPrograms()
+      onClose()
     } catch (error: any) {
       if (error?.status === 422 && error?.data?.certifications) {
         const names = error.data.certifications
@@ -595,7 +521,7 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
           .join(", ")
         toast.error(`Staff missing required certifications: ${names}`)
       } else {
-        toast.error("Failed to save staff settings")
+        toast.error("Failed to save program")
       }
     } finally {
       setIsSaving(false)
@@ -813,13 +739,6 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
               </p>
             </div>
 
-            {/* Save */}
-            <div className="pt-4 flex justify-end">
-              <Button onClick={handleSaveGeneral} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </div>
           </TabsContent>
 
           {/* ============================================= */}
@@ -1233,13 +1152,6 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
               </div>
             )}
 
-            {/* Save */}
-            <div className="pt-4 flex justify-end">
-              <Button onClick={handleSaveSchedule} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Schedule
-              </Button>
-            </div>
           </TabsContent>
 
           {/* ============================================= */}
@@ -1733,13 +1645,6 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
               </div>
             )}
 
-            {/* Save */}
-            <div className="pt-4 flex justify-end">
-              <Button onClick={handleSaveRequirements} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Requirements
-              </Button>
-            </div>
           </TabsContent>
 
           {/* ============================================= */}
@@ -1798,12 +1703,6 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
               </>
             )}
 
-            <div className="pt-4 flex justify-end">
-              <Button onClick={handleSaveWaitlist} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Waitlist
-              </Button>
-            </div>
           </TabsContent>
           )}
 
@@ -1981,20 +1880,17 @@ export function ProgramConfiguration({ program, onClose }: ProgramConfigProps) {
               </div>
             </div>
 
-            {/* Save */}
-            <div className="pt-4 flex justify-end">
-              <Button onClick={handleSaveStaff} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Staff
-              </Button>
-            </div>
           </TabsContent>
         </div>
       </Tabs>
 
-      <div className="p-4 border-t flex justify-end bg-background">
+      <div className="p-4 border-t flex justify-end gap-2 bg-background">
         <Button variant="outline" onClick={onClose}>
           Close
+        </Button>
+        <Button onClick={handleSaveAll} disabled={isSaving}>
+          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Save Changes
         </Button>
       </div>
     </div>
