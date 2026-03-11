@@ -10,7 +10,7 @@ const createEquipmentSchema = z.object({
   serialNumber: z.string().optional().nullable(),
   condition: z.enum(["EXCELLENT", "GOOD", "FAIR", "POOR", "UNSAFE"]).optional(),
   status: z.enum(["ACTIVE", "RETIRED", "MAINTENANCE"]).optional(),
-  trainingZoneId: z.string().optional().nullable(),
+  spaceId: z.string().optional().nullable(),
   purchaseDate: z.string().optional().nullable(),
   lastInspectionDate: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
@@ -46,7 +46,7 @@ export async function GET(
     const equipment = await db.equipment.findMany({
       where: { facilityId },
       include: {
-        trainingZone: {
+        space: {
           select: { id: true, name: true },
         },
       },
@@ -90,13 +90,13 @@ export async function POST(
     const body = await request.json();
     const validatedData = createEquipmentSchema.parse(body);
 
-    // Verify training zone belongs to this facility if provided
-    if (validatedData.trainingZoneId) {
-      const zone = await db.trainingZone.findFirst({
-        where: { id: validatedData.trainingZoneId, facilityId },
+    // Verify space belongs to this facility if provided
+    if (validatedData.spaceId) {
+      const space = await db.space.findFirst({
+        where: { id: validatedData.spaceId, facilityId },
       });
-      if (!zone) {
-        return NextResponse.json({ error: "Training zone not found" }, { status: 404 });
+      if (!space) {
+        return NextResponse.json({ error: "Space not found" }, { status: 404 });
       }
     }
 
@@ -109,13 +109,13 @@ export async function POST(
         serialNumber: validatedData.serialNumber ?? null,
         condition: validatedData.condition ?? "GOOD",
         status: validatedData.status ?? "ACTIVE",
-        trainingZoneId: validatedData.trainingZoneId ?? null,
+        spaceId: validatedData.spaceId ?? null,
         purchaseDate: validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null,
         lastInspectionDate: validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null,
         notes: validatedData.notes ?? null,
       },
       include: {
-        trainingZone: {
+        space: {
           select: { id: true, name: true },
         },
       },

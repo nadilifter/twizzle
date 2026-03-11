@@ -11,7 +11,7 @@ const updateEquipmentSchema = z.object({
   condition: z.enum(["EXCELLENT", "GOOD", "FAIR", "POOR", "UNSAFE"]).optional(),
   status: z.enum(["ACTIVE", "RETIRED", "MAINTENANCE"]).optional(),
   facilityId: z.string().optional().nullable(),
-  trainingZoneId: z.string().optional().nullable(),
+  spaceId: z.string().optional().nullable(),
   purchaseDate: z.string().optional().nullable(),
   lastInspectionDate: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
@@ -41,7 +41,7 @@ export async function GET(
         facility: {
           select: { id: true, name: true },
         },
-        trainingZone: {
+        space: {
           select: { id: true, name: true },
         },
       },
@@ -108,9 +108,9 @@ export async function PATCH(
       updateData.lastInspectionDate = validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null;
     }
 
-    // If facility is being cleared, also clear training zone
+    // If facility is being cleared, also clear space
     if (validatedData.facilityId === null) {
-      updateData.trainingZoneId = null;
+      updateData.spaceId = null;
     }
 
     const equipment = await db.equipment.update({
@@ -120,7 +120,7 @@ export async function PATCH(
         facility: {
           select: { id: true, name: true },
         },
-        trainingZone: {
+        space: {
           select: { id: true, name: true },
         },
       },

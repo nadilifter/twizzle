@@ -43,7 +43,7 @@ export async function GET(
         organizationId,
       },
       include: {
-        trainingZones: {
+        spaces: {
           orderBy: { name: "asc" },
         },
         equipment: {
@@ -64,7 +64,7 @@ export async function GET(
         },
         _count: {
           select: {
-            trainingZones: true,
+            spaces: true,
             equipment: true,
             assignments: true,
             events: true,
@@ -127,7 +127,7 @@ export async function PATCH(
       include: {
         _count: {
           select: {
-            trainingZones: true,
+            spaces: true,
             equipment: true,
             assignments: true,
             events: true,

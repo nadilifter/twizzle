@@ -3,18 +3,17 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
-const updateZoneSchema = z.object({
+const updateSpaceSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
-  type: z.string().min(1, "Type is required").optional(),
   capacity: z.number().optional().nullable(),
   status: z.enum(["OPEN", "CLOSED", "MAINTENANCE"]).optional(),
   description: z.string().optional().nullable(),
 });
 
-// GET - Get a single training zone
+// GET - Get a single space
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; zoneId: string }> }
+  { params }: { params: Promise<{ id: string; spaceId: string }> }
 ) {
   try {
     const session = await getAuthSession();
@@ -27,7 +26,7 @@ export async function GET(
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id: facilityId, zoneId } = await params;
+    const { id: facilityId, spaceId } = await params;
 
     // Verify facility belongs to organization
     const facility = await db.facility.findFirst({
@@ -38,8 +37,8 @@ export async function GET(
       return NextResponse.json({ error: "Facility not found" }, { status: 404 });
     }
 
-    const zone = await db.trainingZone.findFirst({
-      where: { id: zoneId, facilityId },
+    const space = await db.space.findFirst({
+      where: { id: spaceId, facilityId },
       include: {
         equipment: {
           orderBy: { name: "asc" },
@@ -50,21 +49,21 @@ export async function GET(
       },
     });
 
-    if (!zone) {
-      return NextResponse.json({ error: "Training zone not found" }, { status: 404 });
+    if (!space) {
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
-    return NextResponse.json(zone);
+    return NextResponse.json(space);
   } catch (error) {
-    console.error("Error fetching training zone:", error);
-    return NextResponse.json({ error: "Failed to fetch training zone" }, { status: 500 });
+    console.error("Error fetching space:", error);
+    return NextResponse.json({ error: "Failed to fetch space" }, { status: 500 });
   }
 }
 
-// PATCH - Update a training zone
+// PATCH - Update a space
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; zoneId: string }> }
+  { params }: { params: Promise<{ id: string; spaceId: string }> }
 ) {
   try {
     const session = await getAuthSession();
@@ -77,7 +76,7 @@ export async function PATCH(
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id: facilityId, zoneId } = await params;
+    const { id: facilityId, spaceId } = await params;
 
     // Verify facility belongs to organization
     const facility = await db.facility.findFirst({
@@ -88,20 +87,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Facility not found" }, { status: 404 });
     }
 
-    // Verify zone exists
-    const existingZone = await db.trainingZone.findFirst({
-      where: { id: zoneId, facilityId },
+    // Verify space exists
+    const existingSpace = await db.space.findFirst({
+      where: { id: spaceId, facilityId },
     });
 
-    if (!existingZone) {
-      return NextResponse.json({ error: "Training zone not found" }, { status: 404 });
+    if (!existingSpace) {
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
     const body = await request.json();
-    const validatedData = updateZoneSchema.parse(body);
+    const validatedData = updateSpaceSchema.parse(body);
 
-    const zone = await db.trainingZone.update({
-      where: { id: zoneId },
+    const space = await db.space.update({
+      where: { id: spaceId },
       data: validatedData,
       include: {
         _count: {
@@ -110,20 +109,20 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json(zone);
+    return NextResponse.json(space);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error updating training zone:", error);
-    return NextResponse.json({ error: "Failed to update training zone" }, { status: 500 });
+    console.error("Error updating space:", error);
+    return NextResponse.json({ error: "Failed to update space" }, { status: 500 });
   }
 }
 
-// DELETE - Delete a training zone
+// DELETE - Delete a space
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; zoneId: string }> }
+  { params }: { params: Promise<{ id: string; spaceId: string }> }
 ) {
   try {
     const session = await getAuthSession();
@@ -136,7 +135,7 @@ export async function DELETE(
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id: facilityId, zoneId } = await params;
+    const { id: facilityId, spaceId } = await params;
 
     // Verify facility belongs to organization
     const facility = await db.facility.findFirst({
@@ -147,28 +146,28 @@ export async function DELETE(
       return NextResponse.json({ error: "Facility not found" }, { status: 404 });
     }
 
-    // Verify zone exists
-    const existingZone = await db.trainingZone.findFirst({
-      where: { id: zoneId, facilityId },
+    // Verify space exists
+    const existingSpace = await db.space.findFirst({
+      where: { id: spaceId, facilityId },
     });
 
-    if (!existingZone) {
-      return NextResponse.json({ error: "Training zone not found" }, { status: 404 });
+    if (!existingSpace) {
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
-    // Remove zone assignment from equipment (set to null)
+    // Remove space assignment from equipment (set to null)
     await db.equipment.updateMany({
-      where: { trainingZoneId: zoneId },
-      data: { trainingZoneId: null },
+      where: { spaceId },
+      data: { spaceId: null },
     });
 
-    await db.trainingZone.delete({
-      where: { id: zoneId },
+    await db.space.delete({
+      where: { id: spaceId },
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting training zone:", error);
-    return NextResponse.json({ error: "Failed to delete training zone" }, { status: 500 });
+    console.error("Error deleting space:", error);
+    return NextResponse.json({ error: "Failed to delete space" }, { status: 500 });
   }
 }

@@ -3,15 +3,14 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
-const createZoneSchema = z.object({
+const createSpaceSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  type: z.string().min(1, "Type is required"),
   capacity: z.number().optional().nullable(),
   status: z.enum(["OPEN", "CLOSED", "MAINTENANCE"]).optional(),
   description: z.string().optional().nullable(),
 });
 
-// GET - List all training zones for a facility
+// GET - List all spaces for a facility
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -38,7 +37,7 @@ export async function GET(
       return NextResponse.json({ error: "Facility not found" }, { status: 404 });
     }
 
-    const zones = await db.trainingZone.findMany({
+    const spaces = await db.space.findMany({
       where: { facilityId },
       include: {
         _count: {
@@ -48,14 +47,14 @@ export async function GET(
       orderBy: { name: "asc" },
     });
 
-    return NextResponse.json(zones);
+    return NextResponse.json(spaces);
   } catch (error) {
-    console.error("Error fetching training zones:", error);
-    return NextResponse.json({ error: "Failed to fetch training zones" }, { status: 500 });
+    console.error("Error fetching spaces:", error);
+    return NextResponse.json({ error: "Failed to fetch spaces" }, { status: 500 });
   }
 }
 
-// POST - Create a new training zone
+// POST - Create a new space
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -83,13 +82,12 @@ export async function POST(
     }
 
     const body = await request.json();
-    const validatedData = createZoneSchema.parse(body);
+    const validatedData = createSpaceSchema.parse(body);
 
-    const zone = await db.trainingZone.create({
+    const space = await db.space.create({
       data: {
         facilityId,
         name: validatedData.name,
-        type: validatedData.type,
         capacity: validatedData.capacity ?? null,
         status: validatedData.status ?? "OPEN",
         description: validatedData.description ?? null,
@@ -101,12 +99,12 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(zone, { status: 201 });
+    return NextResponse.json(space, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error creating training zone:", error);
-    return NextResponse.json({ error: "Failed to create training zone" }, { status: 500 });
+    console.error("Error creating space:", error);
+    return NextResponse.json({ error: "Failed to create space" }, { status: 500 });
   }
 }

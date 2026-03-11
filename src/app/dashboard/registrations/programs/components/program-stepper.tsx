@@ -64,7 +64,7 @@ import { useStaff } from "@/hooks/use-staff"
 import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
 import { useMemberships } from "@/hooks/use-memberships"
 import type { ProgramStaffRole } from "@/types/staff"
-import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, TrainingZoneWithAvailability } from "@/types/programs"
+import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, SpaceWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
 import { CopySettingsDialog } from "@/components/copy-settings-dialog"
 import { ColorSelector } from "@/components/color-selector"
@@ -133,14 +133,14 @@ interface ProgramFormData {
   duration: number | null
   facilityId: string | null
   rrule: string | null
-  trainingZoneIds: string[]
+  spaceIds: string[]
   
   // Step 3: Requirements
   hasLevelRestriction: boolean
   levelRequirementIds: string[]
   hasCapacityRestriction: boolean
-  hasTrainingZoneRestriction: boolean
-  trainingZoneCapacityMode: "MINIMUM" | "SUM"
+  hasSpaceRestriction: boolean
+  spaceCapacityMode: "MINIMUM" | "SUM"
   capacity: number | null
   hasAgeRestriction: boolean
   minAge: number | null
@@ -212,11 +212,11 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const [waivers, setWaivers] = React.useState<Array<{ id: string; title: string; status: string }>>([])
   const [loadingWaivers, setLoadingWaivers] = React.useState(true)
   
-  // Training zones state
-  const [trainingZones, setTrainingZones] = React.useState<TrainingZoneWithAvailability[]>([])
-  const [loadingZones, setLoadingZones] = React.useState(false)
+  // Spaces state
+  const [spaces, setSpaces] = React.useState<SpaceWithAvailability[]>([])
+  const [loadingSpaces, setLoadingSpaces] = React.useState(false)
   const [fullyBookedOverride, setFullyBookedOverride] = React.useState<string | null>(null)
-  const [conflictDetailsZoneId, setConflictDetailsZoneId] = React.useState<string | null>(null)
+  const [conflictDetailsSpaceId, setConflictDetailsSpaceId] = React.useState<string | null>(null)
   
   // Evaluation templates state
   const [evaluationTemplates, setEvaluationTemplates] = React.useState<Array<{
@@ -265,14 +265,14 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     duration: (program as any)?.duration || 60,
     facilityId: (program as any)?.facilityId || null,
     rrule: (program as any)?.rrule || null,
-    trainingZoneIds: program?.trainingZones?.map(tz => tz.trainingZoneId) || [],
+    spaceIds: program?.spaces?.map(s => s.spaceId) || [],
     
     // Step 3: Requirements
     hasLevelRestriction: program?.hasLevelRestriction || false,
     levelRequirementIds: program?.levelRequirements?.map(lr => lr.levelId) || [],
     hasCapacityRestriction: program?.hasCapacityRestriction || false,
-    hasTrainingZoneRestriction: program?.hasTrainingZoneRestriction || false,
-    trainingZoneCapacityMode: program?.trainingZoneCapacityMode || "MINIMUM",
+    hasSpaceRestriction: program?.hasSpaceRestriction || false,
+    spaceCapacityMode: program?.spaceCapacityMode || "MINIMUM",
     capacity: program?.capacity || null,
     hasAgeRestriction: program?.hasAgeRestriction || false,
     minAge: program?.minAge || null,
@@ -342,12 +342,12 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         duration: data.duration || 60,
         facilityId: data.facilityId || null,
         rrule: data.rrule || null,
-        trainingZoneIds: data.trainingZones?.map((tz: any) => tz.trainingZoneId) || [],
+        spaceIds: data.spaces?.map((s: any) => s.spaceId) || [],
         hasLevelRestriction: data.hasLevelRestriction || false,
         levelRequirementIds: data.levelRequirements?.map((lr: any) => lr.levelId) || [],
         hasCapacityRestriction: data.hasCapacityRestriction || false,
-        hasTrainingZoneRestriction: data.hasTrainingZoneRestriction || false,
-        trainingZoneCapacityMode: data.trainingZoneCapacityMode || "MINIMUM",
+        hasSpaceRestriction: data.hasSpaceRestriction || false,
+        spaceCapacityMode: data.spaceCapacityMode || "MINIMUM",
         capacity: data.capacity || null,
         hasAgeRestriction: data.hasAgeRestriction || false,
         minAge: data.minAge || null,
@@ -470,7 +470,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     fetchAssignment()
   }, [isEditing, program, trainingEnabled])
 
-  // Fetch training zones + availability when facility or time changes
+  // Fetch spaces + availability when facility or time changes
   // Extract ISO weekdays from rrule string (e.g. BYDAY=MO,WE,FR -> [0,2,4])
   const rruleDays = React.useMemo(() => {
     if (!formData.rrule) return []
@@ -480,7 +480,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     return match[1].split(",").map(d => dayMap[d]).filter((d): d is number => d != null)
   }, [formData.rrule])
 
-  const fetchZoneAvailability = React.useCallback(async (
+  const fetchSpaceAvailability = React.useCallback(async (
     facilityId: string,
     startTime?: string,
     duration?: number | null,
@@ -488,7 +488,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     programStartDate?: Date | null,
     programEndDate?: Date | null,
   ) => {
-    setLoadingZones(true)
+    setLoadingSpaces(true)
     try {
       const params = new URLSearchParams()
       if (startTime && duration) {
@@ -510,21 +510,21 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         params.set("excludeProgramId", program.id)
       }
       const qs = params.toString()
-      const response = await fetch(`/api/organization/facilities/${facilityId}/zones/availability${qs ? `?${qs}` : ""}`)
+      const response = await fetch(`/api/organization/facilities/${facilityId}/spaces/availability${qs ? `?${qs}` : ""}`)
       if (response.ok) {
         const data = await response.json()
-        setTrainingZones(data)
+        setSpaces(data)
       }
     } catch (error) {
-      console.error("Failed to fetch training zones:", error)
+      console.error("Failed to fetch spaces:", error)
     } finally {
-      setLoadingZones(false)
+      setLoadingSpaces(false)
     }
   }, [isEditing, program])
 
   React.useEffect(() => {
     if (formData.facilityId) {
-      fetchZoneAvailability(
+      fetchSpaceAvailability(
         formData.facilityId,
         formData.startTime,
         formData.duration,
@@ -533,22 +533,22 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         formData.endDate,
       )
     } else {
-      setTrainingZones([])
-      setFormData(prev => ({ ...prev, trainingZoneIds: [] }))
+      setSpaces([])
+      setFormData(prev => ({ ...prev, spaceIds: [] }))
     }
-  }, [formData.facilityId, formData.startTime, formData.duration, rruleDays, formData.startDate, formData.endDate, fetchZoneAvailability])
+  }, [formData.facilityId, formData.startTime, formData.duration, rruleDays, formData.startDate, formData.endDate, fetchSpaceAvailability])
 
-  // Compute zone-derived capacity
-  const zoneDerivedCapacity = React.useMemo(() => {
-    if (formData.trainingZoneIds.length === 0) return null
-    const selectedZones = trainingZones.filter(z => formData.trainingZoneIds.includes(z.id))
-    const capacities = selectedZones.map(z => z.capacity).filter((c): c is number => c != null)
+  // Compute space-derived capacity
+  const spaceDerivedCapacity = React.useMemo(() => {
+    if (formData.spaceIds.length === 0) return null
+    const selectedSpaces = spaces.filter(s => formData.spaceIds.includes(s.id))
+    const capacities = selectedSpaces.map(s => s.capacity).filter((c): c is number => c != null)
     if (capacities.length === 0) return null
-    if (formData.trainingZoneCapacityMode === "SUM") {
+    if (formData.spaceCapacityMode === "SUM") {
       return capacities.reduce((sum, c) => sum + c, 0)
     }
     return Math.min(...capacities)
-  }, [formData.trainingZoneIds, formData.trainingZoneCapacityMode, trainingZones])
+  }, [formData.spaceIds, formData.spaceCapacityMode, spaces])
   
   // Flatten membership instances from groups
   const allMembershipInstances = React.useMemo(() => {
@@ -722,10 +722,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         hasMedicalRequirement: formData.hasMedicalRequirement,
         hasFileRequirement: formData.hasFileRequirement,
         fileRequirementConfig: formData.hasFileRequirement ? formData.fileRequirementConfig : null,
-        hasTrainingZoneRestriction: formData.hasTrainingZoneRestriction,
-        trainingZoneCapacityMode: formData.trainingZoneCapacityMode,
+        hasSpaceRestriction: formData.hasSpaceRestriction,
+        spaceCapacityMode: formData.spaceCapacityMode,
         capacity: formData.hasCapacityRestriction ? formData.capacity : null,
-        trainingZoneIds: formData.trainingZoneIds,
+        spaceIds: formData.spaceIds,
         minAge: formData.hasAgeRestriction ? formData.minAge : null,
         maxAge: formData.hasAgeRestriction ? formData.maxAge : null,
         showCoachOnSite: formData.showCoachOnSite,
@@ -1262,7 +1262,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     onValueChange={(value) => setFormData(prev => ({ 
                       ...prev, 
                       facilityId: value === "__none__" ? null : value,
-                      trainingZoneIds: value === "__none__" ? [] : prev.trainingZoneIds,
+                      spaceIds: value === "__none__" ? [] : prev.spaceIds,
                     }))}
                   >
                     <SelectTrigger>
@@ -1288,63 +1288,63 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 )}
               </div>
 
-              {/* Training Zone Selection - shown when a facility is selected */}
+              {/* Space Selection - shown when a facility is selected */}
               {formData.facilityId && (
                 <div className="space-y-3">
-                  <Label>Training Zones (optional)</Label>
-                  {loadingZones ? (
+                  <Label>Spaces (optional)</Label>
+                  {loadingSpaces ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading training zones...
+                      Loading spaces...
                     </div>
-                  ) : trainingZones.length === 0 ? (
+                  ) : spaces.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No training zones configured for this facility.
+                      No spaces configured for this facility.
                     </p>
                   ) : (
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {trainingZones.map(zone => {
-                          const isSelected = formData.trainingZoneIds.includes(zone.id)
-                          const hasConflicts = zone.totalConflicts > 0
-                          const hasClosed = zone.closedDays?.length > 0
+                        {spaces.map(space => {
+                          const isSelected = formData.spaceIds.includes(space.id)
+                          const hasConflicts = space.totalConflicts > 0
+                          const hasClosed = space.closedDays?.length > 0
                           const hasWarnings = hasConflicts || hasClosed
                           return (
                             <label
-                              key={zone.id}
+                              key={space.id}
                               className={cn(
                                 "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
                                 isSelected
                                   ? "border-primary bg-primary/5"
                                   : "hover:bg-muted/50",
-                                (zone.isFullyBooked || !zone.isAvailable) && !isSelected && "opacity-60"
+                                (space.isFullyBooked || !space.isAvailable) && !isSelected && "opacity-60"
                               )}
                             >
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={checked => {
                                   if (checked && hasWarnings) {
-                                    setFullyBookedOverride(zone.id)
+                                    setFullyBookedOverride(space.id)
                                     return
                                   }
                                   setFormData(prev => {
                                     const newIds = checked
-                                      ? [...prev.trainingZoneIds, zone.id]
-                                      : prev.trainingZoneIds.filter(id => id !== zone.id)
-                                    const hasZones = newIds.length > 0
-                                    const selectedZones = trainingZones.filter(z => newIds.includes(z.id))
-                                    const capacities = selectedZones.map(z => z.capacity).filter((c): c is number => c != null)
+                                      ? [...prev.spaceIds, space.id]
+                                      : prev.spaceIds.filter(id => id !== space.id)
+                                    const hasSpaces = newIds.length > 0
+                                    const selectedSpaces = spaces.filter(s => newIds.includes(s.id))
+                                    const capacities = selectedSpaces.map(s => s.capacity).filter((c): c is number => c != null)
                                     const derived = capacities.length > 0
-                                      ? (prev.trainingZoneCapacityMode === "SUM"
+                                      ? (prev.spaceCapacityMode === "SUM"
                                           ? capacities.reduce((sum, c) => sum + c, 0)
                                           : Math.min(...capacities))
                                       : null
                                     return {
                                       ...prev,
-                                      trainingZoneIds: newIds,
-                                      hasCapacityRestriction: hasZones ? true : prev.hasCapacityRestriction,
-                                      hasTrainingZoneRestriction: hasZones ? true : false,
-                                      capacity: hasZones && derived != null ? derived : prev.capacity,
+                                      spaceIds: newIds,
+                                      hasCapacityRestriction: hasSpaces ? true : prev.hasCapacityRestriction,
+                                      hasSpaceRestriction: hasSpaces ? true : false,
+                                      capacity: hasSpaces && derived != null ? derived : prev.capacity,
                                     }
                                   })
                                 }}
@@ -1352,45 +1352,44 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium">{zone.name}</span>
-                                  <Badge variant="outline" className="text-xs">{zone.type}</Badge>
-                                  {zone.isFullyBooked ? (
+                                  <span className="text-sm font-medium">{space.name}</span>
+                                  {space.isFullyBooked ? (
                                     <Badge variant="destructive" className="text-xs">
                                       <AlertTriangle className="h-3 w-3 mr-1" />
                                       Fully booked
                                     </Badge>
-                                  ) : hasConflicts && zone.totalConflicts <= 3 ? (
+                                  ) : hasConflicts && space.totalConflicts <= 3 ? (
                                     <Badge variant="secondary" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
                                       <AlertTriangle className="h-3 w-3 mr-1" />
-                                      Full on {zone.conflictDates.map(c => format(new Date(c.date + "T00:00:00"), "MMM d")).join(", ")}
+                                      Full on {space.conflictDates.map(c => format(new Date(c.date + "T00:00:00"), "MMM d")).join(", ")}
                                     </Badge>
                                   ) : hasConflicts ? (
                                     <Badge
                                       variant="secondary"
                                       className="text-xs text-amber-600 border-amber-300 bg-amber-50 cursor-pointer"
-                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictDetailsZoneId(zone.id) }}
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictDetailsSpaceId(space.id) }}
                                     >
                                       <AlertTriangle className="h-3 w-3 mr-1" />
-                                      {zone.totalConflicts} date conflicts
+                                      {space.totalConflicts} date conflicts
                                     </Badge>
                                   ) : null}
                                   {hasClosed && (
                                     <Badge variant="secondary" className="text-xs text-orange-600 border-orange-300 bg-orange-50">
                                       <Clock className="h-3 w-3 mr-1" />
-                                      {zone.closedDays.length === 1
-                                        ? `Closed ${zone.closedDays[0].day}`
-                                        : zone.closedDays.every(d => d.reason === "closed")
-                                          ? `Closed ${zone.closedDays.map(d => d.day).join(", ")}`
-                                          : `${zone.closedDays.length} day${zone.closedDays.length !== 1 ? "s" : ""} outside hours`
+                                      {space.closedDays.length === 1
+                                        ? `Closed ${space.closedDays[0].day}`
+                                        : space.closedDays.every(d => d.reason === "closed")
+                                          ? `Closed ${space.closedDays.map(d => d.day).join(", ")}`
+                                          : `${space.closedDays.length} day${space.closedDays.length !== 1 ? "s" : ""} outside hours`
                                       }
                                     </Badge>
                                   )}
                                 </div>
-                                {zone.capacity != null && (
+                                {space.capacity != null && (
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    Capacity: {zone.capacity}
-                                    {hasConflicts && !zone.isFullyBooked && (
-                                      <> &middot; <span className="text-amber-600">{zone.totalConflicts} date{zone.totalConflicts !== 1 ? "s" : ""} at capacity</span></>
+                                    Capacity: {space.capacity}
+                                    {hasConflicts && !space.isFullyBooked && (
+                                      <> &middot; <span className="text-amber-600">{space.totalConflicts} date{space.totalConflicts !== 1 ? "s" : ""} at capacity</span></>
                                     )}
                                   </p>
                                 )}
@@ -1401,26 +1400,26 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                       </div>
 
                       {/* Conflict details dialog */}
-                      <Dialog open={!!conflictDetailsZoneId} onOpenChange={(open) => !open && setConflictDetailsZoneId(null)}>
+                      <Dialog open={!!conflictDetailsSpaceId} onOpenChange={(open) => !open && setConflictDetailsSpaceId(null)}>
                         <DialogContent className="max-w-md">
                           <DialogHeader>
                             <DialogTitle>
-                              Conflict Details &mdash; {trainingZones.find(z => z.id === conflictDetailsZoneId)?.name}
+                              Conflict Details &mdash; {spaces.find(s => s.id === conflictDetailsSpaceId)?.name}
                             </DialogTitle>
                           </DialogHeader>
                           {(() => {
-                            const zone = trainingZones.find(z => z.id === conflictDetailsZoneId)
-                            if (!zone) return null
+                            const space = spaces.find(s => s.id === conflictDetailsSpaceId)
+                            if (!space) return null
                             return (
                               <div className="space-y-2">
                                 <p className="text-sm text-muted-foreground">
-                                  This zone (capacity {zone.capacity}) is fully booked on the following {zone.totalConflicts} date{zone.totalConflicts !== 1 ? "s" : ""}:
+                                  This space (capacity {space.capacity}) is fully booked on the following {space.totalConflicts} date{space.totalConflicts !== 1 ? "s" : ""}:
                                 </p>
                                 <div className="max-h-64 overflow-y-auto rounded border divide-y">
-                                  {zone.conflictDates.map(c => (
+                                  {space.conflictDates.map(c => (
                                     <div key={c.date} className="flex items-center justify-between px-3 py-2 text-sm">
                                       <span>{format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")}</span>
-                                      <span className="text-destructive font-medium">{c.used}/{zone.capacity} used</span>
+                                      <span className="text-destructive font-medium">{c.used}/{space.capacity} used</span>
                                     </div>
                                   ))}
                                 </div>
@@ -1436,23 +1435,23 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                           <AlertDialogHeader>
                             <AlertDialogTitle className="flex items-center gap-2">
                               <AlertTriangle className="h-5 w-5 text-destructive" />
-                              Training Zone Warning
+                              Space Warning
                             </AlertDialogTitle>
                             <AlertDialogDescription asChild>
                               <div className="space-y-3">
                                 {(() => {
-                                  const zone = trainingZones.find(z => z.id === fullyBookedOverride)
-                                  if (!zone) return <p>This training zone has issues.</p>
+                                  const space = spaces.find(s => s.id === fullyBookedOverride)
+                                  if (!space) return <p>This space has issues.</p>
                                   const sections: React.ReactNode[] = []
 
-                                  if (zone.closedDays?.length > 0) {
+                                  if (space.closedDays?.length > 0) {
                                     sections.push(
                                       <div key="closed">
                                         <p className="font-medium text-foreground">Outside operating hours</p>
                                         <ul className="mt-1 space-y-0.5 text-sm">
-                                          {zone.closedDays.map(d => (
+                                          {space.closedDays.map(d => (
                                             <li key={d.day} className="text-orange-600">
-                                              {d.day}: {d.reason === "closed" ? "Zone is closed" : `Zone is ${d.reason}`}
+                                              {d.day}: {d.reason === "closed" ? "Space is closed" : `Space is ${d.reason}`}
                                             </li>
                                           ))}
                                         </ul>
@@ -1460,35 +1459,35 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                                     )
                                   }
 
-                                  if (zone.isFullyBooked) {
+                                  if (space.isFullyBooked) {
                                     sections.push(
                                       <div key="full">
                                         <p className="font-medium text-foreground">Fully booked</p>
-                                        <p className="text-sm">This zone is at capacity on all dates during the selected time slot.</p>
+                                        <p className="text-sm">This space is at capacity on all dates during the selected time slot.</p>
                                       </div>
                                     )
-                                  } else if (zone.totalConflicts > 0) {
+                                  } else if (space.totalConflicts > 0) {
                                     sections.push(
                                       <div key="conflicts">
                                         <p className="font-medium text-foreground">Capacity conflicts</p>
-                                        {zone.totalConflicts <= 5 ? (
+                                        {space.totalConflicts <= 5 ? (
                                           <ul className="mt-1 space-y-0.5 text-sm">
-                                            {zone.conflictDates.map(c => (
+                                            {space.conflictDates.map(c => (
                                               <li key={c.date} className="text-destructive">
-                                                {format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")} ({c.used}/{zone.capacity} used)
+                                                {format(new Date(c.date + "T00:00:00"), "EEE, MMM d, yyyy")} ({c.used}/{space.capacity} used)
                                               </li>
                                             ))}
                                           </ul>
                                         ) : (
                                           <p className="text-sm text-muted-foreground">
-                                            {zone.totalConflicts} dates at capacity, from {format(new Date(zone.conflictDates[0].date + "T00:00:00"), "MMM d")} through {format(new Date(zone.conflictDates[zone.conflictDates.length - 1].date + "T00:00:00"), "MMM d, yyyy")}.
+                                            {space.totalConflicts} dates at capacity, from {format(new Date(space.conflictDates[0].date + "T00:00:00"), "MMM d")} through {format(new Date(space.conflictDates[space.conflictDates.length - 1].date + "T00:00:00"), "MMM d, yyyy")}.
                                           </p>
                                         )}
                                       </div>
                                     )
                                   }
 
-                                  return sections.length > 0 ? sections : <p>This training zone has issues.</p>
+                                  return sections.length > 0 ? sections : <p>This space has issues.</p>
                                 })()}
                                 <p>Are you sure you want to proceed?</p>
                               </div>
@@ -1500,19 +1499,19 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                               onClick={() => {
                                 if (fullyBookedOverride) {
                                   setFormData(prev => {
-                                    const newIds = [...prev.trainingZoneIds, fullyBookedOverride]
-                                    const selectedZones = trainingZones.filter(z => newIds.includes(z.id))
-                                    const capacities = selectedZones.map(z => z.capacity).filter((c): c is number => c != null)
+                                    const newIds = [...prev.spaceIds, fullyBookedOverride]
+                                    const selectedSpaces = spaces.filter(s => newIds.includes(s.id))
+                                    const capacities = selectedSpaces.map(s => s.capacity).filter((c): c is number => c != null)
                                     const derived = capacities.length > 0
-                                      ? (prev.trainingZoneCapacityMode === "SUM"
+                                      ? (prev.spaceCapacityMode === "SUM"
                                           ? capacities.reduce((sum, c) => sum + c, 0)
                                           : Math.min(...capacities))
                                       : null
                                     return {
                                       ...prev,
-                                      trainingZoneIds: newIds,
+                                      spaceIds: newIds,
                                       hasCapacityRestriction: true,
-                                      hasTrainingZoneRestriction: true,
+                                      hasSpaceRestriction: true,
                                       capacity: derived ?? prev.capacity,
                                     }
                                   })
@@ -1628,50 +1627,50 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     onCheckedChange={checked => setFormData(prev => ({
                       ...prev,
                       hasCapacityRestriction: checked,
-                      capacity: checked ? (prev.capacity || zoneDerivedCapacity || 20) : null,
+                      capacity: checked ? (prev.capacity || spaceDerivedCapacity || 20) : null,
                     }))}
                   />
                 </div>
                 
                 {formData.hasCapacityRestriction && (
                   <div className="pt-2 border-t space-y-4">
-                    {/* Training zone capacity restriction */}
-                    {formData.trainingZoneIds.length > 0 && (
+                    {/* Space capacity restriction */}
+                    {formData.spaceIds.length > 0 && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="space-y-0.5">
-                            <Label className="text-sm font-medium">Restrict by Training Zone Capacity</Label>
+                            <Label className="text-sm font-medium">Restrict by Space Capacity</Label>
                             <p className="text-xs text-muted-foreground">
-                              Derive capacity from the selected training zones
+                              Derive capacity from the selected spaces
                             </p>
                           </div>
                           <Switch
-                            checked={formData.hasTrainingZoneRestriction}
+                            checked={formData.hasSpaceRestriction}
                             onCheckedChange={checked => {
                               setFormData(prev => ({
                                 ...prev,
-                                hasTrainingZoneRestriction: checked,
-                                capacity: checked && zoneDerivedCapacity ? zoneDerivedCapacity : prev.capacity,
+                                hasSpaceRestriction: checked,
+                                capacity: checked && spaceDerivedCapacity ? spaceDerivedCapacity : prev.capacity,
                               }))
                             }}
                           />
                         </div>
 
-                        {formData.hasTrainingZoneRestriction && formData.trainingZoneIds.length > 1 && (
+                        {formData.hasSpaceRestriction && formData.spaceIds.length > 1 && (
                           <div className="pl-4 border-l-2 space-y-2">
-                            <Label className="text-sm">Multi-zone capacity mode</Label>
+                            <Label className="text-sm">Multi-space capacity mode</Label>
                             <RadioGroup
-                              value={formData.trainingZoneCapacityMode}
+                              value={formData.spaceCapacityMode}
                               onValueChange={(value: "MINIMUM" | "SUM") => {
                                 setFormData(prev => {
-                                  const selectedZones = trainingZones.filter(z => prev.trainingZoneIds.includes(z.id))
-                                  const capacities = selectedZones.map(z => z.capacity).filter((c): c is number => c != null)
+                                  const selectedSpaces = spaces.filter(s => prev.spaceIds.includes(s.id))
+                                  const capacities = selectedSpaces.map(s => s.capacity).filter((c): c is number => c != null)
                                   const derived = value === "SUM"
                                     ? capacities.reduce((s, c) => s + c, 0)
                                     : capacities.length > 0 ? Math.min(...capacities) : null
                                   return {
                                     ...prev,
-                                    trainingZoneCapacityMode: value,
+                                    spaceCapacityMode: value,
                                     capacity: derived ?? prev.capacity,
                                   }
                                 })
@@ -1680,24 +1679,24 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                             >
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <RadioGroupItem value="MINIMUM" />
-                                <span className="text-sm">Use smallest zone capacity</span>
+                                <span className="text-sm">Use smallest space capacity</span>
                               </label>
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <RadioGroupItem value="SUM" />
-                                <span className="text-sm">Use combined zone capacity</span>
+                                <span className="text-sm">Use combined space capacity</span>
                               </label>
                             </RadioGroup>
-                            {zoneDerivedCapacity != null && (
+                            {spaceDerivedCapacity != null && (
                               <p className="text-xs text-muted-foreground">
-                                Derived capacity: {zoneDerivedCapacity} athletes
+                                Derived capacity: {spaceDerivedCapacity} athletes
                               </p>
                             )}
                           </div>
                         )}
 
-                        {formData.hasTrainingZoneRestriction && zoneDerivedCapacity != null && formData.trainingZoneIds.length === 1 && (
+                        {formData.hasSpaceRestriction && spaceDerivedCapacity != null && formData.spaceIds.length === 1 && (
                           <p className="text-xs text-muted-foreground pl-4 border-l-2">
-                            Zone capacity: {zoneDerivedCapacity} athletes
+                            Space capacity: {spaceDerivedCapacity} athletes
                           </p>
                         )}
                       </div>
@@ -1709,21 +1708,21 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                         id="capacity"
                         type="number"
                         min={1}
-                        max={formData.hasTrainingZoneRestriction && zoneDerivedCapacity ? zoneDerivedCapacity : undefined}
+                        max={formData.hasSpaceRestriction && spaceDerivedCapacity ? spaceDerivedCapacity : undefined}
                         placeholder="Max athletes"
                         value={formData.capacity || ""}
                         onChange={e => {
                           const val = e.target.value ? parseInt(e.target.value) : null
-                          const capped = formData.hasTrainingZoneRestriction && zoneDerivedCapacity && val
-                            ? Math.min(val, zoneDerivedCapacity)
+                          const capped = formData.hasSpaceRestriction && spaceDerivedCapacity && val
+                            ? Math.min(val, spaceDerivedCapacity)
                             : val
                           setFormData(prev => ({ ...prev, capacity: capped }))
                         }}
                         className="mt-2 max-w-[200px]"
                       />
-                      {formData.hasTrainingZoneRestriction && zoneDerivedCapacity != null && (
+                      {formData.hasSpaceRestriction && spaceDerivedCapacity != null && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Cannot exceed zone capacity of {zoneDerivedCapacity}
+                          Cannot exceed space capacity of {spaceDerivedCapacity}
                         </p>
                       )}
                     </div>

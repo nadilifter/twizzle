@@ -11,7 +11,7 @@ const createEquipmentSchema = z.object({
   condition: z.enum(["EXCELLENT", "GOOD", "FAIR", "POOR", "UNSAFE"]).optional(),
   status: z.enum(["ACTIVE", "RETIRED", "MAINTENANCE"]).optional(),
   facilityId: z.string().optional().nullable(),
-  trainingZoneId: z.string().optional().nullable(),
+  spaceId: z.string().optional().nullable(),
   purchaseDate: z.string().optional().nullable(),
   lastInspectionDate: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         facility: {
           select: { id: true, name: true },
         },
-        trainingZone: {
+        space: {
           select: { id: true, name: true },
         },
       },
@@ -88,13 +88,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify training zone belongs to the facility if both are provided
-    if (validatedData.trainingZoneId && validatedData.facilityId) {
-      const zone = await db.trainingZone.findFirst({
-        where: { id: validatedData.trainingZoneId, facilityId: validatedData.facilityId },
+    // Verify space belongs to the facility if both are provided
+    if (validatedData.spaceId && validatedData.facilityId) {
+      const space = await db.space.findFirst({
+        where: { id: validatedData.spaceId, facilityId: validatedData.facilityId },
       });
-      if (!zone) {
-        return NextResponse.json({ error: "Training zone not found in this facility" }, { status: 404 });
+      if (!space) {
+        return NextResponse.json({ error: "Space not found in this facility" }, { status: 404 });
       }
     }
 
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         condition: validatedData.condition ?? "GOOD",
         status: validatedData.status ?? "ACTIVE",
         facilityId: validatedData.facilityId ?? null,
-        trainingZoneId: validatedData.trainingZoneId ?? null,
+        spaceId: validatedData.spaceId ?? null,
         purchaseDate: validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null,
         lastInspectionDate: validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null,
         notes: validatedData.notes ?? null,
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         facility: {
           select: { id: true, name: true },
         },
-        trainingZone: {
+        space: {
           select: { id: true, name: true },
         },
       },

@@ -1,4 +1,4 @@
-Timelines (for future facility zone management/staff schedling) https://www.abui.io/blocks/timeline
+Timelines (for future facility space management/staff schedling) https://www.abui.io/blocks/timeline
 Accordion Multiselect (picking events in competitions?) https://www.abui.io/components/accordion-multiselect
 Animated Chart (for superadmin monitoring?) https://www.abui.io/blocks/animated-chart
 Timeline (for showing dates, vertical and horizontal) https://ui.8starlabs.com/docs/components/timeline

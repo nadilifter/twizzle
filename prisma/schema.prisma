@@ -767,9 +767,9 @@ model Program {
   minAge Int? // Minimum age (0-100)
   maxAge Int? // Maximum age (0-100)
 
-  // Training Zone Capacity
-  hasTrainingZoneRestriction Boolean                  @default(false)
-  trainingZoneCapacityMode   TrainingZoneCapacityMode @default(MINIMUM)
+  // Space Capacity
+  hasSpaceRestriction Boolean           @default(false) @map("hasTrainingZoneRestriction")
+  spaceCapacityMode   SpaceCapacityMode @default(MINIMUM) @map("trainingZoneCapacityMode")
 
   // Restriction Flags (for UI toggle state)
   hasGenderRestriction     Boolean @default(false)
@@ -800,7 +800,7 @@ model Program {
   levelRequirements   ProgramLevelRequirement[]
   waiverRequirements  ProgramWaiverRequirement[]
   instances           ProgramInstance[]
-  trainingZones       ProgramTrainingZone[]
+  spaces              ProgramSpace[]
   registrationFiles   RegistrationFile[]
 
   // Registration Queue
@@ -1087,7 +1087,7 @@ model ProgramInstance {
   organization  Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   registrations InstanceRegistration[]
   attendances   InstanceAttendance[]
-  trainingZones ProgramInstanceTrainingZone[]
+  spaces        ProgramInstanceSpace[]
   evaluations   Evaluation[]
 
   @@index([programId])
@@ -2600,7 +2600,7 @@ model Facility {
 
   // Relations
   organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  trainingZones    TrainingZone[]
+  spaces           Space[]
   equipment        Equipment[]
   assignments      FacilityAssignment[]
   events           Event[]
@@ -2618,83 +2618,90 @@ enum FacilityStatus {
   MAINTENANCE
 }
 
-model TrainingZone {
-  id          String     @id @default(cuid())
+model Space {
+  id          String      @id @default(cuid())
   facilityId  String
   name        String
-  type        String // e.g., "Floor", "Vault", "Bars", "Beam", "Trampoline"
   capacity    Int?
-  status      ZoneStatus @default(OPEN)
+  status      SpaceStatus @default(OPEN)
   description String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  facility            Facility                       @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facility            Facility                @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   equipment           Equipment[]
-  programAssignments  ProgramTrainingZone[]
-  instanceAssignments ProgramInstanceTrainingZone[]
-  availability        TrainingZoneAvailability[]
+  programAssignments  ProgramSpace[]
+  instanceAssignments ProgramInstanceSpace[]
+  availability        SpaceAvailability[]
 
   @@index([facilityId])
+  @@map("TrainingZone")
 }
 
-enum ZoneStatus {
+enum SpaceStatus {
   OPEN
   CLOSED
   MAINTENANCE
+
+  @@map("ZoneStatus")
 }
 
-enum TrainingZoneCapacityMode {
-  MINIMUM // Capacity = smallest zone capacity
-  SUM // Capacity = sum of zone capacities
+enum SpaceCapacityMode {
+  MINIMUM // Capacity = smallest space capacity
+  SUM // Capacity = sum of space capacities
+
+  @@map("TrainingZoneCapacityMode")
 }
 
-model ProgramTrainingZone {
-  id             String @id @default(cuid())
-  programId      String
-  trainingZoneId String
+model ProgramSpace {
+  id      String @id @default(cuid())
+  programId String
+  spaceId   String @map("trainingZoneId")
 
-  program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
-  trainingZone TrainingZone @relation(fields: [trainingZoneId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  space   Space   @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
-  @@unique([programId, trainingZoneId])
+  @@unique([programId, spaceId])
   @@index([programId])
-  @@index([trainingZoneId])
+  @@index([spaceId])
+  @@map("ProgramTrainingZone")
 }
 
-model ProgramInstanceTrainingZone {
+model ProgramInstanceSpace {
   id                String @id @default(cuid())
   programInstanceId String
-  trainingZoneId    String
+  spaceId           String @map("trainingZoneId")
 
   programInstance ProgramInstance @relation(fields: [programInstanceId], references: [id], onDelete: Cascade)
-  trainingZone    TrainingZone   @relation(fields: [trainingZoneId], references: [id], onDelete: Cascade)
+  space           Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
-  @@unique([programInstanceId, trainingZoneId])
+  @@unique([programInstanceId, spaceId])
   @@index([programInstanceId])
-  @@index([trainingZoneId])
+  @@index([spaceId])
+  @@map("ProgramInstanceTrainingZone")
 }
 
-model TrainingZoneAvailability {
-  id             String @id @default(cuid())
-  trainingZoneId String
-  dayOfWeek      Int // 0=Sunday, 1=Monday, ..., 6=Saturday
-  openTime       String // e.g., "08:00"
-  closeTime      String // e.g., "18:00"
+model SpaceAvailability {
+  id      String @id @default(cuid())
+  spaceId String @map("trainingZoneId")
+  dayOfWeek Int // 0=Sunday, 1=Monday, ..., 6=Saturday
+  openTime  String // e.g., "08:00"
+  closeTime String // e.g., "18:00"
 
-  trainingZone TrainingZone @relation(fields: [trainingZoneId], references: [id], onDelete: Cascade)
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
-  @@unique([trainingZoneId, dayOfWeek])
-  @@index([trainingZoneId])
+  @@unique([spaceId, dayOfWeek])
+  @@index([spaceId])
+  @@map("TrainingZoneAvailability")
 }
 
 model Equipment {
   id             String  @id @default(cuid())
   organizationId String
   facilityId     String? // Optional - null means org-level equipment
-  trainingZoneId String? // Optional - for zone assignment within facility
+  spaceId        String? @map("trainingZoneId")
 
   name         String
   type         String // e.g., "Apparatus", "Mat", "Training Aid"
@@ -2711,13 +2718,13 @@ model Equipment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  facility     Facility?     @relation(fields: [facilityId], references: [id], onDelete: SetNull)
-  trainingZone TrainingZone? @relation(fields: [trainingZoneId], references: [id], onDelete: SetNull)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  space        Space?       @relation(fields: [spaceId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([facilityId])
-  @@index([trainingZoneId])
+  @@index([spaceId])
 }
 
 enum EquipmentCondition {

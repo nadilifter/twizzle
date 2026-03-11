@@ -25,7 +25,7 @@ export type RegistrationType = "ALL_INSTANCES" | "PER_INSTANCE";
 export type InstanceStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
 export type RegistrationStatus = "REGISTERED" | "WAITLISTED" | "CANCELLED";
 export type EnrollmentStatus = "ACTIVE" | "WAITLISTED" | "PAUSED" | "CANCELLED" | "COMPLETED";
-export type TrainingZoneCapacityMode = "MINIMUM" | "SUM";
+export type SpaceCapacityMode = "MINIMUM" | "SUM";
 
 export interface ProgramLevelRequirement {
   id: string;
@@ -93,9 +93,9 @@ export interface Program {
   minAge: number | null;
   maxAge: number | null;
   
-  // Training zone capacity
-  hasTrainingZoneRestriction: boolean;
-  trainingZoneCapacityMode: TrainingZoneCapacityMode;
+  // Space capacity
+  hasSpaceRestriction: boolean;
+  spaceCapacityMode: SpaceCapacityMode;
 
   // Restriction flags
   hasGenderRestriction: boolean;
@@ -163,53 +163,51 @@ export interface InstanceRegistration {
   } | null;
 }
 
-export interface ProgramTrainingZone {
+export interface ProgramSpace {
   id: string;
   programId: string;
-  trainingZoneId: string;
-  trainingZone: {
+  spaceId: string;
+  space: {
     id: string;
     name: string;
-    type: string;
     capacity: number | null;
     status: string;
   };
 }
 
-export interface TrainingZoneAvailabilitySlot {
+export interface SpaceAvailabilitySlot {
   id: string;
-  trainingZoneId: string;
+  spaceId: string;
   dayOfWeek: number;
   openTime: string;
   closeTime: string;
 }
 
-export interface TrainingZoneConflictDate {
+export interface SpaceConflictDate {
   date: string;
   used: number;
   available: number;
 }
 
-export interface TrainingZoneClosedDay {
+export interface SpaceClosedDay {
   day: string;
   reason: string;
 }
 
-export interface TrainingZoneWithAvailability {
+export interface SpaceWithAvailability {
   id: string;
   name: string;
-  type: string;
   capacity: number | null;
   status: string;
   description: string | null;
-  availability: TrainingZoneAvailabilitySlot[];
+  availability: SpaceAvailabilitySlot[];
   maxCapacity: number | null;
   availableCapacity: number | null;
   isAvailable: boolean;
   isFullyBooked: boolean;
-  conflictDates: TrainingZoneConflictDate[];
+  conflictDates: SpaceConflictDate[];
   totalConflicts: number;
-  closedDays: TrainingZoneClosedDay[];
+  closedDays: SpaceClosedDay[];
 }
 
 export interface ProgramWithRelations extends Program {
@@ -222,7 +220,7 @@ export interface ProgramWithRelations extends Program {
   requiredMemberships?: ProgramRequiredMembership[];
   levelRequirements?: ProgramLevelRequirement[];
   waiverRequirements?: ProgramWaiverRequirement[];
-  trainingZones?: ProgramTrainingZone[];
+  spaces?: ProgramSpace[];
 }
 
 export interface ProgramsListResponse {
@@ -260,8 +258,8 @@ export interface CreateProgramPayload {
   hasMedicalRequirement?: boolean;
   hasFileRequirement?: boolean;
   fileRequirementConfig?: unknown;
-  hasTrainingZoneRestriction?: boolean;
-  trainingZoneCapacityMode?: TrainingZoneCapacityMode;
+  hasSpaceRestriction?: boolean;
+  spaceCapacityMode?: SpaceCapacityMode;
   waitlistEnabled?: boolean;
   waitlistAutoPromote?: boolean;
   waitlistCapacity?: number | null;
@@ -277,8 +275,8 @@ export interface CreateProgramPayload {
   membershipRequirementIds?: string[];
   // For waiver requirements during creation
   waiverRequirementIds?: string[];
-  // For training zone assignments during creation
-  trainingZoneIds?: string[];
+  // For space assignments during creation
+  spaceIds?: string[];
 }
 
 export interface UpdateProgramPayload {
@@ -309,8 +307,8 @@ export interface UpdateProgramPayload {
   hasMedicalRequirement?: boolean;
   hasFileRequirement?: boolean;
   fileRequirementConfig?: unknown;
-  hasTrainingZoneRestriction?: boolean;
-  trainingZoneCapacityMode?: TrainingZoneCapacityMode;
+  hasSpaceRestriction?: boolean;
+  spaceCapacityMode?: SpaceCapacityMode;
   waitlistEnabled?: boolean;
   waitlistAutoPromote?: boolean;
   waitlistCapacity?: number | null;
@@ -326,8 +324,8 @@ export interface UpdateProgramPayload {
   membershipRequirementIds?: string[];
   // For waiver requirements
   waiverRequirementIds?: string[];
-  // For training zone assignments
-  trainingZoneIds?: string[];
+  // For space assignments
+  spaceIds?: string[];
 }
 
 export interface ProgramsQueryParams {

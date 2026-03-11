@@ -53,11 +53,11 @@ erDiagram
     Event }o--o| Facility : hosted_at
     Event ||--o{ EventStaff : staffed_by
     
-    Facility ||--o{ TrainingZone : contains
+    Facility ||--o{ Space : contains
     Facility ||--o{ Equipment : houses
     Facility ||--o{ FacilityAssignment : staffed_by
     Facility ||--o{ Shift : location_for
-    TrainingZone ||--o{ Equipment : optionally_contains
+    Space ||--o{ Equipment : optionally_contains
     
     ScheduleTemplate ||--o{ ScheduleTemplateEntry : contains
     
@@ -359,20 +359,19 @@ classDiagram
         +Int maxCapacity
     }
 
-    class TrainingZone {
+    class Space {
         +String id
         +String facilityId
         +String name
-        +String type
         +Int capacity
-        +ZoneStatus status
+        +SpaceStatus status
     }
 
     class Equipment {
         +String id
         +String organizationId
         +String facilityId
-        +String trainingZoneId
+        +String spaceId
         +String name
         +String type
         +EquipmentCondition condition
@@ -394,7 +393,7 @@ classDiagram
         MAINTENANCE
     }
 
-    class ZoneStatus {
+    class SpaceStatus {
         <<enumeration>>
         OPEN
         CLOSED
@@ -417,12 +416,12 @@ classDiagram
         MAINTENANCE
     }
 
-    Facility "1" --> "*" TrainingZone
+    Facility "1" --> "*" Space
     Facility "1" --> "*" Equipment
     Facility "1" --> "*" FacilityAssignment
-    TrainingZone "1" --> "*" Equipment
+    Space "1" --> "*" Equipment
     Facility --> FacilityStatus
-    TrainingZone --> ZoneStatus
+    Space --> SpaceStatus
     Equipment --> EquipmentCondition
     Equipment --> EquipmentStatus
 ```
@@ -758,7 +757,7 @@ flowchart TD
 | BillingInterval | MONTHLY, YEARLY, SESSION |
 | SubscriptionStatus | ACTIVE, TRIALING, PAST_DUE, CANCELLED, PAUSED |
 | FacilityStatus | ACTIVE, INACTIVE, MAINTENANCE |
-| ZoneStatus | OPEN, CLOSED, MAINTENANCE |
+| SpaceStatus | OPEN, CLOSED, MAINTENANCE |
 | EquipmentCondition | EXCELLENT, GOOD, FAIR, POOR, UNSAFE |
 | EquipmentStatus | ACTIVE, RETIRED, MAINTENANCE |
 | EmploymentType | FULL_TIME, PART_TIME, CONTRACTOR, VOLUNTEER |

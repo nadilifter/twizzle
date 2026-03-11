@@ -39,9 +39,9 @@ const createProgramSchema = z.object({
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
-  // Training zone capacity
-  hasTrainingZoneRestriction: z.boolean().default(false),
-  trainingZoneCapacityMode: z.enum(["MINIMUM", "SUM"]).default("MINIMUM"),
+  // Space capacity
+  hasSpaceRestriction: z.boolean().default(false),
+  spaceCapacityMode: z.enum(["MINIMUM", "SUM"]).default("MINIMUM"),
   // Restriction flags
   hasGenderRestriction: z.boolean().default(false),
   hasLevelRestriction: z.boolean().default(false),
@@ -62,7 +62,7 @@ const createProgramSchema = z.object({
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
-  trainingZoneIds: z.array(z.string()).optional(),
+  spaceIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
     memberId: z.string(),
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
@@ -181,10 +181,10 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          trainingZones: {
+          spaces: {
             include: {
-              trainingZone: {
-                select: { id: true, name: true, type: true, capacity: true, status: true },
+              space: {
+                select: { id: true, name: true, capacity: true, status: true },
               },
             },
           },
@@ -278,8 +278,8 @@ export async function POST(request: NextRequest) {
           showCoachOnSite: validatedData.showCoachOnSite,
           minAge: validatedData.minAge,
           maxAge: validatedData.maxAge,
-          hasTrainingZoneRestriction: validatedData.hasTrainingZoneRestriction,
-          trainingZoneCapacityMode: validatedData.trainingZoneCapacityMode,
+          hasSpaceRestriction: validatedData.hasSpaceRestriction,
+          spaceCapacityMode: validatedData.spaceCapacityMode,
           hasLevelRestriction: validatedData.hasLevelRestriction,
           hasCapacityRestriction: validatedData.hasCapacityRestriction,
           hasAgeRestriction: validatedData.hasAgeRestriction,
@@ -344,12 +344,12 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create training zone assignments if provided
-      if (validatedData.trainingZoneIds?.length) {
-        await tx.programTrainingZone.createMany({
-          data: validatedData.trainingZoneIds.map(trainingZoneId => ({
+      // Create space assignments if provided
+      if (validatedData.spaceIds?.length) {
+        await tx.programSpace.createMany({
+          data: validatedData.spaceIds.map(spaceId => ({
             programId: newProgram.id,
-            trainingZoneId,
+            spaceId,
           })),
         });
       }
@@ -379,23 +379,23 @@ export async function POST(request: NextRequest) {
             })),
           });
 
-          // Assign training zones to instances (inherit from program defaults)
-          if (validatedData.trainingZoneIds?.length) {
+          // Assign spaces to instances (inherit from program defaults)
+          if (validatedData.spaceIds?.length) {
             const createdInstances = await tx.programInstance.findMany({
               where: { programId: newProgram.id },
               select: { id: true },
             });
 
-            const instanceZoneData = createdInstances.flatMap(inst =>
-              validatedData.trainingZoneIds!.map(trainingZoneId => ({
+            const instanceSpaceData = createdInstances.flatMap(inst =>
+              validatedData.spaceIds!.map(spaceId => ({
                 programInstanceId: inst.id,
-                trainingZoneId,
+                spaceId,
               }))
             );
 
-            if (instanceZoneData.length > 0) {
-              await tx.programInstanceTrainingZone.createMany({
-                data: instanceZoneData,
+            if (instanceSpaceData.length > 0) {
+              await tx.programInstanceSpace.createMany({
+                data: instanceSpaceData,
               });
             }
           }
@@ -442,10 +442,10 @@ export async function POST(request: NextRequest) {
               },
             },
           },
-          trainingZones: {
+          spaces: {
             include: {
-              trainingZone: {
-                select: { id: true, name: true, type: true, capacity: true, status: true },
+              space: {
+                select: { id: true, name: true, capacity: true, status: true },
               },
             },
           },

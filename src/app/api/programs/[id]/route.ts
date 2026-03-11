@@ -29,9 +29,9 @@ const updateProgramSchema = z.object({
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
-  // Training zone capacity
-  hasTrainingZoneRestriction: z.boolean().optional(),
-  trainingZoneCapacityMode: z.enum(["MINIMUM", "SUM"]).optional(),
+  // Space capacity
+  hasSpaceRestriction: z.boolean().optional(),
+  spaceCapacityMode: z.enum(["MINIMUM", "SUM"]).optional(),
   // Restriction flags
   hasGenderRestriction: z.boolean().optional(),
   hasLevelRestriction: z.boolean().optional(),
@@ -52,7 +52,7 @@ const updateProgramSchema = z.object({
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
-  trainingZoneIds: z.array(z.string()).optional(),
+  spaceIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
     memberId: z.string(),
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
@@ -162,10 +162,10 @@ export async function GET(
             },
           },
         },
-        trainingZones: {
+        spaces: {
           include: {
-            trainingZone: {
-              select: { id: true, name: true, type: true, capacity: true, status: true },
+            space: {
+              select: { id: true, name: true, capacity: true, status: true },
             },
           },
         },
@@ -303,8 +303,8 @@ export async function PATCH(
       if (validatedData.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
       if (validatedData.hasFileRequirement !== undefined) updateData.hasFileRequirement = validatedData.hasFileRequirement;
       if (validatedData.fileRequirementConfig !== undefined) updateData.fileRequirementConfig = validatedData.fileRequirementConfig;
-      if (validatedData.hasTrainingZoneRestriction !== undefined) updateData.hasTrainingZoneRestriction = validatedData.hasTrainingZoneRestriction;
-      if (validatedData.trainingZoneCapacityMode !== undefined) updateData.trainingZoneCapacityMode = validatedData.trainingZoneCapacityMode;
+      if (validatedData.hasSpaceRestriction !== undefined) updateData.hasSpaceRestriction = validatedData.hasSpaceRestriction;
+      if (validatedData.spaceCapacityMode !== undefined) updateData.spaceCapacityMode = validatedData.spaceCapacityMode;
       if (validatedData.waitlistEnabled !== undefined) updateData.waitlistEnabled = validatedData.waitlistEnabled;
       if (validatedData.waitlistAutoPromote !== undefined) updateData.waitlistAutoPromote = validatedData.waitlistAutoPromote;
       if (validatedData.waitlistCapacity !== undefined) updateData.waitlistCapacity = validatedData.waitlistCapacity;
@@ -440,22 +440,21 @@ export async function PATCH(
         }
       }
 
-      // Update training zone assignments if provided
-      if (validatedData.trainingZoneIds !== undefined) {
-        await tx.programTrainingZone.deleteMany({
+      // Update space assignments if provided
+      if (validatedData.spaceIds !== undefined) {
+        await tx.programSpace.deleteMany({
           where: { programId: id },
         });
-        if (validatedData.trainingZoneIds.length > 0) {
-          await tx.programTrainingZone.createMany({
-            data: validatedData.trainingZoneIds.map(trainingZoneId => ({
+        if (validatedData.spaceIds.length > 0) {
+          await tx.programSpace.createMany({
+            data: validatedData.spaceIds.map(spaceId => ({
               programId: id,
-              trainingZoneId,
+              spaceId,
             })),
           });
         }
 
-        // Update instance-level zone assignments for future instances
-        // that don't have custom zone overrides
+        // Update instance-level space assignments for future instances
         const futureInstances = await tx.programInstance.findMany({
           where: {
             programId: id,
@@ -466,19 +465,19 @@ export async function PATCH(
 
         if (futureInstances.length > 0) {
           const instanceIds = futureInstances.map(i => i.id);
-          await tx.programInstanceTrainingZone.deleteMany({
+          await tx.programInstanceSpace.deleteMany({
             where: { programInstanceId: { in: instanceIds } },
           });
 
-          if (validatedData.trainingZoneIds.length > 0) {
-            const instanceZoneData = futureInstances.flatMap(inst =>
-              validatedData.trainingZoneIds!.map(trainingZoneId => ({
+          if (validatedData.spaceIds.length > 0) {
+            const instanceSpaceData = futureInstances.flatMap(inst =>
+              validatedData.spaceIds!.map(spaceId => ({
                 programInstanceId: inst.id,
-                trainingZoneId,
+                spaceId,
               }))
             );
-            await tx.programInstanceTrainingZone.createMany({
-              data: instanceZoneData,
+            await tx.programInstanceSpace.createMany({
+              data: instanceSpaceData,
             });
           }
         }
@@ -534,10 +533,10 @@ export async function PATCH(
               },
             },
           },
-          trainingZones: {
+          spaces: {
             include: {
-              trainingZone: {
-                select: { id: true, name: true, type: true, capacity: true, status: true },
+              space: {
+                select: { id: true, name: true, capacity: true, status: true },
               },
             },
           },

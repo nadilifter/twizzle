@@ -12,7 +12,7 @@ function toDateKey(d: Date): string {
 }
 
 /**
- * Returns all training zones for a facility with their current booking
+ * Returns all spaces for a facility with their current booking
  * availability. For recurring programs, accepts a date range and days
  * of the week, then returns per-date conflict info so the UI can show
  * which specific dates have capacity issues.
@@ -62,7 +62,7 @@ export async function GET(
       );
     }
 
-    const zones = await db.trainingZone.findMany({
+    const spaces = await db.space.findMany({
       where: { facilityId, status: "OPEN" },
       include: {
         availability: true,
@@ -81,13 +81,13 @@ export async function GET(
         .map((d) => isoWeekdayToJsDay(parseInt(d.trim())));
     }
 
-    // Per-zone, per-date used capacity: { zoneId -> { "2026-03-05" -> usedCapacity } }
-    const usedCapacityByZoneDate: Record<string, Record<string, number>> = {};
+    // Per-space, per-date used capacity: { spaceId -> { "2026-03-05" -> usedCapacity } }
+    const usedCapacityBySpaceDate: Record<string, Record<string, number>> = {};
 
     if (hasTimeSlot) {
-      const zoneIds = zones.map((z) => z.id);
+      const spaceIds = spaces.map((s) => s.id);
 
-      if (zoneIds.length > 0) {
+      if (spaceIds.length > 0) {
         const excludeFilter = excludeProgramId
           ? { programId: { not: excludeProgramId } }
           : {};
@@ -97,10 +97,10 @@ export async function GET(
         if (programStartDate) dateRangeFilter.date = { ...dateRangeFilter.date, gte: new Date(programStartDate) };
         if (programEndDate) dateRangeFilter.date = { ...dateRangeFilter.date, lte: new Date(programEndDate) };
 
-        const instanceZoneAssignments =
-          await db.programInstanceTrainingZone.findMany({
+        const instanceSpaceAssignments =
+          await db.programInstanceSpace.findMany({
             where: {
-              trainingZoneId: { in: zoneIds },
+              spaceId: { in: spaceIds },
               programInstance: {
                 status: "SCHEDULED",
                 startTime: { lt: endTime },
@@ -116,20 +116,20 @@ export async function GET(
             },
           });
 
-        for (const a of instanceZoneAssignments) {
+        for (const a of instanceSpaceAssignments) {
           const instDate = new Date(a.programInstance.date);
           if (jsDays.length > 0 && !jsDays.includes(instDate.getDay())) continue;
           const key = toDateKey(instDate);
-          usedCapacityByZoneDate[a.trainingZoneId] ??= {};
-          usedCapacityByZoneDate[a.trainingZoneId][key] =
-            (usedCapacityByZoneDate[a.trainingZoneId][key] ?? 0) +
+          usedCapacityBySpaceDate[a.spaceId] ??= {};
+          usedCapacityBySpaceDate[a.spaceId][key] =
+            (usedCapacityBySpaceDate[a.spaceId][key] ?? 0) +
             (a.programInstance.capacity ?? 0);
         }
 
-        // Program-level zone assignments for instances without overrides
-        const programZoneAssignments = await db.programTrainingZone.findMany({
+        // Program-level space assignments for instances without overrides
+        const programSpaceAssignments = await db.programSpace.findMany({
           where: {
-            trainingZoneId: { in: zoneIds },
+            spaceId: { in: spaceIds },
             program: {
               instances: {
                 some: {
@@ -138,7 +138,7 @@ export async function GET(
                   endTime: { gt: startTime },
                   ...dateRangeFilter,
                   ...excludeFilter,
-                  trainingZones: { none: {} },
+                  spaces: { none: {} },
                 },
               },
             },
@@ -153,7 +153,7 @@ export async function GET(
                     endTime: { gt: startTime },
                     ...dateRangeFilter,
                     ...excludeFilter,
-                    trainingZones: { none: {} },
+                    spaces: { none: {} },
                   },
                   select: { capacity: true, date: true },
                 },
@@ -162,25 +162,25 @@ export async function GET(
           },
         });
 
-        for (const a of programZoneAssignments) {
+        for (const a of programSpaceAssignments) {
           for (const inst of a.program.instances) {
             const instDate = new Date(inst.date);
             if (jsDays.length > 0 && !jsDays.includes(instDate.getDay())) continue;
             const key = toDateKey(instDate);
-            usedCapacityByZoneDate[a.trainingZoneId] ??= {};
-            usedCapacityByZoneDate[a.trainingZoneId][key] =
-              (usedCapacityByZoneDate[a.trainingZoneId][key] ?? 0) +
+            usedCapacityBySpaceDate[a.spaceId] ??= {};
+            usedCapacityBySpaceDate[a.spaceId][key] =
+              (usedCapacityBySpaceDate[a.spaceId][key] ?? 0) +
               (inst.capacity ?? 0);
           }
         }
       }
     }
 
-    const result = zones.map((zone) => {
-      const maxCapacity = zone.capacity;
-      const perDate = usedCapacityByZoneDate[zone.id] ?? {};
+    const result = spaces.map((space) => {
+      const maxCapacity = space.capacity;
+      const perDate = usedCapacityBySpaceDate[space.id] ?? {};
 
-      // Build conflict dates list - dates where zone is at capacity
+      // Build conflict dates list - dates where space is at capacity
       const conflictDates: Array<{ date: string; used: number; available: number }> = [];
       for (const [dateKey, used] of Object.entries(perDate)) {
         const available = maxCapacity != null ? Math.max(0, maxCapacity - used) : null;
@@ -206,15 +206,15 @@ export async function GET(
         conflictDates.length > 0 &&
         conflictDates.length === totalDatesWithBookings;
 
-      // Availability window check - identify days the zone is closed or
+      // Availability window check - identify days the space is closed or
       // outside operating hours for the requested time slot
       const JS_DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       const closedDays: Array<{ day: string; reason: string }> = [];
 
-      if (zone.availability.length > 0) {
+      if (space.availability.length > 0) {
         const daysToCheck = jsDays.length > 0 ? jsDays : (hasTimeSlot ? [0, 1, 2, 3, 4, 5, 6] : []);
         for (const jsDay of daysToCheck) {
-          const daySlot = zone.availability.find((a) => a.dayOfWeek === jsDay);
+          const daySlot = space.availability.find((a) => a.dayOfWeek === jsDay);
           if (!daySlot) {
             closedDays.push({
               day: JS_DAY_LABELS[jsDay],
@@ -233,13 +233,12 @@ export async function GET(
       }
 
       return {
-        id: zone.id,
-        name: zone.name,
-        type: zone.type,
-        capacity: zone.capacity,
-        status: zone.status,
-        description: zone.description,
-        availability: zone.availability,
+        id: space.id,
+        name: space.name,
+        capacity: space.capacity,
+        status: space.status,
+        description: space.description,
+        availability: space.availability,
         maxCapacity,
         availableCapacity,
         isAvailable: closedDays.length === 0,
@@ -252,9 +251,9 @@ export async function GET(
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching training zone availability:", error);
+    console.error("Error fetching space availability:", error);
     return NextResponse.json(
-      { error: "Failed to fetch training zone availability" },
+      { error: "Failed to fetch space availability" },
       { status: 500 }
     );
   }

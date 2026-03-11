@@ -36,7 +36,7 @@ export async function GET() {
       include: {
         _count: {
           select: {
-            trainingZones: true,
+            spaces: true,
             equipment: true,
             assignments: true,
             events: true,
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       include: {
         _count: {
           select: {
-            trainingZones: true,
+            spaces: true,
             equipment: true,
             assignments: true,
             events: true,

@@ -804,67 +804,67 @@ async function main() {
   console.log("  ✓ Created 3 facilities");
 
   // ============================================
-  // TRAINING ZONES
+  // SPACES
   // ============================================
-  console.log("\n🏋️ Creating training zones...");
-  const trainingZoneData = [
+  console.log("\n🏋️ Creating spaces...");
+  const spaceData = [
     // Org1 Main Facility
-    { id: `${ORG1_ID}-zone-1`, facilityId: org1Facility1.id, name: "Main Floor", type: "Floor", capacity: 50, status: "OPEN" as const },
-    { id: `${ORG1_ID}-zone-2`, facilityId: org1Facility1.id, name: "Vault Runway", type: "Vault", capacity: 15, status: "OPEN" as const },
-    { id: `${ORG1_ID}-zone-3`, facilityId: org1Facility1.id, name: "Uneven Bars", type: "Bars", capacity: 20, status: "MAINTENANCE" as const },
-    { id: `${ORG1_ID}-zone-4`, facilityId: org1Facility1.id, name: "Beam Area", type: "Beam", capacity: 25, status: "OPEN" as const },
-    { id: `${ORG1_ID}-zone-5`, facilityId: org1Facility1.id, name: "Tumble Track", type: "Tumble Track", capacity: 10, status: "OPEN" as const },
+    { id: `${ORG1_ID}-space-1`, facilityId: org1Facility1.id, name: "Main Floor", capacity: 50, status: "OPEN" as const },
+    { id: `${ORG1_ID}-space-2`, facilityId: org1Facility1.id, name: "Vault Runway", capacity: 15, status: "OPEN" as const },
+    { id: `${ORG1_ID}-space-3`, facilityId: org1Facility1.id, name: "Uneven Bars", capacity: 20, status: "MAINTENANCE" as const },
+    { id: `${ORG1_ID}-space-4`, facilityId: org1Facility1.id, name: "Beam Area", capacity: 25, status: "OPEN" as const },
+    { id: `${ORG1_ID}-space-5`, facilityId: org1Facility1.id, name: "Tumble Track", capacity: 10, status: "OPEN" as const },
     // Org1 Satellite Facility
-    { id: `${ORG1_ID}-zone-6`, facilityId: org1Facility2.id, name: "Preschool Area", type: "Preschool", capacity: 30, status: "OPEN" as const },
-    { id: `${ORG1_ID}-zone-7`, facilityId: org1Facility2.id, name: "Recreational Floor", type: "Floor", capacity: 25, status: "OPEN" as const },
+    { id: `${ORG1_ID}-space-6`, facilityId: org1Facility2.id, name: "Preschool Area", capacity: 30, status: "OPEN" as const },
+    { id: `${ORG1_ID}-space-7`, facilityId: org1Facility2.id, name: "Recreational Floor", capacity: 25, status: "OPEN" as const },
     // Org2 Main Facility
-    { id: `${ORG2_ID}-zone-1`, facilityId: org2Facility.id, name: "Basketball Court A", type: "Court", capacity: 30, status: "OPEN" as const },
-    { id: `${ORG2_ID}-zone-2`, facilityId: org2Facility.id, name: "Basketball Court B", type: "Court", capacity: 30, status: "OPEN" as const },
-    { id: `${ORG2_ID}-zone-3`, facilityId: org2Facility.id, name: "Soccer Field", type: "Field", capacity: 50, status: "OPEN" as const },
-    { id: `${ORG2_ID}-zone-4`, facilityId: org2Facility.id, name: "Swimming Pool", type: "Pool", capacity: 40, status: "OPEN" as const },
-    { id: `${ORG2_ID}-zone-5`, facilityId: org2Facility.id, name: "Fitness Room", type: "Fitness", capacity: 25, status: "MAINTENANCE" as const },
+    { id: `${ORG2_ID}-space-1`, facilityId: org2Facility.id, name: "Basketball Court A", capacity: 30, status: "OPEN" as const },
+    { id: `${ORG2_ID}-space-2`, facilityId: org2Facility.id, name: "Basketball Court B", capacity: 30, status: "OPEN" as const },
+    { id: `${ORG2_ID}-space-3`, facilityId: org2Facility.id, name: "Soccer Field", capacity: 50, status: "OPEN" as const },
+    { id: `${ORG2_ID}-space-4`, facilityId: org2Facility.id, name: "Swimming Pool", capacity: 40, status: "OPEN" as const },
+    { id: `${ORG2_ID}-space-5`, facilityId: org2Facility.id, name: "Fitness Room", capacity: 25, status: "MAINTENANCE" as const },
   ];
-  await Promise.all(trainingZoneData.map((z) =>
-    prisma.trainingZone.upsert({
+  await Promise.all(spaceData.map((z) =>
+    prisma.space.upsert({
       where: { id: z.id },
       update: {},
       create: z,
     })
   ));
-  console.log(`  ✓ Created ${trainingZoneData.length} training zones`);
+  console.log(`  ✓ Created ${spaceData.length} spaces`);
 
   // ============================================
-  // TRAINING ZONE AVAILABILITY
+  // SPACE AVAILABILITY
   // ============================================
-  console.log("\n🕐 Creating training zone availability hours...");
-  const zoneAvailabilityData = [
+  console.log("\n🕐 Creating space availability hours...");
+  const spaceAvailabilityData = [
     // Org1 Main Facility - Main Floor: Mon-Fri 7am-9pm, Sat 8am-5pm
-    ...([1, 2, 3, 4, 5].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-1`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
-    { trainingZoneId: `${ORG1_ID}-zone-1`, dayOfWeek: 6, openTime: "08:00", closeTime: "17:00" },
+    ...([1, 2, 3, 4, 5].map(day => ({ spaceId: `${ORG1_ID}-space-1`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
+    { spaceId: `${ORG1_ID}-space-1`, dayOfWeek: 6, openTime: "08:00", closeTime: "17:00" },
     // Vault Runway: Mon-Fri 8am-8pm
-    ...([1, 2, 3, 4, 5].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-2`, dayOfWeek: day, openTime: "08:00", closeTime: "20:00" }))),
+    ...([1, 2, 3, 4, 5].map(day => ({ spaceId: `${ORG1_ID}-space-2`, dayOfWeek: day, openTime: "08:00", closeTime: "20:00" }))),
     // Beam Area: Mon-Sat 7am-9pm
-    ...([1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-4`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
+    ...([1, 2, 3, 4, 5, 6].map(day => ({ spaceId: `${ORG1_ID}-space-4`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
     // Tumble Track: Mon-Fri 9am-6pm
-    ...([1, 2, 3, 4, 5].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-5`, dayOfWeek: day, openTime: "09:00", closeTime: "18:00" }))),
+    ...([1, 2, 3, 4, 5].map(day => ({ spaceId: `${ORG1_ID}-space-5`, dayOfWeek: day, openTime: "09:00", closeTime: "18:00" }))),
     // Org1 Satellite - Preschool Area: Mon-Fri 8am-4pm
-    ...([1, 2, 3, 4, 5].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-6`, dayOfWeek: day, openTime: "08:00", closeTime: "16:00" }))),
+    ...([1, 2, 3, 4, 5].map(day => ({ spaceId: `${ORG1_ID}-space-6`, dayOfWeek: day, openTime: "08:00", closeTime: "16:00" }))),
     // Recreational Floor: Mon-Sat 7am-9pm
-    ...([1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG1_ID}-zone-7`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
+    ...([1, 2, 3, 4, 5, 6].map(day => ({ spaceId: `${ORG1_ID}-space-7`, dayOfWeek: day, openTime: "07:00", closeTime: "21:00" }))),
     // Org2 - Basketball Court A: Mon-Sun 6am-10pm
-    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG2_ID}-zone-1`, dayOfWeek: day, openTime: "06:00", closeTime: "22:00" }))),
+    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ spaceId: `${ORG2_ID}-space-1`, dayOfWeek: day, openTime: "06:00", closeTime: "22:00" }))),
     // Basketball Court B: Mon-Sun 6am-10pm
-    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG2_ID}-zone-2`, dayOfWeek: day, openTime: "06:00", closeTime: "22:00" }))),
+    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ spaceId: `${ORG2_ID}-space-2`, dayOfWeek: day, openTime: "06:00", closeTime: "22:00" }))),
     // Soccer Field: Mon-Sun 7am-8pm
-    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG2_ID}-zone-3`, dayOfWeek: day, openTime: "07:00", closeTime: "20:00" }))),
+    ...([0, 1, 2, 3, 4, 5, 6].map(day => ({ spaceId: `${ORG2_ID}-space-3`, dayOfWeek: day, openTime: "07:00", closeTime: "20:00" }))),
     // Swimming Pool: Mon-Sat 6am-9pm
-    ...([1, 2, 3, 4, 5, 6].map(day => ({ trainingZoneId: `${ORG2_ID}-zone-4`, dayOfWeek: day, openTime: "06:00", closeTime: "21:00" }))),
+    ...([1, 2, 3, 4, 5, 6].map(day => ({ spaceId: `${ORG2_ID}-space-4`, dayOfWeek: day, openTime: "06:00", closeTime: "21:00" }))),
   ];
-  for (const slot of zoneAvailabilityData) {
-    await prisma.trainingZoneAvailability.upsert({
+  for (const slot of spaceAvailabilityData) {
+    await prisma.spaceAvailability.upsert({
       where: {
-        trainingZoneId_dayOfWeek: {
-          trainingZoneId: slot.trainingZoneId,
+        spaceId_dayOfWeek: {
+          spaceId: slot.spaceId,
           dayOfWeek: slot.dayOfWeek,
         },
       },
@@ -872,7 +872,7 @@ async function main() {
       create: slot,
     });
   }
-  console.log(`  ✓ Created ${zoneAvailabilityData.length} availability slots`);
+  console.log(`  ✓ Created ${spaceAvailabilityData.length} availability slots`);
 
   // ============================================
   // EQUIPMENT
@@ -880,23 +880,23 @@ async function main() {
   console.log("\n🎯 Creating equipment...");
   const equipmentData = [
     // Org1 Main Facility Equipment
-    { id: `${ORG1_ID}-equip-1`, organizationId: ORG1_ID, facilityId: org1Facility1.id, trainingZoneId: `${ORG1_ID}-zone-1`, name: "Spring Floor A", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(30) },
-    { id: `${ORG1_ID}-equip-2`, organizationId: ORG1_ID, facilityId: org1Facility1.id, trainingZoneId: `${ORG1_ID}-zone-2`, name: "Vault Table (Tac/10)", type: "Apparatus", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(15) },
-    { id: `${ORG1_ID}-equip-3`, organizationId: ORG1_ID, facilityId: org1Facility1.id, trainingZoneId: `${ORG1_ID}-zone-3`, name: "Uneven Bars Set 1", type: "Apparatus", condition: "FAIR" as const, status: "MAINTENANCE" as const, lastInspectionDate: daysAgo(60) },
-    { id: `${ORG1_ID}-equip-4`, organizationId: ORG1_ID, facilityId: org1Facility1.id, trainingZoneId: `${ORG1_ID}-zone-4`, name: "High Beam 1", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(45) },
-    { id: `${ORG1_ID}-equip-5`, organizationId: ORG1_ID, facilityId: org1Facility1.id, trainingZoneId: `${ORG1_ID}-zone-4`, name: "High Beam 2", type: "Apparatus", condition: "POOR" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(90) },
-    { id: `${ORG1_ID}-equip-6`, organizationId: ORG1_ID, facilityId: org1Facility1.id, trainingZoneId: `${ORG1_ID}-zone-5`, name: "Tumble Track", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
-    { id: `${ORG1_ID}-equip-7`, organizationId: ORG1_ID, facilityId: org1Facility1.id, trainingZoneId: `${ORG1_ID}-zone-2`, name: "Landing Mat (Blue)", type: "Mat", condition: "FAIR" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(40) },
-    { id: `${ORG1_ID}-equip-8`, organizationId: ORG1_ID, facilityId: org1Facility1.id, trainingZoneId: `${ORG1_ID}-zone-4`, name: "Low Beam Training", type: "Training Aid", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(25) },
+    { id: `${ORG1_ID}-equip-1`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-1`, name: "Spring Floor A", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(30) },
+    { id: `${ORG1_ID}-equip-2`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-2`, name: "Vault Table (Tac/10)", type: "Apparatus", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(15) },
+    { id: `${ORG1_ID}-equip-3`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-3`, name: "Uneven Bars Set 1", type: "Apparatus", condition: "FAIR" as const, status: "MAINTENANCE" as const, lastInspectionDate: daysAgo(60) },
+    { id: `${ORG1_ID}-equip-4`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "High Beam 1", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(45) },
+    { id: `${ORG1_ID}-equip-5`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "High Beam 2", type: "Apparatus", condition: "POOR" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(90) },
+    { id: `${ORG1_ID}-equip-6`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-5`, name: "Tumble Track", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
+    { id: `${ORG1_ID}-equip-7`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-2`, name: "Landing Mat (Blue)", type: "Mat", condition: "FAIR" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(40) },
+    { id: `${ORG1_ID}-equip-8`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "Low Beam Training", type: "Training Aid", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(25) },
     // Org1 Satellite Equipment
-    { id: `${ORG1_ID}-equip-9`, organizationId: ORG1_ID, facilityId: org1Facility2.id, trainingZoneId: `${ORG1_ID}-zone-6`, name: "Preschool Foam Shapes", type: "Training Aid", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(10) },
-    { id: `${ORG1_ID}-equip-10`, organizationId: ORG1_ID, facilityId: org1Facility2.id, trainingZoneId: `${ORG1_ID}-zone-7`, name: "Panel Mat Set", type: "Mat", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(35) },
+    { id: `${ORG1_ID}-equip-9`, organizationId: ORG1_ID, facilityId: org1Facility2.id, spaceId: `${ORG1_ID}-space-6`, name: "Preschool Foam Shapes", type: "Training Aid", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(10) },
+    { id: `${ORG1_ID}-equip-10`, organizationId: ORG1_ID, facilityId: org1Facility2.id, spaceId: `${ORG1_ID}-space-7`, name: "Panel Mat Set", type: "Mat", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(35) },
     // Org2 Equipment
-    { id: `${ORG2_ID}-equip-1`, organizationId: ORG2_ID, facilityId: org2Facility.id, trainingZoneId: `${ORG2_ID}-zone-1`, name: "Basketball Hoop A", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
-    { id: `${ORG2_ID}-equip-2`, organizationId: ORG2_ID, facilityId: org2Facility.id, trainingZoneId: `${ORG2_ID}-zone-2`, name: "Basketball Hoop B", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
-    { id: `${ORG2_ID}-equip-3`, organizationId: ORG2_ID, facilityId: org2Facility.id, trainingZoneId: `${ORG2_ID}-zone-3`, name: "Soccer Goals (Pair)", type: "Apparatus", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(7) },
-    { id: `${ORG2_ID}-equip-4`, organizationId: ORG2_ID, facilityId: org2Facility.id, trainingZoneId: `${ORG2_ID}-zone-4`, name: "Lane Dividers", type: "Safety Equipment", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(14) },
-    { id: `${ORG2_ID}-equip-5`, organizationId: ORG2_ID, facilityId: org2Facility.id, trainingZoneId: `${ORG2_ID}-zone-5`, name: "Treadmills (Set of 5)", type: "Apparatus", condition: "FAIR" as const, status: "MAINTENANCE" as const, lastInspectionDate: daysAgo(60) },
+    { id: `${ORG2_ID}-equip-1`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-1`, name: "Basketball Hoop A", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
+    { id: `${ORG2_ID}-equip-2`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-2`, name: "Basketball Hoop B", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
+    { id: `${ORG2_ID}-equip-3`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-3`, name: "Soccer Goals (Pair)", type: "Apparatus", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(7) },
+    { id: `${ORG2_ID}-equip-4`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-4`, name: "Lane Dividers", type: "Safety Equipment", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(14) },
+    { id: `${ORG2_ID}-equip-5`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-5`, name: "Treadmills (Set of 5)", type: "Apparatus", condition: "FAIR" as const, status: "MAINTENANCE" as const, lastInspectionDate: daysAgo(60) },
   ];
   await Promise.all(equipmentData.map((e) =>
     prisma.equipment.upsert({

@@ -94,17 +94,16 @@ interface Facility {
   maxCapacity: number | null
   description: string | null
   _count: {
-    trainingZones: number
+    spaces: number
     equipment: number
     assignments: number
     events: number
   }
 }
 
-interface TrainingZone {
+interface Space {
   id: string
   name: string
-  type: string
   capacity: number | null
   status: "OPEN" | "CLOSED" | "MAINTENANCE"
   description: string | null
@@ -121,13 +120,13 @@ interface Equipment {
   condition: "EXCELLENT" | "GOOD" | "FAIR" | "POOR" | "UNSAFE"
   status: "ACTIVE" | "RETIRED" | "MAINTENANCE"
   lastInspectionDate: string | null
-  trainingZone: { id: string; name: string } | null
+  space: { id: string; name: string } | null
 }
 
 export default function FacilitiesPage() {
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
-  const [zones, setZones] = useState<TrainingZone[]>([])
+  const [spaces, setSpaces] = useState<Space[]>([])
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingDetail, setLoadingDetail] = useState(false)
@@ -136,18 +135,18 @@ export default function FacilitiesPage() {
   // Form states
   const [facilityFormOpen, setFacilityFormOpen] = useState(false)
   const [editingFacility, setEditingFacility] = useState<Facility | null>(null)
-  const [zoneFormOpen, setZoneFormOpen] = useState(false)
+  const [spaceFormOpen, setSpaceFormOpen] = useState(false)
   const [equipmentFormOpen, setEquipmentFormOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [facilityToDelete, setFacilityToDelete] = useState<Facility | null>(null)
 
   // Search states
-  const [zoneSearch, setZoneSearch] = useState("")
+  const [spaceSearch, setSpaceSearch] = useState("")
   const [equipmentSearch, setEquipmentSearch] = useState("")
 
-  // Zone availability state
+  // Space availability state
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false)
-  const [editingZoneAvailability, setEditingZoneAvailability] = useState<TrainingZone | null>(null)
+  const [editingSpaceAvailability, setEditingSpaceAvailability] = useState<Space | null>(null)
   const [availabilitySlots, setAvailabilitySlots] = useState<Record<number, { enabled: boolean; openTime: string; closeTime: string }>>({})
   const [savingAvailability, setSavingAvailability] = useState(false)
 
@@ -172,23 +171,23 @@ export default function FacilitiesPage() {
     }
   }, [selectedFacility])
 
-  // Fetch zones and equipment for selected facility
+  // Fetch spaces and equipment for selected facility
   const fetchFacilityDetails = useCallback(async (facilityId: string) => {
     setLoadingDetail(true)
     try {
-      const [zonesRes, equipmentRes] = await Promise.all([
-        fetch(`/api/organization/facilities/${facilityId}/zones`),
+      const [spacesRes, equipmentRes] = await Promise.all([
+        fetch(`/api/organization/facilities/${facilityId}/spaces`),
         fetch(`/api/organization/facilities/${facilityId}/equipment`),
       ])
       
-      if (!zonesRes.ok || !equipmentRes.ok) throw new Error("Failed to fetch details")
+      if (!spacesRes.ok || !equipmentRes.ok) throw new Error("Failed to fetch details")
       
-      const [zonesData, equipmentData] = await Promise.all([
-        zonesRes.json(),
+      const [spacesData, equipmentData] = await Promise.all([
+        spacesRes.json(),
         equipmentRes.json(),
       ])
       
-      setZones(zonesData)
+      setSpaces(spacesData)
       setEquipment(equipmentData)
     } catch (error) {
       toast.error("Failed to load facility details")
@@ -292,8 +291,8 @@ export default function FacilitiesPage() {
     }
   }
 
-  // Create zone
-  const handleCreateZone = async (e: React.FormEvent<HTMLFormElement>) => {
+  // Create space
+  const handleCreateSpace = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!selectedFacility) return
     setSaving(true)
@@ -301,12 +300,11 @@ export default function FacilitiesPage() {
     const formData = new FormData(e.currentTarget)
     const data = {
       name: formData.get("name") as string,
-      type: formData.get("type") as string,
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
     }
 
     try {
-      const res = await fetch(`/api/organization/facilities/${selectedFacility.id}/zones`, {
+      const res = await fetch(`/api/organization/facilities/${selectedFacility.id}/spaces`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -314,15 +312,15 @@ export default function FacilitiesPage() {
       
       if (!res.ok) {
         const error = await res.json()
-        throw new Error(error.error || "Failed to create zone")
+        throw new Error(error.error || "Failed to create space")
       }
       
-      toast.success("Training zone created")
-      setZoneFormOpen(false)
+      toast.success("Space created")
+      setSpaceFormOpen(false)
       await fetchFacilityDetails(selectedFacility.id)
       await fetchFacilities()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create zone")
+      toast.error(error instanceof Error ? error.message : "Failed to create space")
     } finally {
       setSaving(false)
     }
@@ -339,7 +337,7 @@ export default function FacilitiesPage() {
       name: formData.get("name") as string,
       type: formData.get("type") as string,
       condition: formData.get("condition") as string || "GOOD",
-      trainingZoneId: formData.get("trainingZoneId") as string || null,
+      spaceId: formData.get("spaceId") as string || null,
     }
 
     try {
@@ -365,22 +363,22 @@ export default function FacilitiesPage() {
     }
   }
 
-  // Delete zone
-  const handleDeleteZone = async (zoneId: string) => {
+  // Delete space
+  const handleDeleteSpace = async (spaceId: string) => {
     if (!selectedFacility) return
     
     try {
-      const res = await fetch(`/api/organization/facilities/${selectedFacility.id}/zones/${zoneId}`, {
+      const res = await fetch(`/api/organization/facilities/${selectedFacility.id}/spaces/${spaceId}`, {
         method: "DELETE",
       })
       
-      if (!res.ok) throw new Error("Failed to delete zone")
+      if (!res.ok) throw new Error("Failed to delete space")
       
-      toast.success("Zone deleted")
+      toast.success("Space deleted")
       await fetchFacilityDetails(selectedFacility.id)
       await fetchFacilities()
     } catch (error) {
-      toast.error("Failed to delete zone")
+      toast.error("Failed to delete space")
     }
   }
 
@@ -405,11 +403,11 @@ export default function FacilitiesPage() {
 
   const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-  const handleOpenAvailability = async (zone: TrainingZone) => {
-    setEditingZoneAvailability(zone)
+  const handleOpenAvailability = async (space: Space) => {
+    setEditingSpaceAvailability(space)
     if (!selectedFacility) return
     try {
-      const res = await fetch(`/api/organization/facilities/${selectedFacility.id}/zones/${zone.id}/availability`)
+      const res = await fetch(`/api/organization/facilities/${selectedFacility.id}/spaces/${space.id}/availability`)
       if (res.ok) {
         const slots: Array<{ dayOfWeek: number; openTime: string; closeTime: string }> = await res.json()
         const initial: Record<number, { enabled: boolean; openTime: string; closeTime: string }> = {}
@@ -422,13 +420,13 @@ export default function FacilitiesPage() {
         setAvailabilitySlots(initial)
       }
     } catch {
-      toast.error("Failed to load zone availability")
+      toast.error("Failed to load space availability")
     }
     setAvailabilityDialogOpen(true)
   }
 
   const handleSaveAvailability = async () => {
-    if (!selectedFacility || !editingZoneAvailability) return
+    if (!selectedFacility || !editingSpaceAvailability) return
     setSavingAvailability(true)
     try {
       const slots = Object.entries(availabilitySlots)
@@ -439,7 +437,7 @@ export default function FacilitiesPage() {
           closeTime: v.closeTime,
         }))
       const res = await fetch(
-        `/api/organization/facilities/${selectedFacility.id}/zones/${editingZoneAvailability.id}/availability`,
+        `/api/organization/facilities/${selectedFacility.id}/spaces/${editingSpaceAvailability.id}/availability`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -459,10 +457,9 @@ export default function FacilitiesPage() {
     }
   }
 
-  // Filter zones and equipment by search
-  const filteredZones = zones.filter(z => 
-    z.name.toLowerCase().includes(zoneSearch.toLowerCase()) ||
-    z.type.toLowerCase().includes(zoneSearch.toLowerCase())
+  // Filter spaces and equipment by search
+  const filteredSpaces = spaces.filter(s => 
+    s.name.toLowerCase().includes(spaceSearch.toLowerCase())
   )
 
   const filteredEquipment = equipment.filter(e => 
@@ -506,7 +503,7 @@ export default function FacilitiesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Facilities</h1>
           <p className="text-muted-foreground">
-            Manage your locations, training zones, and equipment inventory.
+            Manage your locations, spaces, and equipment inventory.
           </p>
         </div>
         <Sheet open={facilityFormOpen} onOpenChange={setFacilityFormOpen}>
@@ -704,7 +701,7 @@ export default function FacilitiesPage() {
                   {facility.status}
                 </Badge>
                 <span className="text-muted-foreground">
-                  {facility._count.trainingZones} zones • {facility._count.equipment} equipment
+                  {facility._count.spaces} spaces • {facility._count.equipment} equipment
                 </span>
               </div>
             </CardContent>
@@ -741,7 +738,7 @@ export default function FacilitiesPage() {
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="zones">Training Zones ({zones.length})</TabsTrigger>
+              <TabsTrigger value="spaces">Spaces ({spaces.length})</TabsTrigger>
               <TabsTrigger value="equipment">Equipment ({equipment.length})</TabsTrigger>
             </TabsList>
 
@@ -837,8 +834,8 @@ export default function FacilitiesPage() {
                           <span className="text-xs text-muted-foreground">Max Capacity</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-2xl font-bold">{zones.length}</span>
-                          <span className="text-xs text-muted-foreground">Training Zones</span>
+                          <span className="text-2xl font-bold">{spaces.length}</span>
+                          <span className="text-xs text-muted-foreground">Spaces</span>
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-2xl font-bold">{equipment.length}</span>
@@ -851,51 +848,33 @@ export default function FacilitiesPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="zones" className="space-y-4">
+            <TabsContent value="spaces" className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input 
-                    placeholder="Search zones..." 
+                    placeholder="Search spaces..." 
                     className="w-[150px] lg:w-[250px]" 
-                    value={zoneSearch}
-                    onChange={(e) => setZoneSearch(e.target.value)}
+                    value={spaceSearch}
+                    onChange={(e) => setSpaceSearch(e.target.value)}
                   />
                 </div>
-                <Sheet open={zoneFormOpen} onOpenChange={setZoneFormOpen}>
+                <Sheet open={spaceFormOpen} onOpenChange={setSpaceFormOpen}>
                   <SheetTrigger asChild>
                     <Button>
-                      <Plus className="mr-2 h-4 w-4" /> Add Zone
+                      <Plus className="mr-2 h-4 w-4" /> Add Space
                     </Button>
                   </SheetTrigger>
                   <SheetContent>
-                    <form onSubmit={handleCreateZone}>
+                    <form onSubmit={handleCreateSpace}>
                       <SheetHeader>
-                        <SheetTitle>Add New Zone</SheetTitle>
-                        <SheetDescription>Define a new training area in this facility.</SheetDescription>
+                        <SheetTitle>Add New Space</SheetTitle>
+                        <SheetDescription>Define a new space in this facility.</SheetDescription>
                       </SheetHeader>
                       <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                          <Label htmlFor="zone-name">Zone Name *</Label>
-                          <Input id="zone-name" name="name" placeholder="e.g. Balance Beam Area" required />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="zone-type">Type *</Label>
-                          <Select name="type" required>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Floor">Floor</SelectItem>
-                              <SelectItem value="Vault">Vault</SelectItem>
-                              <SelectItem value="Bars">Bars</SelectItem>
-                              <SelectItem value="Beam">Beam</SelectItem>
-                              <SelectItem value="Trampoline">Trampoline</SelectItem>
-                              <SelectItem value="Tumble Track">Tumble Track</SelectItem>
-                              <SelectItem value="Preschool">Preschool</SelectItem>
-                              <SelectItem value="Mixed">Mixed</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="space-name">Space Name *</Label>
+                          <Input id="space-name" name="name" placeholder="e.g. Balance Beam Area" required />
                         </div>
                         <div className="grid gap-2">
                           <Label htmlFor="capacity">Max Capacity</Label>
@@ -905,7 +884,7 @@ export default function FacilitiesPage() {
                       <SheetFooter>
                         <Button type="submit" disabled={saving}>
                           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Create Zone
+                          Create Space
                         </Button>
                       </SheetFooter>
                     </form>
@@ -919,15 +898,15 @@ export default function FacilitiesPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredZones.map((zone) => (
-                    <Card key={zone.id}>
+                  {filteredSpaces.map((space) => (
+                    <Card key={space.id}>
                       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">
-                          {zone.name}
+                          {space.name}
                         </CardTitle>
                         <div className="flex items-center gap-1">
-                          <Badge variant={getStatusBadgeVariant(zone.status)}>
-                            {zone.status}
+                          <Badge variant={getStatusBadgeVariant(space.status)}>
+                            {space.status}
                           </Badge>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -938,7 +917,7 @@ export default function FacilitiesPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem 
                                 className="text-red-600"
-                                onClick={() => handleDeleteZone(zone.id)}
+                                onClick={() => handleDeleteSpace(space.id)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" /> Delete
                               </DropdownMenuItem>
@@ -947,12 +926,11 @@ export default function FacilitiesPage() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">{zone.type}</div>
                         <p className="text-xs text-muted-foreground">
-                          {zone.capacity ? `Max Capacity: ${zone.capacity} students` : "No capacity set"}
+                          {space.capacity ? `Max Capacity: ${space.capacity} students` : "No capacity set"}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {zone._count.equipment} equipment items
+                          {space._count.equipment} equipment items
                         </p>
                       </CardContent>
                       <CardFooter className="pt-0">
@@ -960,7 +938,7 @@ export default function FacilitiesPage() {
                           variant="outline"
                           size="sm"
                           className="w-full"
-                          onClick={() => handleOpenAvailability(zone)}
+                          onClick={() => handleOpenAvailability(space)}
                         >
                           <Clock className="mr-2 h-3.5 w-3.5" />
                           Availability Hours
@@ -969,12 +947,12 @@ export default function FacilitiesPage() {
                     </Card>
                   ))}
                   
-                  {filteredZones.length === 0 && (
+                  {filteredSpaces.length === 0 && (
                     <Card className="col-span-full">
                       <CardContent className="flex flex-col items-center justify-center py-12">
                         <Dumbbell className="h-12 w-12 text-muted-foreground mb-4" />
                         <p className="text-muted-foreground text-center">
-                          {zoneSearch ? "No zones match your search." : "No training zones yet."}
+                          {spaceSearch ? "No spaces match your search." : "No spaces yet."}
                         </p>
                       </CardContent>
                     </Card>
@@ -1040,17 +1018,17 @@ export default function FacilitiesPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                        {zones.length > 0 && (
+                        {spaces.length > 0 && (
                           <div className="grid gap-2">
-                            <Label htmlFor="equip-zone">Assign to Zone</Label>
-                            <Select name="trainingZoneId">
+                            <Label htmlFor="equip-space">Assign to Space</Label>
+                            <Select name="spaceId">
                               <SelectTrigger>
-                                <SelectValue placeholder="Select zone (optional)" />
+                                <SelectValue placeholder="Select space (optional)" />
                               </SelectTrigger>
                               <SelectContent>
-                                {zones.map((zone) => (
-                                  <SelectItem key={zone.id} value={zone.id}>
-                                    {zone.name}
+                                {spaces.map((space) => (
+                                  <SelectItem key={space.id} value={space.id}>
+                                    {space.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1080,7 +1058,7 @@ export default function FacilitiesPage() {
                       <TableRow>
                         <TableHead className="w-[250px]">Name</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Zone</TableHead>
+                        <TableHead>Space</TableHead>
                         <TableHead>Condition</TableHead>
                         <TableHead>Last Inspection</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -1091,7 +1069,7 @@ export default function FacilitiesPage() {
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.type}</TableCell>
-                          <TableCell>{item.trainingZone?.name || "—"}</TableCell>
+                          <TableCell>{item.space?.name || "—"}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {getConditionIcon(item.condition)}
@@ -1151,7 +1129,7 @@ export default function FacilitiesPage() {
             <DialogTitle>Delete Facility</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete &quot;{facilityToDelete?.name}&quot;? 
-              This will also delete all training zones and equipment associated with this facility.
+              This will also delete all spaces and equipment associated with this facility.
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -1167,15 +1145,15 @@ export default function FacilitiesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Zone Availability Dialog */}
+      {/* Space Availability Dialog */}
       <Dialog open={availabilityDialogOpen} onOpenChange={setAvailabilityDialogOpen}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>
-              Availability Hours &mdash; {editingZoneAvailability?.name}
+              Availability Hours &mdash; {editingSpaceAvailability?.name}
             </DialogTitle>
             <DialogDescription>
-              Set the weekly operating hours for this training zone. Programs can only be scheduled within these windows.
+              Set the weekly operating hours for this space. Programs can only be scheduled within these windows.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 max-h-[400px] overflow-y-auto py-2">

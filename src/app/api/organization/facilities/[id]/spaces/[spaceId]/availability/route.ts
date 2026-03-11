@@ -13,18 +13,18 @@ const upsertAvailabilitySchema = z.object({
   slots: z.array(availabilitySlotSchema),
 });
 
-type RouteParams = { params: Promise<{ id: string; zoneId: string }> };
+type RouteParams = { params: Promise<{ id: string; spaceId: string }> };
 
-async function verifyOwnership(organizationId: string, facilityId: string, zoneId: string) {
+async function verifyOwnership(organizationId: string, facilityId: string, spaceId: string) {
   const facility = await db.facility.findFirst({
     where: { id: facilityId, organizationId },
   });
   if (!facility) return null;
 
-  const zone = await db.trainingZone.findFirst({
-    where: { id: zoneId, facilityId },
+  const space = await db.space.findFirst({
+    where: { id: spaceId, facilityId },
   });
-  return zone;
+  return space;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -39,26 +39,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id: facilityId, zoneId } = await params;
-    const zone = await verifyOwnership(organizationId, facilityId, zoneId);
-    if (!zone) {
-      return NextResponse.json({ error: "Training zone not found" }, { status: 404 });
+    const { id: facilityId, spaceId } = await params;
+    const space = await verifyOwnership(organizationId, facilityId, spaceId);
+    if (!space) {
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
-    const availability = await db.trainingZoneAvailability.findMany({
-      where: { trainingZoneId: zoneId },
+    const availability = await db.spaceAvailability.findMany({
+      where: { spaceId },
       orderBy: { dayOfWeek: "asc" },
     });
 
     return NextResponse.json(availability);
   } catch (error) {
-    console.error("Error fetching zone availability:", error);
-    return NextResponse.json({ error: "Failed to fetch zone availability" }, { status: 500 });
+    console.error("Error fetching space availability:", error);
+    return NextResponse.json({ error: "Failed to fetch space availability" }, { status: 500 });
   }
 }
 
 /**
- * Upsert all availability slots for a zone. Replaces existing slots
+ * Upsert all availability slots for a space. Replaces existing slots
  * with the provided set (delete-and-recreate).
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
@@ -73,10 +73,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const { id: facilityId, zoneId } = await params;
-    const zone = await verifyOwnership(organizationId, facilityId, zoneId);
-    if (!zone) {
-      return NextResponse.json({ error: "Training zone not found" }, { status: 404 });
+    const { id: facilityId, spaceId } = await params;
+    const space = await verifyOwnership(organizationId, facilityId, spaceId);
+    if (!space) {
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -102,14 +102,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const result = await db.$transaction(async (tx) => {
-      await tx.trainingZoneAvailability.deleteMany({
-        where: { trainingZoneId: zoneId },
+      await tx.spaceAvailability.deleteMany({
+        where: { spaceId },
       });
 
       if (slots.length > 0) {
-        await tx.trainingZoneAvailability.createMany({
+        await tx.spaceAvailability.createMany({
           data: slots.map((slot) => ({
-            trainingZoneId: zoneId,
+            spaceId,
             dayOfWeek: slot.dayOfWeek,
             openTime: slot.openTime,
             closeTime: slot.closeTime,
@@ -117,8 +117,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         });
       }
 
-      return tx.trainingZoneAvailability.findMany({
-        where: { trainingZoneId: zoneId },
+      return tx.spaceAvailability.findMany({
+        where: { spaceId },
         orderBy: { dayOfWeek: "asc" },
       });
     });
@@ -128,7 +128,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error("Error updating zone availability:", error);
-    return NextResponse.json({ error: "Failed to update zone availability" }, { status: 500 });
+    console.error("Error updating space availability:", error);
+    return NextResponse.json({ error: "Failed to update space availability" }, { status: 500 });
   }
 }
