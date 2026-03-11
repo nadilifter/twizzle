@@ -764,6 +764,7 @@ model Program {
 
   // Display
   showCoachOnSite Boolean @default(true)
+  imageUrl        String?
 
   // Age Restrictions
   minAge Int? // Minimum age (0-100)

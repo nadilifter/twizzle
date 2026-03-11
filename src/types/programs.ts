@@ -245,6 +245,7 @@ export interface CreateProgramPayload {
   rrule?: string | null;
   facilityId?: string | null;
   showCoachOnSite?: boolean;
+  imageUrl?: string | null;
   capacity?: number | null;
   minAge?: number | null;
   maxAge?: number | null;
@@ -290,6 +291,7 @@ export interface UpdateProgramPayload {
   rrule?: string | null;
   facilityId?: string | null;
   showCoachOnSite?: boolean;
+  imageUrl?: string | null;
   capacity?: number | null;
   minAge?: number | null;
   maxAge?: number | null;

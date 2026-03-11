@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarDays, User, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield, ClipboardList } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
+import Image from "next/image";
 
 interface StaffAssignment {
   id: string;
@@ -65,6 +66,7 @@ interface ProgramCardProps {
     id: string;
     name: string;
     description: string | null;
+    imageUrl?: string | null;
     staffAssignments?: StaffAssignment[];
     requiredMemberships?: RequiredMembership[];
     levelRequirements?: LevelRequirement[];
@@ -145,6 +147,18 @@ export function ProgramCard({ program }: ProgramCardProps) {
 
   return (
     <Card className="group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
+      {program.imageUrl && (
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
+            src={program.imageUrl}
+            alt={program.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            loading="lazy"
+          />
+        </div>
+      )}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">

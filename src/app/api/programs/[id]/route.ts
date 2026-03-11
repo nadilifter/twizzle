@@ -24,6 +24,7 @@ const updateProgramSchema = z.object({
   facilityId: z.string().optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
   showCoachOnSite: z.boolean().optional(),
+  imageUrl: z.string().url().optional().nullable(),
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
@@ -290,6 +291,7 @@ export async function PATCH(
       if (validatedData.facilityId !== undefined) updateData.facilityId = validatedData.facilityId;
       if (validatedData.capacity !== undefined) updateData.capacity = validatedData.capacity;
       if (validatedData.showCoachOnSite !== undefined) updateData.showCoachOnSite = validatedData.showCoachOnSite;
+      if (validatedData.imageUrl !== undefined) updateData.imageUrl = validatedData.imageUrl;
       // Age and restriction fields
       if (validatedData.minAge !== undefined) updateData.minAge = validatedData.minAge;
       if (validatedData.maxAge !== undefined) updateData.maxAge = validatedData.maxAge;

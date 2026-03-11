@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { ImageUpload } from "@/components/ui/image-upload"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -150,6 +151,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
     name: program.name || "",
     description: program.description || "",
     color: program.color || "#3b82f6",
+    imageUrl: program.imageUrl as string | null || null,
     registrationType: (program.registrationType || "ALL_INSTANCES") as "ALL_INSTANCES" | "PER_INSTANCE",
     price: (() => {
       const isFlatRate = program.pricingModel === "FLAT_RATE"
@@ -472,6 +474,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         name: formData.name,
         description: formData.description || undefined,
         color: formData.color,
+        imageUrl: formData.imageUrl,
         registrationType: formData.registrationType as any,
         pricingModel: isFlatRate ? ("FLAT_RATE" as any) : ("PER_SESSION" as any),
         basePrice: isFlatRate ? priceValue : null,
@@ -585,6 +588,13 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
             <ColorSelector
               value={formData.color}
               onChange={(color) => setFormData((prev) => ({ ...prev, color }))}
+            />
+
+            <ImageUpload
+              label="Program Image"
+              value={formData.imageUrl}
+              onChange={(url) => setFormData((prev) => ({ ...prev, imageUrl: url }))}
+              type="program"
             />
 
             {/* Registration Style */}

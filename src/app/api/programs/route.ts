@@ -34,6 +34,7 @@ const createProgramSchema = z.object({
   facilityId: z.string().optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
   showCoachOnSite: z.boolean().default(true),
+  imageUrl: z.string().url().optional().nullable(),
   // Age restrictions
   minAge: z.number().int().min(0).max(100).optional().nullable(),
   maxAge: z.number().int().min(0).max(100).optional().nullable(),
@@ -270,6 +271,7 @@ export async function POST(request: NextRequest) {
           facilityId: validatedData.facilityId,
           capacity: validatedData.capacity,
           showCoachOnSite: validatedData.showCoachOnSite,
+          imageUrl: validatedData.imageUrl,
           minAge: validatedData.minAge,
           maxAge: validatedData.maxAge,
           hasSpaceRestriction: validatedData.hasSpaceRestriction,

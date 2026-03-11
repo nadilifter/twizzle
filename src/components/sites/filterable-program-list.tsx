@@ -40,6 +40,7 @@ interface Program {
   id: string;
   name: string;
   description: string | null;
+  imageUrl?: string | null;
   staffAssignments?: {
     id: string;
     role: string;

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { ImageUpload } from "@/components/ui/image-upload"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -123,6 +124,7 @@ interface ProgramFormData {
   name: string
   description: string
   color: string
+  imageUrl: string | null
   registrationType: "ALL_INSTANCES" | "PER_INSTANCE"
   /** Single price: per-session (per-class) or flat rate (entire program). Null/0 = free. */
   price: number | null
@@ -252,6 +254,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     name: program?.name || "",
     description: program?.description || "",
     color: (program as any)?.color || "#3b82f6",
+    imageUrl: (program as any)?.imageUrl || null,
     registrationType: (program as any)?.registrationType || "ALL_INSTANCES",
     price: (() => {
       const p = program as any
@@ -338,6 +341,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         ...prev,
         description: data.description || "",
         color: data.color || "#3b82f6",
+        imageUrl: data.imageUrl || null,
         registrationType: data.registrationType || "ALL_INSTANCES",
         price: priceVal != null ? Number(priceVal) : null,
         startDate: data.startDate ? new Date(data.startDate) : null,
@@ -739,6 +743,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         minAge: formData.hasAgeRestriction ? formData.minAge : null,
         maxAge: formData.hasAgeRestriction ? formData.maxAge : null,
         showCoachOnSite: formData.showCoachOnSite,
+        imageUrl: formData.imageUrl,
         waitlistEnabled: formData.waitlistEnabled,
         waitlistAutoPromote: formData.waitlistEnabled ? formData.waitlistAutoPromote : false,
         waitlistCapacity: formData.waitlistEnabled ? formData.waitlistCapacity : null,
@@ -958,6 +963,13 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               <ColorSelector
                 value={formData.color}
                 onChange={(color) => setFormData(prev => ({ ...prev, color }))}
+              />
+
+              <ImageUpload
+                label="Program Image"
+                value={formData.imageUrl}
+                onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
+                type="program"
               />
               
               {/* Registration Style */}
