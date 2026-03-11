@@ -680,6 +680,108 @@ export default function FacilitiesPage() {
                     rows={3}
                   />
                 </div>
+                <Separator />
+                <div className="grid gap-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-base font-semibold">Operating Hours</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground -mt-1">
+                    Set when this facility is open each day. Add multiple blocks per day for break periods.
+                  </p>
+                  {DAY_LABELS.map((label, dayIndex) => {
+                    const blocks = operatingHours[dayIndex] ?? []
+                    const isOpen = blocks.length > 0
+                    return (
+                      <div key={dayIndex} className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 flex items-center gap-2">
+                            <Switch
+                              checked={isOpen}
+                              onCheckedChange={(checked) => {
+                                setOperatingHours(prev => ({
+                                  ...prev,
+                                  [dayIndex]: checked
+                                    ? [{ openTime: "09:00", closeTime: "17:00" }]
+                                    : [],
+                                }))
+                              }}
+                            />
+                            <span className="text-sm font-medium">{label.slice(0, 3)}</span>
+                          </div>
+                          {isOpen ? (
+                            <div className="flex-1 space-y-2">
+                              {blocks.map((block, blockIdx) => (
+                                <div key={blockIdx} className="flex items-center gap-2">
+                                  <Input
+                                    type="time"
+                                    value={block.openTime}
+                                    onChange={(e) => {
+                                      setOperatingHours(prev => {
+                                        const updated = [...prev[dayIndex]]
+                                        updated[blockIdx] = { ...updated[blockIdx], openTime: e.target.value }
+                                        return { ...prev, [dayIndex]: updated }
+                                      })
+                                    }}
+                                    className="w-[120px]"
+                                  />
+                                  <span className="text-muted-foreground text-sm">to</span>
+                                  <Input
+                                    type="time"
+                                    value={block.closeTime}
+                                    onChange={(e) => {
+                                      setOperatingHours(prev => {
+                                        const updated = [...prev[dayIndex]]
+                                        updated[blockIdx] = { ...updated[blockIdx], closeTime: e.target.value }
+                                        return { ...prev, [dayIndex]: updated }
+                                      })
+                                    }}
+                                    className="w-[120px]"
+                                  />
+                                  {blocks.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 shrink-0"
+                                      onClick={() => {
+                                        setOperatingHours(prev => ({
+                                          ...prev,
+                                          [dayIndex]: prev[dayIndex].filter((_, i) => i !== blockIdx),
+                                        }))
+                                      }}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  setOperatingHours(prev => ({
+                                    ...prev,
+                                    [dayIndex]: [
+                                      ...prev[dayIndex],
+                                      { openTime: "09:00", closeTime: "17:00" },
+                                    ],
+                                  }))
+                                }}
+                              >
+                                <Plus className="mr-1 h-3 w-3" /> Add hours
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Closed</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
               <SheetFooter>
                 <Button type="submit" disabled={saving}>
