@@ -127,7 +127,6 @@ export default async function ProgramDetailPage({
         })
         : 0;
 
-    const isRecurring = program.recurrenceType === "RECURRING";
     const isPerInstance = program.registrationType === "PER_INSTANCE";
     const primaryColor = config.primaryColor || "#000000";
 
@@ -270,7 +269,7 @@ export default async function ProgramDetailPage({
                             </div>
                         )}
 
-                        {isRecurring && program._count.instances > 0 && (
+                        {program._count.instances > 0 && (
                             <div className="flex items-center gap-1.5">
                                 <Repeat className="h-4 w-4" />
                                 <span>

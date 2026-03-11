@@ -37,7 +37,6 @@ export async function GET(
           select: {
             id: true,
             name: true,
-            recurrenceType: true,
             registrationType: true,
           },
         },

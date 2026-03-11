@@ -28,7 +28,6 @@ export async function GET(
             description: true,
             basePrice: true,
             perSessionPrice: true,
-            recurrenceType: true,
             registrationType: true,
             evaluationTemplates: {
               take: 1,

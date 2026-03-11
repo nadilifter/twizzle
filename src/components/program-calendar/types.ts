@@ -16,7 +16,6 @@ export interface CalendarEvent {
   attendanceCount: number;
   color: string; // Hex color from program level
   levelName: string | null;
-  recurrenceType: string | null;
   registrationType: string | null;
 }
 

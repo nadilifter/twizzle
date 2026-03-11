@@ -86,7 +86,6 @@ interface CalendarEvent {
   attendanceCount: number;
   color: string;
   levelName: string | null;
-  recurrenceType: string | null;
   registrationType: string | null;
 }
 

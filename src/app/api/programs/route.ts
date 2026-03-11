@@ -25,9 +25,7 @@ const createProgramSchema = z.object({
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).default("FLAT_RATE"),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
-  // New calendar scheduling fields
-  recurrenceType: z.enum(["NON_RECURRING", "RECURRING"]).default("RECURRING"),
-  registrationType: z.enum(["ALL_INSTANCES", "PER_INSTANCE"]).optional().nullable(),
+  registrationType: z.enum(["ALL_INSTANCES", "PER_INSTANCE"]).default("ALL_INSTANCES"),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
   startTime: z.string().optional().nullable(), // e.g., "09:00"
@@ -81,16 +79,12 @@ function generateInstanceDates(
   rruleString: string | null
 ): Date[] {
   if (!rruleString) {
-    // For non-recurring programs, just return the start date
     return [startDate];
   }
   
   try {
-    // Parse the RRULE string
     const rruleWithDtstart = `DTSTART:${format(startDate, "yyyyMMdd'T'HHmmss'Z'")}\nRRULE:${rruleString}`;
     const rule = RRule.fromString(rruleWithDtstart);
-    
-    // Get all occurrences between start and end date
     return rule.between(startDate, endDate, true);
   } catch (error) {
     console.error("Error parsing RRULE:", error);
@@ -267,8 +261,6 @@ export async function POST(request: NextRequest) {
           pricingModel: validatedData.pricingModel,
           basePrice: validatedData.basePrice,
           perSessionPrice: validatedData.perSessionPrice,
-          // New calendar scheduling fields
-          recurrenceType: validatedData.recurrenceType,
           registrationType: validatedData.registrationType,
           startDate: validatedData.startDate ? parseDateOnly(validatedData.startDate) : null,
           endDate: validatedData.endDate ? parseDateOnly(validatedData.endDate) : null,
@@ -367,8 +359,7 @@ export async function POST(request: NextRequest) {
         const endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate)! : startDate;
         const endTime = calculateEndTime(validatedData.startTime, validatedData.duration);
         
-        // Generate dates based on recurrence type
-        const instanceDates = validatedData.recurrenceType === "RECURRING" && validatedData.rrule
+        const instanceDates = validatedData.rrule
           ? generateInstanceDates(startDate, endDate, validatedData.rrule)
           : [startDate];
         

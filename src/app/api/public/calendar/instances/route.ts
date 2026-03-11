@@ -62,7 +62,6 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             color: true,
-            recurrenceType: true,
             registrationType: true,
           },
         },
@@ -90,7 +89,6 @@ export async function GET(request: NextRequest) {
       attendanceCount: 0,
       color: instance.program.color,
       levelName: null,
-      recurrenceType: instance.program.recurrenceType,
       registrationType: instance.program.registrationType,
     }));
 

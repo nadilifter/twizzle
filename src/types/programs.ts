@@ -20,7 +20,6 @@ export interface ProgramRequiredMembership {
 export type PricingModel = "FLAT_RATE" | "PER_SESSION";
 
 // Calendar-based scheduling types
-export type RecurrenceType = "NON_RECURRING" | "RECURRING";
 export type RegistrationType = "ALL_INSTANCES" | "PER_INSTANCE";
 export type InstanceStatus = "SCHEDULED" | "CANCELLED" | "COMPLETED";
 export type RegistrationStatus = "REGISTERED" | "WAITLISTED" | "CANCELLED";
@@ -64,9 +63,8 @@ export interface Program {
   basePrice: number | null;
   perSessionPrice: number | null;
   
-  // Calendar-based scheduling
-  recurrenceType: RecurrenceType;
-  registrationType: RegistrationType | null;
+  // Registration style
+  registrationType: RegistrationType;
   
   // Schedule
   startDate: string | null;
@@ -239,8 +237,7 @@ export interface CreateProgramPayload {
   pricingModel?: PricingModel;
   basePrice?: number | null;
   perSessionPrice?: number | null;
-  recurrenceType?: RecurrenceType;
-  registrationType?: RegistrationType | null;
+  registrationType?: RegistrationType;
   startDate?: string | null;
   endDate?: string | null;
   startTime?: string | null;
@@ -265,21 +262,15 @@ export interface CreateProgramPayload {
   waitlistEnabled?: boolean;
   waitlistAutoPromote?: boolean;
   waitlistCapacity?: number | null;
-  // For staff assignments during creation
   staffAssignments?: Array<{
     memberId: string;
     role: string;
     isPrimary: boolean;
   }>;
-  // For level requirements during creation
   levelRequirementIds?: string[];
-  // For membership requirements during creation
   membershipRequirementIds?: string[];
-  // For pass requirements during creation
   passRequirementIds?: string[];
-  // For waiver requirements during creation
   waiverRequirementIds?: string[];
-  // For space assignments during creation
   spaceIds?: string[];
 }
 
@@ -291,8 +282,7 @@ export interface UpdateProgramPayload {
   pricingModel?: PricingModel;
   basePrice?: number | null;
   perSessionPrice?: number | null;
-  recurrenceType?: RecurrenceType;
-  registrationType?: RegistrationType | null;
+  registrationType?: RegistrationType;
   startDate?: string | null;
   endDate?: string | null;
   startTime?: string | null;

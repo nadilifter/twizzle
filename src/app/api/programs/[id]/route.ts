@@ -15,9 +15,7 @@ const updateProgramSchema = z.object({
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).optional(),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
-  // New calendar scheduling fields
-  recurrenceType: z.enum(["NON_RECURRING", "RECURRING"]).optional(),
-  registrationType: z.enum(["ALL_INSTANCES", "PER_INSTANCE"]).optional().nullable(),
+  registrationType: z.enum(["ALL_INSTANCES", "PER_INSTANCE"]).optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
   startTime: z.string().optional().nullable(),
@@ -283,8 +281,6 @@ export async function PATCH(
       if (validatedData.pricingModel !== undefined) updateData.pricingModel = validatedData.pricingModel;
       if (validatedData.basePrice !== undefined) updateData.basePrice = validatedData.basePrice;
       if (validatedData.perSessionPrice !== undefined) updateData.perSessionPrice = validatedData.perSessionPrice;
-      // New calendar scheduling fields
-      if (validatedData.recurrenceType !== undefined) updateData.recurrenceType = validatedData.recurrenceType;
       if (validatedData.registrationType !== undefined) updateData.registrationType = validatedData.registrationType;
       if (validatedData.startDate !== undefined) updateData.startDate = validatedData.startDate ? parseDateOnly(validatedData.startDate) : null;
       if (validatedData.endDate !== undefined) updateData.endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate) : null;
@@ -338,14 +334,13 @@ export async function PATCH(
           : existing.endDate;
         const startTime = validatedData.startTime ?? (existing as any).startTime;
         const duration = validatedData.duration ?? (existing as any).duration;
-        const recurrenceType = validatedData.recurrenceType ?? (existing as any).recurrenceType;
         const rrule = validatedData.rrule ?? (existing as any).rrule;
         const facilityId = validatedData.facilityId ?? (existing as any).facilityId;
         const capacity = validatedData.capacity ?? existing.capacity;
 
         if (startDate && startTime && duration) {
           const endTime = calculateEndTime(startTime, duration);
-          const instanceDates = recurrenceType === "RECURRING" && rrule
+          const instanceDates = rrule
             ? generateInstanceDates(startDate, endDate || startDate, rrule)
             : [startDate];
 

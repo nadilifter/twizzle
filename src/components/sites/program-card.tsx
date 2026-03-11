@@ -73,7 +73,6 @@ interface ProgramCardProps {
     pricingModel?: string;
     basePrice?: number | string | null;
     perSessionPrice?: number | string | null;
-    recurrenceType?: "NON_RECURRING" | "RECURRING" | null;
     registrationType?: "ALL_INSTANCES" | "PER_INSTANCE" | null;
     startDate?: string | Date | null;
     endDate?: string | Date | null;
@@ -200,7 +199,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                 <span>
-                  {program.recurrenceType === "RECURRING" && program.endDate ? (
+                  {program.endDate ? (
                     <>
                       {format(new Date(program.startDate), "MMM d")} - {format(new Date(program.endDate), "MMM d, yyyy")}
                     </>
@@ -231,20 +230,18 @@ export function ProgramCard({ program }: ProgramCardProps) {
               </div>
             )}
 
-            {program.recurrenceType === "RECURRING" && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Repeat className="h-3.5 w-3.5 shrink-0" />
-                <span>
-                  {program._count?.instances 
-                    ? `${program._count.instances} sessions`
-                    : "Recurring program"
-                  }
-                  {program.registrationType === "PER_INSTANCE" && (
-                    <span className="ml-1 text-primary">(drop-in available)</span>
-                  )}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Repeat className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                {program._count?.instances 
+                  ? `${program._count.instances} sessions`
+                  : "Recurring program"
+                }
+                {program.registrationType === "PER_INSTANCE" && (
+                  <span className="ml-1 text-primary">(drop-in available)</span>
+                )}
+              </span>
+            </div>
           </div>
         )}
 

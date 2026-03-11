@@ -1072,8 +1072,7 @@ async function main() {
       pricingModel: "FLAT_RATE", basePrice: 85,
       showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
-      // New calendar scheduling fields
-      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      registrationType: "ALL_INSTANCES",
       startTime: "16:00", duration: 60,
       facilityId: `${ORG1_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
@@ -1087,8 +1086,7 @@ async function main() {
       pricingModel: "FLAT_RATE", basePrice: 115,
       showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
-      // New calendar scheduling fields
-      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      registrationType: "ALL_INSTANCES",
       startTime: "17:00", duration: 75,
       facilityId: `${ORG1_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR",
@@ -1102,8 +1100,7 @@ async function main() {
       pricingModel: "FLAT_RATE", basePrice: 145,
       showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
-      // New calendar scheduling fields
-      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      registrationType: "ALL_INSTANCES",
       startTime: "18:30", duration: 90,
       facilityId: `${ORG1_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=TU,TH,SA",
@@ -1114,8 +1111,7 @@ async function main() {
       pricingModel: "FLAT_RATE", basePrice: 2400,
       showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 30,
-      // New calendar scheduling fields
-      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      registrationType: "ALL_INSTANCES",
       startTime: "15:30", duration: 180,
       facilityId: `${ORG1_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
@@ -1131,8 +1127,7 @@ async function main() {
       showCoachOnSite: false,
       capacity: 12,
       startDate: daysAgo(7), endDate: daysFromNow(90),
-      // New calendar scheduling fields - drop-in with per-instance registration
-      recurrenceType: "RECURRING", registrationType: "PER_INSTANCE",
+      registrationType: "PER_INSTANCE",
       startTime: "09:30", duration: 45,
       facilityId: `${ORG1_ID}-facility-satellite`,
       rrule: "FREQ=WEEKLY;BYDAY=SA",
@@ -1144,8 +1139,7 @@ async function main() {
       pricingModel: "FLAT_RATE", basePrice: 175,
       showCoachOnSite: true,
       startDate: daysAgo(15), endDate: daysFromNow(90),
-      // New calendar scheduling fields
-      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      registrationType: "ALL_INSTANCES",
       startTime: "10:00", duration: 90,
       facilityId: `${ORG2_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=SA",
@@ -1156,8 +1150,7 @@ async function main() {
       pricingModel: "FLAT_RATE", basePrice: 95,
       showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(60),
-      // New calendar scheduling fields
-      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      registrationType: "ALL_INSTANCES",
       startTime: "18:00", duration: 90,
       facilityId: `${ORG2_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=TU,TH",
@@ -1168,8 +1161,7 @@ async function main() {
       pricingModel: "FLAT_RATE", basePrice: 1200,
       showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 40,
-      // New calendar scheduling fields
-      recurrenceType: "RECURRING", registrationType: "ALL_INSTANCES",
+      registrationType: "ALL_INSTANCES",
       startTime: "06:00", duration: 120,
       facilityId: `${ORG2_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR,SA",
@@ -1182,8 +1174,7 @@ async function main() {
       showCoachOnSite: false,
       capacity: 20,
       startDate: daysAgo(7), endDate: daysFromNow(60),
-      // New calendar scheduling fields - drop-in with per-instance registration
-      recurrenceType: "RECURRING", registrationType: "PER_INSTANCE",
+      registrationType: "PER_INSTANCE",
       startTime: "14:00", duration: 45,
       facilityId: `${ORG2_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR",

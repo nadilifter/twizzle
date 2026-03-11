@@ -123,9 +123,8 @@ interface ProgramFormData {
   name: string
   description: string
   color: string
-  recurrenceType: "NON_RECURRING" | "RECURRING"
-  registrationType: "ALL_INSTANCES" | "PER_INSTANCE" | null
-  /** Single price: per-session (single session or per-class) or flat rate (entire program). Null/0 = free. */
+  registrationType: "ALL_INSTANCES" | "PER_INSTANCE"
+  /** Single price: per-session (per-class) or flat rate (entire program). Null/0 = free. */
   price: number | null
   
   // Step 2: Date & Location
@@ -253,7 +252,6 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     name: program?.name || "",
     description: program?.description || "",
     color: (program as any)?.color || "#3b82f6",
-    recurrenceType: (program as any)?.recurrenceType || "RECURRING",
     registrationType: (program as any)?.registrationType || "ALL_INSTANCES",
     price: (() => {
       const p = program as any
@@ -340,7 +338,6 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         ...prev,
         description: data.description || "",
         color: data.color || "#3b82f6",
-        recurrenceType: data.recurrenceType || "RECURRING",
         registrationType: data.registrationType || "ALL_INSTANCES",
         price: priceVal != null ? Number(priceVal) : null,
         startDate: data.startDate ? new Date(data.startDate) : null,
@@ -596,8 +593,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           toast.error("Start date is required")
           return false
         }
-        if (formData.recurrenceType === "RECURRING" && !formData.endDate) {
-          toast.error("End date is required for recurring programs")
+        if (!formData.endDate) {
+          toast.error("End date is required")
           return false
         }
         if (formData.endDate && formData.startDate && formData.endDate < formData.startDate) {
@@ -709,15 +706,14 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     setIsSaving(true)
     
     try {
-      const isFlatRate = formData.recurrenceType === "RECURRING" && formData.registrationType === "ALL_INSTANCES"
+      const isFlatRate = formData.registrationType === "ALL_INSTANCES"
       const priceValue = formData.price != null ? Math.max(0, Math.round(formData.price * 100) / 100) : null
 
       const payload: CreateProgramPayload | UpdateProgramPayload = {
         name: formData.name,
         description: formData.description || undefined,
         color: formData.color,
-        recurrenceType: formData.recurrenceType,
-        registrationType: formData.recurrenceType === "RECURRING" ? formData.registrationType : null,
+        registrationType: formData.registrationType,
         pricingModel: isFlatRate ? "FLAT_RATE" : "PER_SESSION",
         basePrice: isFlatRate ? priceValue : null,
         perSessionPrice: !isFlatRate ? priceValue : null,
@@ -964,115 +960,57 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 onChange={(color) => setFormData(prev => ({ ...prev, color }))}
               />
               
-              {/* Schedule Type Selection */}
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Schedule Type</Label>
+              {/* Registration Style */}
+              <div className="space-y-4 rounded-lg border p-4 bg-muted/20">
+                <Label className="text-base font-medium">Registration Style</Label>
                 <RadioGroup
-                  value={formData.recurrenceType}
-                  onValueChange={(value: "NON_RECURRING" | "RECURRING") => 
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      recurrenceType: value,
-                      registrationType: value === "RECURRING" ? (prev.registrationType || "ALL_INSTANCES") : null,
-                    }))
+                  value={formData.registrationType}
+                  onValueChange={(value: "ALL_INSTANCES" | "PER_INSTANCE") => 
+                    setFormData(prev => ({ ...prev, registrationType: value }))
                   }
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                  className="space-y-3"
                 >
                   <label
                     className={cn(
-                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                      formData.recurrenceType === "NON_RECURRING"
+                      "flex items-start gap-3 rounded-lg border bg-background p-3 cursor-pointer transition-colors",
+                      formData.registrationType === "ALL_INSTANCES"
                         ? "border-primary bg-primary/5"
                         : "hover:bg-muted/50"
                     )}
                   >
-                    <RadioGroupItem value="NON_RECURRING" className="mt-1" />
+                    <RadioGroupItem value="ALL_INSTANCES" className="mt-0.5" />
                     <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Single Session</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        One-time event like a camp, workshop, or clinic
+                      <span className="font-medium text-sm">Enroll in entire program</span>
+                      <p className="text-xs text-muted-foreground">
+                        Athletes register once for all sessions during the program period
                       </p>
                     </div>
                   </label>
                   
                   <label
                     className={cn(
-                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
-                      formData.recurrenceType === "RECURRING"
+                      "flex items-start gap-3 rounded-lg border bg-background p-3 cursor-pointer transition-colors",
+                      formData.registrationType === "PER_INSTANCE"
                         ? "border-primary bg-primary/5"
                         : "hover:bg-muted/50"
                     )}
                   >
-                    <RadioGroupItem value="RECURRING" className="mt-1" />
+                    <RadioGroupItem value="PER_INSTANCE" className="mt-0.5" />
                     <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Repeat className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Repeating Schedule</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Weekly or recurring classes on a regular schedule
+                      <span className="font-medium text-sm">Sign up per class</span>
+                      <p className="text-xs text-muted-foreground">
+                        Athletes register individually for each session they want to attend
                       </p>
                     </div>
                   </label>
                 </RadioGroup>
               </div>
               
-              {/* Registration Type - only show for recurring programs */}
-              {formData.recurrenceType === "RECURRING" && (
-                <div className="space-y-4 rounded-lg border p-4 bg-muted/20">
-                  <Label className="text-base font-medium">Registration Style</Label>
-                  <RadioGroup
-                    value={formData.registrationType || "ALL_INSTANCES"}
-                    onValueChange={(value: "ALL_INSTANCES" | "PER_INSTANCE") => 
-                      setFormData(prev => ({ ...prev, registrationType: value }))
-                    }
-                    className="space-y-3"
-                  >
-                    <label
-                      className={cn(
-                        "flex items-start gap-3 rounded-lg border bg-background p-3 cursor-pointer transition-colors",
-                        formData.registrationType === "ALL_INSTANCES"
-                          ? "border-primary bg-primary/5"
-                          : "hover:bg-muted/50"
-                      )}
-                    >
-                      <RadioGroupItem value="ALL_INSTANCES" className="mt-0.5" />
-                      <div className="flex-1 space-y-1">
-                        <span className="font-medium text-sm">Enroll in entire program</span>
-                        <p className="text-xs text-muted-foreground">
-                          Athletes register once for all sessions during the program period
-                        </p>
-                      </div>
-                    </label>
-                    
-                    <label
-                      className={cn(
-                        "flex items-start gap-3 rounded-lg border bg-background p-3 cursor-pointer transition-colors",
-                        formData.registrationType === "PER_INSTANCE"
-                          ? "border-primary bg-primary/5"
-                          : "hover:bg-muted/50"
-                      )}
-                    >
-                      <RadioGroupItem value="PER_INSTANCE" className="mt-0.5" />
-                      <div className="flex-1 space-y-1">
-                        <span className="font-medium text-sm">Sign up per class</span>
-                        <p className="text-xs text-muted-foreground">
-                          Athletes register individually for each session they want to attend
-                        </p>
-                      </div>
-                    </label>
-                  </RadioGroup>
-                </div>
-              )}
-              
-              {/* Price - per session (single session or sign up per class) or flat rate (entire program) */}
+              {/* Price */}
               <div className="space-y-2">
                 <Label htmlFor="price" className="text-base font-medium flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  {formData.recurrenceType === "RECURRING" && formData.registrationType === "ALL_INSTANCES"
+                  {formData.registrationType === "ALL_INSTANCES"
                     ? "Price (flat rate)"
                     : "Price (per session)"}
                 </Label>
@@ -1133,12 +1071,9 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Date Selection */}
-              <div className={cn(
-                "grid gap-4",
-                formData.recurrenceType === "RECURRING" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
-              )}>
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>{formData.recurrenceType === "RECURRING" ? "Start Date *" : "Program Date *"}</Label>
+                  <Label>Start Date *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -1160,7 +1095,6 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                           setFormData(prev => ({
                             ...prev,
                             startDate: date || null,
-                            // If end date is before new start date, reset it
                             endDate: date && prev.endDate && prev.endDate < date ? null : prev.endDate,
                           }))
                         }}
@@ -1170,34 +1104,32 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   </Popover>
                 </div>
                 
-                {formData.recurrenceType === "RECURRING" && (
-                  <div className="space-y-2">
-                    <Label>End Date *</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.endDate && "text-muted-foreground"
-                          )}
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {formData.endDate ? format(formData.endDate, "PPP") : "Select end date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={formData.endDate || undefined}
-                          onSelect={(date) => setFormData(prev => ({ ...prev, endDate: date || null }))}
-                          disabled={(date) => formData.startDate ? date < formData.startDate : false}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label>End Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formData.endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {formData.endDate ? format(formData.endDate, "PPP") : "Select end date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={formData.endDate || undefined}
+                        onSelect={(date) => setFormData(prev => ({ ...prev, endDate: date || null }))}
+                        disabled={(date) => formData.startDate ? date < formData.startDate : false}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               
               {/* Time and Duration */}
@@ -1238,8 +1170,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 </div>
               </div>
               
-              {/* Recurrence Pattern - only for recurring programs */}
-              {formData.recurrenceType === "RECURRING" && formData.startDate && formData.endDate && (
+              {/* Recurrence Pattern */}
+              {formData.startDate && formData.endDate && (
                 <div className="space-y-4 rounded-lg border p-4">
                   <div className="flex items-center gap-2">
                     <Repeat className="h-4 w-4 text-muted-foreground" />

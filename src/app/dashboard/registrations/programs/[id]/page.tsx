@@ -56,7 +56,6 @@ interface Program {
     name: string;
     description: string | null;
     status: string;
-    recurrenceType: string | null;
     registrationType: string | null;
     startDate: string | null;
     endDate: string | null;
@@ -320,7 +319,6 @@ export default function ProgramDetailPage() {
         );
     }
 
-    const isRecurring = program.recurrenceType === "RECURRING";
     const isPerInstance = program.registrationType === "PER_INSTANCE";
 
     return (
@@ -339,12 +337,10 @@ export default function ProgramDetailPage() {
                             <Badge variant={program.status === "ACTIVE" ? "default" : "secondary"}>
                                 {program.status}
                             </Badge>
-                            {isRecurring && (
-                                <Badge variant="outline" className="gap-1">
-                                    <Repeat className="h-3 w-3" />
-                                    Recurring
-                                </Badge>
-                            )}
+                            <Badge variant="outline" className="gap-1">
+                                <Repeat className="h-3 w-3" />
+                                Recurring
+                            </Badge>
                         </div>
                         {program.description && (
                             <div

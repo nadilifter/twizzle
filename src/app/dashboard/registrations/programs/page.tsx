@@ -122,7 +122,6 @@ export default function ProgramsPage() {
           {programs.map((program) => {
             const p = program as any;
             const price = p.basePrice || p.perSessionPrice;
-            const isRecurring = p.recurrenceType === "RECURRING";
             const levelReqs = p.levelRequirements || [];
             const staffAssignments = p.staffAssignments || [];
             const requiredMemberships = p.requiredMemberships || [];
@@ -184,9 +183,9 @@ export default function ProgramsPage() {
                     {/* Schedule type + price */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        {isRecurring ? <Repeat className="h-3.5 w-3.5" /> : <CalendarDays className="h-3.5 w-3.5" />}
-                        <span>{isRecurring ? "Recurring" : "Single Session"}</span>
-                        {isRecurring && p.registrationType === "PER_INSTANCE" && (
+                        <Repeat className="h-3.5 w-3.5" />
+                        <span>Recurring</span>
+                        {p.registrationType === "PER_INSTANCE" && (
                           <span className="text-primary">(Drop-in)</span>
                         )}
                       </div>
@@ -270,7 +269,7 @@ export default function ProgramsPage() {
                   <Button variant="outline" size="sm" className="flex-1" asChild>
                     <Link href={`/dashboard/registrations/programs/${program.id}/sessions`}>
                       <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
-                      {isRecurring ? "Sessions" : "Session"}
+                      Sessions
                     </Link>
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleQuickConfigure(program)} title="Configure">

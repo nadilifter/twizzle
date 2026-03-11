@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             color: true,
-            recurrenceType: true,
             registrationType: true,
             basePrice: true,
             perSessionPrice: true,
@@ -89,7 +88,6 @@ export async function GET(request: NextRequest) {
       attendanceCount: instance._count.attendances,
       color: instance.program.color,
       levelName: null,
-      recurrenceType: instance.program.recurrenceType,
       registrationType: instance.program.registrationType,
     }));
 

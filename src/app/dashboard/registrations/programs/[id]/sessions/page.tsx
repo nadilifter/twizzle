@@ -22,7 +22,6 @@ import { toast } from "sonner"
 interface Program {
   id: string
   name: string
-  recurrenceType: string | null
   registrationType: string | null
   _count: { instances: number; enrollments: number }
 }
@@ -63,11 +62,8 @@ export default function ProgramSessionsPage() {
         const instData = await instRes.json()
         const instanceList: Instance[] = instData.instances || []
 
-        // For single-session programs with exactly 1 instance, redirect directly
-        if (
-          progData.recurrenceType === "NON_RECURRING" &&
-          instanceList.length === 1
-        ) {
+        // If there's exactly 1 instance, redirect directly
+        if (instanceList.length === 1) {
           router.replace(
             `/dashboard/calendar/instance/${instanceList[0].id}`
           )

@@ -74,7 +74,6 @@ interface Program {
   pricingModel?: string;
   basePrice?: number | string | null;
   perSessionPrice?: number | string | null;
-  recurrenceType?: "NON_RECURRING" | "RECURRING" | null;
   registrationType?: "ALL_INSTANCES" | "PER_INSTANCE" | null;
   startDate?: string | Date | null;
   endDate?: string | Date | null;

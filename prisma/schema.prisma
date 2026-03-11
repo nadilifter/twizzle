@@ -736,9 +736,8 @@ model Program {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  // Calendar-based scheduling
-  recurrenceType   RecurrenceType    @default(RECURRING)
-  registrationType RegistrationType? // Only for recurring: all-at-once or per-instance
+  // Registration style
+  registrationType RegistrationType @default(ALL_INSTANCES)
 
   // Pricing Configuration
   pricingModel    PricingModel @default(FLAT_RATE)
@@ -820,12 +819,6 @@ enum ProgramStatus {
   ACTIVE
   INACTIVE
   ARCHIVED
-}
-
-// Legacy - kept for backwards compatibility during migration
-enum RecurrenceType {
-  NON_RECURRING // Single date/time event
-  RECURRING // Repeats on a schedule
 }
 
 enum RegistrationType {

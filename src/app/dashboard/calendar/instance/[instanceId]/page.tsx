@@ -141,7 +141,6 @@ interface ProgramInstance {
     description: string | null;
     basePrice: number | null;
     perSessionPrice: number | null;
-    recurrenceType: string;
     registrationType: string;
     evaluationTemplates?: ProgramEvaluationTemplateAssignment[];
   };
