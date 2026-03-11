@@ -17,6 +17,7 @@ export const FEATURE_KEYS = [
   "pointOfSale",
   "memberships",
   "waitlists",
+  "passes",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -34,6 +35,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   pointOfSale: false,
   memberships: false,
   waitlists: false,
+  passes: false,
 };
 
 /** Human-readable labels for each feature */
@@ -48,6 +50,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   pointOfSale: "Point of Sale",
   memberships: "Memberships",
   waitlists: "Waitlists",
+  passes: "Passes",
 };
 
 /** Descriptions shown to admins */
@@ -62,6 +65,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   pointOfSale: "Point of Sale terminal and checkout via the POS portal",
   memberships: "Membership management, restrictions, and storefront purchasing",
   waitlists: "Program and session waitlist management with automatic promotion",
+  passes: "Allow athletes to purchase passes for program access with session credits",
 };
 
 /**
@@ -142,6 +146,14 @@ export const FEATURE_SIDEBAR_MAP: Record<
     ],
   },
   waitlists: {},
+  passes: {
+    subItems: [
+      {
+        section: "Registrations",
+        items: ["Passes"],
+      },
+    ],
+  },
 };
 
 /**
@@ -164,6 +176,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   pointOfSale: ["/api/pos"],
   memberships: ["/api/memberships", "/api/public/memberships"],
   waitlists: [],
+  passes: ["/api/passes", "/api/public/passes"],
 };
 
 /**

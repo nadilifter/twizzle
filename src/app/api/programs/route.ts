@@ -48,6 +48,7 @@ const createProgramSchema = z.object({
   hasCapacityRestriction: z.boolean().default(false),
   hasAgeRestriction: z.boolean().default(false),
   hasMembershipRestriction: z.boolean().default(false),
+  hasPassRestriction: z.boolean().default(false),
   hasWaiverRestriction: z.boolean().default(false),
   hasMedicalRequirement: z.boolean().default(false),
   hasFileRequirement: z.boolean().default(false),
@@ -61,6 +62,7 @@ const createProgramSchema = z.object({
   // Related data for creation
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
+  passRequirementIds: z.array(z.string()).optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
   spaceIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
@@ -284,6 +286,7 @@ export async function POST(request: NextRequest) {
           hasCapacityRestriction: validatedData.hasCapacityRestriction,
           hasAgeRestriction: validatedData.hasAgeRestriction,
           hasMembershipRestriction: validatedData.hasMembershipRestriction,
+          hasPassRestriction: validatedData.hasPassRestriction,
           hasWaiverRestriction: validatedData.hasWaiverRestriction,
           hasMedicalRequirement: validatedData.hasMedicalRequirement,
           hasFileRequirement: validatedData.hasFileRequirement,
@@ -292,10 +295,14 @@ export async function POST(request: NextRequest) {
           waitlistAutoPromote: validatedData.waitlistAutoPromote,
           waitlistCapacity: validatedData.waitlistCapacity,
           organizationId: session.user.organizationId,
-          // Connect membership requirements in initial create
           ...(validatedData.membershipRequirementIds?.length && {
             requiredMemberships: {
               connect: validatedData.membershipRequirementIds.map(id => ({ id })),
+            },
+          }),
+          ...(validatedData.passRequirementIds?.length && {
+            requiredPasses: {
+              connect: validatedData.passRequirementIds.map(id => ({ id })),
             },
           }),
         },

@@ -38,6 +38,7 @@ const updateProgramSchema = z.object({
   hasCapacityRestriction: z.boolean().optional(),
   hasAgeRestriction: z.boolean().optional(),
   hasMembershipRestriction: z.boolean().optional(),
+  hasPassRestriction: z.boolean().optional(),
   hasWaiverRestriction: z.boolean().optional(),
   hasMedicalRequirement: z.boolean().optional(),
   hasFileRequirement: z.boolean().optional(),
@@ -51,6 +52,7 @@ const updateProgramSchema = z.object({
   // Related data for updates
   levelRequirementIds: z.array(z.string()).optional(),
   membershipRequirementIds: z.array(z.string()).optional(),
+  passRequirementIds: z.array(z.string()).optional(),
   waiverRequirementIds: z.array(z.string()).optional(),
   spaceIds: z.array(z.string()).optional(),
   staffAssignments: z.array(z.object({
@@ -299,6 +301,7 @@ export async function PATCH(
       if (validatedData.hasCapacityRestriction !== undefined) updateData.hasCapacityRestriction = validatedData.hasCapacityRestriction;
       if (validatedData.hasAgeRestriction !== undefined) updateData.hasAgeRestriction = validatedData.hasAgeRestriction;
       if (validatedData.hasMembershipRestriction !== undefined) updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
+      if (validatedData.hasPassRestriction !== undefined) updateData.hasPassRestriction = validatedData.hasPassRestriction;
       if (validatedData.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = validatedData.hasWaiverRestriction;
       if (validatedData.hasMedicalRequirement !== undefined) updateData.hasMedicalRequirement = validatedData.hasMedicalRequirement;
       if (validatedData.hasFileRequirement !== undefined) updateData.hasFileRequirement = validatedData.hasFileRequirement;
@@ -389,6 +392,18 @@ export async function PATCH(
           data: {
             requiredMemberships: {
               set: validatedData.membershipRequirementIds.map(membId => ({ id: membId })),
+            },
+          },
+        });
+      }
+
+      // Update pass requirements if provided
+      if (validatedData.passRequirementIds !== undefined) {
+        await tx.program.update({
+          where: { id },
+          data: {
+            requiredPasses: {
+              set: validatedData.passRequirementIds.map(passId => ({ id: passId })),
             },
           },
         });

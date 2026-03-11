@@ -83,6 +83,17 @@ export default async function ProgramDetailPage({
                     },
                 },
             },
+            requiredPasses: {
+                where: { status: "ACTIVE" },
+                select: {
+                    id: true,
+                    name: true,
+                    price: true,
+                    billingInterval: true,
+                    sessionLimit: true,
+                    limitPeriod: true,
+                },
+            },
             waiverRequirements: {
                 select: { id: true, waiverId: true },
             },
@@ -175,6 +186,15 @@ export default async function ProgramDetailPage({
             price: Number(m.price),
             billingInterval: m.billingInterval,
             group: m.group,
+        })),
+        hasPassRestriction: program.hasPassRestriction,
+        requiredPasses: (program.requiredPasses || []).map(p => ({
+            id: p.id,
+            name: p.name,
+            price: Number(p.price),
+            billingInterval: p.billingInterval,
+            sessionLimit: p.sessionLimit,
+            limitPeriod: p.limitPeriod,
         })),
         waiverRequirements: program.waiverRequirements,
     };

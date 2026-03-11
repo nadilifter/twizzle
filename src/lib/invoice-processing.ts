@@ -6,6 +6,11 @@ export interface InvoiceMetadata {
     athleteId?: string;
     quantity: number;
   }[];
+  passPurchases: {
+    passId: string;
+    athleteId?: string;
+    billingInterval?: string;
+  }[];
   programRegistrations: {
     programId?: string;
     requiredMemberships: string[];
@@ -185,7 +190,43 @@ export async function processInvoiceRegistrations(
     }
   }
 
-  // 4. Ensure OrganizationAthlete links exist for every athlete in this checkout
+  // 4. Pass purchases (AthletePass)
+  for (const purchase of (metadata.passPurchases ?? [])) {
+    if (!purchase.passId || !purchase.athleteId) continue;
+
+    const existing = await db.athletePass.findFirst({
+      where: {
+        athleteId: purchase.athleteId,
+        passId: purchase.passId,
+        status: "ACTIVE",
+      },
+    });
+
+    if (!existing) {
+      const now = new Date();
+      const interval = purchase.billingInterval || "MONTHLY";
+      const endDate = new Date(now);
+      if (interval === "YEARLY") {
+        endDate.setFullYear(endDate.getFullYear() + 1);
+      } else {
+        endDate.setMonth(endDate.getMonth() + 1);
+      }
+
+      await db.athletePass.create({
+        data: {
+          athleteId: purchase.athleteId,
+          passId: purchase.passId,
+          userId: userId ?? undefined,
+          startDate: now,
+          endDate,
+          status: "ACTIVE",
+          autoRenew: true,
+        },
+      });
+    }
+  }
+
+  // 5. Ensure OrganizationAthlete links exist for every athlete in this checkout
   if (organizationId) {
     const allAthleteIds = new Set<string>();
     for (const item of items) {
@@ -196,6 +237,9 @@ export async function processInvoiceRegistrations(
       if (reg.athleteId) allAthleteIds.add(reg.athleteId);
     }
     for (const purchase of metadata.membershipPurchases) {
+      if (purchase.athleteId) allAthleteIds.add(purchase.athleteId);
+    }
+    for (const purchase of (metadata.passPurchases ?? [])) {
       if (purchase.athleteId) allAthleteIds.add(purchase.athleteId);
     }
 

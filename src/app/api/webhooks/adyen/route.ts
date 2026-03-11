@@ -147,12 +147,13 @@ async function handleAuthorisation(
       const metadata: InvoiceMetadata = JSON.parse(invoice.notes)
 
       const cartItems = invoice.lineItems.map((li) => ({
-        referenceId: li.programId || li.membershipInstanceId || li.competitionId || li.id,
-        type: li.competitionId ? "competition" : li.membershipInstanceId ? "membership" : "program",
+        referenceId: li.programId || li.membershipInstanceId || li.passId || li.competitionId || li.id,
+        type: li.competitionId ? "competition" : li.membershipInstanceId ? "membership" : li.passId ? "pass" : "program",
         athleteId: li.athleteId || undefined,
         details: {
           programId: li.programId || undefined,
           membershipInstanceId: li.membershipInstanceId || undefined,
+          passId: li.passId || undefined,
           competitionId: li.competitionId || undefined,
         },
       }))

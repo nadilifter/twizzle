@@ -186,6 +186,10 @@ const data = {
           url: "/dashboard/registrations/programs",
         },
         {
+          title: "Passes",
+          url: "/dashboard/registrations/passes",
+        },
+        {
           title: "Queues",
           url: "/dashboard/registrations/queues",
         },

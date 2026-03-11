@@ -44,6 +44,7 @@ model Organization {
   // Relations
   statusLogs          OrganizationStatusLog[]
   membershipGroups    MembershipGroup[]
+  passes              Pass[]
   members             OrganizationMember[]
   programs            Program[]
   events              Event[]
@@ -231,6 +232,7 @@ model User {
   userPayments         Payment[]         @relation("UserPayments")
   userEnrollments      Enrollment[]      @relation("UserEnrollments")
   userRecurringCharges RecurringCharge[] @relation("UserRecurringCharges")
+  userAthletePasses    AthletePass[]    @relation("UserAthletePasses")
 
   // Communication
   userSmsMessages      SmsMessage[]      @relation("UserSmsMessages")
@@ -417,6 +419,7 @@ model Athlete {
   evaluations      Evaluation[]
   lineItems        LineItem[]
   memberships       AthleteMembership[]
+  passes            AthletePass[]
   media             Media[]
   registrationFiles RegistrationFile[]
   recurringCharges  RecurringCharge[]
@@ -777,6 +780,7 @@ model Program {
   hasCapacityRestriction   Boolean @default(false)
   hasAgeRestriction        Boolean @default(false)
   hasMembershipRestriction Boolean @default(false)
+  hasPassRestriction       Boolean @default(false)
   hasWaiverRestriction     Boolean @default(false)
   hasMedicalRequirement    Boolean @default(false)
   hasFileRequirement       Boolean @default(false)
@@ -794,6 +798,8 @@ model Program {
   lineItems           LineItem[]
   staffAssignments    ProgramStaff[]
   requiredMemberships MembershipInstance[]
+  coveredByPasses     Pass[]              @relation("PassCoveredPrograms")
+  requiredPasses      Pass[]              @relation("PassRequiredForPrograms")
   evaluations         Evaluation[]
   evaluationTemplates ProgramEvaluationTemplate[]
   bulkDiscounts       ProgramBulkDiscount[]
@@ -1110,6 +1116,7 @@ model InstanceRegistration {
   programInstanceId String
   athleteId         String
   userId            String? // The guardian who registered this instance
+  passId            String? // Pass used for this registration (session credit)
   status            RegistrationStatus @default(REGISTERED)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -1123,6 +1130,7 @@ model InstanceRegistration {
   @@index([programInstanceId])
   @@index([athleteId])
   @@index([userId])
+  @@index([passId])
   @@index([status])
 }
 
@@ -1274,6 +1282,7 @@ model LineItem {
   athleteId             String? // Which athlete?
   discountId            String? // Applied discount
   membershipInstanceId  String? // What membership instance?
+  passId                String? // What pass is this for?
   competitionId         String? // What competition is this for?
   competitionCategoryId String? // What competition category?
   createdAt             DateTime @default(now())
@@ -1285,6 +1294,7 @@ model LineItem {
   athlete             Athlete?             @relation(fields: [athleteId], references: [id])
   discount            Discount?            @relation(fields: [discountId], references: [id])
   membershipInstance  MembershipInstance?  @relation(fields: [membershipInstanceId], references: [id])
+  pass                Pass?                @relation(fields: [passId], references: [id])
   competition         Competition?         @relation(fields: [competitionId], references: [id])
   competitionCategory CompetitionCategory? @relation(fields: [competitionCategoryId], references: [id])
 }
@@ -4212,4 +4222,69 @@ model MemberCertification {
 enum CertificationEvaluationMethod {
   PASS_FAIL
   POINT_SCALE
+}
+
+// ============================================
+// PASSES
+// ============================================
+
+enum PassLimitPeriod {
+  WEEKLY
+  MONTHLY
+}
+
+enum PassStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  ARCHIVED
+}
+
+model Pass {
+  id                String          @id @default(cuid())
+  name              String
+  description       String?
+  price             Decimal         @db.Decimal(10, 2)
+  billingInterval   BillingInterval @default(MONTHLY)
+  sessionLimit      Int
+  limitPeriod       PassLimitPeriod @default(WEEKLY)
+  coversAllPrograms Boolean         @default(false)
+  status            PassStatus      @default(ACTIVE)
+  organizationId    String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  coveredPrograms     Program[]    @relation("PassCoveredPrograms")
+  requiredForPrograms Program[]    @relation("PassRequiredForPrograms")
+  athletePasses       AthletePass[]
+  lineItems           LineItem[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model AthletePass {
+  id        String     @id @default(cuid())
+  passId    String
+  athleteId String
+  userId    String?
+  startDate DateTime
+  endDate   DateTime?
+  status    PassStatus @default(ACTIVE)
+  autoRenew Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  pass    Pass     @relation(fields: [passId], references: [id], onDelete: Cascade)
+  athlete Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  user    User?    @relation("UserAthletePasses", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([passId, athleteId])
+  @@index([passId])
+  @@index([athleteId])
+  @@index([userId])
+  @@index([status])
 }

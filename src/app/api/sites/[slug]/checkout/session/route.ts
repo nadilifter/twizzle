@@ -9,7 +9,7 @@ import { getAuthSession } from "@/lib/auth";
 
 interface CartItem {
   referenceId: string;
-  type: "program" | "membership" | "item" | "event" | "competition";
+  type: "program" | "membership" | "item" | "event" | "competition" | "pass";
   name: string;
   description?: string;
   price: number;
@@ -20,9 +20,11 @@ interface CartItem {
     programId?: string;
     instanceId?: string;
     membershipInstanceId?: string;
+    passId?: string;
     athleteId?: string;
     level?: string;
     interval?: string;
+    billingInterval?: string;
     requiredMemberships?: string[];
     competitionId?: string;
     competitionName?: string;
@@ -52,7 +54,7 @@ export async function POST(
     const subdomain = params.slug;
 
     // Validate registration items have quantity of 1
-    const registrationTypes = ["program", "event", "membership", "competition"];
+    const registrationTypes = ["program", "event", "membership", "competition", "pass"];
     const invalidItems = items.filter(
       (item) => registrationTypes.includes(item.type) && item.quantity !== 1
     );
@@ -811,6 +813,7 @@ export async function POST(
 
     // 5. Create Invoice with metadata for post-payment processing
     const membershipInvoiceItems = items.filter((item: CartItem) => item.type === "membership");
+    const passInvoiceItems = items.filter((item: CartItem) => item.type === "pass");
     
     // Build metadata for webhook processing
     const invoiceMetadata = {
@@ -818,6 +821,11 @@ export async function POST(
         membershipInstanceId: item.details?.membershipInstanceId || item.referenceId,
         athleteId: item.athleteId || item.details?.athleteId,
         quantity: item.quantity,
+      })),
+      passPurchases: passInvoiceItems.map(item => ({
+        passId: item.details?.passId || item.referenceId,
+        athleteId: item.athleteId || item.details?.athleteId,
+        billingInterval: item.details?.billingInterval,
       })),
       programRegistrations: programItems.map(item => ({
         programId: item.details?.programId,
@@ -861,6 +869,7 @@ export async function POST(
               total: serverPrice,
               programId: item.type === 'program' ? (item.details?.programId || undefined) : undefined,
               membershipInstanceId: item.type === 'membership' ? (item.details?.membershipInstanceId || item.referenceId) : undefined,
+              passId: item.type === 'pass' ? (item.details?.passId || item.referenceId) : undefined,
               competitionId: isCompetition ? (item.details?.competitionId || item.referenceId) : undefined,
               athleteId: item.athleteId || item.details?.athleteId || undefined,
             };

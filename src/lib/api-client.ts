@@ -113,8 +113,8 @@ export const api = {
   /**
    * DELETE request
    */
-  delete<T>(endpoint: string): Promise<T> {
-    return apiFetch<T>(endpoint, { method: "DELETE" });
+  delete<T>(endpoint: string, body?: unknown): Promise<T> {
+    return apiFetch<T>(endpoint, { method: "DELETE", body });
   },
 };
 

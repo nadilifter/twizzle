@@ -84,6 +84,17 @@ export default async function SitePage({ params }: { params: { slug: string } })
             },
           },
         },
+        requiredPasses: {
+          where: { status: "ACTIVE" },
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            billingInterval: true,
+            sessionLimit: true,
+            limitPeriod: true,
+          },
+        },
       },
     }),
     db.level.findMany({
@@ -273,6 +284,10 @@ export default async function SitePage({ params }: { params: { slug: string } })
               requiredMemberships: program.requiredMemberships.map(m => ({
                 ...m,
                 price: Number(m.price),
+              })),
+              requiredPasses: (program.requiredPasses || []).map(p => ({
+                ...p,
+                price: Number(p.price),
               })),
               bulkDiscounts: (program as any).bulkDiscounts?.map((d: any) => ({
                 ...d,

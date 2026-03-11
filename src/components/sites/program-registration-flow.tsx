@@ -52,6 +52,7 @@ import {
   Heart,
   ClipboardList,
   ExternalLink,
+  Ticket,
 } from "lucide-react"
 
 // ---------- Types ----------
@@ -72,6 +73,15 @@ interface RequiredMembership {
   price: number
   billingInterval: string
   group: { id: string; name: string }
+}
+
+interface RequiredPass {
+  id: string
+  name: string
+  price: number
+  billingInterval: string
+  sessionLimit: number
+  limitPeriod: string
 }
 
 interface WaiverRequirement {
@@ -117,6 +127,7 @@ interface ProgramData {
   hasFileRequirement: boolean
   fileRequirementConfig: FileRequirementConfig | null
   hasMembershipRestriction: boolean
+  hasPassRestriction: boolean
   organizationId: string
   capacity: number | null
   hasCapacityRestriction: boolean
@@ -125,6 +136,7 @@ interface ProgramData {
   enrolled?: number
   waitlistedCount?: number
   requiredMemberships: RequiredMembership[]
+  requiredPasses?: RequiredPass[]
   waiverRequirements: WaiverRequirement[]
 }
 
@@ -141,6 +153,7 @@ const { useStepper } = defineStepper(
   { id: "athlete", title: "Select Athlete" },
   { id: "sessions", title: "Select Sessions" },
   { id: "membership", title: "Membership" },
+  { id: "pass", title: "Pass" },
   { id: "waivers", title: "Sign Waivers" },
   { id: "medical", title: "Medical Info" },
   { id: "files", title: "File Upload" },
@@ -183,6 +196,7 @@ export function ProgramRegistrationFlow({
   const needsMedicalStep = program.hasMedicalRequirement
   const needsFiles = program.hasFileRequirement && !!program.fileRequirementConfig
   const needsMembership = program.hasMembershipRestriction && program.requiredMemberships.length > 0
+  const needsPass = program.hasPassRestriction && (program.requiredPasses?.length ?? 0) > 0
 
   const programIsFull = program.hasCapacityRestriction
     && program.capacity != null
@@ -212,6 +226,9 @@ export function ProgramRegistrationFlow({
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null)
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set())
   const [selectedMembership, setSelectedMembership] = useState<RequiredMembership | null>(null)
+  const [selectedPass, setSelectedPass] = useState<RequiredPass | null>(null)
+  const [athleteHasPass, setAthleteHasPass] = useState(false)
+  const [isCheckingPass, setIsCheckingPass] = useState(false)
 
   // Existing registration check
   const [alreadyRegisteredIds, setAlreadyRegisteredIds] = useState<Set<string>>(new Set())
@@ -249,12 +266,13 @@ export function ProgramRegistrationFlow({
     const ids = ["athlete"]
     if (isPerInstance) ids.push("sessions")
     if (needsMembership) ids.push("membership")
+    if (needsPass) ids.push("pass")
     if (needsWaivers) ids.push("waivers")
     if (needsMedicalStep) ids.push("medical")
     if (needsFiles) ids.push("files")
     ids.push("review")
     return ids
-  }, [isPerInstance, needsMembership, needsWaivers, needsMedicalStep, needsFiles])
+  }, [isPerInstance, needsMembership, needsPass, needsWaivers, needsMedicalStep, needsFiles])
 
   const getNextStepId = useCallback(
     (currentId: string): string | null => {
@@ -461,6 +479,28 @@ export function ProgramRegistrationFlow({
     }
   }, [needsMembership, program.requiredMemberships])
 
+  // ---------- Pass helpers ----------
+
+  useEffect(() => {
+    if (needsPass && selectedAthlete) {
+      setIsCheckingPass(true)
+      fetch(`/api/public/passes?organizationId=${program.organizationId}`)
+        .then((r) => r.json())
+        .then((data) => {
+          const requiredPassIds = new Set(program.requiredPasses?.map((p) => p.id) || [])
+          const activePasses = (data.data || []).filter((p: { id: string }) => requiredPassIds.has(p.id))
+          if (activePasses.length > 0) {
+            setAthleteHasPass(false)
+            if (program.requiredPasses?.length === 1) {
+              setSelectedPass(program.requiredPasses[0])
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => setIsCheckingPass(false))
+    }
+  }, [needsPass, selectedAthlete, program.organizationId, program.requiredPasses])
+
   // ---------- Waiver helpers ----------
 
   const loadWaiverContent = useCallback(
@@ -644,7 +684,8 @@ export function ProgramRegistrationFlow({
   }, [isPerInstance, selectedInstanceIds.size, program.perSessionPrice, program.basePrice])
 
   const membershipPrice = selectedMembership ? selectedMembership.price : 0
-  const combinedTotal = totalPrice + membershipPrice
+  const passPrice = (needsPass && selectedPass && !athleteHasPass) ? selectedPass.price : 0
+  const combinedTotal = totalPrice + membershipPrice + passPrice
 
   // ---------- Add to cart ----------
 
@@ -668,6 +709,23 @@ export function ProgramRegistrationFlow({
           groupId: selectedMembership.group.id,
           groupName: selectedMembership.group.name,
           billingInterval: selectedMembership.billingInterval,
+        },
+      })
+    }
+
+    if (needsPass && selectedPass && !athleteHasPass) {
+      addItem({
+        referenceId: selectedPass.id,
+        type: "pass",
+        name: selectedPass.name,
+        description: `${selectedPass.sessionLimit} sessions / ${selectedPass.limitPeriod === "WEEKLY" ? "week" : "month"}`,
+        price: selectedPass.price,
+        quantity: 1,
+        athleteId: selectedAthlete.id,
+        athleteName,
+        details: {
+          passId: selectedPass.id,
+          billingInterval: selectedPass.billingInterval,
         },
       })
     }
@@ -753,6 +811,7 @@ export function ProgramRegistrationFlow({
   const canProceedFromAthlete = selectedAthlete !== null
   const canProceedFromSessions = selectedInstanceIds.size > 0
   const canProceedFromMembership = selectedMembership !== null
+  const canProceedFromPass = athleteHasPass || selectedPass !== null
 
   return (
     <div className="space-y-6">
@@ -1215,6 +1274,98 @@ export function ProgramRegistrationFlow({
                   disabled={!canProceedFromMembership}
                   onClick={() => {
                     const nextId = getNextStepId("membership")
+                    if (nextId) stepper.navigation.goTo(nextId as any)
+                  }}
+                >
+                  Continue
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step: Pass */}
+      {currentStepId === "pass" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Ticket className="h-5 w-5" />
+              Pass Required
+            </CardTitle>
+            <CardDescription>
+              This program requires an active pass. Select a pass to purchase or continue if you already have one.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {isCheckingPass ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : athleteHasPass ? (
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
+                  <Check className="h-5 w-5 text-green-600 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm text-green-800 dark:text-green-200">Active pass found</p>
+                    <p className="text-xs text-green-700 dark:text-green-300">You already have an active pass that covers this program.</p>
+                  </div>
+                </div>
+              ) : (program.requiredPasses?.length ?? 0) === 1 ? (
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-primary/40 bg-primary/5">
+                  <Ticket className="h-5 w-5 text-primary shrink-0" />
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{program.requiredPasses![0].name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {program.requiredPasses![0].sessionLimit} sessions / {program.requiredPasses![0].limitPeriod === "WEEKLY" ? "week" : "month"}
+                    </div>
+                  </div>
+                  <span className="font-bold">{formatPrice(program.requiredPasses![0].price)}/{program.requiredPasses![0].billingInterval.toLowerCase().replace("_", "-")}</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {program.requiredPasses?.map(p => {
+                    const isSelected = selectedPass?.id === p.id
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setSelectedPass(p)}
+                        className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-colors text-left ${
+                          isSelected ? "border-primary/40 bg-primary/5" : "border-border hover:bg-accent"
+                        }`}
+                      >
+                        <Ticket className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{p.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {p.sessionLimit} sessions / {p.limitPeriod === "WEEKLY" ? "week" : "month"}
+                          </div>
+                        </div>
+                        <span className="font-bold">{formatPrice(p.price)}/{p.billingInterval.toLowerCase().replace("_", "-")}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const prevId = getPreviousStepId("pass")
+                    if (prevId) stepper.navigation.goTo(prevId as any)
+                  }}
+                  className="gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  className="flex-1 gap-2"
+                  disabled={!canProceedFromPass}
+                  onClick={() => {
+                    const nextId = getNextStepId("pass")
                     if (nextId) stepper.navigation.goTo(nextId as any)
                   }}
                 >

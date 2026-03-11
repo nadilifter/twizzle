@@ -41,6 +41,7 @@ import {
   Heart,
   AlertTriangle,
   ShieldAlert,
+  Ticket,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -49,6 +50,7 @@ import { usePrograms } from "@/hooks/use-programs"
 import { useStaff } from "@/hooks/use-staff"
 import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
 import { useMemberships } from "@/hooks/use-memberships"
+import { usePasses } from "@/hooks/use-passes"
 import type { ProgramStaffRole } from "@/types/staff"
 import type { SpaceWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
@@ -119,6 +121,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
   const waitlistsEnabled = isFeatureEnabled("waitlists")
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
+  const { passes: availablePasses, isLoading: loadingPasses } = usePasses()
   const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("programs")
 
   const [activeTab, setActiveTab] = useState("general")
@@ -177,6 +180,8 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
     maxAge: (program.maxAge ?? null) as number | null,
     hasMembershipRestriction: program.hasMembershipRestriction || false,
     membershipRequirementIds: (program.requiredMemberships?.map((m: any) => m.id) || []) as string[],
+    hasPassRestriction: (program as any).hasPassRestriction || false,
+    passRequirementIds: ((program as any).requiredPasses?.map((p: any) => p.id) || []) as string[],
     hasWaiverRestriction: (program as any).hasWaiverRestriction || false,
     waiverRequirementIds: ((program as any).waiverRequirements?.map((wr: any) => wr.waiverId) || []) as string[],
     hasMedicalRequirement: (program as any).hasMedicalRequirement || false,
@@ -437,6 +442,10 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
       toast.error("Select at least one membership when membership restriction is enabled")
       return
     }
+    if (formData.hasPassRestriction && formData.passRequirementIds.length === 0) {
+      toast.error("Select at least one pass when pass restriction is enabled")
+      return
+    }
     if (formData.hasWaiverRestriction && formData.waiverRequirementIds.length === 0) {
       toast.error("Select at least one waiver when waiver restriction is enabled")
       return
@@ -492,6 +501,10 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         hasMembershipRestriction: formData.hasMembershipRestriction,
         membershipRequirementIds: formData.hasMembershipRestriction
           ? formData.membershipRequirementIds
+          : [],
+        hasPassRestriction: formData.hasPassRestriction,
+        passRequirementIds: formData.hasPassRestriction
+          ? formData.passRequirementIds
           : [],
         hasWaiverRestriction: formData.hasWaiverRestriction,
         waiverRequirementIds: formData.hasWaiverRestriction
@@ -1503,6 +1516,84 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                   )}
                 </div>
               )}
+              </div>
+            )}
+
+            {/* Pass Requirement */}
+            {isFeatureEnabled("passes") && (
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Pass Requirement</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Require athletes to have an active pass to register
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.hasPassRestriction}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        hasPassRestriction: checked,
+                        passRequirementIds: checked ? prev.passRequirementIds : [],
+                      }))
+                    }
+                  />
+                </div>
+
+                {formData.hasPassRestriction && (
+                  <div className="pt-2 border-t">
+                    {loadingPasses ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading passes...
+                      </div>
+                    ) : availablePasses.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No passes configured.{" "}
+                        <a href="/dashboard/registrations/passes" className="text-primary underline">
+                          Create passes
+                        </a>{" "}
+                        first.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {availablePasses.map((pass) => (
+                          <label
+                            key={pass.id}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                              formData.passRequirementIds.includes(pass.id)
+                                ? "border-primary bg-primary/5"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
+                            <Checkbox
+                              checked={formData.passRequirementIds.includes(pass.id)}
+                              onCheckedChange={(checked) => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  passRequirementIds: checked
+                                    ? [...prev.passRequirementIds, pass.id]
+                                    : prev.passRequirementIds.filter((id) => id !== pass.id),
+                                }))
+                              }}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <Ticket className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">{pass.name}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                ${Number(pass.price).toFixed(2)} / {pass.billingInterval.toLowerCase().replace("_", "-")} · {pass.sessionLimit} sessions / {pass.limitPeriod === "WEEKLY" ? "week" : "month"}
+                              </span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

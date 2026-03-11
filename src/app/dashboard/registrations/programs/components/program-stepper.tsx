@@ -55,6 +55,7 @@ import {
   ClipboardList,
   ShieldAlert,
   Copy,
+  Ticket,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -63,6 +64,7 @@ import { useFeatures } from "@/components/feature-context"
 import { useStaff } from "@/hooks/use-staff"
 import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
 import { useMemberships } from "@/hooks/use-memberships"
+import { usePasses } from "@/hooks/use-passes"
 import type { ProgramStaffRole } from "@/types/staff"
 import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, SpaceWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
@@ -147,6 +149,8 @@ interface ProgramFormData {
   maxAge: number | null
   hasMembershipRestriction: boolean
   membershipRequirementIds: string[]
+  hasPassRestriction: boolean
+  passRequirementIds: string[]
   hasWaiverRestriction: boolean
   waiverRequirementIds: string[]
   hasMedicalRequirement: boolean
@@ -198,6 +202,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   // Hooks for data
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
+  const { passes: availablePasses, isLoading: loadingPasses } = usePasses()
   const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("programs")
   
   // Levels state
@@ -279,6 +284,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     maxAge: program?.maxAge || null,
     hasMembershipRestriction: program?.hasMembershipRestriction || false,
     membershipRequirementIds: program?.requiredMemberships?.map(m => m.id) || [],
+    hasPassRestriction: (program as any)?.hasPassRestriction || false,
+    passRequirementIds: (program as any)?.requiredPasses?.map((p: any) => p.id) || [],
     hasWaiverRestriction: (program as any)?.hasWaiverRestriction || false,
     waiverRequirementIds: (program as any)?.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
     hasMedicalRequirement: program?.hasMedicalRequirement || false,
@@ -354,6 +361,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         maxAge: data.maxAge || null,
         hasMembershipRestriction: data.hasMembershipRestriction || false,
         membershipRequirementIds: data.requiredMemberships?.map((m: any) => m.id) || [],
+        hasPassRestriction: data.hasPassRestriction || false,
+        passRequirementIds: data.requiredPasses?.map((p: any) => p.id) || [],
         hasWaiverRestriction: data.hasWaiverRestriction || false,
         waiverRequirementIds: data.waiverRequirements?.map((wr: any) => wr.waiverId) || [],
         hasMedicalRequirement: data.hasMedicalRequirement || false,
@@ -635,6 +644,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           toast.error("Select at least one membership when membership restriction is enabled")
           return false
         }
+        if (formData.hasPassRestriction && formData.passRequirementIds.length === 0) {
+          toast.error("Select at least one pass when pass restriction is enabled")
+          return false
+        }
         if (formData.hasWaiverRestriction && formData.waiverRequirementIds.length === 0) {
           toast.error("Select at least one waiver when waiver restriction is enabled")
           return false
@@ -718,6 +731,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         hasCapacityRestriction: formData.hasCapacityRestriction,
         hasAgeRestriction: formData.hasAgeRestriction,
         hasMembershipRestriction: formData.hasMembershipRestriction,
+        hasPassRestriction: formData.hasPassRestriction,
         hasWaiverRestriction: formData.hasWaiverRestriction,
         hasMedicalRequirement: formData.hasMedicalRequirement,
         hasFileRequirement: formData.hasFileRequirement,
@@ -734,6 +748,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         waitlistCapacity: formData.waitlistEnabled ? formData.waitlistCapacity : null,
         levelRequirementIds: formData.hasLevelRestriction ? formData.levelRequirementIds : [],
         membershipRequirementIds: formData.hasMembershipRestriction ? formData.membershipRequirementIds : [],
+        passRequirementIds: formData.hasPassRestriction ? formData.passRequirementIds : [],
         waiverRequirementIds: formData.hasWaiverRestriction ? formData.waiverRequirementIds : [],
         staffAssignments: formData.staffAssignments.map(sa => ({
           memberId: sa.memberId,
@@ -1853,6 +1868,78 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                                   <span className="text-sm font-medium">{instance.groupName} - {instance.name}</span>
                                 </div>
                                 <span className="text-xs text-muted-foreground">${instance.price.toFixed(2)}</span>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Pass Requirement */}
+              {isFeatureEnabled("passes") && (
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Pass Requirement</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Require athletes to have an active pass to register
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.hasPassRestriction}
+                      onCheckedChange={checked => setFormData(prev => ({
+                        ...prev,
+                        hasPassRestriction: checked,
+                        passRequirementIds: checked ? prev.passRequirementIds : [],
+                      }))}
+                    />
+                  </div>
+                  
+                  {formData.hasPassRestriction && (
+                    <div className="pt-2 border-t">
+                      {loadingPasses ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading passes...
+                        </div>
+                      ) : availablePasses.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No passes configured. <a href="/dashboard/registrations/passes" className="text-primary underline">Create passes</a> first.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {availablePasses.map((pass) => (
+                            <label
+                              key={pass.id}
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                                formData.passRequirementIds.includes(pass.id)
+                                  ? "border-primary bg-primary/5"
+                                  : "hover:bg-muted/50"
+                              )}
+                            >
+                              <Checkbox
+                                checked={formData.passRequirementIds.includes(pass.id)}
+                                onCheckedChange={checked => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    passRequirementIds: checked
+                                      ? [...prev.passRequirementIds, pass.id]
+                                      : prev.passRequirementIds.filter(id => id !== pass.id),
+                                  }))
+                                }}
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Ticket className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm font-medium">{pass.name}</span>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  ${Number(pass.price).toFixed(2)} / {pass.billingInterval.toLowerCase().replace("_", "-")} · {pass.sessionLimit} sessions / {pass.limitPeriod === "WEEKLY" ? "week" : "month"}
+                                </span>
                               </div>
                             </label>
                           ))}

@@ -23,6 +23,7 @@ const TENANT_MODELS = [
   "WebsiteConfig",
   "OrganizationMember",
   "MembershipGroup",
+  "Pass",
   "Discount",
   "GLCode",
   "LedgerEntry",
