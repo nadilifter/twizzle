@@ -30,7 +30,7 @@ WHERE p."recurrenceType" = 'NON_RECURRING';
 
 -- Step 2: Migrate staff assignments (ProgramStaff -> EventStaff) for converted programs
 INSERT INTO "EventStaff" (
-  "id", "eventId", "memberId", "role", "isPrimary", "createdAt", "updatedAt"
+  "id", "eventId", "memberId", "role", "createdAt", "updatedAt"
 )
 SELECT
   gen_random_uuid()::text,
@@ -43,7 +43,6 @@ SELECT
     WHEN 'VOLUNTEER' THEN 'VOLUNTEER'::"EventStaffRole"
     ELSE 'ASSISTANT'::"EventStaffRole"
   END,
-  ps."isPrimary",
   NOW(),
   NOW()
 FROM "ProgramStaff" ps
