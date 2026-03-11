@@ -275,6 +275,8 @@ export interface CreateProgramPayload {
   levelRequirementIds?: string[];
   // For membership requirements during creation
   membershipRequirementIds?: string[];
+  // For pass requirements during creation
+  passRequirementIds?: string[];
   // For waiver requirements during creation
   waiverRequirementIds?: string[];
   // For space assignments during creation
@@ -325,6 +327,8 @@ export interface UpdateProgramPayload {
   levelRequirementIds?: string[];
   // For membership requirements
   membershipRequirementIds?: string[];
+  // For pass requirements
+  passRequirementIds?: string[];
   // For waiver requirements
   waiverRequirementIds?: string[];
   // For space assignments
