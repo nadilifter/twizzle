@@ -92,7 +92,7 @@ WHERE "programInstanceId" IN (
   WHERE p."recurrenceType" = 'NON_RECURRING'
 );
 
-DELETE FROM "ProgramInstanceSpace"
+DELETE FROM "ProgramInstanceTrainingZone"
 WHERE "programInstanceId" IN (
   SELECT pi."id" FROM "ProgramInstance" pi
   JOIN "Program" p ON p."id" = pi."programId"
@@ -119,7 +119,7 @@ WHERE "programId" IN (
   SELECT "id" FROM "Program" WHERE "recurrenceType" = 'NON_RECURRING'
 );
 
-DELETE FROM "ProgramSpace"
+DELETE FROM "ProgramTrainingZone"
 WHERE "programId" IN (
   SELECT "id" FROM "Program" WHERE "recurrenceType" = 'NON_RECURRING'
 );
