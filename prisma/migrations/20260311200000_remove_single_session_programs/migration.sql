@@ -65,7 +65,7 @@ SELECT
     WHEN 'WAITLISTED' THEN 'REGISTERED'::"AttendanceStatus"
     ELSE 'REGISTERED'::"AttendanceStatus"
   END,
-  false,
+  NULL,
   ir."createdAt",
   NOW()
 FROM "InstanceRegistration" ir
