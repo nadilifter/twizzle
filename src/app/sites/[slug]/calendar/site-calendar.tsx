@@ -73,7 +73,7 @@ export function SiteCalendar({ slug, organizationId, organizationName }: SiteCal
       slug={slug}
       isPublic={true}
       onEventClick={handleEventClick}
-      className="border-0 shadow-none"
+      className="shadow-none"
     />
   );
 }

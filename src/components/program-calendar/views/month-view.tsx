@@ -79,7 +79,7 @@ export function MonthView() {
       </div>
 
       {/* Desktop Calendar Grid */}
-      <div className="hidden md:grid grid-cols-7 flex-1 border-t divide-x divide-border auto-rows-fr">
+      <div className="hidden md:grid grid-cols-7 flex-1 border-t divide-x divide-border auto-rows-fr [&>div:nth-last-child(-n+7)]:border-b-0">
         {calendarDays.map((day) => {
           const dayEvents = getEventsForDay(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
