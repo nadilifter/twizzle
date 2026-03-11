@@ -103,6 +103,7 @@ export interface Program {
   hasCapacityRestriction: boolean;
   hasAgeRestriction: boolean;
   hasMembershipRestriction: boolean;
+  hasPassRestriction: boolean;
   hasWaiverRestriction: boolean;
   hasMedicalRequirement: boolean;
   
@@ -254,6 +255,7 @@ export interface CreateProgramPayload {
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
   hasMembershipRestriction?: boolean;
+  hasPassRestriction?: boolean;
   hasWaiverRestriction?: boolean;
   hasMedicalRequirement?: boolean;
   hasFileRequirement?: boolean;
@@ -303,6 +305,7 @@ export interface UpdateProgramPayload {
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
   hasMembershipRestriction?: boolean;
+  hasPassRestriction?: boolean;
   hasWaiverRestriction?: boolean;
   hasMedicalRequirement?: boolean;
   hasFileRequirement?: boolean;
