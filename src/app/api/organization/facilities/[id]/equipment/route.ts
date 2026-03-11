@@ -6,7 +6,6 @@ import { z } from "zod";
 
 const createEquipmentSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  type: z.string().min(1, "Type is required"),
   serialNumber: z.string().optional().nullable(),
   condition: z.enum(["EXCELLENT", "GOOD", "FAIR", "POOR", "UNSAFE"]).optional(),
   status: z.enum(["ACTIVE", "RETIRED", "MAINTENANCE"]).optional(),
@@ -105,7 +104,6 @@ export async function POST(
         organizationId,
         facilityId,
         name: validatedData.name,
-        type: validatedData.type,
         serialNumber: validatedData.serialNumber ?? null,
         condition: validatedData.condition ?? "GOOD",
         status: validatedData.status ?? "ACTIVE",

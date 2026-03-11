@@ -19,6 +19,7 @@ import {
   Trash2,
   ChevronRight,
   Clock,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -115,7 +116,6 @@ interface Space {
 interface Equipment {
   id: string
   name: string
-  type: string
   serialNumber: string | null
   condition: "EXCELLENT" | "GOOD" | "FAIR" | "POOR" | "UNSAFE"
   status: "ACTIVE" | "RETIRED" | "MAINTENANCE"
@@ -149,6 +149,12 @@ export default function FacilitiesPage() {
   const [editingSpaceAvailability, setEditingSpaceAvailability] = useState<Space | null>(null)
   const [availabilitySlots, setAvailabilitySlots] = useState<Record<number, { enabled: boolean; openTime: string; closeTime: string }>>({})
   const [savingAvailability, setSavingAvailability] = useState(false)
+
+  // Facility operating hours state
+  type TimeBlock = { openTime: string; closeTime: string }
+  const [operatingHours, setOperatingHours] = useState<Record<number, TimeBlock[]>>({
+    0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [],
+  })
 
   // Fetch facilities
   const fetchFacilities = useCallback(async () => {
@@ -207,6 +213,35 @@ export default function FacilitiesPage() {
     }
   }, [selectedFacility, fetchFacilityDetails])
 
+  const emptyOperatingHours = (): Record<number, TimeBlock[]> =>
+    ({ 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] })
+
+  const loadOperatingHours = async (facilityId: string) => {
+    try {
+      const res = await fetch(`/api/organization/facilities/${facilityId}/operating-hours`)
+      if (res.ok) {
+        const data: Array<{ dayOfWeek: number; openTime: string; closeTime: string }> = await res.json()
+        const hours = emptyOperatingHours()
+        for (const slot of data) {
+          hours[slot.dayOfWeek].push({ openTime: slot.openTime, closeTime: slot.closeTime })
+        }
+        setOperatingHours(hours)
+      }
+    } catch {
+      // Leave defaults on error
+    }
+  }
+
+  const openFacilityForm = (facility: Facility | null) => {
+    setEditingFacility(facility)
+    if (facility) {
+      loadOperatingHours(facility.id)
+    } else {
+      setOperatingHours(emptyOperatingHours())
+    }
+    setFacilityFormOpen(true)
+  }
+
   // Create or update facility
   const handleSaveFacility = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -245,6 +280,28 @@ export default function FacilitiesPage() {
       }
       
       const savedFacility = await res.json()
+
+      // Save operating hours
+      const slots = Object.entries(operatingHours).flatMap(([day, blocks]) =>
+        blocks.map((b) => ({ dayOfWeek: parseInt(day), openTime: b.openTime, closeTime: b.closeTime }))
+      )
+      try {
+        const hoursRes = await fetch(
+          `/api/organization/facilities/${savedFacility.id}/operating-hours`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slots }),
+          }
+        )
+        if (!hoursRes.ok) {
+          const err = await hoursRes.json()
+          toast.error(err.error || "Facility saved but failed to save operating hours")
+        }
+      } catch {
+        toast.error("Facility saved but failed to save operating hours")
+      }
+
       toast.success(editingFacility ? "Facility updated" : "Facility created")
       setFacilityFormOpen(false)
       setEditingFacility(null)
@@ -335,7 +392,6 @@ export default function FacilitiesPage() {
     const formData = new FormData(e.currentTarget)
     const data = {
       name: formData.get("name") as string,
-      type: formData.get("type") as string,
       condition: formData.get("condition") as string || "GOOD",
       spaceId: formData.get("spaceId") as string || null,
     }
@@ -463,8 +519,7 @@ export default function FacilitiesPage() {
   )
 
   const filteredEquipment = equipment.filter(e => 
-    e.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-    e.type.toLowerCase().includes(equipmentSearch.toLowerCase())
+    e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
   )
 
   const getStatusBadgeVariant = (status: string) => {
@@ -508,7 +563,7 @@ export default function FacilitiesPage() {
         </div>
         <Sheet open={facilityFormOpen} onOpenChange={setFacilityFormOpen}>
           <SheetTrigger asChild>
-            <Button onClick={() => setEditingFacility(null)}>
+            <Button onClick={() => openFacilityForm(null)}>
               <Plus className="mr-2 h-4 w-4" /> Add Facility
             </Button>
           </SheetTrigger>
@@ -667,8 +722,7 @@ export default function FacilitiesPage() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={(e) => {
                       e.stopPropagation()
-                      setEditingFacility(facility)
-                      setFacilityFormOpen(true)
+                      openFacilityForm(facility)
                     }}>
                       <Pencil className="mr-2 h-4 w-4" /> Edit
                     </DropdownMenuItem>
@@ -795,10 +849,7 @@ export default function FacilitiesPage() {
                     <CardFooter>
                       <Button 
                         variant="outline" 
-                        onClick={() => {
-                          setEditingFacility(selectedFacility)
-                          setFacilityFormOpen(true)
-                        }}
+                        onClick={() => openFacilityForm(selectedFacility)}
                       >
                         <Pencil className="mr-2 h-4 w-4" /> Edit Details
                       </Button>
@@ -990,20 +1041,6 @@ export default function FacilitiesPage() {
                           <Input id="equip-name" name="name" placeholder="e.g. Beam #3" required />
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="equip-type">Type *</Label>
-                          <Select name="type" required>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Apparatus">Apparatus</SelectItem>
-                              <SelectItem value="Mat">Mat</SelectItem>
-                              <SelectItem value="Training Aid">Training Aid</SelectItem>
-                              <SelectItem value="Safety Equipment">Safety Equipment</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-2">
                           <Label htmlFor="equip-condition">Condition</Label>
                           <Select name="condition" defaultValue="GOOD">
                             <SelectTrigger>
@@ -1057,7 +1094,6 @@ export default function FacilitiesPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[250px]">Name</TableHead>
-                        <TableHead>Type</TableHead>
                         <TableHead>Space</TableHead>
                         <TableHead>Condition</TableHead>
                         <TableHead>Last Inspection</TableHead>
@@ -1068,7 +1104,6 @@ export default function FacilitiesPage() {
                       {filteredEquipment.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.type}</TableCell>
                           <TableCell>{item.space?.name || "—"}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">

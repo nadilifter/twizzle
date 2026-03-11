@@ -2608,6 +2608,7 @@ model Facility {
   programs         Program[]
   programInstances ProgramInstance[]
   competitions     Competition[]
+  operatingHours   FacilityOperatingHours[]
 
   @@index([organizationId])
 }
@@ -2616,6 +2617,18 @@ enum FacilityStatus {
   ACTIVE
   INACTIVE
   MAINTENANCE
+}
+
+model FacilityOperatingHours {
+  id         String @id @default(cuid())
+  facilityId String
+  dayOfWeek  Int // 0=Sunday, 1=Monday, ..., 6=Saturday
+  openTime   String // e.g., "09:00"
+  closeTime  String // e.g., "17:00"
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId])
 }
 
 model Space {
@@ -2704,7 +2717,6 @@ model Equipment {
   spaceId        String? @map("trainingZoneId")
 
   name         String
-  type         String // e.g., "Apparatus", "Mat", "Training Aid"
   serialNumber String?
   condition    EquipmentCondition @default(GOOD)
   status       EquipmentStatus    @default(ACTIVE)

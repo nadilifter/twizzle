@@ -880,23 +880,23 @@ async function main() {
   console.log("\n🎯 Creating equipment...");
   const equipmentData = [
     // Org1 Main Facility Equipment
-    { id: `${ORG1_ID}-equip-1`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-1`, name: "Spring Floor A", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(30) },
-    { id: `${ORG1_ID}-equip-2`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-2`, name: "Vault Table (Tac/10)", type: "Apparatus", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(15) },
-    { id: `${ORG1_ID}-equip-3`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-3`, name: "Uneven Bars Set 1", type: "Apparatus", condition: "FAIR" as const, status: "MAINTENANCE" as const, lastInspectionDate: daysAgo(60) },
-    { id: `${ORG1_ID}-equip-4`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "High Beam 1", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(45) },
-    { id: `${ORG1_ID}-equip-5`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "High Beam 2", type: "Apparatus", condition: "POOR" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(90) },
-    { id: `${ORG1_ID}-equip-6`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-5`, name: "Tumble Track", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
-    { id: `${ORG1_ID}-equip-7`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-2`, name: "Landing Mat (Blue)", type: "Mat", condition: "FAIR" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(40) },
-    { id: `${ORG1_ID}-equip-8`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "Low Beam Training", type: "Training Aid", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(25) },
+    { id: `${ORG1_ID}-equip-1`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-1`, name: "Spring Floor A", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(30) },
+    { id: `${ORG1_ID}-equip-2`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-2`, name: "Vault Table (Tac/10)", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(15) },
+    { id: `${ORG1_ID}-equip-3`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-3`, name: "Uneven Bars Set 1", condition: "FAIR" as const, status: "MAINTENANCE" as const, lastInspectionDate: daysAgo(60) },
+    { id: `${ORG1_ID}-equip-4`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "High Beam 1", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(45) },
+    { id: `${ORG1_ID}-equip-5`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "High Beam 2", condition: "POOR" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(90) },
+    { id: `${ORG1_ID}-equip-6`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-5`, name: "Tumble Track", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
+    { id: `${ORG1_ID}-equip-7`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-2`, name: "Landing Mat (Blue)", condition: "FAIR" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(40) },
+    { id: `${ORG1_ID}-equip-8`, organizationId: ORG1_ID, facilityId: org1Facility1.id, spaceId: `${ORG1_ID}-space-4`, name: "Low Beam Training", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(25) },
     // Org1 Satellite Equipment
-    { id: `${ORG1_ID}-equip-9`, organizationId: ORG1_ID, facilityId: org1Facility2.id, spaceId: `${ORG1_ID}-space-6`, name: "Preschool Foam Shapes", type: "Training Aid", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(10) },
-    { id: `${ORG1_ID}-equip-10`, organizationId: ORG1_ID, facilityId: org1Facility2.id, spaceId: `${ORG1_ID}-space-7`, name: "Panel Mat Set", type: "Mat", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(35) },
+    { id: `${ORG1_ID}-equip-9`, organizationId: ORG1_ID, facilityId: org1Facility2.id, spaceId: `${ORG1_ID}-space-6`, name: "Preschool Foam Shapes", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(10) },
+    { id: `${ORG1_ID}-equip-10`, organizationId: ORG1_ID, facilityId: org1Facility2.id, spaceId: `${ORG1_ID}-space-7`, name: "Panel Mat Set", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(35) },
     // Org2 Equipment
-    { id: `${ORG2_ID}-equip-1`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-1`, name: "Basketball Hoop A", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
-    { id: `${ORG2_ID}-equip-2`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-2`, name: "Basketball Hoop B", type: "Apparatus", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
-    { id: `${ORG2_ID}-equip-3`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-3`, name: "Soccer Goals (Pair)", type: "Apparatus", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(7) },
-    { id: `${ORG2_ID}-equip-4`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-4`, name: "Lane Dividers", type: "Safety Equipment", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(14) },
-    { id: `${ORG2_ID}-equip-5`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-5`, name: "Treadmills (Set of 5)", type: "Apparatus", condition: "FAIR" as const, status: "MAINTENANCE" as const, lastInspectionDate: daysAgo(60) },
+    { id: `${ORG2_ID}-equip-1`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-1`, name: "Basketball Hoop A", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
+    { id: `${ORG2_ID}-equip-2`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-2`, name: "Basketball Hoop B", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(20) },
+    { id: `${ORG2_ID}-equip-3`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-3`, name: "Soccer Goals (Pair)", condition: "EXCELLENT" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(7) },
+    { id: `${ORG2_ID}-equip-4`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-4`, name: "Lane Dividers", condition: "GOOD" as const, status: "ACTIVE" as const, lastInspectionDate: daysAgo(14) },
+    { id: `${ORG2_ID}-equip-5`, organizationId: ORG2_ID, facilityId: org2Facility.id, spaceId: `${ORG2_ID}-space-5`, name: "Treadmills (Set of 5)", condition: "FAIR" as const, status: "MAINTENANCE" as const, lastInspectionDate: daysAgo(60) },
   ];
   await Promise.all(equipmentData.map((e) =>
     prisma.equipment.upsert({

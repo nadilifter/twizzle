@@ -6,7 +6,6 @@ import { z } from "zod";
 
 const updateEquipmentSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
-  type: z.string().min(1, "Type is required").optional(),
   serialNumber: z.string().optional().nullable(),
   condition: z.enum(["EXCELLENT", "GOOD", "FAIR", "POOR", "UNSAFE"]).optional(),
   status: z.enum(["ACTIVE", "RETIRED", "MAINTENANCE"]).optional(),

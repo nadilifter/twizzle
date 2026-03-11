@@ -373,7 +373,6 @@ classDiagram
         +String facilityId
         +String spaceId
         +String name
-        +String type
         +EquipmentCondition condition
         +EquipmentStatus status
         +DateTime lastInspectionDate
