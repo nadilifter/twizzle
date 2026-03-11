@@ -317,8 +317,8 @@ export default async function SiteLayout({
                 </Link>
                 <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
                     <Link href="/" className="text-foreground/80 hover:text-primary transition-colors">Home</Link>
+                    {config.showRegistration && <Link href="/register" className="text-foreground/80 hover:text-primary transition-colors">Programs</Link>}
                     {config.showCalendar && <Link href="/calendar" className="text-foreground/80 hover:text-primary transition-colors">Calendar</Link>}
-                    {config.showRegistration && <Link href="/register" className="text-foreground/80 hover:text-primary transition-colors">Register</Link>}
                     {config.showCompetitions && <Link href="/competitions" className="text-foreground/80 hover:text-primary transition-colors">Competitions</Link>}
                     {config.showContact && <Link href="/contact" className="text-foreground/80 hover:text-primary transition-colors">Contact</Link>}
                 </nav>
@@ -376,7 +376,7 @@ export default async function SiteLayout({
                             href="/register" 
                             className="text-sm text-muted-foreground transition-colors hover:text-primary"
                         >
-                            Register
+                            Programs
                         </Link>
                     )}
                     {config.showCompetitions && (

@@ -523,12 +523,12 @@ export default function WebsitePage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Show Calendar</Label>
-              <p className="text-sm text-muted-foreground">Display your class schedule.</p>
+              <Label>Show Programs</Label>
+              <p className="text-sm text-muted-foreground">Allow users to register for programs online.</p>
             </div>
             <Switch 
-              checked={config.showCalendar !== false} 
-              onCheckedChange={(c) => updateConfig("showCalendar", c)} 
+              checked={config.showRegistration !== false} 
+              onCheckedChange={(c) => updateConfig("showRegistration", c)} 
             />
           </div>
           
@@ -536,12 +536,12 @@ export default function WebsitePage() {
           
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Show Registration</Label>
-              <p className="text-sm text-muted-foreground">Allow users to register online.</p>
+              <Label>Show Calendar</Label>
+              <p className="text-sm text-muted-foreground">Display your class schedule.</p>
             </div>
             <Switch 
-              checked={config.showRegistration !== false} 
-              onCheckedChange={(c) => updateConfig("showRegistration", c)} 
+              checked={config.showCalendar !== false} 
+              onCheckedChange={(c) => updateConfig("showCalendar", c)} 
             />
           </div>
           
