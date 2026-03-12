@@ -1,6 +1,7 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from "react"
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from "react"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 
 export type CartItem = {
@@ -24,6 +25,12 @@ export function isRegistrationType(type: CartItem["type"]): boolean {
   return REGISTRATION_TYPES.includes(type)
 }
 
+const GUEST_CART_KEY = "uplifter-cart-guest"
+
+function getCartKey(userId: string | undefined): string {
+  return userId ? `uplifter-cart-${userId}` : GUEST_CART_KEY
+}
+
 interface CartContextType {
   items: CartItem[]
   isOpen: boolean
@@ -42,28 +49,83 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession()
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
+  const currentUserIdRef = useRef<string | undefined>(undefined)
 
-  // Load from local storage on mount
+  // Load cart from localStorage, scoped to the current user.
+  // When a guest logs in, their guest cart migrates to the user-specific key.
   useEffect(() => {
-    const savedCart = localStorage.getItem("uplifter-cart")
-    if (savedCart) {
+    if (status === "loading") return
+
+    const userId = session?.user?.id
+    const cartKey = getCartKey(userId)
+
+    // Avoid re-loading when the user hasn't actually changed
+    if (isInitialized && currentUserIdRef.current === userId) return
+    currentUserIdRef.current = userId
+
+    let parsed: CartItem[] = []
+
+    const saved = localStorage.getItem(cartKey)
+    if (saved) {
       try {
-        setItems(JSON.parse(savedCart))
-      } catch (e) {
-        console.error("Failed to parse cart from local storage", e)
+        parsed = JSON.parse(saved)
+      } catch {
+        // corrupt data — start fresh
       }
     }
-    setIsInitialized(true)
-  }, [])
 
-  // Save to local storage on change
-  useEffect(() => {
-    if (isInitialized) {
-      localStorage.setItem("uplifter-cart", JSON.stringify(items))
+    // One-time migration from the legacy global "uplifter-cart" key
+    const legacyCart = localStorage.getItem("uplifter-cart")
+    if (legacyCart) {
+      try {
+        const legacyItems: CartItem[] = JSON.parse(legacyCart)
+        if (legacyItems.length > 0 && parsed.length === 0) {
+          parsed = legacyItems
+        }
+      } catch {
+        // ignore
+      }
+      localStorage.removeItem("uplifter-cart")
     }
+
+    // Migrate guest cart when a user logs in
+    if (userId) {
+      const guestCart = localStorage.getItem(GUEST_CART_KEY)
+      if (guestCart) {
+        try {
+          const guestItems: CartItem[] = JSON.parse(guestCart)
+          if (guestItems.length > 0) {
+            // Merge: add guest items that aren't already in the user's cart
+            const existingKeys = new Set(
+              parsed.map((i) => `${i.referenceId}|${i.athleteId}|${JSON.stringify(i.details)}`)
+            )
+            for (const gi of guestItems) {
+              const key = `${gi.referenceId}|${gi.athleteId}|${JSON.stringify(gi.details)}`
+              if (!existingKeys.has(key)) {
+                parsed.push(gi)
+              }
+            }
+          }
+        } catch {
+          // ignore corrupt guest data
+        }
+        localStorage.removeItem(GUEST_CART_KEY)
+      }
+    }
+
+    setItems(parsed)
+    setIsInitialized(true)
+  }, [session?.user?.id, status, isInitialized])
+
+  // Save to localStorage on change, using the user-scoped key
+  useEffect(() => {
+    if (!isInitialized) return
+    const cartKey = getCartKey(currentUserIdRef.current)
+    localStorage.setItem(cartKey, JSON.stringify(items))
   }, [items, isInitialized])
 
   const addItem = (item: Omit<CartItem, "id">) => {
@@ -109,10 +171,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     )
   }
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setItems([])
-    localStorage.removeItem("uplifter-cart")
-  }
+    const cartKey = getCartKey(currentUserIdRef.current)
+    localStorage.removeItem(cartKey)
+  }, [])
 
   // Find items that depend on the given item (e.g., programs that require a membership)
   const getDependentItems = (id: string): CartItem[] => {
