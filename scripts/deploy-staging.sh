@@ -30,6 +30,16 @@ echo "   Target: upliftergymnastics.com"
 echo "========================================"
 echo ""
 
+# Run local type check to catch build errors before deploying
+log_step "Running local type check..."
+TS_ERRORS=$(pnpm tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
+if [ -n "$TS_ERRORS" ]; then
+    log_error "TypeScript errors detected in project files — fix before deploying:"
+    echo "$TS_ERRORS" | head -20
+    exit 1
+fi
+log_info "Type check passed"
+
 # Check SSH connection
 log_step "Checking SSH connection..."
 if ! ssh -o ConnectTimeout=5 "$SSH_HOST" "echo 'connected'" > /dev/null 2>&1; then

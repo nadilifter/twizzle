@@ -771,8 +771,8 @@ model Program {
   maxAge Int? // Maximum age (0-100)
 
   // Space Capacity
-  hasSpaceRestriction Boolean           @default(false) @map("hasTrainingZoneRestriction")
-  spaceCapacityMode   SpaceCapacityMode @default(MINIMUM) @map("trainingZoneCapacityMode")
+  hasSpaceRestriction Boolean           @default(false)
+  spaceCapacityMode   SpaceCapacityMode @default(MINIMUM)
 
   // Restriction Flags (for UI toggle state)
   hasGenderRestriction     Boolean @default(false)
@@ -2654,28 +2654,23 @@ model Space {
   availability        SpaceAvailability[]
 
   @@index([facilityId])
-  @@map("TrainingZone")
 }
 
 enum SpaceStatus {
   OPEN
   CLOSED
   MAINTENANCE
-
-  @@map("ZoneStatus")
 }
 
 enum SpaceCapacityMode {
   MINIMUM // Capacity = smallest space capacity
   SUM // Capacity = sum of space capacities
-
-  @@map("TrainingZoneCapacityMode")
 }
 
 model ProgramSpace {
   id      String @id @default(cuid())
   programId String
-  spaceId   String @map("trainingZoneId")
+  spaceId   String
 
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
   space   Space   @relation(fields: [spaceId], references: [id], onDelete: Cascade)
@@ -2683,13 +2678,12 @@ model ProgramSpace {
   @@unique([programId, spaceId])
   @@index([programId])
   @@index([spaceId])
-  @@map("ProgramTrainingZone")
 }
 
 model ProgramInstanceSpace {
   id                String @id @default(cuid())
   programInstanceId String
-  spaceId           String @map("trainingZoneId")
+  spaceId           String
 
   programInstance ProgramInstance @relation(fields: [programInstanceId], references: [id], onDelete: Cascade)
   space           Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
@@ -2697,12 +2691,11 @@ model ProgramInstanceSpace {
   @@unique([programInstanceId, spaceId])
   @@index([programInstanceId])
   @@index([spaceId])
-  @@map("ProgramInstanceTrainingZone")
 }
 
 model SpaceAvailability {
   id      String @id @default(cuid())
-  spaceId String @map("trainingZoneId")
+  spaceId String
   dayOfWeek Int // 0=Sunday, 1=Monday, ..., 6=Saturday
   openTime  String // e.g., "08:00"
   closeTime String // e.g., "18:00"
@@ -2711,14 +2704,13 @@ model SpaceAvailability {
 
   @@unique([spaceId, dayOfWeek])
   @@index([spaceId])
-  @@map("TrainingZoneAvailability")
 }
 
 model Equipment {
   id             String  @id @default(cuid())
   organizationId String
   facilityId     String? // Optional - null means org-level equipment
-  spaceId        String? @map("trainingZoneId")
+  spaceId        String?
 
   name         String
   serialNumber String?
