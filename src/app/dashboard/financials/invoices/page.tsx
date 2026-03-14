@@ -31,7 +31,7 @@ interface Invoice {
     id: string
     name: string
     email: string
-  }
+  } | null
   lineItems: Array<{
     id: string
     description: string
@@ -133,6 +133,10 @@ export default function InvoicesPage() {
   }
 
   const handleResendEmail = async (invoice: Invoice) => {
+    if (!invoice.user?.email) {
+      toast.error("No guardian email associated with this invoice")
+      return
+    }
     // In a real implementation, this would trigger an email
     toast.success(`Email sent to ${invoice.user.email}`)
   }
@@ -244,9 +248,9 @@ export default function InvoicesPage() {
                     <TableCell className="font-medium">{invoice.reference}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span>{invoice.user.name}</span>
+                        <span>{invoice.user?.name ?? "No guardian"}</span>
                         <span className="text-xs text-muted-foreground">
-                          {invoice.user.email}
+                          {invoice.user?.email ?? "—"}
                         </span>
                       </div>
                     </TableCell>
