@@ -849,7 +849,16 @@ export default function SmsCampaignsPage() {
                             onChange={(e) => setPlaceholderSearch(e.target.value)}
                             className="h-8 text-xs"
                           />
-                          <div className="max-h-[240px] overflow-y-auto space-y-1">
+                          <div
+                            className="max-h-[240px] overflow-y-auto space-y-1"
+                            onWheel={(e) => {
+                              const el = e.currentTarget
+                              if (el.scrollHeight > el.clientHeight) {
+                                el.scrollTop += e.deltaY
+                                e.stopPropagation()
+                              }
+                            }}
+                          >
                             {filteredPlaceholders.map((p) => (
                               <button
                                 key={p.key}
