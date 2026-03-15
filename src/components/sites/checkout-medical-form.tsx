@@ -461,7 +461,7 @@ function EmergencyInsuranceForm({
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="ecName">Contact Name</Label>
+              <Label htmlFor="ecName">Contact Name <span className="text-destructive">*</span></Label>
               <Input
                 id="ecName"
                 value={emergencyContactName}
@@ -470,7 +470,7 @@ function EmergencyInsuranceForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ecPhone">Phone Number</Label>
+              <Label htmlFor="ecPhone">Phone Number <span className="text-destructive">*</span></Label>
               <PhoneInput
                 defaultCountry="US"
                 value={emergencyContactPhone}
@@ -479,7 +479,7 @@ function EmergencyInsuranceForm({
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="ecRelation">Relationship</Label>
+              <Label htmlFor="ecRelation">Relationship <span className="text-destructive">*</span></Label>
               <Select
                 value={emergencyContactRelation}
                 onValueChange={(v) => onChangeEC("emergencyContactRelation", v)}
@@ -794,6 +794,21 @@ export function CheckoutMedicalForm({
   const handleNext = async () => {
     const steps = getStepOrder()
     const currentIndex = steps.indexOf(subStep)
+
+    if (subStep === "emergency_insurance" && config.collectEmergencyContact) {
+      if (!emergencyContactName.trim()) {
+        toast.error("Emergency contact name is required")
+        return
+      }
+      if (!emergencyContactPhone.trim()) {
+        toast.error("Emergency contact phone number is required")
+        return
+      }
+      if (!emergencyContactRelation) {
+        toast.error("Emergency contact relationship is required")
+        return
+      }
+    }
 
     // Save current section
     const saved = await saveCurrentSection()

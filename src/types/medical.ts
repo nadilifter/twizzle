@@ -207,14 +207,17 @@ export const DIETARY_RESTRICTIONS = [
 ] as const;
 
 export const EMERGENCY_CONTACT_RELATIONSHIPS = [
-  "Parent",
-  "Mother",
-  "Father",
-  "Guardian",
-  "Grandparent",
-  "Sibling",
   "Aunt/Uncle",
-  "Other Family",
+  "Father",
   "Friend",
+  "Grandparent",
+  "Guardian",
+  "Mother",
   "Neighbor",
+  "Other Family",
+  "Parent",
+  "Partner",
+  "Roommate",
+  "Sibling",
+  "Spouse",
 ] as const;
