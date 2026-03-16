@@ -18,6 +18,7 @@ import { SubscriptionManager } from "./subscription-manager"
 import { FeatureOverrides } from "./feature-overrides"
 import { DeactivationDialog } from "./deactivation-dialog"
 import { ReactivationDialog } from "./reactivation-dialog"
+import { AdyenPlatformCard } from "./adyen-platform-card"
 import { getSubdomainUrl } from "@/lib/env-domains"
 
 function getMarketingSiteUrl(slug: string, websiteConfig: { domain?: string | null; subdomain?: string | null } | null): string {
@@ -108,6 +109,7 @@ export default async function OrganizationDetailPage({ params }: Props) {
         take: 1,
         include: { user: { select: { name: true, email: true } } },
       },
+      adyenPlatformAccount: true,
     }
   })
 
@@ -406,6 +408,32 @@ export default async function OrganizationDetailPage({ params }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* Adyen Platform Account */}
+      <AdyenPlatformCard
+        organizationId={organization.id}
+        initialAccount={
+          organization.adyenPlatformAccount
+            ? {
+                id: organization.adyenPlatformAccount.id,
+                legalEntityId: organization.adyenPlatformAccount.legalEntityId,
+                businessLineId: organization.adyenPlatformAccount.businessLineId,
+                accountHolderId: organization.adyenPlatformAccount.accountHolderId,
+                balanceAccountId: organization.adyenPlatformAccount.balanceAccountId,
+                storeId: organization.adyenPlatformAccount.storeId,
+                storeReference: organization.adyenPlatformAccount.storeReference,
+                onboardingStatus: organization.adyenPlatformAccount.onboardingStatus,
+                verificationStatus: organization.adyenPlatformAccount.verificationStatus,
+                capabilities: organization.adyenPlatformAccount.capabilities,
+                sweepId: organization.adyenPlatformAccount.sweepId,
+                transferInstrumentId: organization.adyenPlatformAccount.transferInstrumentId,
+                splitConfigurationId: organization.adyenPlatformAccount.splitConfigurationId,
+                createdAt: organization.adyenPlatformAccount.createdAt.toISOString(),
+                updatedAt: organization.adyenPlatformAccount.updatedAt.toISOString(),
+              }
+            : null
+        }
+      />
 
       {/* Payment Methods (Adyen Integration) */}
       <Card>
