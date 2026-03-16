@@ -79,9 +79,9 @@ POST /accountHolders (Configuration API)
   "description": org.name,
   "balancePlatform": process.env.ADYEN_BALANCE_PLATFORM,
   "capabilities": {
-    "receivePayments": { "requested": true, "requestedLevel": "similar" },
-    "sendToTransferInstrument": { "requested": true, "requestedLevel": "similar" },
-    "receiveFromBalanceAccount": { "requested": true, "requestedLevel": "similar" }
+    "receivePayments": { "requested": true, "requestedLevel": "notApplicable" },
+    "sendToTransferInstrument": { "requested": true, "requestedLevel": "notApplicable" },
+    "receiveFromBalanceAccount": { "requested": true, "requestedLevel": "notApplicable" }
   }
 }
 ```

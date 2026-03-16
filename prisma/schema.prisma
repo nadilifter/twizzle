@@ -118,6 +118,9 @@ model Organization {
   // Organization Payment Methods (for SaaS subscription billing)
   organizationPaymentMethods OrganizationPaymentMethod[]
 
+  // Adyen Platform
+  adyenPlatformAccount AdyenPlatformAccount?
+
   // Program Instances
   programInstances ProgramInstance[]
 
@@ -2936,6 +2939,52 @@ model OrganizationPaymentMethod {
 
   @@index([organizationId])
   @@index([shopperReference])
+}
+
+// ============================================
+// Adyen Platform (Balance Platform / Marketplace)
+// ============================================
+
+model AdyenPlatformAccount {
+  id             String @id @default(cuid())
+  organizationId String @unique
+
+  // Adyen entity IDs (populated progressively during onboarding)
+  legalEntityId    String  @unique
+  businessLineId   String?
+  accountHolderId  String? @unique
+  balanceAccountId String? @unique
+  storeId          String?
+  storeReference   String?
+
+  // Onboarding
+  onboardingStatus   AdyenOnboardingStatus @default(PENDING_HOSTED)
+  verificationStatus String?
+  capabilities       Json?
+
+  // Sweep
+  sweepId              String?
+  transferInstrumentId String?
+
+  // Split profile linked to this org's store
+  splitConfigurationId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([legalEntityId])
+  @@index([accountHolderId])
+}
+
+enum AdyenOnboardingStatus {
+  PENDING_HOSTED
+  IN_PROGRESS
+  AWAITING_DATA
+  IN_REVIEW
+  VERIFIED
+  REJECTED
 }
 
 // ============================================

@@ -195,9 +195,9 @@ export async function createAccountHolder(data: {
 }): Promise<{ id: string; [key: string]: any }>
 // Calls: POST /accountHolders via Configuration API
 // Default capabilities to request:
-//   receivePayments: { requested: true, requestedLevel: "similar" }
-//   sendToTransferInstrument: { requested: true, requestedLevel: "similar" }
-//   receiveFromBalanceAccount: { requested: true, requestedLevel: "similar" }
+//   receivePayments: { requested: true, requestedLevel: "notApplicable" }
+//   sendToTransferInstrument: { requested: true, requestedLevel: "notApplicable" }
+//   receiveFromBalanceAccount: { requested: true, requestedLevel: "notApplicable" }
 
 export async function createBalanceAccount(data: {
   accountHolderId: string;
@@ -250,11 +250,11 @@ export async function createStore(data: {
 
 2. **No `refundPayment` or `createTransfer` yet**: These are deferred to Phase 5 and Phase 7 respectively. Do not implement them now.
 
-3. **API key resolution**: Two separate clients are needed:
+3. **API key resolution**: Three separate clients are needed:
    - `getLemClient()` uses `ADYEN_LEM_API_KEY` (Company-scoped `ws_236609@Scope.Company_KirraCapital`). Used by `getLemApi()` for legal entities, business lines, onboarding links.
-   - `getPlatformClient()` uses `ADYEN_PLATFORM_API_KEY` (BalancePlatform-scoped `ws_508000@BalancePlatform.UplifterLLC`). Used by `getConfigApi()` and `getManagementApi()` for account holders, balance accounts, sweeps, stores.
-   - Do NOT use `ADYEN_API_KEY` in this module -- that key handles checkout/payments only.
-   - Throw a clear error if either key is missing when the respective client is requested.
+   - `getPlatformClient()` uses `ADYEN_PLATFORM_API_KEY` (BalancePlatform-scoped `ws_508000@BalancePlatform.UplifterLLC`). Used by `getConfigApi()` for account holders, balance accounts, sweeps.
+   - `getManagementClient()` uses `ADYEN_API_KEY` (Company-level). Used by `getManagementApi()` for stores. The Management API is company-scoped, so the BalancePlatform key returns 401.
+   - Throw a clear error if any key is missing when the respective client is requested.
 
 4. **The `@adyen/api-library` v30 API classes**:
    - `LegalEntityManagementAPI` -- exposes `.LegalEntitiesApi`, `.BusinessLinesApi`, `.HostedOnboardingApi`
