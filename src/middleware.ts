@@ -109,6 +109,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Bypass all routing for webhook endpoints (external services POST directly, no auth)
+  if (path.startsWith("/api/webhooks/")) {
+    return NextResponse.next();
+  }
+
   // 2. Portal Routing
   
   // Helper to get the login host based on environment
