@@ -18,7 +18,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import {
   Card,
   CardContent,
@@ -286,12 +287,12 @@ export default function SchedulesPage() {
         </Alert>
       )}
 
-      <Tabs defaultValue="assignments" className="space-y-4" onValueChange={setActiveTab}>
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="assignments">Shifts & Assignments</TabsTrigger>
           <TabsTrigger value="employee-availability">Employee Availability</TabsTrigger>
           <TabsTrigger value="facility-availability">Facility Usage</TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
 
         {/* Shifts & Assignments Tab */}
         <TabsContent value="assignments" className="space-y-4">

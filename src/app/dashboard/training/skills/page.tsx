@@ -23,7 +23,8 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Table,
@@ -482,13 +483,11 @@ export default function SkillsPage() {
       </div>
 
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="space-y-4">
-        <div className="w-full overflow-x-auto pb-2">
-          <TabsList>
-            {categories.map((category) => (
-              <TabsTrigger key={category} value={category}>{category}</TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+        <ResponsiveTabsList value={selectedCategory} onValueChange={setSelectedCategory}>
+          {categories.map((category) => (
+            <TabsTrigger key={category} value={category}>{category}</TabsTrigger>
+          ))}
+        </ResponsiveTabsList>
 
         {categories.map((tabCategory) => (
           <TabsContent key={tabCategory} value={tabCategory} className="space-y-4">

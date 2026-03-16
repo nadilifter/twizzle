@@ -25,7 +25,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import {
   Card,
   CardContent,
@@ -124,6 +125,7 @@ interface Equipment {
 }
 
 export default function FacilitiesPage() {
+  const [facilityTab, setFacilityTab] = useState("overview")
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
   const [spaces, setSpaces] = useState<Space[]>([])
@@ -891,12 +893,12 @@ export default function FacilitiesPage() {
             <span>Details</span>
           </div>
 
-          <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList>
+          <Tabs value={facilityTab} onValueChange={setFacilityTab} className="space-y-4">
+            <ResponsiveTabsList value={facilityTab} onValueChange={setFacilityTab}>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="spaces">Spaces ({spaces.length})</TabsTrigger>
               <TabsTrigger value="equipment">Equipment ({equipment.length})</TabsTrigger>
-            </TabsList>
+            </ResponsiveTabsList>
 
             <TabsContent value="overview" className="space-y-4">
               {loadingDetail ? (

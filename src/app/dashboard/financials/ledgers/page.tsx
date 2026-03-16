@@ -34,7 +34,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { RoutingRules } from "./routing-rules"
 import { GLCodesTable, GLCode } from "./gl-codes-table"
 import { LedgerTransactions } from "./ledger-transactions"
@@ -57,6 +58,7 @@ const expenseTypeConfig = {
 } satisfies ChartConfig
 
 export default function LedgersPage() {
+  const [activeTab, setActiveTab] = React.useState("overview")
   const [glCodes, setGlCodes] = React.useState<GLCode[]>([])
   const [loading, setLoading] = React.useState(true)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
@@ -243,13 +245,13 @@ export default function LedgersPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="reports">Financial Reports</TabsTrigger>
           <TabsTrigger value="rules">Routing Rules</TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
         <TabsContent value="overview" className="space-y-4">
           <div className="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-7">
             <Card className="col-span-4">

@@ -9,7 +9,8 @@ import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -550,13 +551,13 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <div className="px-6 py-2 border-b bg-muted/30">
-          <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
+          <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab} className="w-full justify-start">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="requirements">Requirements</TabsTrigger>
             {waitlistsEnabled && <TabsTrigger value="waitlist">Waitlist</TabsTrigger>}
             <TabsTrigger value="staff">Staff</TabsTrigger>
-          </TabsList>
+          </ResponsiveTabsList>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">

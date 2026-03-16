@@ -32,7 +32,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -148,6 +149,7 @@ export default function UserDetailPage() {
   const { isFeatureEnabled } = useFeatures()
   const memberId = params.id as string
 
+  const [activeTab, setActiveTab] = React.useState("profile")
   const [member, setMember] = React.useState<MemberData | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSaving, setIsSaving] = React.useState(false)
@@ -552,8 +554,8 @@ export default function UserDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="profile">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="profile" className="gap-1.5">
             <Shield className="h-4 w-4" /> Profile & Permissions
           </TabsTrigger>
@@ -569,7 +571,7 @@ export default function UserDetailPage() {
           <TabsTrigger value="schedule" className="gap-1.5">
             <Calendar className="h-4 w-4" /> Schedule
           </TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
 
         {/* Profile & Permissions Tab */}
         <TabsContent value="profile">

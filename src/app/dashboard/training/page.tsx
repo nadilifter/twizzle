@@ -1,6 +1,10 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { CalendarDays, Dumbbell, GraduationCap, LayoutList, Plus, Users } from "lucide-react"
 import Link from "next/link"
 import {
@@ -13,6 +17,8 @@ import {
 } from "@/components/ui/sheet"
 
 export default function TrainingPage() {
+  const [activeTab, setActiveTab] = useState("recent")
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
@@ -79,12 +85,12 @@ export default function TrainingPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="recent" className="space-y-4">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="recent">Recent Plans</TabsTrigger>
           <TabsTrigger value="upcoming">Upcoming Classes</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
         <TabsContent value="recent" className="space-y-4">
           <Card>
             <CardHeader>

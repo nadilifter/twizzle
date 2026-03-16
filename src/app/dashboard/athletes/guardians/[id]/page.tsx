@@ -25,7 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Table,
@@ -103,6 +104,7 @@ interface GuardianDetail {
 export default function GuardianDetailPage() {
   const params = useParams()
   const guardianId = typeof params.id === "string" ? params.id : null
+  const [activeTab, setActiveTab] = React.useState("overview")
   const [guardian, setGuardian] = React.useState<GuardianDetail | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -242,13 +244,13 @@ export default function GuardianDetailPage() {
 
         {/* Main Content */}
         <div className="md:col-span-2">
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="w-full justify-start">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab} className="w-full justify-start">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="athletes">Athletes</TabsTrigger>
               <TabsTrigger value="contacts">Contacts</TabsTrigger>
               <TabsTrigger value="billing">Billing</TabsTrigger>
-            </TabsList>
+            </ResponsiveTabsList>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="mt-6 space-y-4">

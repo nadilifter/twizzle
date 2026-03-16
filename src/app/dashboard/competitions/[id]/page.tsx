@@ -23,7 +23,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import {
   Table,
   TableBody,
@@ -483,7 +484,7 @@ export default function CompetitionProfilePage() {
 
       {/* Top-level tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
+        <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="overview" className="gap-2">
             <Info className="h-4 w-4" />
             Overview
@@ -508,7 +509,7 @@ export default function CompetitionProfilePage() {
             <Trophy className="h-4 w-4" />
             Results
           </TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
 
         {/* ===== OVERVIEW TAB ===== */}
         <TabsContent value="overview">

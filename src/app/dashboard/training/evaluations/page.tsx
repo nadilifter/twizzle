@@ -22,7 +22,8 @@ import {
   XCircle,
   Clock,
 } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import {
   Sheet,
   SheetContent,
@@ -471,7 +472,7 @@ export default function EvaluationsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="templates">
             <ClipboardList className="mr-2 h-4 w-4" />
             Templates
@@ -480,7 +481,7 @@ export default function EvaluationsPage() {
             <Clock className="mr-2 h-4 w-4" />
             Recent Evaluations
           </TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
 
         <TabsContent value="templates" className="space-y-4">
           <div className="flex items-center gap-4">

@@ -40,9 +40,9 @@ import {
 import {
   Tabs,
   TabsContent,
-  TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import {
   Plus,
   Search,
@@ -427,7 +427,7 @@ export default function SuperadminFeedbackPage() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex items-center justify-between gap-4">
-          <TabsList>
+          <ResponsiveTabsList value={activeTab} onValueChange={handleTabChange}>
             <TabsTrigger value="submissions">
               Submissions
               {submissionsCount > 0 && (
@@ -440,7 +440,7 @@ export default function SuperadminFeedbackPage() {
                 <Badge variant="outline" className="ml-2">{liveCount}</Badge>
               )}
             </TabsTrigger>
-          </TabsList>
+          </ResponsiveTabsList>
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input

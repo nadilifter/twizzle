@@ -18,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -243,11 +244,11 @@ export default function SuperadminRevenuePage() {
             </SelectContent>
           </Select>
           <Tabs value={granularity} onValueChange={(value) => setGranularity(value as Granularity)}>
-            <TabsList>
+            <ResponsiveTabsList value={granularity} onValueChange={(value) => setGranularity(value as Granularity)}>
               <TabsTrigger value="day">Daily</TabsTrigger>
               <TabsTrigger value="month">Monthly</TabsTrigger>
               <TabsTrigger value="year">Yearly</TabsTrigger>
-            </TabsList>
+            </ResponsiveTabsList>
           </Tabs>
         </div>
       </div>

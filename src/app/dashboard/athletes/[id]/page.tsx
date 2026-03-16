@@ -71,7 +71,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { type ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table/data-table"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
@@ -378,7 +379,7 @@ export default function AthleteProfilePage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
+        <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="overview" className="gap-2">
             <Info className="h-4 w-4" />
             Overview
@@ -415,7 +416,7 @@ export default function AthleteProfilePage() {
               Evaluations
             </TabsTrigger>
           )}
-        </TabsList>
+        </ResponsiveTabsList>
 
         {/* ===== OVERVIEW TAB ===== */}
         <TabsContent value="overview">

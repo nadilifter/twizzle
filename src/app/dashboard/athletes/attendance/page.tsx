@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
@@ -253,12 +254,12 @@ export default function AttendancePage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AttendanceGroupBy)} className="space-y-4">
-        <TabsList>
+        <ResponsiveTabsList value={activeTab} onValueChange={(v) => setActiveTab(v as AttendanceGroupBy)}>
           <TabsTrigger value="overall">Overview</TabsTrigger>
           <TabsTrigger value="athlete">By Athlete</TabsTrigger>
           <TabsTrigger value="program">By Program</TabsTrigger>
           <TabsTrigger value="coach">By Coach</TabsTrigger>
-        </TabsList>
+        </ResponsiveTabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overall" className="space-y-4">

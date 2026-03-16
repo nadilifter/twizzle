@@ -60,7 +60,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import {
   Dialog,
   DialogContent,
@@ -747,7 +748,7 @@ export default function InstanceDetailPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
         {trainingEnabled && (
-          <TabsList>
+          <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
             <TabsTrigger value="registrations" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Roster & Attendance ({instance._count.registrations})
@@ -756,7 +757,7 @@ export default function InstanceDetailPage() {
               <Star className="h-4 w-4" />
               Evaluations
             </TabsTrigger>
-          </TabsList>
+          </ResponsiveTabsList>
         )}
 
         {/* Roster & Attendance Tab */}
