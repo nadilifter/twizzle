@@ -121,11 +121,19 @@ async function main() {
   console.log("\n🏢 Creating organizations...");
   const org1 = await prisma.organization.upsert({
     where: { id: ORG1_ID }, update: {},
-    create: { id: ORG1_ID, name: "Sunrise Gymnastics Academy", slug: "sunrise-gymnastics" },
+    create: {
+      id: ORG1_ID, name: "Sunrise Gymnastics Academy", slug: "sunrise-gymnastics",
+      email: "info@sunrisegymnastics.com", phone: "+15551234567",
+      street: "100 Sunrise Blvd", city: "Austin", stateProvince: "TX", postalCode: "78701", country: "US",
+    },
   });
   const org2 = await prisma.organization.upsert({
     where: { id: ORG2_ID }, update: {},
-    create: { id: ORG2_ID, name: "Metro Sports Complex", slug: "metro-sports" },
+    create: {
+      id: ORG2_ID, name: "Metro Sports Complex", slug: "metro-sports",
+      email: "hello@metrosports.com", phone: "+15559876543",
+      street: "250 Metro Way", city: "Denver", stateProvince: "CO", postalCode: "80202", country: "US",
+    },
   });
   console.log(`  ✓ Created: ${org1.name}`);
   console.log(`  ✓ Created: ${org2.name}`);
@@ -133,11 +141,19 @@ async function main() {
   // Demo Gym and Uplifter (from original seed.ts)
   const orgDemo = await prisma.organization.upsert({
     where: { slug: "demo-gym" }, update: {},
-    create: { id: ORG_DEMO_ID, name: "Demo Gymnastics Club", slug: "demo-gym" },
+    create: {
+      id: ORG_DEMO_ID, name: "Demo Gymnastics Club", slug: "demo-gym",
+      email: "demo@demogym.com", phone: "+15550001111",
+      street: "500 Demo Lane", city: "Portland", stateProvince: "OR", postalCode: "97201", country: "US",
+    },
   });
   const orgUplifter = await prisma.organization.upsert({
     where: { slug: "uplifter" }, update: {},
-    create: { id: ORG_UPLIFTER_ID, name: "Uplifter", slug: "uplifter" },
+    create: {
+      id: ORG_UPLIFTER_ID, name: "Uplifter", slug: "uplifter",
+      email: "admin@uplifterinc.com", phone: "+15550009999",
+      street: "1 Platform Plaza", city: "San Francisco", stateProvince: "CA", postalCode: "94105", country: "US",
+    },
   });
   console.log(`  ✓ Created: ${orgDemo.name}`);
   console.log(`  ✓ Created: ${orgUplifter.name}`);
@@ -181,6 +197,62 @@ async function main() {
     }),
   ]);
   console.log("  ✓ Created subscriptions for all organizations");
+
+  // ============================================
+  // ADYEN PLATFORM ACCOUNTS (seed various onboarding states)
+  // ============================================
+  console.log("\n🏦 Creating Adyen platform accounts...");
+
+  // Sunrise: fully verified with store and sweep
+  await prisma.adyenPlatformAccount.upsert({
+    where: { organizationId: ORG1_ID },
+    update: {},
+    create: {
+      organizationId: ORG1_ID,
+      legalEntityId: "LE_SEED_SUNRISE_001",
+      businessLineId: "BL_SEED_SUNRISE_001",
+      accountHolderId: "AH_SEED_SUNRISE_001",
+      balanceAccountId: "BA_SEED_SUNRISE_001",
+      storeId: "ST_SEED_SUNRISE_001",
+      storeReference: "store-sunrise-gymnastics",
+      onboardingStatus: "VERIFIED",
+      verificationStatus: "All checks passed",
+      capabilities: {
+        receivePayments: { requested: true, allowed: true, verificationStatus: "valid" },
+        sendToTransferInstrument: { requested: true, allowed: true, verificationStatus: "valid" },
+        receiveFromBalanceAccount: { requested: true, allowed: true, verificationStatus: "valid" },
+      },
+      sweepId: "SWEEP_SEED_SUNRISE_001",
+      transferInstrumentId: "TI_SEED_SUNRISE_001",
+    },
+  });
+
+  // Metro: in-progress (started onboarding but not yet verified)
+  await prisma.adyenPlatformAccount.upsert({
+    where: { organizationId: ORG2_ID },
+    update: {},
+    create: {
+      organizationId: ORG2_ID,
+      legalEntityId: "LE_SEED_METRO_001",
+      businessLineId: "BL_SEED_METRO_001",
+      accountHolderId: "AH_SEED_METRO_001",
+      balanceAccountId: "BA_SEED_METRO_001",
+      onboardingStatus: "IN_PROGRESS",
+      verificationStatus: "Awaiting identity verification",
+      capabilities: {
+        receivePayments: { requested: true, allowed: false, verificationStatus: "pending" },
+        sendToTransferInstrument: { requested: true, allowed: false, verificationStatus: "pending" },
+        receiveFromBalanceAccount: { requested: true, allowed: false, verificationStatus: "pending" },
+      },
+    },
+  });
+
+  // Demo Gym: no Adyen account (can test "Begin Verification" flow)
+  // Uplifter: no Adyen account (platform owner, doesn't need marketplace onboarding)
+
+  console.log("  ✓ Sunrise Gymnastics: VERIFIED (fully onboarded)");
+  console.log("  ✓ Metro Sports: IN_PROGRESS (awaiting verification)");
+  console.log("  ✓ Demo Gym: no account (ready to test initiation)");
 
   // ============================================
   // SPORTS
