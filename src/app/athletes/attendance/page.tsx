@@ -59,10 +59,10 @@ export default function AthleteAttendancePage() {
     async function fetchAthleteData() {
       setIsLoading(true);
       try {
-        const response = await api.get<{ data: any[] }>("/api/athletes", {});
-        
-        if (response.data.length > 0) {
-          const fetched: Athlete[] = response.data.map((athlete: any) => ({
+        const response = await api.get<{ athletes: any[] }>("/api/athletes/me");
+        const athleteList = response.athletes || [];
+        if (athleteList.length > 0) {
+          const fetched: Athlete[] = athleteList.map((athlete: any) => ({
             id: athlete.id,
             name: athlete.name,
             level: athlete.level,

@@ -101,10 +101,11 @@ export default function AthleteEvaluationsPage() {
     async function fetchAthletes() {
       setIsLoading(true);
       try {
-        const response = await api.get<{ data: Athlete[] }>("/api/athletes");
-        setAthletes(response.data);
-        if (response.data.length > 0) {
-          setSelectedAthleteId(response.data[0].id);
+        const response = await api.get<{ athletes: Athlete[] }>("/api/athletes/me");
+        const athleteData = response.athletes || [];
+        setAthletes(athleteData);
+        if (athleteData.length > 0) {
+          setSelectedAthleteId(athleteData[0].id);
         }
       } catch (error) {
         console.error("Error fetching athletes:", error);

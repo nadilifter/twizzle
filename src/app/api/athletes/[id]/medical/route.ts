@@ -20,19 +20,36 @@ const upsertMedicalInfoSchema = z.object({
   })).optional(),
 });
 
-// Helper to check if user can access athlete (org link via junction or guardian)
 async function canAccessAthlete(session: any, athleteId: string): Promise<boolean> {
-  const organizationId = session.user.organizationId;
-  
+  const permissions = session.user.permissions ?? [];
+  const isSuperAdmin = session.user.isSuperAdmin === true;
+  const hasStaffAccess =
+    isSuperAdmin ||
+    permissions.includes("*") ||
+    permissions.includes("athletes.view") ||
+    permissions.includes("athletes.edit");
+
+  if (hasStaffAccess) {
+    const athlete = await db.athlete.findFirst({
+      where: {
+        id: athleteId,
+        organizationAthletes: {
+          some: { organizationId: session.user.organizationId },
+        },
+      },
+    });
+    return !!athlete;
+  }
+
   const athlete = await db.athlete.findFirst({
     where: {
       id: athleteId,
-      organizationAthletes: {
-        some: { organizationId },
-      },
+      OR: [
+        { guardians: { some: { userId: session.user.id } } },
+        { userId: session.user.id },
+      ],
     },
   });
-
   return !!athlete;
 }
 

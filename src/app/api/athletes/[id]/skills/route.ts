@@ -18,15 +18,35 @@ export async function GET(
     const category = searchParams.get("category");
     const levelId = searchParams.get("levelId");
 
-    // Verify athlete belongs to organization
-    const athlete = await db.athlete.findFirst({
-      where: {
-        id: athleteId,
-        organizationAthletes: {
-          some: { organizationId: session.user.organizationId },
+    const permissions = session.user.permissions ?? [];
+    const isSuperAdmin = session.user.isSuperAdmin === true;
+    const hasStaffAccess =
+      isSuperAdmin ||
+      permissions.includes("*") ||
+      permissions.includes("athletes.view") ||
+      permissions.includes("athletes.edit");
+
+    let athlete;
+    if (hasStaffAccess) {
+      athlete = await db.athlete.findFirst({
+        where: {
+          id: athleteId,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
         },
-      },
-    });
+      });
+    } else {
+      athlete = await db.athlete.findFirst({
+        where: {
+          id: athleteId,
+          OR: [
+            { guardians: { some: { userId: session.user.id } } },
+            { userId: session.user.id },
+          ],
+        },
+      });
+    }
 
     if (!athlete) {
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });

@@ -42,8 +42,8 @@ export default function AthleteMedicalPage() {
     async function fetchAthletes() {
       setIsLoadingAthletes(true);
       try {
-        const response = await api.get<{ data: Athlete[] }>("/api/athletes", {});
-        const athleteData = response.data || [];
+        const response = await api.get<{ athletes: Athlete[] }>("/api/athletes/me");
+        const athleteData = response.athletes || [];
         setAthletes(athleteData);
         
         // Select first athlete by default

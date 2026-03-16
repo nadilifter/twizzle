@@ -46,13 +46,31 @@ export async function GET(
     }
 
     const { id } = await params;
+    const permissions = session.user.permissions ?? [];
+    const isSuperAdmin = session.user.isSuperAdmin === true;
+    const hasStaffAccess =
+      isSuperAdmin ||
+      permissions.includes("*") ||
+      permissions.includes("athletes.view") ||
+      permissions.includes("athletes.edit");
+
+    const whereClause = hasStaffAccess
+      ? {
+          id,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
+        }
+      : {
+          id,
+          OR: [
+            { guardians: { some: { userId: session.user.id } } },
+            { userId: session.user.id },
+          ],
+        };
+
     const athlete = await db.athlete.findFirst({
-      where: {
-        id,
-        organizationAthletes: {
-          some: { organizationId: session.user.organizationId },
-        },
-      },
+      where: whereClause,
       include: {
         organizationAthletes: {
           where: { organizationId: session.user.organizationId },
