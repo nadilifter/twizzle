@@ -116,9 +116,13 @@ export async function POST() {
     })
   } catch (error: any) {
     console.error("Finalization failed:", error)
+    const adyenError = error.apiError?.detail || error.responseBody
+    const message = adyenError
+      ? `Adyen error: ${typeof adyenError === "string" ? adyenError : JSON.stringify(adyenError)}`
+      : "Finalization failed"
     return NextResponse.json(
-      { error: "Finalization failed", details: error.responseBody },
-      { status: 500 }
+      { error: message },
+      { status: error.statusCode || 500 }
     )
   }
 }
