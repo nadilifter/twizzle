@@ -32,6 +32,9 @@ export function getWebhookBaseUrl(): string {
 export const WEBHOOK_ENDPOINTS = {
   /** Adyen payment webhook endpoint */
   adyen: () => `${getWebhookBaseUrl()}/api/webhooks/adyen`,
+
+  /** Adyen balance platform webhook endpoint */
+  adyenBalancePlatform: () => `${getWebhookBaseUrl()}/api/webhooks/adyen-balance-platform`,
   
   /** Twilio SMS/messaging webhook endpoint */
   twilio: () => `${getWebhookBaseUrl()}/api/twilio/webhook`,
@@ -208,6 +211,17 @@ export function getWebhookSetupInstructions(): Record<string, { url: string; ins
 3. Create a new webhook with URL: ${WEBHOOK_ENDPOINTS.adyen()}
 4. Set up HMAC signature verification
 5. Copy the HMAC key to ADYEN_WEBHOOK_HMAC_KEY environment variable
+      `.trim(),
+    },
+    adyenBalancePlatform: {
+      url: WEBHOOK_ENDPOINTS.adyenBalancePlatform(),
+      instructions: `
+1. Go to Adyen Customer Area (${currentEnv === 'production' ? 'ca-live' : 'ca-test'}.adyen.com)
+2. Navigate to Balance Platforms > UplifterLLC > Webhooks
+3. Create Configuration, Transfer, and Negative Balance Compensation Warning webhooks
+4. Set URL for all three: ${WEBHOOK_ENDPOINTS.adyenBalancePlatform()}
+5. Enable HMAC verification on each
+6. Copy HMAC keys to ADYEN_BP_CONFIG_WEBHOOK_HMAC_KEY, ADYEN_BP_TRANSFER_WEBHOOK_HMAC_KEY, ADYEN_BP_NEGBAL_WEBHOOK_HMAC_KEY
       `.trim(),
     },
     twilio: {

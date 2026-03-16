@@ -149,6 +149,7 @@ export function getWebhookBaseUrl(): string {
  */
 export const WEBHOOK_ENDPOINTS = {
   adyen: () => `${getWebhookBaseUrl()}/api/webhooks/adyen`,
+  adyenBalancePlatform: () => `${getWebhookBaseUrl()}/api/webhooks/adyen-balance-platform`,
   twilio: () => `${getWebhookBaseUrl()}/api/twilio/webhook`,
   stripe: () => `${getWebhookBaseUrl()}/api/webhooks/stripe`,
   sesBounce: () => `${getWebhookBaseUrl()}/api/webhooks/ses-bounce`,

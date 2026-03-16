@@ -60,6 +60,22 @@ export async function POST(request: NextRequest) {
       console.log(`Payment failed for invoice ${merchantReference}: pspReference=${pspReference}`)
     }
 
+    if (eventCode === "CAPTURE" && (success === "true" || success === true)) {
+      await handleCapture(pspReference)
+    }
+
+    if (eventCode === "REFUND" && (success === "true" || success === true)) {
+      await handleRefund(notificationItem)
+    }
+
+    if (eventCode === "CHARGEBACK") {
+      await handleChargeback(notificationItem)
+    }
+
+    if (eventCode === "REFUND_FAILED" || eventCode === "CAPTURE_FAILED") {
+      await handleFailure(eventCode, notificationItem)
+    }
+
     return NextResponse.json({ "[accepted]": true })
   } catch (error) {
     console.error("Payment webhook processing error:", error)
@@ -208,4 +224,161 @@ async function handleAuthorisation(
   }
 
   console.log(`Payment processed for invoice ${invoiceId}: pspReference=${pspReference}`)
+}
+
+async function handleCapture(pspReference: string) {
+  const transaction = await db.transaction.findUnique({
+    where: { pspReference },
+  })
+
+  if (!transaction) {
+    console.log(`[CAPTURE] Transaction not found for pspReference=${pspReference}`)
+    return
+  }
+
+  if (transaction.status === "AUTHORISED") {
+    await db.transaction.update({
+      where: { id: transaction.id },
+      data: { status: "CAPTURED", settledAt: new Date() },
+    })
+    console.log(`[CAPTURE] Transaction ${pspReference} captured`)
+  }
+}
+
+async function handleRefund(notificationItem: any) {
+  const {
+    pspReference,
+    originalReference,
+    amount,
+    merchantReference,
+  } = notificationItem
+
+  if (!originalReference) {
+    console.error("[REFUND] Missing originalReference")
+    return
+  }
+
+  // Prevent duplicate processing
+  const existing = await db.transaction.findUnique({
+    where: { pspReference },
+  })
+  if (existing) {
+    console.log(`[REFUND] Transaction ${pspReference} already processed`)
+    return
+  }
+
+  const originalTx = await db.transaction.findUnique({
+    where: { pspReference: originalReference },
+  })
+
+  if (!originalTx) {
+    console.error(`[REFUND] Original transaction not found: ${originalReference}`)
+    return
+  }
+
+  const refundAmount = amount?.value ? Number(amount.value) / 100 : 0
+
+  await db.transaction.create({
+    data: {
+      organizationId: originalTx.organizationId,
+      pspReference,
+      merchantRef: merchantReference || originalTx.merchantRef,
+      type: "REFUND",
+      amount: -refundAmount,
+      currency: amount?.currency || "USD",
+      status: "SETTLED",
+      method: originalTx.method,
+      description: `Refund for ${originalTx.merchantRef || originalReference}`,
+      settledAt: new Date(),
+    },
+  })
+
+  // Update invoice status if fully refunded
+  if (originalTx.paymentId) {
+    const payment = await db.payment.findUnique({
+      where: { id: originalTx.paymentId },
+      include: { invoice: true },
+    })
+
+    if (payment?.invoiceId) {
+      const invoiceTotal = Number(payment.invoice?.total || 0)
+      if (refundAmount >= invoiceTotal) {
+        await db.invoice.update({
+          where: { id: payment.invoiceId },
+          data: { status: "CANCELLED" },
+        })
+      }
+    }
+  }
+
+  console.log(`[REFUND] Processed refund ${pspReference} for ${originalReference}`)
+}
+
+async function handleChargeback(notificationItem: any) {
+  const {
+    pspReference,
+    originalReference,
+    amount,
+    merchantReference,
+  } = notificationItem
+
+  // Prevent duplicate processing
+  const existing = await db.transaction.findUnique({
+    where: { pspReference },
+  })
+  if (existing) {
+    console.log(`[CHARGEBACK] Transaction ${pspReference} already processed`)
+    return
+  }
+
+  const originalTx = originalReference
+    ? await db.transaction.findUnique({ where: { pspReference: originalReference } })
+    : null
+
+  const organizationId = originalTx?.organizationId
+  if (!organizationId) {
+    console.error(`[CHARGEBACK] Cannot determine organization for ${pspReference}`)
+    return
+  }
+
+  const chargebackAmount = amount?.value ? Number(amount.value) / 100 : 0
+
+  await db.transaction.create({
+    data: {
+      organizationId,
+      pspReference,
+      merchantRef: merchantReference || originalTx?.merchantRef,
+      type: "CHARGEBACK",
+      amount: -chargebackAmount,
+      currency: amount?.currency || "USD",
+      status: "SETTLED",
+      method: originalTx?.method,
+      description: `Chargeback for ${originalTx?.merchantRef || originalReference}`,
+      settledAt: new Date(),
+    },
+  })
+
+  console.log(`[CHARGEBACK] Processed ${pspReference} for ${originalReference}`)
+}
+
+async function handleFailure(eventCode: string, notificationItem: any) {
+  const { pspReference, originalReference } = notificationItem
+
+  console.error(`[${eventCode}] Payment failure`, {
+    pspReference,
+    originalReference,
+    reason: notificationItem.reason,
+  })
+
+  if (originalReference) {
+    const tx = await db.transaction.findUnique({
+      where: { pspReference: originalReference },
+    })
+    if (tx && tx.status !== "SETTLED") {
+      await db.transaction.update({
+        where: { id: tx.id },
+        data: { status: "ERROR" },
+      })
+    }
+  }
 }
