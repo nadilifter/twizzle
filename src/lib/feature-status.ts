@@ -228,9 +228,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
 
   // Financials Section
   "/dashboard/financials": {
-    status: "demo",
+    status: "live",
     description: "Financial overview with real-time metrics",
-    apiRoutes: ["/api/financials/overview"],
+    apiRoutes: ["/api/financials/overview", "/api/financials/settlement"],
   },
   "/dashboard/financials/discounts": {
     status: "live",
@@ -262,8 +262,8 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/payouts"],
   },
   "/dashboard/financials/recurring": {
-    status: "demo",
-    description: "Recurring billing management",
+    status: "live",
+    description: "Recurring billing with Adyen payment execution",
     apiRoutes: ["/api/recurring"],
   },
   "/dashboard/financials/transactions": {
