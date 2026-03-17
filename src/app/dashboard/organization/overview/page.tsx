@@ -229,11 +229,11 @@ export default function OrganizationOverviewPage() {
             </div>
             {!editingAddress && (
               <Button variant="ghost" size="sm" onClick={() => setEditingAddress(true)}>
-                Edit Address
+                Edit Contact Info
               </Button>
             )}
           </div>
-          <CardDescription>Basic information about your organization</CardDescription>
+          <CardDescription>Basic information and contact details for your organization</CardDescription>
         </CardHeader>
         <CardContent>
           {editingAddress ? (
