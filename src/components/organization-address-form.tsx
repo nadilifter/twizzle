@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -14,6 +15,7 @@ interface OrganizationAddressFormProps {
     stateProvince: string | null
     postalCode: string | null
     country: string | null
+    phone?: string | null
   }
   onSuccess: (updatedOrg: any) => void
   onCancel?: () => void
@@ -31,6 +33,7 @@ export function OrganizationAddressForm({
     stateProvince: organization.stateProvince || "",
     postalCode: organization.postalCode || "",
     country: organization.country || "US",
+    phone: organization.phone || "",
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +74,16 @@ export function OrganizationAddressForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="phone">Phone Number</Label>
+        <PhoneInput
+          id="phone"
+          defaultCountry="US"
+          value={formData.phone}
+          onChange={(value) => setFormData(prev => ({ ...prev, phone: value || "" }))}
+          required
+        />
+      </div>
       <div className="space-y-2">
         <Label htmlFor="street">Street Address</Label>
         <Input

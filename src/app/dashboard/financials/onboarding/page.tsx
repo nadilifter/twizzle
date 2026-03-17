@@ -45,6 +45,7 @@ type OrganizationDetails = {
   stateProvince: string | null
   postalCode: string | null
   country: string | null
+  phone: string | null
 }
 
 export default function OnboardingPage() {
@@ -228,7 +229,8 @@ function OrganizationAddressCard({
     organization.city &&
     organization.stateProvince &&
     organization.postalCode &&
-    organization.country
+    organization.country &&
+    organization.phone
   )
 
   const address = [
@@ -245,7 +247,7 @@ function OrganizationAddressCard({
     <Card>
       <CardHeader>
         <CardTitle className="text-sm font-medium flex items-center justify-between">
-          <span>Organization Address</span>
+          <span>Organization Contact Details</span>
           {!isEditing && (
             <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
               Edit
@@ -253,7 +255,7 @@ function OrganizationAddressCard({
           )}
         </CardTitle>
         <CardDescription>
-          Your organization's physical address. This must be complete before initiating Adyen onboarding.
+          Your organization's physical address and phone number. These must be complete before initiating Adyen onboarding.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -268,11 +270,16 @@ function OrganizationAddressCard({
           />
         ) : (
           <div className="flex items-center justify-between">
-            <div>
+            <div className="space-y-1">
               {address ? (
                 <p className="text-sm font-medium">{address}</p>
               ) : (
                 <p className="text-sm text-muted-foreground italic">No address provided</p>
+              )}
+              {organization.phone ? (
+                <p className="text-sm text-muted-foreground">{organization.phone}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No phone provided</p>
               )}
             </div>
             {!isComplete && (

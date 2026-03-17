@@ -59,21 +59,31 @@ export async function POST() {
 
     // Create Store (idempotent -- skip if already set)
     if (!account.storeId) {
+      if (!org.phone) {
+        return NextResponse.json(
+          { error: "Organization phone number is missing. Please update your organization details before finalizing setup." },
+          { status: 400 }
+        )
+      }
+
+      // Format phone number to E.164 for Adyen if it's not already
+      let formattedPhone = org.phone
+      let cleaned = org.phone.replace(/[^\d+]/g, "")
+      if (!cleaned.startsWith("+")) {
+        cleaned = cleaned.length === 11 && cleaned.startsWith("1") ? `+${cleaned}` : `+1${cleaned}`
+      }
+      if (cleaned.length >= 10) {
+        formattedPhone = cleaned
+      } else {
+        return NextResponse.json(
+          { error: "Organization phone number is invalid. Please provide a valid phone number." },
+          { status: 400 }
+        )
+      }
+
       // Adyen shopper statement must be alphanumeric/spaces and max 22 chars
       const sanitizedName = org.name.replace(/[^a-zA-Z0-9\s&,.\-_@]/g, "").substring(0, 22).trim()
       
-      // Format phone number to E.164 for Adyen
-      let formattedPhone = "+15555555555"
-      if (org.phone) {
-        let cleaned = org.phone.replace(/[^\d+]/g, "")
-        if (!cleaned.startsWith("+")) {
-          cleaned = cleaned.length === 11 && cleaned.startsWith("1") ? `+${cleaned}` : `+1${cleaned}`
-        }
-        if (cleaned.length >= 10) {
-          formattedPhone = cleaned
-        }
-      }
-
       const store = await createStore({
         merchantId: process.env.ADYEN_PLATFORM_MERCHANT_ACCOUNT || "",
         description: org.name,

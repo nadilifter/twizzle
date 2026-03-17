@@ -129,9 +129,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 })
     }
 
-    if (!org.street || !org.city || !org.stateProvince || !org.postalCode || !org.country) {
+    if (!org.street || !org.city || !org.stateProvince || !org.postalCode || !org.country || !org.phone) {
       return NextResponse.json(
-        { error: "Organization address is incomplete. Please update your organization details before onboarding." },
+        { error: "Organization address or phone number is incomplete. Please update your organization details before onboarding." },
         { status: 400 }
       )
     }
