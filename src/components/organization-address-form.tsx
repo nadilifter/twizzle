@@ -34,7 +34,12 @@ export function OrganizationAddressForm({
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    let value = e.target.value
+    // Auto-uppercase state/province and country codes
+    if (e.target.name === 'stateProvince' || e.target.name === 'country') {
+      value = value.toUpperCase()
+    }
+    setFormData((prev) => ({ ...prev, [e.target.name]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,7 +100,10 @@ export function OrganizationAddressForm({
             value={formData.stateProvince}
             onChange={handleChange}
             required
+            maxLength={2}
+            placeholder="NY"
           />
+          <p className="text-xs text-muted-foreground">Two-letter state/province code</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
