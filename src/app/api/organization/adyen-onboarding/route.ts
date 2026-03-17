@@ -136,6 +136,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (org.stateProvince.length > 2 || org.country.length > 2) {
+      return NextResponse.json(
+        { error: "State/Province and Country must be 2-letter codes. Please edit your organization address to fix this." },
+        { status: 400 }
+      )
+    }
+
     // Read optional override from request body
     let body: any = {}
     try {

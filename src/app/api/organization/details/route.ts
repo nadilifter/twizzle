@@ -94,6 +94,14 @@ export async function PATCH(request: Request) {
     const data = await request.json()
     const { name, email, phone, street, city, stateProvince, postalCode, country } = data
 
+    // Validate 2-letter codes for Adyen compliance
+    if (stateProvince && stateProvince.length > 2) {
+      return NextResponse.json({ error: "State/Province must be a 2-letter code" }, { status: 400 })
+    }
+    if (country && country.length > 2) {
+      return NextResponse.json({ error: "Country must be a 2-letter code" }, { status: 400 })
+    }
+
     const organization = await db.organization.update({
       where: { id: organizationId },
       data: {
