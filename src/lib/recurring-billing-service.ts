@@ -72,6 +72,8 @@ export async function executeRecurringCharge(
           userId: charge.userId,
           reference: `REC-${charge.id.slice(-8)}-${Date.now()}`,
           status: "PAID",
+          dueDate: new Date(),
+          subtotal: amountDollars,
           total: amountDollars,
           notes: JSON.stringify({ recurringChargeId: charge.id }),
         },
