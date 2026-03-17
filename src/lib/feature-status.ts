@@ -252,8 +252,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/ledgers", "/api/ledgers/entries"],
   },
   "/dashboard/financials/onboarding": {
-    status: "demo",
-    description: "Payment onboarding preview",
+    status: "live",
+    description: "Adyen payment onboarding",
+    apiRoutes: ["/api/organization/adyen-onboarding", "/api/organization/adyen-onboarding/finalize", "/api/organization/adyen-onboarding/link"],
   },
   "/dashboard/financials/payouts": {
     status: "demo",
