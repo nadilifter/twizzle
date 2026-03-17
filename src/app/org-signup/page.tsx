@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner"
 import { validatePassword, PASSWORD_MESSAGES, PASSWORD_MIN_LENGTH } from "@/lib/password"
 
+import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -47,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 import {
   Tooltip,
   TooltipContent,
@@ -91,22 +93,8 @@ interface SubscriptionPlan {
   maxMembershipTypes: number | null
 }
 
-const COUNTRIES = [
-  { code: "US", name: "United States" },
-  { code: "CA", name: "Canada" },
-]
-
 const MAX_NAME_LENGTH = 50
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
-
-// US: 12345 or 12345-6789; Canada: A1A 1A1 (letter-digit-letter digit-letter-digit)
-function isValidPostalCode(value: string, country: string): boolean {
-  const trimmed = value.trim().replace(/\s/g, "")
-  if (!trimmed) return false
-  if (country === "US") return /^\d{5}(-\d{4})?$/.test(trimmed)
-  if (country === "CA") return /^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/.test(trimmed)
-  return true // no country selected yet
-}
 
 type SignupMode = "choosing" | "existingAccount" | "newAccount"
 
@@ -263,15 +251,7 @@ export default function SignupPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    let finalValue = value
-    
-    // Auto-uppercase state/province code
-    if (name === 'stateProvince') {
-      finalValue = value.toUpperCase()
-    }
-    
-    setFormData(prev => ({ ...prev, [name]: finalValue }))
-    // Clear error when user starts typing
+    setFormData(prev => ({ ...prev, [name]: value }))
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }))
     }
@@ -661,7 +641,11 @@ export default function SignupPage() {
                 <Select
                   value={formData.country}
                   onValueChange={(value) => {
-                    setFormData(prev => ({ ...prev, country: value }))
+                    setFormData(prev => ({
+                      ...prev,
+                      country: value,
+                      stateProvince: prev.country !== value ? "" : prev.stateProvince,
+                    }))
                     if (errors.country) setErrors(prev => ({ ...prev, country: "" }))
                   }}
                 >
@@ -705,18 +689,18 @@ export default function SignupPage() {
                 {errors.city && <p className="text-sm text-destructive">{errors.city}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="stateProvince">State / Province</Label>
-                <Input
-                  id="stateProvince"
-                  name="stateProvince"
-                  autoComplete="address-level1"
-                  placeholder="NY"
-                  maxLength={2}
+                <Label htmlFor="stateProvince">
+                  {formData.country === "CA" ? "Province" : "State / Province"}
+                </Label>
+                <StateProvinceCombobox
+                  country={formData.country}
                   value={formData.stateProvince}
-                  onChange={handleInputChange}
-                  className={errors.stateProvince ? "border-destructive" : ""}
+                  onChange={(val) => {
+                    setFormData(prev => ({ ...prev, stateProvince: val }))
+                    if (errors.stateProvince) setErrors(prev => ({ ...prev, stateProvince: "" }))
+                  }}
+                  error={!!errors.stateProvince}
                 />
-                <p className="text-xs text-muted-foreground">Two-letter state/province code</p>
                 {errors.stateProvince && <p className="text-sm text-destructive">{errors.stateProvince}</p>}
               </div>
               <div className="space-y-2">

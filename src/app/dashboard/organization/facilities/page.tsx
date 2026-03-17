@@ -21,6 +21,7 @@ import {
   Clock,
   X,
 } from "lucide-react"
+import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -35,6 +36,7 @@ import {
   CardTitle,
   CardFooter
 } from "@/components/ui/card"
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 import {
   Table,
   TableBody,
@@ -142,6 +144,10 @@ export default function FacilitiesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [facilityToDelete, setFacilityToDelete] = useState<Facility | null>(null)
 
+  // Facility address controlled state (for combobox/select fields)
+  const [facilityCountry, setFacilityCountry] = useState("US")
+  const [facilityStateProvince, setFacilityStateProvince] = useState("")
+
   // Search states
   const [spaceSearch, setSpaceSearch] = useState("")
   const [equipmentSearch, setEquipmentSearch] = useState("")
@@ -236,6 +242,8 @@ export default function FacilitiesPage() {
 
   const openFacilityForm = (facility: Facility | null) => {
     setEditingFacility(facility)
+    setFacilityCountry(facility?.country || "US")
+    setFacilityStateProvince(facility?.stateProvince || "")
     if (facility) {
       loadOperatingHours(facility.id)
     } else {
@@ -254,9 +262,9 @@ export default function FacilitiesPage() {
       name: formData.get("name") as string,
       street: formData.get("street") as string || null,
       city: formData.get("city") as string || null,
-      stateProvince: formData.get("stateProvince") as string || null,
+      stateProvince: facilityStateProvince || null,
       postalCode: formData.get("postalCode") as string || null,
-      country: formData.get("country") as string || null,
+      country: facilityCountry || null,
       phone: formData.get("phone") as string || null,
       email: formData.get("email") as string || null,
       squareFootage: formData.get("squareFootage") ? Number(formData.get("squareFootage")) : null,
@@ -607,30 +615,46 @@ export default function FacilitiesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="stateProvince">State/Province</Label>
-                    <Input 
-                      id="stateProvince" 
-                      name="stateProvince" 
-                      defaultValue={editingFacility?.stateProvince || ""} 
+                    <Label htmlFor="stateProvince">
+                      {facilityCountry === "CA" ? "Province" : "State / Province"}
+                    </Label>
+                    <StateProvinceCombobox
+                      country={facilityCountry}
+                      value={facilityStateProvince}
+                      onChange={setFacilityStateProvince}
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="postalCode">Postal Code</Label>
+                    <Label htmlFor="postalCode">
+                      {facilityCountry === "CA" ? "Postal Code" : facilityCountry === "US" ? "ZIP Code" : "Postal Code"}
+                    </Label>
                     <Input 
                       id="postalCode" 
                       name="postalCode" 
-                      defaultValue={editingFacility?.postalCode || ""} 
+                      defaultValue={editingFacility?.postalCode || ""}
+                      placeholder={facilityCountry === "CA" ? "A1A 1A1" : facilityCountry === "US" ? "12345" : ""}
                     />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="country">Country</Label>
-                    <Input 
-                      id="country" 
-                      name="country" 
-                      defaultValue={editingFacility?.country || ""} 
-                    />
+                    <Select
+                      value={facilityCountry}
+                      onValueChange={(value) => {
+                        setFacilityCountry(value)
+                        if (facilityCountry !== value) setFacilityStateProvince("")
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <Separator />
@@ -850,7 +874,7 @@ export default function FacilitiesPage() {
                 {facility.city && facility.stateProvince && (
                   <>
                     <MapPin className="h-3 w-3" />
-                    <span>{facility.city}, {facility.stateProvince}</span>
+                    <span>{facility.city}, {getRegionsForCountry(facility.country || "").find((r) => r.code === facility.stateProvince)?.name ?? facility.stateProvince}</span>
                   </>
                 )}
               </div>

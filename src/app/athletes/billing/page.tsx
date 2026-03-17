@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { formatPhoneNumberIntl, isValidPhoneNumber } from "react-phone-number-input"
-import { Check, ChevronsUpDown, Loader2, Plus, Pencil, Trash2, Star, MapPin, Phone, User } from "lucide-react"
+import { Loader2, Plus, Pencil, Trash2, Star, MapPin, Phone, User } from "lucide-react"
 import { toast } from "sonner"
 
 import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,24 +15,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PhoneInput } from "@/components/ui/phone-input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -41,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 import {
   Dialog,
   DialogContent,
@@ -114,7 +101,6 @@ export default function BillingPage() {
   const [editingAddress, setEditingAddress] = useState<UserBillingAddress | null>(null)
   const [addressForm, setAddressForm] = useState(emptyAddress)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
-  const [stateProvinceOpen, setStateProvinceOpen] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -659,74 +645,11 @@ export default function BillingPage() {
                       {addressForm.country === "CA" ? "Province" : "State"}{" "}
                       {getRegionsForCountry(addressForm.country).length > 0 ? "*" : ""}
                     </Label>
-                    {getRegionsForCountry(addressForm.country).length > 0 ? (
-                      <Popover open={stateProvinceOpen} onOpenChange={setStateProvinceOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={stateProvinceOpen}
-                            className={cn(
-                              "w-full justify-between font-normal",
-                              !addressForm.stateProvince && "text-muted-foreground"
-                            )}
-                          >
-                            {addressForm.stateProvince
-                              ? getRegionsForCountry(addressForm.country).find(
-                                  (r) => r.code === addressForm.stateProvince
-                                )?.name ?? addressForm.stateProvince
-                              : `Select ${addressForm.country === "CA" ? "province" : "state"}...`}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                          <Command>
-                            <CommandInput
-                              placeholder={`Search ${addressForm.country === "CA" ? "provinces" : "states"}...`}
-                            />
-                            <CommandList>
-                              <CommandEmpty>No results found.</CommandEmpty>
-                              <CommandGroup>
-                                {getRegionsForCountry(addressForm.country).map((region) => (
-                                  <CommandItem
-                                    key={region.code}
-                                    value={region.name}
-                                    onSelect={() => {
-                                      setAddressForm((f) => ({
-                                        ...f,
-                                        stateProvince: region.code,
-                                      }))
-                                      setStateProvinceOpen(false)
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        addressForm.stateProvince === region.code
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      )}
-                                    />
-                                    {region.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <Input
-                        autoComplete="address-level1"
-                        value={addressForm.stateProvince}
-                        onChange={(e) =>
-                          setAddressForm((f) => ({
-                            ...f,
-                            stateProvince: e.target.value,
-                          }))
-                        }
-                      />
-                    )}
+                    <StateProvinceCombobox
+                      country={addressForm.country}
+                      value={addressForm.stateProvince}
+                      onChange={(val) => setAddressForm((f) => ({ ...f, stateProvince: val }))}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">

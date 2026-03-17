@@ -55,45 +55,23 @@ import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/locati
 </Select>
 ```
 
-### State / Province — Searchable `Command` combobox (Popover)
+### State / Province — `StateProvinceCombobox`
 
-When `getRegionsForCountry(country)` returns entries, render a searchable Popover+Command combobox. Fall back to a plain `<Input>` when there are no known regions for the selected country.
+Use the `StateProvinceCombobox` component from `@/components/ui/state-province-combobox`. It renders a searchable combobox for US states / CA provinces, falls back to a plain `<Input maxLength={2}>` for other countries, and includes a hidden `<input autocomplete="address-level1">` so browser autofill and password managers (1Password, etc.) can populate the field.
 
 ```tsx
-const regions = getRegionsForCountry(form.country)
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 
-{regions.length > 0 ? (
-  <Popover open={stateOpen} onOpenChange={setStateOpen}>
-    <PopoverTrigger asChild>
-      <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
-        {form.stateProvince
-          ? regions.find((r) => r.code === form.stateProvince)?.name ?? form.stateProvince
-          : `Select ${form.country === "CA" ? "province" : "state"}...`}
-        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-      <Command>
-        <CommandInput placeholder={`Search ${form.country === "CA" ? "provinces" : "states"}...`} />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup>
-            {regions.map((region) => (
-              <CommandItem key={region.code} value={region.name}
-                onSelect={() => { setForm((f) => ({ ...f, stateProvince: region.code })); setStateOpen(false) }}>
-                <Check className={cn("mr-2 h-4 w-4", form.stateProvince === region.code ? "opacity-100" : "opacity-0")} />
-                {region.name}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      </Command>
-    </PopoverContent>
-  </Popover>
-) : (
-  <Input value={form.stateProvince} onChange={(e) => setForm((f) => ({ ...f, stateProvince: e.target.value }))} />
-)}
+<StateProvinceCombobox
+  country={form.country}
+  value={form.stateProvince}
+  onChange={(val) => setForm((f) => ({ ...f, stateProvince: val }))}
+  disabled={false}   // optional
+  error={false}      // optional — adds border-destructive styling
+/>
 ```
+
+**Never** build an inline Popover+Command combobox for state/province — always use this component.
 
 ### Postal / ZIP Code — contextual label and validation
 

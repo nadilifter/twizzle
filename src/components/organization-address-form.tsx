@@ -1,12 +1,22 @@
 "use client"
 
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
+
+import { COUNTRIES } from "@/lib/location-data"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PhoneInput } from "@/components/ui/phone-input"
-import { Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 
 interface OrganizationAddressFormProps {
   organization: {
@@ -37,12 +47,7 @@ export function OrganizationAddressForm({
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value
-    // Auto-uppercase state/province and country codes
-    if (e.target.name === 'stateProvince' || e.target.name === 'country') {
-      value = value.toUpperCase()
-    }
-    setFormData((prev) => ({ ...prev, [e.target.name]: value }))
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,42 +111,51 @@ export function OrganizationAddressForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="stateProvince">State/Province</Label>
-          <Input
-            id="stateProvince"
-            name="stateProvince"
+          <Label htmlFor="stateProvince">
+            {formData.country === "CA" ? "Province" : "State / Province"}
+          </Label>
+          <StateProvinceCombobox
+            country={formData.country}
             value={formData.stateProvince}
-            onChange={handleChange}
-            required
-            maxLength={2}
-            placeholder="NY"
+            onChange={(val) => setFormData((prev) => ({ ...prev, stateProvince: val }))}
           />
-          <p className="text-xs text-muted-foreground">Two-letter state/province code</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="postalCode">Postal/ZIP Code</Label>
+          <Label htmlFor="postalCode">
+            {formData.country === "CA" ? "Postal Code" : formData.country === "US" ? "ZIP Code" : "Postal/ZIP Code"}
+          </Label>
           <Input
             id="postalCode"
             name="postalCode"
             value={formData.postalCode}
             onChange={handleChange}
+            placeholder={formData.country === "CA" ? "A1A 1A1" : formData.country === "US" ? "12345" : ""}
             required
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="country">Country</Label>
-          <Input
-            id="country"
-            name="country"
+          <Select
             value={formData.country}
-            onChange={handleChange}
-            required
-            maxLength={2}
-            placeholder="US"
-          />
-          <p className="text-xs text-muted-foreground">Two-letter country code (e.g., US)</p>
+            onValueChange={(value) =>
+              setFormData((prev) => ({
+                ...prev,
+                country: value,
+                stateProvince: prev.country !== value ? "" : prev.stateProvince,
+              }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select country" />
+            </SelectTrigger>
+            <SelectContent>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-2">

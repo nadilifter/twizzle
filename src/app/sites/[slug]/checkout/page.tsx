@@ -17,6 +17,8 @@ import { useSession } from "next-auth/react"
 import { useQueueGate, useCompleteRegistration } from "@/hooks/use-queue-gate"
 import { ReservationTimer } from "@/components/sites/reservation-timer"
 import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
+import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data"
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
@@ -79,6 +81,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     city: "",
     stateProvince: "",
     postalCode: "",
+    country: "US",
   })
 
   // Saved contacts & billing addresses
@@ -184,6 +187,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               city: restoredForm!.city,
               stateProvince: restoredForm!.stateProvince,
               postalCode: restoredForm!.postalCode,
+              country: restoredForm!.country || "US",
             }))
           } else {
             // Auto-select primary address if available
@@ -196,6 +200,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 city: primary.city,
                 stateProvince: primary.stateProvince || "",
                 postalCode: primary.postalCode,
+                country: primary.country || "US",
               }))
             }
           }
@@ -251,7 +256,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     setSelectedAddressId(addressId)
     setIsEditingAddress(false)
     if (addressId === "new") {
-      setFormData((prev) => ({ ...prev, address: "", city: "", stateProvince: "", postalCode: "" }))
+      setFormData((prev) => ({ ...prev, address: "", city: "", stateProvince: "", postalCode: "", country: "US" }))
     } else {
       const addr = savedAddresses.find((a) => a.id === addressId)
       if (addr) {
@@ -261,6 +266,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           city: addr.city,
           stateProvince: addr.stateProvince || "",
           postalCode: addr.postalCode,
+          country: addr.country || "US",
         }))
       }
     }
@@ -917,7 +923,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                     <SelectContent>
                       {savedAddresses.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
-                          {a.label ? `${a.label} — ` : ""}{a.street}, {a.city}{a.stateProvince ? `, ${a.stateProvince}` : ""} {a.postalCode}
+                          {a.label ? `${a.label} — ` : ""}{a.street}, {a.city}{a.stateProvince ? `, ${getRegionsForCountry(a.country).find((r) => r.code === a.stateProvince)?.name ?? a.stateProvince}` : ""} {a.postalCode}
                           {a.isPrimary ? " (Primary)" : ""}
                         </SelectItem>
                       ))}
@@ -969,24 +975,51 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="stateProvince">State / Province</Label>
-                <Input 
-                  id="stateProvince" 
-                  name="stateProvince" 
-                  value={formData.stateProvince} 
-                  onChange={handleInputChange} 
+                <Label htmlFor="stateProvince">
+                  {formData.country === "CA" ? "Province" : "State / Province"}
+                </Label>
+                <StateProvinceCombobox
+                  country={formData.country}
+                  value={formData.stateProvince}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, stateProvince: val }))}
                   disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="postalCode">Postal Code</Label>
+                <Label htmlFor="postalCode">
+                  {formData.country === "CA" ? "Postal Code" : formData.country === "US" ? "ZIP Code" : "Postal Code"}
+                </Label>
                 <Input 
                   id="postalCode" 
                   name="postalCode" 
                   value={formData.postalCode} 
                   onChange={handleInputChange} 
+                  placeholder={formData.country === "CA" ? "A1A 1A1" : formData.country === "US" ? "12345" : ""}
                   disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Select
+                  value={formData.country}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      country: value,
+                      stateProvince: prev.country !== value ? "" : prev.stateProvince,
+                    }))
+                  }
+                  disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
             {checkoutStep === "details" && (

@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner"
 import { validatePassword, PASSWORD_MESSAGES, PASSWORD_MIN_LENGTH } from "@/lib/password"
 
+import { COUNTRIES } from "@/lib/location-data"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 import {
   Tooltip,
   TooltipContent,
@@ -70,29 +72,6 @@ interface SubscriptionPlan {
   maxStorageMB: number | null
   maxMembershipTypes: number | null
 }
-
-const COUNTRIES = [
-  { code: "US", name: "United States" },
-  { code: "CA", name: "Canada" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "AU", name: "Australia" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "ES", name: "Spain" },
-  { code: "IT", name: "Italy" },
-  { code: "NL", name: "Netherlands" },
-  { code: "BE", name: "Belgium" },
-  { code: "AT", name: "Austria" },
-  { code: "CH", name: "Switzerland" },
-  { code: "IE", name: "Ireland" },
-  { code: "NZ", name: "New Zealand" },
-  { code: "MX", name: "Mexico" },
-  { code: "BR", name: "Brazil" },
-  { code: "AR", name: "Argentina" },
-  { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-  { code: "IN", name: "India" },
-]
 
 const MAX_NAME_LENGTH = 50
 
@@ -196,15 +175,7 @@ export default function SignupPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    let finalValue = value
-    
-    // Auto-uppercase state/province code
-    if (name === 'stateProvince') {
-      finalValue = value.toUpperCase()
-    }
-    
-    setFormData(prev => ({ ...prev, [name]: finalValue }))
-    // Clear error when user starts typing
+    setFormData(prev => ({ ...prev, [name]: value }))
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }))
     }
@@ -459,16 +430,14 @@ export default function SignupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="stateProvince">State / Province</Label>
-                <Input
-                  id="stateProvince"
-                  name="stateProvince"
-                  placeholder="NY"
-                  maxLength={2}
+                <Label htmlFor="stateProvince">
+                  {formData.country === "CA" ? "Province" : "State / Province"}
+                </Label>
+                <StateProvinceCombobox
+                  country={formData.country}
                   value={formData.stateProvince}
-                  onChange={handleInputChange}
+                  onChange={(val) => setFormData(prev => ({ ...prev, stateProvince: val }))}
                 />
-                <p className="text-xs text-muted-foreground">Two-letter state/province code</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="postalCode">Postal Code</Label>
@@ -484,7 +453,11 @@ export default function SignupPage() {
                 <Label htmlFor="country">Country</Label>
                 <Select
                   value={formData.country}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
+                  onValueChange={(value) => setFormData(prev => ({
+                    ...prev,
+                    country: value,
+                    stateProvince: prev.country !== value ? "" : prev.stateProvince,
+                  }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select country" />
