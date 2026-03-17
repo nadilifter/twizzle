@@ -62,6 +62,18 @@ export async function POST() {
       // Adyen shopper statement must be alphanumeric/spaces and max 22 chars
       const sanitizedName = org.name.replace(/[^a-zA-Z0-9\s&,.\-_@]/g, "").substring(0, 22).trim()
       
+      // Format phone number to E.164 for Adyen
+      let formattedPhone = "+15555555555"
+      if (org.phone) {
+        let cleaned = org.phone.replace(/[^\d+]/g, "")
+        if (!cleaned.startsWith("+")) {
+          cleaned = cleaned.length === 11 && cleaned.startsWith("1") ? `+${cleaned}` : `+1${cleaned}`
+        }
+        if (cleaned.length >= 10) {
+          formattedPhone = cleaned
+        }
+      }
+
       const store = await createStore({
         merchantId: process.env.ADYEN_PLATFORM_MERCHANT_ACCOUNT || "",
         description: org.name,
@@ -74,7 +86,7 @@ export async function POST() {
           stateOrProvince: org.stateProvince || "",
           postalCode: org.postalCode || "",
         },
-        phoneNumber: org.phone || "+10000000000",
+        phoneNumber: formattedPhone,
       })
 
       updates.storeId = store.id
