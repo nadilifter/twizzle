@@ -196,7 +196,14 @@ export default function SignupPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    let finalValue = value
+    
+    // Auto-uppercase state/province code
+    if (name === 'stateProvince') {
+      finalValue = value.toUpperCase()
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: finalValue }))
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }))
@@ -457,9 +464,11 @@ export default function SignupPage() {
                   id="stateProvince"
                   name="stateProvince"
                   placeholder="NY"
+                  maxLength={2}
                   value={formData.stateProvince}
                   onChange={handleInputChange}
                 />
+                <p className="text-xs text-muted-foreground">Two-letter state/province code</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="postalCode">Postal Code</Label>
