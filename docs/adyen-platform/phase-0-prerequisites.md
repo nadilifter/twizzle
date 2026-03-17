@@ -93,6 +93,8 @@ This can be revisited later to add Leapfrog/Kirra branding to the onboarding exp
 
 ### 0.5 Configure Balance Platform Webhooks
 
+> **Automated alternative**: Webhook creation and HMAC key generation can now be done programmatically with `npx tsx scripts/provision-adyen-staging.ts`. See [Staging / Production Provisioning](README.md#staging--production-provisioning) for details.
+
 **Where**: Adyen Customer Area > Balance Platforms > UplifterLLC > Webhooks
 
 Adyen requires **three separate webhook subscriptions** for different event categories. Each generates its own HMAC key.

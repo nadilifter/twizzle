@@ -110,6 +110,80 @@ Existing variables (unchanged):
 | Platform | `ADYEN_PLATFORM_API_KEY` | `ws_508000@BalancePlatform.UplifterLLC` | BalancePlatform | Configuration API, Transfers API |
 | LEM | `ADYEN_LEM_API_KEY` | `ws_236609@Scope.Company_KirraCapital` | Company | Legal Entity Management API |
 
+## Local Development Setup
+
+### Webhooks via ngrok
+
+Adyen delivers webhook notifications to public URLs. For local development, use [ngrok](https://ngrok.com/) to tunnel requests to your local Next.js server:
+
+1. **Install ngrok** and authenticate with your ngrok account
+2. **Start a tunnel** to your local dev server:
+   ```bash
+   ngrok http 3000
+   ```
+3. **Set the tunnel URL** in your `.env`:
+   ```
+   WEBHOOK_TUNNEL_URL=https://abcd-1234.ngrok-free.app
+   ```
+   The webhook URL helper in `src/lib/webhooks.ts` automatically uses `WEBHOOK_TUNNEL_URL` when `APP_ENVIRONMENT=local`.
+4. **Create webhook subscriptions** in the [Adyen Customer Area](https://ca-test.adyen.com) pointing to your ngrok URL:
+   - Standard payment webhook → `{ngrok_url}/api/webhooks/adyen`
+   - Balance Platform webhooks (3x) → `{ngrok_url}/api/webhooks/adyen-balance-platform`
+5. **Generate HMAC keys** for each subscription and add them to your `.env`.
+
+### Dollar-sign escaping in `.env`
+
+Next.js uses `dotenv-expand` which interpolates `$VAR` syntax. If your Adyen API keys contain `$` characters, you must escape them with a backslash:
+
+```
+ADYEN_API_KEY=AQEyhmfxKo3...before\$after...rest_of_key
+```
+
+Without the `\`, everything after `$` is treated as a variable reference and the key gets truncated.
+
+### Test data for hosted onboarding
+
+When testing the Adyen hosted onboarding flow in the `TEST` environment, use these placeholder values:
+
+| Field | Test Value |
+|---|---|
+| EIN (Tax ID) | `123456789` |
+| SSN (last 4) | `1234` |
+| Bank routing number | `121000248` |
+| Bank account number | `123456789` |
+| Document uploads | Any valid image/PDF (Adyen auto-approves in TEST) |
+
+## Staging / Production Provisioning
+
+### Automated provisioning (recommended)
+
+The `scripts/provision-adyen-staging.ts` script automates webhook creation and HMAC key distribution:
+
+```bash
+npx tsx scripts/provision-adyen-staging.ts          # run for real
+npx tsx scripts/provision-adyen-staging.ts --dry-run # preview only
+```
+
+The script:
+1. Discovers the Company ID from the Management API using your local `ADYEN_API_KEY`
+2. Creates 4 webhook subscriptions (1 standard payment + 3 balance platform) pointing to `https://admin.upliftergymnastics.com`
+3. Generates HMAC keys for each webhook
+4. SSHs into the EC2 instance via `uplifter-staging` and patches `~/.env.uplifter`
+
+After running, redeploy to pick up the new environment variables:
+```bash
+./scripts/deploy-staging.sh
+```
+
+### Manual alternative
+
+If the script is not available or you need to create webhooks manually:
+1. Go to [Adyen Customer Area](https://ca-test.adyen.com) → Developers → Webhooks
+2. Create a standard webhook pointing to `https://admin.upliftergymnastics.com/api/webhooks/adyen`
+3. Go to Balance Platforms → UplifterLLC → Webhooks
+4. Create three subscriptions (Configuration, Transfer, Negative Balance) pointing to `https://admin.upliftergymnastics.com/api/webhooks/adyen-balance-platform`
+5. Generate HMAC keys for each and manually update `~/.env.uplifter` on the EC2 instance
+
 ## Coexistence Strategy
 
 The platform model is opt-in per organization. The system maintains backward compatibility:

@@ -158,6 +158,8 @@ APP_ENVIRONMENT=production
   * `check-schema-drift.sh` - Detects schema/migration drift (see below)
   * `deploy-staging.sh` - Staging deployment helper
   * `secrets-decrypt.sh` / `secrets-encrypt.sh` / `secrets-edit.sh` - Secrets management
+  * `provision-adyen-staging.ts` - Provisions Adyen webhooks and HMAC keys for staging via the Management API, then SSHs into EC2 to update `.env.uplifter` (run with `npx tsx scripts/provision-adyen-staging.ts`)
+  * `migrate-states.ts` - One-time migration that converts full state/province names (e.g. "Virginia") to 2-letter ISO codes (e.g. "VA") across all address tables
 * `.husky/` - Git hooks
   * `pre-commit` - Blocks commits that modify `schema.prisma` without a corresponding migration
 
