@@ -59,9 +59,13 @@ export async function POST() {
 
     // Create Store (idempotent -- skip if already set)
     if (!account.storeId) {
+      // Adyen shopper statement must be alphanumeric/spaces and max 22 chars
+      const sanitizedName = org.name.replace(/[^a-zA-Z0-9\s&,.\-_@]/g, "").substring(0, 22).trim()
+      
       const store = await createStore({
         merchantId: process.env.ADYEN_PLATFORM_MERCHANT_ACCOUNT || "",
         description: org.name,
+        shopperStatement: sanitizedName || "ClubRegistration",
         reference: `store-${org.slug}`,
         address: {
           country: org.country || "US",

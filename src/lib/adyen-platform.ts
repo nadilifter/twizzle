@@ -282,6 +282,7 @@ export async function createSweep(
 export async function createStore(data: {
   merchantId: string;
   description: string;
+  shopperStatement?: string;
   address: {
     country: string;
     line1: string;
