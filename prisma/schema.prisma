@@ -689,11 +689,16 @@ model PaymentMethod {
   isDefault Boolean           @default(false)
   createdAt DateTime          @default(now())
 
+  // Adyen stored payment method token (for recurring charges)
+  adyenTokenId     String? @unique
+  shopperReference String?
+
   // Relations
   user             User?             @relation("UserPaymentMethods", fields: [userId], references: [id], onDelete: Cascade)
   recurringCharges RecurringCharge[]
 
   @@index([userId])
+  @@index([adyenTokenId])
 }
 
 enum PaymentMethodType {
@@ -2965,9 +2970,6 @@ model AdyenPlatformAccount {
   // Sweep
   sweepId              String?
   transferInstrumentId String?
-
-  // Split profile linked to this org's store
-  splitConfigurationId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

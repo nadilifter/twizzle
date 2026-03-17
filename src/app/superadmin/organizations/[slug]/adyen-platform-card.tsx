@@ -38,7 +38,6 @@ type AdyenAccount = {
   capabilities: any
   sweepId: string | null
   transferInstrumentId: string | null
-  splitConfigurationId: string | null
   createdAt: string
   updatedAt: string
 }

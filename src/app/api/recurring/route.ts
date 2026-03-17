@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { executeRecurringCharge } from "@/lib/recurring-billing-service";
 import { z } from "zod";
 
 const createRecurringChargeSchema = z.object({
@@ -275,7 +276,16 @@ export async function PATCH(request: NextRequest) {
           },
         },
         include: {
-          paymentMethod: true,
+          paymentMethod: {
+            select: {
+              id: true,
+              type: true,
+              last4: true,
+              brand: true,
+              adyenTokenId: true,
+              shopperReference: true,
+            },
+          },
         },
       });
 
@@ -286,35 +296,55 @@ export async function PATCH(request: NextRequest) {
       };
 
       for (const charge of dueCharges) {
-        // Skip if no payment method
-        if (!charge.paymentMethodId) {
+        if (!charge.paymentMethodId || !charge.paymentMethod) {
           results.skipped++;
           continue;
         }
 
-        // In a real implementation, you would:
-        // 1. Create a payment intent with Adyen
-        // 2. Process the payment
-        // 3. Create an invoice and payment record
-        // 4. Update the recurring charge
-
-        // For now, we'll just update the next charge date
-        const nextDate = new Date(charge.nextChargeDate);
-        if (charge.frequency === "MONTHLY") {
-          nextDate.setMonth(nextDate.getMonth() + 1);
-        } else if (charge.frequency === "YEARLY") {
-          nextDate.setFullYear(nextDate.getFullYear() + 1);
+        if (!charge.paymentMethod.adyenTokenId) {
+          results.skipped++;
+          continue;
         }
 
-        await db.recurringCharge.update({
-          where: { id: charge.id },
-          data: {
-            nextChargeDate: nextDate,
-            lastChargedAt: new Date(),
-          },
-        });
+        try {
+          const result = await executeRecurringCharge(charge, charge.organizationId);
 
-        results.processed++;
+          if (result.success) {
+            const nextDate = new Date(charge.nextChargeDate);
+            if (charge.frequency === "MONTHLY") {
+              nextDate.setMonth(nextDate.getMonth() + 1);
+            } else if (charge.frequency === "YEARLY") {
+              nextDate.setFullYear(nextDate.getFullYear() + 1);
+            }
+
+            await db.recurringCharge.update({
+              where: { id: charge.id },
+              data: {
+                nextChargeDate: nextDate,
+                lastChargedAt: new Date(),
+                failureCount: 0,
+              },
+            });
+
+            results.processed++;
+          } else {
+            const newFailureCount = charge.failureCount + 1;
+            const MAX_RETRIES = 3;
+
+            await db.recurringCharge.update({
+              where: { id: charge.id },
+              data: {
+                failureCount: newFailureCount,
+                status: newFailureCount >= MAX_RETRIES ? "FAILED" : "ACTIVE",
+              },
+            });
+
+            results.failed++;
+          }
+        } catch (error) {
+          console.error(`Error processing recurring charge ${charge.id}:`, error);
+          results.failed++;
+        }
       }
 
       return NextResponse.json({

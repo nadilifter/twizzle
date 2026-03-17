@@ -258,15 +258,24 @@ async function handleRefund(notificationItem: any) {
     return
   }
 
-  // Prevent duplicate processing
+  // Check if a PENDING refund transaction exists (created by our refund API)
   const existing = await db.transaction.findUnique({
     where: { pspReference },
   })
   if (existing) {
-    console.log(`[REFUND] Transaction ${pspReference} already processed`)
+    if (existing.status === "PENDING") {
+      await db.transaction.update({
+        where: { id: existing.id },
+        data: { status: "SETTLED", settledAt: new Date() },
+      })
+      console.log(`[REFUND] Updated PENDING refund ${pspReference} to SETTLED`)
+    } else {
+      console.log(`[REFUND] Transaction ${pspReference} already processed`)
+    }
     return
   }
 
+  // No existing record -- refund was initiated outside our API (e.g. Adyen dashboard)
   const originalTx = await db.transaction.findUnique({
     where: { pspReference: originalReference },
   })
@@ -289,6 +298,7 @@ async function handleRefund(notificationItem: any) {
       status: "SETTLED",
       method: originalTx.method,
       description: `Refund for ${originalTx.merchantRef || originalReference}`,
+      metadata: { originalPspReference: originalReference },
       settledAt: new Date(),
     },
   })

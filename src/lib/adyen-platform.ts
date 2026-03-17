@@ -276,6 +276,43 @@ export async function createSweep(
 }
 
 // ---------------------------------------------------------------------------
+// Refunds (Checkout Modifications API)
+// ---------------------------------------------------------------------------
+
+export async function refundPayment(
+  pspReference: string,
+  amount: { value: number; currency: string },
+  merchantAccount?: string,
+  reference?: string,
+): Promise<{ pspReference: string; status: string; [key: string]: any }> {
+  try {
+    const { CheckoutAPI } = require("@adyen/api-library");
+    const checkoutApi = new CheckoutAPI(getManagementClient());
+
+    const response = await checkoutApi.ModificationsApi.refundCapturedPayment(
+      pspReference,
+      {
+        amount,
+        merchantAccount: merchantAccount
+          || process.env.ADYEN_MERCHANT_ACCOUNT
+          || "TestMerchant",
+        reference: reference || `refund-${pspReference}-${Date.now()}`,
+      }
+    );
+
+    return response;
+  } catch (error: any) {
+    console.error("adyen-platform: refundPayment failed", {
+      pspReference,
+      amount,
+      status: error.statusCode,
+      body: error.responseBody,
+    });
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Management API
 // ---------------------------------------------------------------------------
 
@@ -292,10 +329,6 @@ export async function createStore(data: {
   };
   phoneNumber: string;
   reference: string;
-  splitConfiguration?: {
-    balanceAccountId: string;
-    splitConfigurationId: string;
-  };
 }): Promise<{ id: string; reference: string; [key: string]: any }> {
   try {
     const { merchantId, ...storeData } = data;

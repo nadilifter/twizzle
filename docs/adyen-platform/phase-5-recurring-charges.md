@@ -1,7 +1,7 @@
-# Phase 6: Recurring Charge Execution
+# Phase 5: Recurring Charge Execution
 
 **Type**: Backend (new service + modify existing route)
-**Depends on**: Phase 4 (payment flow with splits must work)
+**Depends on**: Phase 3 (onboarding must exist; recurring also works for non-onboarded orgs)
 **Blocks**: Nothing directly
 **Estimated effort**: 2-3 days
 **Risk to existing functionality**: MEDIUM -- modifies the recurring charge batch runner, which is currently a placeholder
@@ -22,12 +22,11 @@ The current code (lines 288-315) contains this comment:
 ## Adyen Prerequisites
 
 - Stored payment tokens exist (via `PaymentMethod` model for guardians, or `OrganizationPaymentMethod` for org subscriptions)
-- For platform orgs: store must be configured (Phase 3) so auto-splits apply
 - No additional API credentials needed
 
 ---
 
-## Step 6A: Create Recurring Billing Service
+## Step 5A: Create Recurring Billing Service
 
 ### File to create: `src/lib/recurring-billing-service.ts`
 
@@ -73,22 +72,12 @@ export async function executeRecurringCharge(
    - Missing: `storedPaymentMethodId` (the Adyen token reference), `shopperReference`
    - **Schema addition needed**: Add `adyenTokenId` (String, optional) and `shopperReference` (String, optional) to the `PaymentMethod` model
 
-3. **Determine platform context**: Look up `AdyenPlatformAccount` for the organization:
-   ```typescript
-   const platformAccount = await db.adyenPlatformAccount.findUnique({
-     where: { organizationId },
-     select: { storeId: true, onboardingStatus: true },
-   });
-   ```
-
-4. **Build payment request**:
+3. **Build payment request**:
    ```typescript
    const paymentRequest: any = {
      amount: { currency: "USD", value: Math.round(Number(charge.amount) * 100) },
      reference: `recurring-${charge.id}-${Date.now()}`,
-     merchantAccount: platformAccount?.storeId
-       ? process.env.ADYEN_PLATFORM_MERCHANT_ACCOUNT
-       : process.env.ADYEN_MERCHANT_ACCOUNT,
+     merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT,
      shopperReference: paymentMethod.shopperReference,
      paymentMethod: {
        type: "scheme",
@@ -97,40 +86,35 @@ export async function executeRecurringCharge(
      shopperInteraction: "ContAuth",
      recurringProcessingModel: "Subscription",
    };
-
-   // For platform orgs: include store so auto-splits apply
-   if (platformAccount?.storeId && platformAccount.onboardingStatus === "VERIFIED") {
-     paymentRequest.store = platformAccount.storeId;
-   }
    ```
 
-5. **Add Idempotency-Key**: For `/payments` calls (unlike `/sessions`), idempotency keys are important:
+4. **Add Idempotency-Key**: For `/payments` calls (unlike `/sessions`), idempotency keys are important:
    ```typescript
    // The idempotency key ensures retries don't create duplicate charges
    const idempotencyKey = `recurring-${charge.id}-${charge.nextChargeDate.toISOString().split("T")[0]}`;
    ```
 
-6. **Call Adyen**:
+5. **Call Adyen**:
    ```typescript
    const response = await checkoutApi.PaymentsApi.payments(paymentRequest, {
      idempotencyKey,
    });
    ```
 
-7. **Create records on success** (`resultCode === "Authorised"`):
+6. **Create records on success** (`resultCode === "Authorised"`):
    - Create `Invoice` with reference `REC-{charge.id}-{timestamp}`
    - Create `LineItem` with charge description and amount
    - Create `Payment` linked to invoice
    - Create `Transaction` with pspReference
    - Update invoice status to `PAID`
 
-8. **Handle failure**:
+7. **Handle failure**:
    - If `resultCode` is `Refused`, `Error`, etc.: return `{ success: false, error: response.refusalReason }`
    - The caller (batch runner) handles incrementing `failureCount`
 
 ---
 
-## Step 6B: Schema Addition for PaymentMethod
+## Step 5B: Schema Addition for PaymentMethod
 
 ### File to modify: `prisma/schema.prisma`
 
@@ -164,7 +148,7 @@ Run migration: `pnpm db:migrate` (migration name: `add_adyen_token_to_payment_me
 
 ---
 
-## Step 6C: Update Batch Runner Route
+## Step 5C: Update Batch Runner Route
 
 ### File to modify: `src/app/api/recurring/route.ts`
 
@@ -244,26 +228,6 @@ include: {
 
 ---
 
-## Step 6D: Update Tokenization for Platform Model
-
-### File to modify: `src/lib/adyen.ts`
-
-Update `createTokenizationSession()` to accept an optional `store` parameter:
-
-```typescript
-export async function createTokenizationSession(
-  shopperReference: string,
-  returnUrl: string,
-  shopperEmail?: string,
-  amount: number = 0,
-  store?: string,  // Add this parameter
-)
-```
-
-When `store` is provided, include it in the session request so the token is associated with the correct store/merchant.
-
----
-
 ## Verification / Test Plan
 
 1. **Create a recurring charge with a stored token**:
@@ -271,23 +235,18 @@ When `store` is provided, include it in the session request so the token is asso
    - Ensure the `PaymentMethod` record has `adyenTokenId` populated
    - Create a `RecurringCharge` pointing to this payment method
 
-2. **Run the batch for a platform org**:
+2. **Run the batch**:
    - Set `nextChargeDate` to today
    - Call `PATCH /api/recurring` with `{ "action": "run_batch" }`
    - Verify the payment is processed via Adyen
    - Verify Invoice, Payment, Transaction records are created
    - Verify `nextChargeDate` is advanced
-   - Verify splits apply (for platform orgs)
 
-3. **Run the batch for a non-platform org**:
-   - Same test but for an org without `AdyenPlatformAccount`
-   - Verify payment goes through single-merchant account
-
-4. **Failure handling**:
+3. **Failure handling**:
    - Use an invalid token to trigger a refused payment
    - Verify `failureCount` increments
    - After 3 failures, verify status changes to `FAILED`
 
-5. **Idempotency**:
+4. **Idempotency**:
    - Run the batch twice for the same charge on the same day
    - Verify only one payment is created (idempotency key prevents double-charge)

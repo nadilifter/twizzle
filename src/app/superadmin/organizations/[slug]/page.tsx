@@ -427,7 +427,6 @@ export default async function OrganizationDetailPage({ params }: Props) {
                 capabilities: organization.adyenPlatformAccount.capabilities,
                 sweepId: organization.adyenPlatformAccount.sweepId,
                 transferInstrumentId: organization.adyenPlatformAccount.transferInstrumentId,
-                splitConfigurationId: organization.adyenPlatformAccount.splitConfigurationId,
                 createdAt: organization.adyenPlatformAccount.createdAt.toISOString(),
                 updatedAt: organization.adyenPlatformAccount.updatedAt.toISOString(),
               }

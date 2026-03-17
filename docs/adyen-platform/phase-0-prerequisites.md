@@ -7,7 +7,7 @@
 
 ## Overview
 
-Before any development can begin, the Kirra Adyen balance platform must be fully configured with the correct API credentials, webhook endpoints, split configuration profiles, and onboarding themes. This phase is entirely manual work done in the Adyen Customer Area and local environment files.
+Before any development can begin, the Kirra Adyen balance platform must be fully configured with the correct API credentials, webhook endpoints, and onboarding themes. This phase is entirely manual work done in the Adyen Customer Area and local environment files.
 
 ## Prerequisites Checklist
 
@@ -67,19 +67,7 @@ All API keys are set in `.env` only (never committed).
 
 ---
 
-### 0.3 Create Split Configuration Profile -- DEFERRED
-
-Split configuration is not needed until Phase 4 (payment processing with splits). Onboarding (Phase 3) and webhook handling (Phase 2) can be built and tested without it.
-
-When ready, create it in Adyen Customer Area > Platform > New split configuration:
-- Profile name: "Leapfrog Default Split"
-- Platform commission: fixed fee and/or percentage
-- Where to book payment fees and chargebacks
-- Note the **Split Configuration ID** (UUID) -- stored in `AdyenPlatformAccount.splitConfigurationId`
-
----
-
-### 0.4 Create Hosted Onboarding Theme -- DEFERRED
+### 0.3 Create Hosted Onboarding Theme -- DEFERRED
 
 Adyen hosted onboarding supports generating links without a custom theme (uses Adyen's default branding). We will skip custom theme creation for now and pass no `themeId` when generating onboarding links.
 
@@ -91,7 +79,7 @@ This can be revisited later to add Leapfrog/Kirra branding to the onboarding exp
 
 ---
 
-### 0.5 Configure Balance Platform Webhooks
+### 0.4 Configure Balance Platform Webhooks
 
 > **Automated alternative**: Webhook creation and HMAC key generation can now be done programmatically with `npx tsx scripts/provision-adyen-staging.ts`. See [Staging / Production Provisioning](README.md#staging--production-provisioning) for details.
 
@@ -135,7 +123,7 @@ The webhook handler will try all three keys when verifying signatures (the paylo
 
 ---
 
-### 0.6 Update Environment Variables
+### 0.5 Update Environment Variables
 
 **File**: `.env.example` and all environment `.env` files
 
@@ -167,7 +155,7 @@ ADYEN_LEM_API_KEY=your-lem-api-key
 
 ---
 
-### 0.7 Verify Test Environment Access
+### 0.6 Verify Test Environment Access
 
 **Manual validation before writing any code**:
 
@@ -186,7 +174,6 @@ A completed checklist document with all IDs and keys filled in, confirming:
 - [x] Balance platform ID obtained (`UplifterLLC`)
 - [x] Platform merchant account ID obtained (`KirraCapital_Leapfrog_TEST`)
 - [x] API credentials obtained (triple-key: checkout + platform + LEM)
-- [ ] Split configuration profile -- deferred to Phase 4
 - [x] Onboarding theme -- deferred (using Adyen default)
 - [x] Balance platform webhooks configured (3 subscriptions) and HMAC keys obtained
 - [x] Liable balance account ID obtained (`BA32957223227M5KTBSHJFVFL`)

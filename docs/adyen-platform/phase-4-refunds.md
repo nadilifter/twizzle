@@ -1,23 +1,23 @@
-# Phase 5: Refunds
+# Phase 4: Refunds
 
 **Type**: Backend (new API route + API client addition)
-**Depends on**: Phase 4 (need completed payments to refund)
-**Blocks**: Phase 7 (negative balance handling relates to refund scenarios)
+**Depends on**: Phase 3 (need completed payments to refund; refunds also work for non-onboarded orgs)
+**Blocks**: Phase 6 (negative balance handling relates to refund scenarios)
 **Estimated effort**: 1-2 days
 **Risk to existing functionality**: Low -- new API endpoint, no modification to existing flows
 
 ## Overview
 
-Implement a refund API endpoint that calls Adyen's refund API. For platform-onboarded orgs, refund split instructions must reverse the original split correctly. The Phase 2 webhook handler already handles `REFUND` event codes.
+Implement a refund API endpoint that calls Adyen's refund API. The Phase 2 webhook handler already handles `REFUND` event codes.
 
 ## Adyen Prerequisites
 
-- Completed test payments from Phase 4 (need `pspReference` values to refund)
+- Completed test payments (need `pspReference` values to refund)
 - No additional API credentials needed (uses existing Checkout API key)
 
 ---
 
-## Step 5A: Add Refund Function to API Client
+## Step 4A: Add Refund Function to API Client
 
 ### File to modify: `src/lib/adyen-platform.ts`
 
@@ -50,7 +50,6 @@ export async function refundPayment(
       {
         amount,
         merchantAccount: merchantAccount
-          || process.env.ADYEN_PLATFORM_MERCHANT_ACCOUNT
           || process.env.ADYEN_MERCHANT_ACCOUNT
           || "TestMerchant",
         reference: reference || `refund-${pspReference}-${Date.now()}`,
@@ -65,11 +64,9 @@ export async function refundPayment(
 }
 ```
 
-**Note on split reversal**: For platform payments, Adyen automatically reverses the split when a refund is processed -- the funds come back from the same accounts they were split to. You do NOT need to provide a `splits` array for standard full refunds. For partial refunds with custom split distribution, you would need a `splits` array, but that's an edge case we can add later.
-
 ---
 
-## Step 5B: Create Refund API Endpoint
+## Step 4B: Create Refund API Endpoint
 
 ### File to create: `src/app/api/transactions/[id]/refund/route.ts`
 
@@ -92,9 +89,7 @@ export async function refundPayment(
 4. Calculate refund amount:
    - If `amount` provided: use it (partial refund). Validate it doesn't exceed original amount.
    - If not provided: use original transaction amount (full refund)
-5. Determine merchant account:
-   - Check if org has `AdyenPlatformAccount` → use `ADYEN_PLATFORM_MERCHANT_ACCOUNT`
-   - Otherwise → use `ADYEN_MERCHANT_ACCOUNT`
+5. Use `ADYEN_MERCHANT_ACCOUNT` for the refund call
 6. Call `refundPayment()` with the transaction's `pspReference`
 7. Create a new `Transaction` record:
    ```typescript
@@ -131,14 +126,14 @@ export async function refundPayment(
    ```
 
 **Error handling**:
-- If Adyen returns an error (e.g., insufficient funds in balance account), return the error to the caller
+- If Adyen returns an error, return the error to the caller
 - Do not create a Transaction record if the Adyen call fails
 
 **Response**: Return the new refund transaction record.
 
 ---
 
-## Step 5C: Verify Phase 2 Webhook Handles Refund Events
+## Step 4C: Verify Phase 2 Webhook Handles Refund Events
 
 The existing payment webhook (`src/app/api/webhooks/adyen/route.ts`) was extended in Phase 2B to handle `REFUND` event codes. Verify that when a refund completes:
 
@@ -170,7 +165,7 @@ async function handleRefund(notificationItem: any) {
 ## Verification / Test Plan
 
 1. **Full refund**:
-   - Process a payment for a platform org (Phase 4)
+   - Process a payment via the existing checkout flow
    - Call `POST /api/transactions/{id}/refund` with no body (full refund)
    - Verify refund Transaction record created with status `PENDING`
    - Verify Adyen Customer Area shows the refund
@@ -186,8 +181,3 @@ async function handleRefund(notificationItem: any) {
 3. **Double refund prevention**:
    - Try to refund the same transaction twice (full amount both times)
    - Second attempt should fail or be prevented by checking existing refund records
-
-4. **Non-platform org refund**:
-   - Process a payment for a non-onboarded org
-   - Refund it
-   - Verify it uses the single-merchant account

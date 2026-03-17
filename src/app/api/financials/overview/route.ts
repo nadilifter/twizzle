@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
       outstandingInvoices,
       invoicesByStatus,
       settledTransactions,
+      refundsThisMonth,
+      chargebacksThisMonth,
+      platformAccount,
     ] = await Promise.all([
       // Revenue this month (from completed payments)
       db.payment.aggregate({
@@ -100,6 +103,38 @@ export async function GET(request: NextRequest) {
         },
         _sum: { amount: true },
         _count: true,
+      }),
+
+      // Refunds this month
+      db.transaction.aggregate({
+        where: {
+          organizationId,
+          type: "REFUND",
+          createdAt: { gte: currentMonth },
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+
+      // Chargebacks this month
+      db.transaction.aggregate({
+        where: {
+          organizationId,
+          type: "CHARGEBACK",
+          createdAt: { gte: currentMonth },
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+
+      // Adyen platform account status
+      db.adyenPlatformAccount.findUnique({
+        where: { organizationId },
+        select: {
+          onboardingStatus: true,
+          verificationStatus: true,
+          balanceAccountId: true,
+        },
       }),
     ]);
 
@@ -208,9 +243,18 @@ export async function GET(request: NextRequest) {
         settledThisMonth: Number(settledTransactions._sum.amount || 0),
         settledCount: settledTransactions._count || 0,
       },
+      refunds: {
+        totalThisMonth: Math.abs(Number(refundsThisMonth._sum.amount || 0)),
+        count: refundsThisMonth._count || 0,
+      },
+      chargebacks: {
+        totalThisMonth: Math.abs(Number(chargebacksThisMonth._sum.amount || 0)),
+        count: chargebacksThisMonth._count || 0,
+      },
       adyenStatus: {
-        status: "active",
-        verificationComplete: true,
+        status: platformAccount?.onboardingStatus || "not_onboarded",
+        verificationComplete: platformAccount?.onboardingStatus === "VERIFIED",
+        hasBalanceAccount: !!platformAccount?.balanceAccountId,
       },
     });
   } catch (error) {

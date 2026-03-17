@@ -1,10 +1,12 @@
-# Phase 7: Negative Balance Handling
+# Phase 6: Negative Balance Handling
 
 **Type**: Backend (API client addition + new route + extend webhook handler)
-**Depends on**: Phase 5 (negative balances typically arise from refunds or chargebacks)
+**Depends on**: Phase 4 (negative balances typically arise from refunds or chargebacks)
 **Blocks**: Nothing
 **Estimated effort**: 1-2 days
 **Risk to existing functionality**: None -- new functionality only
+
+**MVP note**: Without split payments routing funds into per-club balance accounts, those accounts will remain at zero and negative balances cannot occur in practice. This phase remains valid infrastructure for future split payment support, but its priority is low for MVP. Consider deferring.
 
 ## Overview
 
@@ -17,11 +19,11 @@ When a club's Adyen balance account goes negative (e.g., from a refund when fund
 ## Adyen Prerequisites
 
 - The `receiveFromBalanceAccount` capability must be enabled on account holders (requested during Phase 3A onboarding)
-- Transfers API access in the API key (configured in Phase 0.2)
+- Transfers API access in the API key (configured in Phase 0)
 
 ---
 
-## Step 7A: Enhance Negative Balance Webhook Handling
+## Step 6A: Enhance Negative Balance Webhook Handling
 
 ### File to modify: `src/app/api/webhooks/adyen-balance-platform/route.ts`
 
@@ -88,7 +90,7 @@ The Phase 2 handler logs `balancePlatform.negativeBalanceCompensationWarning.sch
 
 ---
 
-## Step 7B: Add Transfer Function to API Client
+## Step 6B: Add Transfer Function to API Client
 
 ### File to modify: `src/lib/adyen-platform.ts`
 
@@ -149,7 +151,7 @@ POST https://balanceplatform-api-test.adyen.com/btl/v4/transfers
 
 ---
 
-## Step 7C: Create Superadmin Transfer Endpoint
+## Step 6C: Create Superadmin Transfer Endpoint
 
 ### File to create: `src/app/api/organization/adyen-transfer/route.ts`
 
@@ -182,7 +184,7 @@ POST https://balanceplatform-api-test.adyen.com/btl/v4/transfers
 
 ---
 
-## Step 7D: Superadmin UI for Negative Balances
+## Step 6D: Superadmin UI for Negative Balances
 
 ### File to modify: `src/app/superadmin/organizations/page.tsx` (or list view)
 

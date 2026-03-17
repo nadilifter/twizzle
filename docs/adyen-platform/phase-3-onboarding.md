@@ -2,7 +2,7 @@
 
 **Type**: Backend API routes + frontend dashboard page
 **Depends on**: Phase 1 (schema + API client), Phase 2 (webhooks must be live to receive status updates)
-**Blocks**: Phase 4 (payments need onboarded orgs)
+**Blocks**: Phase 4 (Refunds), Phase 5 (Recurring Charges)
 **Estimated effort**: 3-5 days
 **Risk to existing functionality**: None -- new API routes and replaces a hardcoded mockup page
 
@@ -15,7 +15,7 @@ Build the onboarding flow that creates Adyen platform resources for an organizat
 3. We generate a hosted onboarding link and redirect the admin to Adyen's page
 4. Admin completes verification on Adyen's hosted page (provides business details, ID, bank info)
 5. Adyen sends webhook updates as verification progresses (handled by Phase 2)
-6. After verification passes, we create the Store (with split config) and configure Sweeps
+6. After verification passes, we create the Store and configure Sweeps
 
 ## Adyen Prerequisites
 
@@ -184,11 +184,8 @@ POST /stores (Management API)
     "postalCode": org.postalCode
   },
   "phoneNumber": org.phone,
-  // splitConfiguration is added later in Phase 4 when the split profile is created
 }
 ```
-
-The store is created without a split configuration initially. The split profile is linked to the store in Phase 4 when payment processing with splits is implemented.
 
 **API Call: Create Sweep** (if transfer instrument is available)
 ```
@@ -301,7 +298,7 @@ This gives superadmins full control over the onboarding process for any organiza
 
 4. **Finalize setup**:
    - After verification passes, create store and sweep
-   - Verify store appears in Adyen Customer Area with correct split configuration
+   - Verify store appears in Adyen Customer Area
 
 5. **Non-onboarded orgs are unaffected**:
    - Verify other organizations can still process payments normally via the existing single-merchant flow

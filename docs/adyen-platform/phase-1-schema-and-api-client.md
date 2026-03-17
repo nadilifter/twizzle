@@ -44,9 +44,6 @@ model AdyenPlatformAccount {
   sweepId              String?
   transferInstrumentId String?
 
-  // Split profile linked to this org's store
-  splitConfigurationId String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -236,10 +233,6 @@ export async function createStore(data: {
   };
   phoneNumber: string;
   reference: string;
-  splitConfiguration?: {
-    balanceAccountId: string;
-    splitConfigurationId: string;
-  };
 }): Promise<{ id: string; reference: string; [key: string]: any }>
 // Calls: POST /stores via Management API
 ```
@@ -248,7 +241,7 @@ export async function createStore(data: {
 
 1. **Error handling**: Each function should catch errors, log them with context (the function name and key parameters), and re-throw. Match the pattern in `src/lib/adyen.ts`.
 
-2. **No `refundPayment` or `createTransfer` yet**: These are deferred to Phase 5 and Phase 7 respectively. Do not implement them now.
+2. **No `refundPayment` or `createTransfer` yet**: These are deferred to Phase 4 and Phase 6 respectively. Do not implement them now.
 
 3. **API key resolution**: Three separate clients are needed:
    - `getLemClient()` uses `ADYEN_LEM_API_KEY` (Company-scoped `ws_236609@Scope.Company_KirraCapital`). Used by `getLemApi()` for legal entities, business lines, onboarding links.
@@ -263,7 +256,7 @@ export async function createStore(data: {
 
    You will need to verify exact method names by checking the library source or TypeScript definitions. The `require()` pattern means these are not statically typed.
 
-5. **Do not modify `src/lib/adyen.ts`** in this phase. That file handles checkout sessions, payment links, and tokenization. It will be modified in Phase 4.
+5. **Do not modify `src/lib/adyen.ts`** in this phase. That file handles checkout sessions, payment links, and tokenization. It will be modified in Phase 5 (Recurring Charges).
 
 ### Verification
 
