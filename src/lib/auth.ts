@@ -56,7 +56,18 @@ async function buildAuthorizedUser(userId: string, targetOrgId?: string | null) 
     membership = activeMemberships.find((m) => m.organizationId === targetOrgId);
     if (membership) {
       organizationName = membership.organization.name;
-    } else if (!user.isSuperAdmin) {
+    } else if (user.isSuperAdmin) {
+      // Superadmins can select any org, fetch its name
+      const targetOrg = await db.organization.findUnique({
+        where: { id: targetOrgId },
+        select: { name: true }
+      });
+      if (targetOrg) {
+        organizationName = targetOrg.name;
+      } else {
+        organizationId = "";
+      }
+    } else {
       organizationId = "";
     }
   }
