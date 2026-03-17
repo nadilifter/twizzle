@@ -34,7 +34,7 @@ function getAdyenClient() {
   }
 
   // Only initialize when actually needed
-  const { Client, Environment } = require("@adyen/api-library");
+  const { Client, EnvironmentEnum: Environment } = require("@adyen/api-library");
 
   // Determine Adyen environment from env var
   const envValue = process.env.ADYEN_ENVIRONMENT?.toUpperCase();
