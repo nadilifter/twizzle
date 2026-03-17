@@ -25,6 +25,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DashboardPageHeader } from "@/components/dashboard-page-header"
+import { OrganizationAddressForm } from "@/components/organization-address-form"
 import { cn } from "@/lib/utils"
 
 interface OrgDetails {
@@ -70,6 +71,7 @@ export default function OrganizationOverviewPage() {
   const [loading, setLoading] = useState(true)
   const [savingSports, setSavingSports] = useState(false)
   const [sportsChanged, setSportsChanged] = useState(false)
+  const [editingAddress, setEditingAddress] = useState(false)
 
   const fetchData = useCallback(async () => {
     try {
@@ -220,75 +222,93 @@ export default function OrganizationOverviewPage() {
       {/* Organization Details */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            <CardTitle>Organization Details</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <CardTitle>Organization Details</CardTitle>
+            </div>
+            {!editingAddress && (
+              <Button variant="ghost" size="sm" onClick={() => setEditingAddress(true)}>
+                Edit Address
+              </Button>
+            )}
           </div>
           <CardDescription>Basic information about your organization</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Organization Name</p>
-              <p className="font-medium">{orgDetails.name}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Subdomain</p>
-              <p className="font-medium font-mono">{orgDetails.slug}</p>
-            </div>
-            {orgDetails.email && (
-              <div className="flex items-start gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{orgDetails.email}</p>
-                </div>
-              </div>
-            )}
-            {orgDetails.phone && (
-              <div className="flex items-start gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{orgDetails.phone}</p>
-                </div>
-              </div>
-            )}
-            {address && (
-              <div className="flex items-start gap-2 sm:col-span-2">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Address</p>
-                  <p className="font-medium">{address}</p>
-                </div>
-              </div>
-            )}
-            {orgDetails.subscription && (
+          {editingAddress ? (
+            <OrganizationAddressForm 
+              organization={orgDetails}
+              onSuccess={(updated) => {
+                setOrgDetails((prev) => prev ? { ...prev, ...updated } : null)
+                setEditingAddress(false)
+              }}
+              onCancel={() => setEditingAddress(false)}
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-sm text-muted-foreground">Subscription Plan</p>
-                <div className="flex items-center gap-2">
-                  <p className="font-medium">{orgDetails.subscription.plan.name}</p>
-                  <Badge
-                    variant={
-                      orgDetails.subscription.status === "ACTIVE"
-                        ? "default"
-                        : orgDetails.subscription.status === "TRIALING"
-                          ? "secondary"
-                          : "destructive"
-                    }
-                  >
-                    {orgDetails.subscription.status}
-                  </Badge>
-                </div>
+                <p className="text-sm text-muted-foreground">Organization Name</p>
+                <p className="font-medium">{orgDetails.name}</p>
               </div>
-            )}
-            <div>
-              <p className="text-sm text-muted-foreground">Member Since</p>
-              <p className="font-medium">
-                {new Date(orgDetails.createdAt).toLocaleDateString()}
-              </p>
+              <div>
+                <p className="text-sm text-muted-foreground">Subdomain</p>
+                <p className="font-medium font-mono">{orgDetails.slug}</p>
+              </div>
+              {orgDetails.email && (
+                <div className="flex items-start gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{orgDetails.email}</p>
+                  </div>
+                </div>
+              )}
+              {orgDetails.phone && (
+                <div className="flex items-start gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p className="font-medium">{orgDetails.phone}</p>
+                  </div>
+                </div>
+              )}
+              {address && (
+                <div className="flex items-start gap-2 sm:col-span-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Address</p>
+                    <p className="font-medium">{address}</p>
+                  </div>
+                </div>
+              )}
+              {orgDetails.subscription && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Subscription Plan</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{orgDetails.subscription.plan.name}</p>
+                    <Badge
+                      variant={
+                        orgDetails.subscription.status === "ACTIVE"
+                          ? "default"
+                          : orgDetails.subscription.status === "TRIALING"
+                            ? "secondary"
+                            : "destructive"
+                      }
+                    >
+                      {orgDetails.subscription.status}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">Member Since</p>
+                <p className="font-medium">
+                  {new Date(orgDetails.createdAt).toLocaleDateString()}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

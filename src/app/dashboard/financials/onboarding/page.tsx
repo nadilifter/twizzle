@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import { OrganizationAddressForm } from "@/components/organization-address-form"
 import {
   Card,
   CardContent,
@@ -36,8 +37,19 @@ type OnboardingAccount = {
   balanceAccountId: string | null
 }
 
+type OrganizationDetails = {
+  id: string
+  name: string
+  street: string | null
+  city: string | null
+  stateProvince: string | null
+  postalCode: string | null
+  country: string | null
+}
+
 export default function OnboardingPage() {
   const [account, setAccount] = useState<OnboardingAccount | null>(null)
+  const [organization, setOrganization] = useState<OrganizationDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +60,7 @@ export default function OnboardingPage() {
       const data = await res.json()
       if (res.ok) {
         setAccount(data.account)
+        setOrganization(data.organization)
       } else {
         setError(data.error)
       }
@@ -176,6 +189,12 @@ export default function OnboardingPage() {
         </Alert>
       )}
 
+      {!account && organization && (
+        <OrganizationAddressCard 
+          organization={organization} 
+          onUpdate={(org) => setOrganization(org)} 
+        />
+      )}
       {!account && <NotStartedState onInitiate={handleInitiate} loading={actionLoading} />}
       {account?.onboardingStatus === "PENDING_HOSTED" && (
         <PendingHostedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
@@ -192,6 +211,77 @@ export default function OnboardingPage() {
         <RejectedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
       )}
     </div>
+  )
+}
+
+function OrganizationAddressCard({ 
+  organization, 
+  onUpdate 
+}: { 
+  organization: OrganizationDetails
+  onUpdate: (org: OrganizationDetails) => void 
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+
+  const isComplete = Boolean(
+    organization.street &&
+    organization.city &&
+    organization.stateProvince &&
+    organization.postalCode &&
+    organization.country
+  )
+
+  const address = [
+    organization.street,
+    organization.city,
+    organization.stateProvince,
+    organization.postalCode,
+    organization.country,
+  ]
+    .filter(Boolean)
+    .join(", ")
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium flex items-center justify-between">
+          <span>Organization Address</span>
+          {!isEditing && (
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+              Edit
+            </Button>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Your organization's physical address. This must be complete before initiating Adyen onboarding.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isEditing ? (
+          <OrganizationAddressForm 
+            organization={organization} 
+            onSuccess={(updated) => {
+              onUpdate(updated)
+              setIsEditing(false)
+            }}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <div className="flex items-center justify-between">
+            <div>
+              {address ? (
+                <p className="text-sm font-medium">{address}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No address provided</p>
+              )}
+            </div>
+            {!isComplete && (
+              <Badge variant="destructive">Missing required fields</Badge>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

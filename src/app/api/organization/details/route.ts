@@ -73,3 +73,47 @@ export async function GET() {
     )
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await getAuthSession()
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const organizationId = session.user.organizationId
+    if (!organizationId) {
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 })
+    }
+
+    // Only owners/admins should be able to update organization details
+    if (session.user.role !== "OWNER" && session.user.role !== "ADMIN" && !session.user.isSuperAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    const data = await request.json()
+    const { name, email, phone, street, city, stateProvince, postalCode, country } = data
+
+    const organization = await db.organization.update({
+      where: { id: organizationId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(email !== undefined && { email }),
+        ...(phone !== undefined && { phone }),
+        ...(street !== undefined && { street }),
+        ...(city !== undefined && { city }),
+        ...(stateProvince !== undefined && { stateProvince }),
+        ...(postalCode !== undefined && { postalCode }),
+        ...(country !== undefined && { country }),
+      },
+    })
+
+    return NextResponse.json(organization)
+  } catch (error) {
+    console.error("Failed to update organization details:", error)
+    return NextResponse.json(
+      { error: "Failed to update organization details" },
+      { status: 500 }
+    )
+  }
+}

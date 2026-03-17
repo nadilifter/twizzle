@@ -25,7 +25,21 @@ export async function GET() {
       where: { organizationId: session.user.organizationId },
     })
 
+    const org = await db.organization.findUnique({
+      where: { id: session.user.organizationId },
+      select: {
+        id: true,
+        name: true,
+        street: true,
+        city: true,
+        stateProvince: true,
+        postalCode: true,
+        country: true,
+      },
+    })
+
     return NextResponse.json({
+      organization: org,
       account: account
         ? {
             onboardingStatus: account.onboardingStatus,
