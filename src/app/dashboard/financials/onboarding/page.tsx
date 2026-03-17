@@ -255,7 +255,7 @@ function OrganizationAddressCard({
           )}
         </CardTitle>
         <CardDescription>
-          Your organization's physical address and phone number. These must be complete before initiating Adyen onboarding.
+          Your organization&apos;s physical address and phone number. These must be complete before initiating Adyen onboarding.
         </CardDescription>
       </CardHeader>
       <CardContent>
