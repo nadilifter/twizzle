@@ -106,24 +106,7 @@ export function RegistrationFilesSection({
     return "Registration"
   }
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <File className="h-4 w-4" />
-            Registration Files
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading files...
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (files.length === 0) return null
+  if (loading || files.length === 0) return null
 
   return (
     <Card>
