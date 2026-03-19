@@ -14,8 +14,12 @@
  *   npx tsx scripts/backfill-adyen-allowed-origins.ts --dry-run   # preview only
  */
 
-const { loadEnvConfig } = require("@next/env")
-loadEnvConfig(process.cwd())
+try {
+  const { loadEnvConfig } = require("@next/env")
+  loadEnvConfig(process.cwd())
+} catch {
+  // @next/env not available (e.g. production Docker image) — env vars must be passed directly
+}
 
 const ADYEN_API_KEY = process.env.ADYEN_API_KEY
 if (!ADYEN_API_KEY) {
@@ -26,15 +30,29 @@ if (!ADYEN_API_KEY) {
 const DRY_RUN = process.argv.includes("--dry-run")
 const FIXED_SUBDOMAINS = ["startup", "admin", "athletes"]
 
+const DOMAIN_MAP: Record<string, { baseDomain: string; https: boolean }> = {
+  production: { baseDomain: "uplifterinc.com", https: true },
+  staging:    { baseDomain: "upliftergymnastics.com", https: true },
+  development:{ baseDomain: "uplifterdev.com", https: true },
+  local:      { baseDomain: "uplifterinc.localhost:3000", https: false },
+}
+
+function getSubdomainUrl(subdomain: string): string {
+  const env = process.env.APP_ENVIRONMENT || "local"
+  const cfg = DOMAIN_MAP[env] ?? DOMAIN_MAP.local
+  const protocol = cfg.https ? "https" : "http"
+  return `${protocol}://${subdomain}.${cfg.baseDomain}`
+}
+
 async function main() {
   console.log("===========================================")
   console.log("  Adyen Allowed Origins Backfill")
+  console.log(`  Environment: ${process.env.APP_ENVIRONMENT || "local"}`)
   if (DRY_RUN) console.log("  MODE: DRY RUN (no changes will be made)")
   console.log("===========================================\n")
 
   const { PrismaClient } = require("@prisma/client")
   const { Client, ManagementAPI } = require("@adyen/api-library")
-  const { getSubdomainUrl } = require("../src/lib/env-domains")
 
   const prisma = new PrismaClient()
   const client = new Client({
