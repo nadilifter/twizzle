@@ -131,7 +131,7 @@ export default function PaymentPage() {
       }
 
       sessionStorage.removeItem("org-signup-data")
-      router.push("/org-signup/success")
+      router.push(`/org-signup/success?subdomain=${encodeURIComponent(signupData.subdomain)}&orgName=${encodeURIComponent(signupData.orgName)}`)
     } catch (error: any) {
       console.error("Failed to create organization:", error)
       toast.error(error.message || "Payment succeeded but organization creation failed. Please contact support.")
