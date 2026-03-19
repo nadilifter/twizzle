@@ -23,10 +23,11 @@ COPY . .
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# NEXT_PUBLIC_* vars are inlined at build time by Next.js
+ARG NEXT_PUBLIC_ADYEN_CLIENT_KEY
+ARG NEXT_PUBLIC_ADYEN_ENVIRONMENT
+ENV NEXT_PUBLIC_ADYEN_CLIENT_KEY=$NEXT_PUBLIC_ADYEN_CLIENT_KEY
+ENV NEXT_PUBLIC_ADYEN_ENVIRONMENT=$NEXT_PUBLIC_ADYEN_ENVIRONMENT
 
 RUN pnpm run build
 

@@ -89,8 +89,16 @@ if ! git fetch origin 2>/dev/null; then
 fi
 git reset --hard origin/main
 
+# Source env vars so NEXT_PUBLIC_* are available as build args
+set -a
+source ~/.env.uplifter
+set +a
+
 log_info "Building Docker image..."
-sudo docker build -t uplifter:latest .
+sudo docker build \
+    --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
+    --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
+    -t uplifter:latest .
 
 log_info "Running database migrations..."
 # Source environment variables
