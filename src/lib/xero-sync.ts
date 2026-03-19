@@ -1,23 +1,24 @@
 import { db } from "@/lib/db";
-import { getQboClient, type QboApiClient } from "@/lib/qbo";
+import { getXeroClient, type XeroApiClient } from "@/lib/xero";
 import type {
   AccountingConnection,
   AccountingAccountMapping,
   AccountingSyncQueue,
   AccountingEntityType,
 } from "@prisma/client";
-import { createHash } from "crypto";
+import { Contact, Invoice as XeroInvoice, CreditNote, BankTransaction, Phone, Address, LineAmountTypes } from "xero-node";
+import type { LineItem, Payment as XeroPayment, ManualJournal, ManualJournalLine } from "xero-node";
 
 const MAX_ATTEMPTS = 5;
 const BATCH_SIZE = 50;
 
-export async function processQboSyncQueue(): Promise<{
+export async function processXeroSyncQueue(): Promise<{
   processed: number;
   succeeded: number;
   failed: number;
 }> {
   const connections = await db.accountingConnection.findMany({
-    where: { provider: "QBO", isActive: true, setupComplete: true },
+    where: { provider: "XERO", isActive: true, setupComplete: true },
     include: { accountMappings: true },
   });
 
@@ -38,12 +39,12 @@ export async function processQboSyncQueue(): Promise<{
 async function processConnectionQueue(
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] }
 ): Promise<{ processed: number; succeeded: number; failed: number }> {
-  let client: QboApiClient;
+  let client: XeroApiClient;
   try {
-    client = await getQboClient(connection.id);
+    client = await getXeroClient(connection.id);
   } catch (error) {
     console.error(
-      `[QBO Sync] Failed to get client for connection ${connection.id}:`,
+      `[Xero Sync] Failed to get client for connection ${connection.id}:`,
       error
     );
     return { processed: 0, succeeded: 0, failed: 0 };
@@ -70,11 +71,7 @@ async function processConnectionQueue(
         data: { status: "PROCESSING" },
       });
 
-      const externalEntityId = await syncEntity(
-        client,
-        connection,
-        item
-      );
+      const externalEntityId = await syncEntity(client, connection, item);
 
       await db.accountingSyncQueue.update({
         where: { id: item.id },
@@ -116,8 +113,7 @@ async function processConnectionQueue(
 
       succeeded++;
     } catch (error: any) {
-      const errorMessage =
-        error?.message || "Unknown error";
+      const errorMessage = error?.message || "Unknown error";
 
       await db.accountingSyncQueue.update({
         where: { id: item.id },
@@ -163,23 +159,23 @@ async function processConnectionQueue(
 }
 
 async function syncEntity(
-  client: QboApiClient,
+  client: XeroApiClient,
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] },
   item: AccountingSyncQueue
 ): Promise<string> {
   switch (item.entityType) {
     case "CUSTOMER":
-      return syncCustomer(client, connection, item.uplifterEntityId);
+      return syncContact(client, connection, item.uplifterEntityId);
     case "INVOICE":
       return syncInvoice(client, connection, item.uplifterEntityId);
     case "PAYMENT":
       return syncPayment(client, connection, item.uplifterEntityId);
     case "REFUND":
-      return syncRefund(client, connection, item.uplifterEntityId);
+      return syncCreditNote(client, connection, item.uplifterEntityId);
     case "JOURNAL_ENTRY":
-      return syncJournalEntry(client, connection, item.uplifterEntityId);
+      return syncManualJournal(client, connection, item.uplifterEntityId);
     case "DEPOSIT":
-      return syncDeposit(client, connection, item.uplifterEntityId);
+      return syncBankTransaction(client, connection, item.uplifterEntityId);
     default:
       throw new Error(`Unsupported entity type: ${item.entityType}`);
   }
@@ -198,7 +194,7 @@ function getMapping(
 }
 
 async function getOrCreateExternalEntityId(
-  client: QboApiClient,
+  client: XeroApiClient,
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] },
   entityType: AccountingEntityType,
   uplifterEntityId: string,
@@ -243,8 +239,8 @@ function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-async function syncCustomer(
-  client: QboApiClient,
+async function syncContact(
+  client: XeroApiClient,
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] },
   userId: string
 ): Promise<string> {
@@ -257,36 +253,54 @@ async function syncCustomer(
 
   if (!user) throw new Error(`User ${userId} not found`);
 
-  const existingCustomers = await client.query<any>(
-    `SELECT Id FROM Customer WHERE PrimaryEmailAddr = '${user.email.replace(/'/g, "\\'")}'`
+  // Check if contact already exists by email
+  const existingResponse = await client.accountingApi.getContacts(
+    client.tenantId,
+    undefined,
+    `EmailAddress=="${user.email}"`
   );
+  const existingContacts = existingResponse.body?.contacts || [];
 
-  if (existingCustomers.length > 0) {
-    return existingCustomers[0].Id;
+  if (existingContacts.length > 0 && existingContacts[0].contactID) {
+    return existingContacts[0].contactID;
   }
 
   const addr = user.billingAddresses[0];
-  const customerData: any = {
-    DisplayName: user.name,
-    PrimaryEmailAddr: { Address: user.email },
-    ...(user.phone && { PrimaryPhone: { FreeFormNumber: user.phone } }),
+  const contact: Contact = {
+    name: user.name,
+    emailAddress: user.email,
+    ...(user.phone && {
+      phones: [{ phoneType: Phone.PhoneTypeEnum.DEFAULT, phoneNumber: user.phone }],
+    }),
     ...(addr && {
-      BillAddr: {
-        Line1: addr.street,
-        City: addr.city,
-        CountrySubDivisionCode: addr.stateProvince || undefined,
-        PostalCode: addr.postalCode,
-        Country: addr.country,
-      },
+      addresses: [
+        {
+          addressType: Address.AddressTypeEnum.STREET,
+          addressLine1: addr.street,
+          city: addr.city,
+          region: addr.stateProvince || undefined,
+          postalCode: addr.postalCode,
+          country: addr.country,
+        },
+      ],
     }),
   };
 
-  const result = await client.post("customer", customerData);
-  return result.Customer.Id;
+  const response = await client.accountingApi.createContacts(
+    client.tenantId,
+    { contacts: [contact] }
+  );
+
+  const created = response.body?.contacts?.[0];
+  if (!created?.contactID) {
+    throw new Error("Failed to create Xero contact");
+  }
+
+  return created.contactID;
 }
 
 async function syncInvoice(
-  client: QboApiClient,
+  client: XeroApiClient,
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] },
   invoiceId: string
 ): Promise<string> {
@@ -300,58 +314,58 @@ async function syncInvoice(
 
   if (!invoice) throw new Error(`Invoice ${invoiceId} not found`);
 
-  let qboCustomerId: string | undefined;
+  let xeroContactId: string | undefined;
   if (invoice.userId) {
-    qboCustomerId = await getOrCreateExternalEntityId(
+    xeroContactId = await getOrCreateExternalEntityId(
       client,
       connection,
       "CUSTOMER",
       invoice.userId,
-      () => syncCustomer(client, connection, invoice.userId!)
+      () => syncContact(client, connection, invoice.userId!)
     );
   }
 
-  const lines = invoice.lineItems.map((li) => {
+  const lineItems: LineItem[] = invoice.lineItems.map((li) => {
     const glMapping = li.glCodeId
       ? getMapping(connection, "GL_CODE", li.glCodeId)
       : undefined;
 
-    const line: any = {
-      Amount: Number(li.total),
-      DetailType: "SalesItemLineDetail",
-      Description: li.description,
-      SalesItemLineDetail: {
-        Qty: li.quantity,
-        UnitPrice: Number(li.unitPrice),
-        ...(glMapping && {
-          ItemAccountRef: {
-            value: glMapping.externalAccountId,
-            name: glMapping.externalAccountName,
-          },
-        }),
-      },
+    return {
+      description: li.description,
+      quantity: li.quantity,
+      unitAmount: Number(li.unitPrice),
+      ...(glMapping && {
+        accountCode: glMapping.externalAccountId,
+      }),
     };
-    return line;
   });
 
-  const invoiceData: any = {
-    Line: lines,
-    DueDate: formatDate(invoice.dueDate),
-    DocNumber: invoice.reference,
-    ...(qboCustomerId && {
-      CustomerRef: { value: qboCustomerId },
-    }),
-    ...(invoice.notes && {
-      CustomerMemo: { value: invoice.notes },
-    }),
+  const xeroInvoice: XeroInvoice = {
+    type: XeroInvoice.TypeEnum.ACCREC,
+    contact: xeroContactId ? { contactID: xeroContactId } : { name: "Unknown Customer" },
+    lineItems,
+    date: formatDate(invoice.createdAt),
+    dueDate: formatDate(invoice.dueDate),
+    reference: invoice.reference,
+    status: XeroInvoice.StatusEnum.AUTHORISED,
+    lineAmountTypes: LineAmountTypes.Exclusive,
   };
 
-  const result = await client.post("invoice", invoiceData);
-  return result.Invoice.Id;
+  const response = await client.accountingApi.createInvoices(
+    client.tenantId,
+    { invoices: [xeroInvoice] }
+  );
+
+  const created = response.body?.invoices?.[0];
+  if (!created?.invoiceID) {
+    throw new Error("Failed to create Xero invoice");
+  }
+
+  return created.invoiceID;
 }
 
 async function syncPayment(
-  client: QboApiClient,
+  client: XeroApiClient,
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] },
   paymentId: string
 ): Promise<string> {
@@ -362,9 +376,9 @@ async function syncPayment(
 
   if (!payment) throw new Error(`Payment ${paymentId} not found`);
 
-  let qboInvoiceId: string | undefined;
+  let xeroInvoiceId: string | undefined;
   if (payment.invoiceId) {
-    qboInvoiceId = await getOrCreateExternalEntityId(
+    xeroInvoiceId = await getOrCreateExternalEntityId(
       client,
       connection,
       "INVOICE",
@@ -373,51 +387,40 @@ async function syncPayment(
     );
   }
 
-  let qboCustomerId: string | undefined;
-  if (payment.userId) {
-    qboCustomerId = await getOrCreateExternalEntityId(
-      client,
-      connection,
-      "CUSTOMER",
-      payment.userId,
-      () => syncCustomer(client, connection, payment.userId!)
-    );
+  if (!xeroInvoiceId) {
+    throw new Error(`Cannot create Xero payment without an invoice`);
   }
 
+  const bankMapping = getMapping(connection, "BANK_ACCOUNT");
   const undepositedFunds = getMapping(connection, "UNDEPOSITED_FUNDS");
+  const accountId = undepositedFunds?.externalAccountId || bankMapping?.externalAccountId;
 
-  const paymentData: any = {
-    TotalAmt: Number(payment.amount),
-    ...(qboCustomerId && {
-      CustomerRef: { value: qboCustomerId },
-    }),
-    ...(payment.processedAt && {
-      TxnDate: formatDate(payment.processedAt),
-    }),
-    ...(undepositedFunds && {
-      DepositToAccountRef: { value: undepositedFunds.externalAccountId },
-    }),
-    ...(qboInvoiceId && {
-      Line: [
-        {
-          Amount: Number(payment.amount),
-          LinkedTxn: [
-            {
-              TxnId: qboInvoiceId,
-              TxnType: "Invoice",
-            },
-          ],
-        },
-      ],
-    }),
+  if (!accountId) {
+    throw new Error("No bank or undeposited funds account mapping for payments");
+  }
+
+  const xeroPayment: XeroPayment = {
+    invoice: { invoiceID: xeroInvoiceId },
+    account: { accountID: accountId },
+    amount: Number(payment.amount),
+    date: formatDate(payment.processedAt || payment.createdAt),
   };
 
-  const result = await client.post("payment", paymentData);
-  return result.Payment.Id;
+  const response = await client.accountingApi.createPayment(
+    client.tenantId,
+    xeroPayment
+  );
+
+  const created = response.body?.payments?.[0];
+  if (!created?.paymentID) {
+    throw new Error("Failed to create Xero payment");
+  }
+
+  return created.paymentID;
 }
 
-async function syncRefund(
-  client: QboApiClient,
+async function syncCreditNote(
+  client: XeroApiClient,
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] },
   transactionId: string
 ): Promise<string> {
@@ -430,48 +433,51 @@ async function syncRefund(
 
   if (!transaction) throw new Error(`Transaction ${transactionId} not found`);
 
-  let qboCustomerId: string | undefined;
+  let xeroContactId: string | undefined;
   if (transaction.payment?.userId) {
-    qboCustomerId = await getOrCreateExternalEntityId(
+    xeroContactId = await getOrCreateExternalEntityId(
       client,
       connection,
       "CUSTOMER",
       transaction.payment.userId,
-      () => syncCustomer(client, connection, transaction.payment!.userId!)
+      () => syncContact(client, connection, transaction.payment!.userId!)
     );
   }
 
   const refundsMapping = getMapping(connection, "REFUNDS");
 
-  const refundData: any = {
-    TotalAmt: Number(transaction.amount),
-    ...(qboCustomerId && {
-      CustomerRef: { value: qboCustomerId },
-    }),
-    TxnDate: formatDate(transaction.createdAt),
-    Line: [
+  const creditNote: CreditNote = {
+    type: CreditNote.TypeEnum.ACCRECCREDIT,
+    contact: xeroContactId ? { contactID: xeroContactId } : { name: "Unknown Customer" },
+    date: formatDate(transaction.createdAt),
+    lineItems: [
       {
-        Amount: Number(transaction.amount),
-        DetailType: "SalesItemLineDetail",
-        Description: `Refund - ${transaction.description || transaction.pspReference}`,
-        SalesItemLineDetail: {
-          ...(refundsMapping && {
-            ItemAccountRef: {
-              value: refundsMapping.externalAccountId,
-              name: refundsMapping.externalAccountName,
-            },
-          }),
-        },
+        description: `Refund - ${transaction.description || transaction.pspReference}`,
+        unitAmount: Number(transaction.amount),
+        quantity: 1,
+        ...(refundsMapping && {
+          accountCode: refundsMapping.externalAccountId,
+        }),
       },
     ],
+    status: CreditNote.StatusEnum.AUTHORISED,
   };
 
-  const result = await client.post("refundreceipt", refundData);
-  return result.RefundReceipt.Id;
+  const response = await client.accountingApi.createCreditNotes(
+    client.tenantId,
+    { creditNotes: [creditNote] }
+  );
+
+  const created = response.body?.creditNotes?.[0];
+  if (!created?.creditNoteID) {
+    throw new Error("Failed to create Xero credit note");
+  }
+
+  return created.creditNoteID;
 }
 
-async function syncJournalEntry(
-  client: QboApiClient,
+async function syncManualJournal(
+  client: XeroApiClient,
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] },
   ledgerEntryId: string
 ): Promise<string> {
@@ -489,50 +495,45 @@ async function syncJournalEntry(
     );
   }
 
-  const lines: any[] = [];
+  const journalLines: ManualJournalLine[] = [];
 
   if (entry.debit && Number(entry.debit) > 0) {
-    lines.push({
-      Amount: Number(entry.debit),
-      DetailType: "JournalEntryLineDetail",
-      Description: entry.description,
-      JournalEntryLineDetail: {
-        PostingType: "Debit",
-        AccountRef: {
-          value: glMapping.externalAccountId,
-          name: glMapping.externalAccountName,
-        },
-      },
+    journalLines.push({
+      lineAmount: Number(entry.debit),
+      accountCode: glMapping.externalAccountId,
+      description: entry.description || `Debit - ${entry.reference}`,
     });
   }
 
   if (entry.credit && Number(entry.credit) > 0) {
-    lines.push({
-      Amount: Number(entry.credit),
-      DetailType: "JournalEntryLineDetail",
-      Description: entry.description,
-      JournalEntryLineDetail: {
-        PostingType: "Credit",
-        AccountRef: {
-          value: glMapping.externalAccountId,
-          name: glMapping.externalAccountName,
-        },
-      },
+    journalLines.push({
+      lineAmount: -Number(entry.credit),
+      accountCode: glMapping.externalAccountId,
+      description: entry.description || `Credit - ${entry.reference}`,
     });
   }
 
-  const jeData: any = {
-    Line: lines,
-    TxnDate: formatDate(entry.date),
-    ...(entry.reference && { DocNumber: entry.reference }),
+  const journal: ManualJournal = {
+    narration: entry.description || `Journal Entry ${entry.reference}`,
+    date: formatDate(entry.date),
+    journalLines,
   };
 
-  const result = await client.post("journalentry", jeData);
-  return result.JournalEntry.Id;
+  const response = await client.accountingApi.createManualJournals(
+    client.tenantId,
+    { manualJournals: [journal] }
+  );
+
+  const created = response.body?.manualJournals?.[0];
+  if (!created?.manualJournalID) {
+    throw new Error("Failed to create Xero manual journal");
+  }
+
+  return created.manualJournalID;
 }
 
-async function syncDeposit(
-  client: QboApiClient,
+async function syncBankTransaction(
+  client: XeroApiClient,
   connection: AccountingConnection & { accountMappings: AccountingAccountMapping[] },
   payoutId: string
 ): Promise<string> {
@@ -550,66 +551,47 @@ async function syncDeposit(
 
   const bankMapping = getMapping(connection, "BANK_ACCOUNT");
   const feesMapping = getMapping(connection, "PROCESSING_FEES");
-  const undepositedFunds = getMapping(connection, "UNDEPOSITED_FUNDS");
 
   if (!bankMapping) {
     throw new Error("No bank account mapping configured for deposits");
   }
 
-  const lines: any[] = [];
+  const lineItems: LineItem[] = [
+    {
+      description: `Payout ${payout.reference}`,
+      unitAmount: Number(payout.amount),
+      quantity: 1,
+      accountCode: bankMapping.externalAccountId,
+    },
+  ];
 
-  for (const txn of payout.transactions) {
-    if (!txn.payment) continue;
-
-    const syncMapping = await db.accountingSyncMapping.findUnique({
-      where: {
-        connectionId_entityType_uplifterEntityId: {
-          connectionId: connection.id,
-          entityType: "PAYMENT",
-          uplifterEntityId: txn.payment.id,
-        },
-      },
-    });
-
-    if (syncMapping) {
-      lines.push({
-        Amount: Number(txn.amount),
-        LinkedTxn: [
-          {
-            TxnId: syncMapping.externalEntityId,
-            TxnType: "Payment",
-          },
-        ],
-      });
-    }
-  }
-
-  if (lines.length === 0) {
-    lines.push({
-      Amount: Number(payout.amount),
-      DetailType: "DepositLineDetail",
-      Description: `Payout ${payout.reference}`,
-      DepositLineDetail: {
-        AccountRef: undepositedFunds
-          ? { value: undepositedFunds.externalAccountId }
-          : undefined,
-      },
+  if (Number(payout.fees) > 0 && feesMapping) {
+    lineItems.push({
+      description: `Processing fees for payout ${payout.reference}`,
+      unitAmount: -Number(payout.fees),
+      quantity: 1,
+      accountCode: feesMapping.externalAccountId,
     });
   }
 
-  const depositData: any = {
-    DepositToAccountRef: { value: bankMapping.externalAccountId },
-    TxnDate: formatDate(payout.paidAt || payout.createdAt),
-    Line: lines,
-    ...(Number(payout.fees) > 0 &&
-      feesMapping && {
-        CashBack: {
-          Amount: Number(payout.fees),
-          AccountRef: { value: feesMapping.externalAccountId },
-        },
-      }),
+  const bankTransaction: BankTransaction = {
+    type: BankTransaction.TypeEnum.RECEIVE,
+    contact: { name: "Payment Processor (Adyen)" },
+    bankAccount: { accountID: bankMapping.externalAccountId },
+    lineItems,
+    date: formatDate(payout.paidAt || payout.createdAt),
+    reference: payout.reference,
   };
 
-  const result = await client.post("deposit", depositData);
-  return result.Deposit.Id;
+  const response = await client.accountingApi.createBankTransactions(
+    client.tenantId,
+    { bankTransactions: [bankTransaction] }
+  );
+
+  const created = response.body?.bankTransactions?.[0];
+  if (!created?.bankTransactionID) {
+    throw new Error("Failed to create Xero bank transaction");
+  }
+
+  return created.bankTransactionID;
 }

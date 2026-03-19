@@ -213,7 +213,7 @@ src/app/api/announcements/route.ts
 src/app/api/admin/reserved-domains/route.ts
 src/app/api/admin/reserved-domains/[id]/route.ts
 
-# --- QBO integration (platform-level models with unique organizationId) ---
+# --- Accounting integrations (platform-level models with organizationId+provider unique) ---
 src/app/api/integrations/qbo/connect/route.ts
 src/app/api/integrations/qbo/callback/route.ts
 src/app/api/integrations/qbo/disconnect/route.ts
@@ -224,3 +224,13 @@ src/app/api/integrations/qbo/mappings/auto-suggest/route.ts
 src/app/api/integrations/qbo/sync/route.ts
 src/app/api/integrations/qbo/sync/status/route.ts
 src/app/api/integrations/qbo/sync/mappings/route.ts
+src/app/api/integrations/xero/connect/route.ts
+src/app/api/integrations/xero/callback/route.ts
+src/app/api/integrations/xero/disconnect/route.ts
+src/app/api/integrations/xero/status/route.ts
+src/app/api/integrations/xero/accounts/route.ts
+src/app/api/integrations/xero/mappings/route.ts
+src/app/api/integrations/xero/mappings/auto-suggest/route.ts
+src/app/api/integrations/xero/sync/route.ts
+src/app/api/integrations/xero/sync/status/route.ts
+src/app/api/integrations/xero/sync/mappings/route.ts

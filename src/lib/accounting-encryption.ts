@@ -2,13 +2,12 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypt
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
-const AUTH_TAG_LENGTH = 16;
-const SALT = "uplifter-qbo-token-salt";
+const SALT = "uplifter-accounting-token-salt";
 
 function getKey(): Buffer {
-  const secret = process.env.QBO_ENCRYPTION_KEY;
+  const secret = process.env.ACCOUNTING_ENCRYPTION_KEY;
   if (!secret) {
-    throw new Error("QBO_ENCRYPTION_KEY environment variable is required for token encryption");
+    throw new Error("ACCOUNTING_ENCRYPTION_KEY environment variable is required for token encryption");
   }
   return scryptSync(secret, SALT, 32);
 }
@@ -22,7 +21,6 @@ export function encrypt(plaintext: string): string {
   encrypted += cipher.final("hex");
   const authTag = cipher.getAuthTag();
 
-  // Format: iv:authTag:ciphertext (all hex-encoded)
   return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
 }
 

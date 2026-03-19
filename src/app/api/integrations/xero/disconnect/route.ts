@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { revokeTokens } from "@/lib/qbo";
+import { revokeXeroTokens } from "@/lib/xero";
 
 export async function POST() {
   try {
@@ -14,16 +14,16 @@ export async function POST() {
       where: {
         organizationId_provider: {
           organizationId: session.user.organizationId,
-          provider: "QBO",
+          provider: "XERO",
         },
       },
     });
 
     if (!connection) {
-      return NextResponse.json({ error: "No QBO connection found" }, { status: 404 });
+      return NextResponse.json({ error: "No Xero connection found" }, { status: 404 });
     }
 
-    await revokeTokens(connection.id);
+    await revokeXeroTokens(connection.id);
 
     await db.$transaction([
       db.accountingSyncQueue.deleteMany({ where: { connectionId: connection.id } }),
@@ -34,9 +34,9 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[QBO Disconnect] Error:", error);
+    console.error("[Xero Disconnect] Error:", error);
     return NextResponse.json(
-      { error: "Failed to disconnect QuickBooks" },
+      { error: "Failed to disconnect Xero" },
       { status: 500 }
     );
   }

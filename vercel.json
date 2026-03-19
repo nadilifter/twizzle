@@ -9,7 +9,7 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/qbo-sync",
+      "path": "/api/cron/accounting-sync",
       "schedule": "*/15 * * * *"
     }
   ]

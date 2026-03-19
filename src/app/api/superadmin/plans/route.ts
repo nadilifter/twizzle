@@ -9,7 +9,7 @@ const featureTogglesSchema = z.object({
   sms: z.boolean(),
   emailCampaigns: z.boolean(),
   customDomains: z.boolean(),
-  qboIntegration: z.boolean(),
+  accountingIntegrations: z.boolean(),
   training: z.boolean(),
   pointOfSale: z.boolean(),
 }).optional()

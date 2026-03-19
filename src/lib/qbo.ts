@@ -1,7 +1,7 @@
 import { AuthProvider, AuthScopes, Environment } from "quickbooks-api";
 import type { Token } from "quickbooks-api";
 import { db } from "@/lib/db";
-import { encrypt, decrypt } from "@/lib/qbo-encryption";
+import { encrypt, decrypt } from "@/lib/accounting-encryption";
 
 const QBO_BASE_URLS = {
   sandbox: "https://sandbox-quickbooks.api.intuit.com/v3/company",
@@ -26,7 +26,7 @@ export function isQboConfigured(): boolean {
     process.env.QBO_CLIENT_ID &&
     process.env.QBO_CLIENT_SECRET &&
     process.env.QBO_REDIRECT_URI &&
-    process.env.QBO_ENCRYPTION_KEY
+    process.env.ACCOUNTING_ENCRYPTION_KEY
   );
 }
 
@@ -69,7 +69,7 @@ export async function exchangeCodeForTokens(
 }
 
 export async function revokeTokens(connectionId: string): Promise<boolean> {
-  const connection = await db.qboConnection.findUnique({
+  const connection = await db.accountingConnection.findUnique({
     where: { id: connectionId },
   });
   if (!connection) return false;
@@ -84,26 +84,22 @@ export async function revokeTokens(connectionId: string): Promise<boolean> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Token persistence helpers
-// ---------------------------------------------------------------------------
-
-interface QboConnectionRecord {
+interface AccountingConnectionRecord {
   accessToken: string;
   refreshToken: string;
   tokenExpiresAt: Date;
   refreshExpiresAt: Date;
-  realmId: string;
+  tenantId: string;
 }
 
-function connectionToToken(conn: QboConnectionRecord): Token {
+function connectionToToken(conn: AccountingConnectionRecord): Token {
   return {
     tokenType: "bearer" as any,
     accessToken: decrypt(conn.accessToken),
     refreshToken: decrypt(conn.refreshToken),
     accessTokenExpiryDate: conn.tokenExpiresAt,
     refreshTokenExpiryDate: conn.refreshExpiresAt,
-    realmId: conn.realmId,
+    realmId: conn.tenantId,
   };
 }
 
@@ -113,19 +109,15 @@ export function tokenToDbFields(token: Token) {
     refreshToken: encrypt(token.refreshToken),
     tokenExpiresAt: token.accessTokenExpiryDate,
     refreshExpiresAt: token.refreshTokenExpiryDate,
-    realmId: token.realmId,
+    tenantId: token.realmId,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Authenticated QBO API requests
-// ---------------------------------------------------------------------------
 
 async function refreshAndPersist(connectionId: string, token: Token): Promise<Token> {
   const provider = createAuthProvider(token);
   const newToken = await provider.refresh();
 
-  await db.qboConnection.update({
+  await db.accountingConnection.update({
     where: { id: connectionId },
     data: tokenToDbFields(newToken),
   });
@@ -143,12 +135,8 @@ export interface QboApiClient {
   query: <T = any>(queryStr: string) => Promise<T[]>;
 }
 
-/**
- * Build an authenticated API client for a specific QBO connection.
- * Handles token refresh automatically.
- */
 export async function getQboClient(connectionId: string): Promise<QboApiClient> {
-  const connection = await db.qboConnection.findUnique({
+  const connection = await db.accountingConnection.findUnique({
     where: { id: connectionId },
   });
 

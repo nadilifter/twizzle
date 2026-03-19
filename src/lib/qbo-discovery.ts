@@ -2,10 +2,6 @@ import { db } from "@/lib/db";
 import { getQboClient, type QboApiClient } from "@/lib/qbo";
 import type { GLCode } from "@prisma/client";
 
-// ---------------------------------------------------------------------------
-// QBO entity types used during discovery
-// ---------------------------------------------------------------------------
-
 export interface QboAccount {
   Id: string;
   Name: string;
@@ -45,10 +41,6 @@ export interface QboItem {
   IncomeAccountRef?: { value: string; name: string };
 }
 
-// ---------------------------------------------------------------------------
-// Discovery: fetch data from QBO after OAuth
-// ---------------------------------------------------------------------------
-
 export async function fetchCompanyInfo(connectionId: string): Promise<void> {
   const client = await getQboClient(connectionId);
   const companies = await client.query<QboCompanyInfo>(
@@ -56,7 +48,7 @@ export async function fetchCompanyInfo(connectionId: string): Promise<void> {
   );
 
   if (companies.length > 0) {
-    await db.qboConnection.update({
+    await db.accountingConnection.update({
       where: { id: connectionId },
       data: { companyName: companies[0].CompanyName },
     });
@@ -90,10 +82,6 @@ export async function fetchExistingItems(
   );
 }
 
-// ---------------------------------------------------------------------------
-// Auto-suggest: match Uplifter GL codes to QBO accounts
-// ---------------------------------------------------------------------------
-
 const GL_TO_QBO_TYPE_MAP: Record<string, string[]> = {
   REVENUE: ["Income", "Other Income"],
   EXPENSE: ["Expense", "Other Expense", "Cost of Goods Sold"],
@@ -107,12 +95,12 @@ export interface MappingSuggestion {
   glCodeCode: string;
   glCodeDescription: string;
   glCodeType: string;
-  suggestedQboAccountId: string | null;
-  suggestedQboAccountName: string | null;
+  suggestedAccountId: string | null;
+  suggestedAccountName: string | null;
   confidence: "high" | "medium" | "low" | "none";
   candidates: Array<{
-    qboAccountId: string;
-    qboAccountName: string;
+    accountId: string;
+    accountName: string;
     accountType: string;
     score: number;
   }>;
@@ -120,12 +108,12 @@ export interface MappingSuggestion {
 
 export interface SpecialAccountSuggestion {
   mappingType: "BANK_ACCOUNT" | "PROCESSING_FEES" | "REFUNDS" | "UNDEPOSITED_FUNDS";
-  suggestedQboAccountId: string | null;
-  suggestedQboAccountName: string | null;
+  suggestedAccountId: string | null;
+  suggestedAccountName: string | null;
   confidence: "high" | "medium" | "low" | "none";
   candidates: Array<{
-    qboAccountId: string;
-    qboAccountName: string;
+    accountId: string;
+    accountName: string;
     accountType: string;
   }>;
 }
@@ -185,8 +173,8 @@ function suggestGlCodeMappings(
 
     const scored = typeMatchedAccounts
       .map((a) => ({
-        qboAccountId: a.Id,
-        qboAccountName: a.FullyQualifiedName,
+        accountId: a.Id,
+        accountName: a.FullyQualifiedName,
         accountType: a.AccountType,
         score: scoreName(gl.description, a.Name),
       }))
@@ -205,8 +193,8 @@ function suggestGlCodeMappings(
       glCodeCode: gl.code,
       glCodeDescription: gl.description,
       glCodeType: gl.type,
-      suggestedQboAccountId: top?.qboAccountId ?? null,
-      suggestedQboAccountName: top?.qboAccountName ?? null,
+      suggestedAccountId: top?.accountId ?? null,
+      suggestedAccountName: top?.accountName ?? null,
       confidence,
       candidates: scored.slice(0, 5),
     };
@@ -218,27 +206,25 @@ function suggestSpecialAccounts(
 ): SpecialAccountSuggestion[] {
   const suggestions: SpecialAccountSuggestion[] = [];
 
-  // Bank account
   const bankAccounts = qboAccounts.filter((a) => a.AccountType === "Bank");
   const checkingAccount = bankAccounts.find(
     (a) => normalizeForComparison(a.Name).includes("checking")
   );
   suggestions.push({
     mappingType: "BANK_ACCOUNT",
-    suggestedQboAccountId: checkingAccount?.Id ?? bankAccounts[0]?.Id ?? null,
-    suggestedQboAccountName:
+    suggestedAccountId: checkingAccount?.Id ?? bankAccounts[0]?.Id ?? null,
+    suggestedAccountName:
       checkingAccount?.FullyQualifiedName ??
       bankAccounts[0]?.FullyQualifiedName ??
       null,
     confidence: checkingAccount ? "high" : bankAccounts.length > 0 ? "medium" : "none",
     candidates: bankAccounts.map((a) => ({
-      qboAccountId: a.Id,
-      qboAccountName: a.FullyQualifiedName,
+      accountId: a.Id,
+      accountName: a.FullyQualifiedName,
       accountType: a.AccountType,
     })),
   });
 
-  // Processing fees
   const expenseAccounts = qboAccounts.filter(
     (a) => a.AccountType === "Expense" || a.AccountType === "Other Expense"
   );
@@ -254,17 +240,16 @@ function suggestSpecialAccounts(
   });
   suggestions.push({
     mappingType: "PROCESSING_FEES",
-    suggestedQboAccountId: feesAccount?.Id ?? null,
-    suggestedQboAccountName: feesAccount?.FullyQualifiedName ?? null,
+    suggestedAccountId: feesAccount?.Id ?? null,
+    suggestedAccountName: feesAccount?.FullyQualifiedName ?? null,
     confidence: feesAccount ? "high" : "none",
     candidates: expenseAccounts.slice(0, 10).map((a) => ({
-      qboAccountId: a.Id,
-      qboAccountName: a.FullyQualifiedName,
+      accountId: a.Id,
+      accountName: a.FullyQualifiedName,
       accountType: a.AccountType,
     })),
   });
 
-  // Refunds account
   const refundAccount = qboAccounts.find((a) => {
     const n = normalizeForComparison(a.Name);
     return n.includes("refund") || n.includes("returnallowance");
@@ -274,20 +259,19 @@ function suggestSpecialAccounts(
   );
   suggestions.push({
     mappingType: "REFUNDS",
-    suggestedQboAccountId: refundAccount?.Id ?? incomeAccounts[0]?.Id ?? null,
-    suggestedQboAccountName:
+    suggestedAccountId: refundAccount?.Id ?? incomeAccounts[0]?.Id ?? null,
+    suggestedAccountName:
       refundAccount?.FullyQualifiedName ??
       incomeAccounts[0]?.FullyQualifiedName ??
       null,
     confidence: refundAccount ? "high" : "low",
     candidates: incomeAccounts.slice(0, 10).map((a) => ({
-      qboAccountId: a.Id,
-      qboAccountName: a.FullyQualifiedName,
+      accountId: a.Id,
+      accountName: a.FullyQualifiedName,
       accountType: a.AccountType,
     })),
   });
 
-  // Undeposited Funds
   const undepositedFunds = qboAccounts.find(
     (a) => normalizeForComparison(a.Name) === "undepositedfunds"
   );
@@ -296,12 +280,12 @@ function suggestSpecialAccounts(
   );
   suggestions.push({
     mappingType: "UNDEPOSITED_FUNDS",
-    suggestedQboAccountId: undepositedFunds?.Id ?? null,
-    suggestedQboAccountName: undepositedFunds?.FullyQualifiedName ?? null,
+    suggestedAccountId: undepositedFunds?.Id ?? null,
+    suggestedAccountName: undepositedFunds?.FullyQualifiedName ?? null,
     confidence: undepositedFunds ? "high" : "none",
     candidates: otherCurrentAssets.map((a) => ({
-      qboAccountId: a.Id,
-      qboAccountName: a.FullyQualifiedName,
+      accountId: a.Id,
+      accountName: a.FullyQualifiedName,
       accountType: a.AccountType,
     })),
   });

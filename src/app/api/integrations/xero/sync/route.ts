@@ -14,14 +14,14 @@ export async function POST() {
       where: {
         organizationId_provider: {
           organizationId: session.user.organizationId,
-          provider: "QBO",
+          provider: "XERO",
         },
       },
     });
 
     if (!connection || !connection.isActive) {
       return NextResponse.json(
-        { error: "No active QBO connection" },
+        { error: "No active Xero connection" },
         { status: 404 }
       );
     }
@@ -33,7 +33,7 @@ export async function POST() {
       );
     }
 
-    const result = await enqueueFullSync(session.user.organizationId, "QBO");
+    const result = await enqueueFullSync(session.user.organizationId, "XERO");
 
     return NextResponse.json({
       success: true,
@@ -41,7 +41,7 @@ export async function POST() {
       message: `Queued ${result.queued} items for sync. They will be processed within 15 minutes.`,
     });
   } catch (error) {
-    console.error("[QBO Sync Trigger] Error:", error);
+    console.error("[Xero Sync Trigger] Error:", error);
     return NextResponse.json(
       { error: "Failed to trigger sync" },
       { status: 500 }

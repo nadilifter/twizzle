@@ -14,7 +14,7 @@ export async function GET() {
       where: {
         organizationId_provider: {
           organizationId: session.user.organizationId,
-          provider: "QBO",
+          provider: "XERO",
         },
       },
       include: { accountMappings: true },
@@ -22,14 +22,14 @@ export async function GET() {
 
     if (!connection) {
       return NextResponse.json(
-        { error: "No QBO connection found" },
+        { error: "No Xero connection found" },
         { status: 404 }
       );
     }
 
     return NextResponse.json({ mappings: connection.accountMappings });
   } catch (error) {
-    console.error("[QBO Mappings GET] Error:", error);
+    console.error("[Xero Mappings GET] Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch mappings" },
       { status: 500 }
@@ -74,14 +74,14 @@ export async function PUT(request: NextRequest) {
       where: {
         organizationId_provider: {
           organizationId: session.user.organizationId,
-          provider: "QBO",
+          provider: "XERO",
         },
       },
     });
 
     if (!connection || !connection.isActive) {
       return NextResponse.json(
-        { error: "No active QBO connection" },
+        { error: "No active Xero connection" },
         { status: 404 }
       );
     }
@@ -109,7 +109,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[QBO Mappings PUT] Error:", error);
+    console.error("[Xero Mappings PUT] Error:", error);
     return NextResponse.json(
       { error: "Failed to save mappings" },
       { status: 500 }

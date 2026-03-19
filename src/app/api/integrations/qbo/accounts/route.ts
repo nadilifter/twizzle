@@ -10,8 +10,13 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const connection = await db.qboConnection.findUnique({
-      where: { organizationId: session.user.organizationId },
+    const connection = await db.accountingConnection.findUnique({
+      where: {
+        organizationId_provider: {
+          organizationId: session.user.organizationId,
+          provider: "QBO",
+        },
+      },
     });
 
     if (!connection || !connection.isActive) {

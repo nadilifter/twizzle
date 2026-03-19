@@ -13,14 +13,14 @@ export async function GET(request: NextRequest) {
       where: {
         organizationId_provider: {
           organizationId: session.user.organizationId,
-          provider: "QBO",
+          provider: "XERO",
         },
       },
     });
 
     if (!connection) {
       return NextResponse.json(
-        { error: "No QBO connection found" },
+        { error: "No Xero connection found" },
         { status: 404 }
       );
     }
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       lastSyncAt: connection.lastSyncAt,
     });
   } catch (error) {
-    console.error("[QBO Sync Status] Error:", error);
+    console.error("[Xero Sync Status] Error:", error);
     return NextResponse.json(
       { error: "Failed to get sync status" },
       { status: 500 }

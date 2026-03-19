@@ -13,7 +13,7 @@ export async function GET() {
       where: {
         organizationId_provider: {
           organizationId: session.user.organizationId,
-          provider: "QBO",
+          provider: "XERO",
         },
       },
       select: {
@@ -53,9 +53,9 @@ export async function GET() {
       mappingsCount: connection._count.accountMappings,
     });
   } catch (error) {
-    console.error("[QBO Status] Error:", error);
+    console.error("[Xero Status] Error:", error);
     return NextResponse.json(
-      { error: "Failed to get QBO status" },
+      { error: "Failed to get Xero status" },
       { status: 500 }
     );
   }

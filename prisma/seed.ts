@@ -78,7 +78,7 @@ async function main() {
       maxMembershipTypes: 2,
       featureToggles: {
         events: false, sms: false, emailCampaigns: false,
-        customDomains: false, qboIntegration: false, training: false, pointOfSale: false, memberships: false, waitlists: false, passes: false,
+        customDomains: false, accountingIntegrations: false, training: false, pointOfSale: false, memberships: false, waitlists: false, passes: false,
       },
     },
     create: {
@@ -92,7 +92,7 @@ async function main() {
       features: ["Basic scheduling", "Up to 25 athletes", "Email support", "500 MB storage"],
       featureToggles: {
         events: false, sms: false, emailCampaigns: false,
-        customDomains: false, qboIntegration: false, training: false, pointOfSale: false, memberships: false, waitlists: false, passes: false,
+        customDomains: false, accountingIntegrations: false, training: false, pointOfSale: false, memberships: false, waitlists: false, passes: false,
       },
       isPopular: false, displayOrder: 0, isActive: true, isPublic: true,
     },
@@ -106,7 +106,7 @@ async function main() {
       maxMembershipTypes: 5,
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
-        customDomains: false, qboIntegration: false, training: false, pointOfSale: true, memberships: false, waitlists: true, passes: false,
+        customDomains: false, accountingIntegrations: false, training: false, pointOfSale: true, memberships: false, waitlists: true, passes: false,
       },
     },
     create: {
@@ -120,7 +120,7 @@ async function main() {
       features: ["Advanced scheduling", "Up to 100 athletes", "Priority email support", "Basic reporting", "500 email campaigns/month", "2 GB storage"],
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
-        customDomains: false, qboIntegration: false, training: false, pointOfSale: true, memberships: false, waitlists: true, passes: false,
+        customDomains: false, accountingIntegrations: false, training: false, pointOfSale: true, memberships: false, waitlists: true, passes: false,
       },
       isPopular: false, displayOrder: 1, isActive: true, isPublic: true,
     },
@@ -134,7 +134,7 @@ async function main() {
       maxMembershipTypes: 15,
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
-        customDomains: true, qboIntegration: false, training: true, pointOfSale: true, memberships: false, waitlists: true, passes: true,
+        customDomains: true, accountingIntegrations: false, training: true, pointOfSale: true, memberships: false, waitlists: true, passes: true,
       },
     },
     create: {
@@ -148,7 +148,7 @@ async function main() {
       features: ["Unlimited events", "Up to 500 athletes", "Phone support", "Advanced reporting", "Custom branding", "2,500 email campaigns/month", "10 GB storage"],
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
-        customDomains: true, qboIntegration: false, training: true, pointOfSale: true, memberships: false, waitlists: true, passes: true,
+        customDomains: true, accountingIntegrations: false, training: true, pointOfSale: true, memberships: false, waitlists: true, passes: true,
       },
       isPopular: true, displayOrder: 2, isActive: true, isPublic: true,
     },
@@ -162,7 +162,7 @@ async function main() {
       maxMembershipTypes: null, // Unlimited
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
-        customDomains: true, qboIntegration: true, training: true, pointOfSale: true, memberships: false, waitlists: true, passes: true,
+        customDomains: true, accountingIntegrations: true, training: true, pointOfSale: true, memberships: false, waitlists: true, passes: true,
       },
     },
     create: {
@@ -176,7 +176,7 @@ async function main() {
       features: ["Unlimited everything", "Dedicated support", "Custom integrations", "White-label options", "SLA guarantee", "10,000 email campaigns/month", "Unlimited storage"],
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
-        customDomains: true, qboIntegration: true, training: true, pointOfSale: true, memberships: false, waitlists: true, passes: true,
+        customDomains: true, accountingIntegrations: true, training: true, pointOfSale: true, memberships: false, waitlists: true, passes: true,
       },
       isPopular: false, displayOrder: 3, isActive: true, isPublic: true,
     },

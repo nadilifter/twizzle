@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { autoSuggestMappings } from "@/lib/qbo-discovery";
+import { fetchXeroAccounts } from "@/lib/xero-discovery";
 
-export async function POST() {
+export async function GET() {
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -14,28 +14,25 @@ export async function POST() {
       where: {
         organizationId_provider: {
           organizationId: session.user.organizationId,
-          provider: "QBO",
+          provider: "XERO",
         },
       },
     });
 
     if (!connection || !connection.isActive) {
       return NextResponse.json(
-        { error: "No active QBO connection" },
+        { error: "No active Xero connection" },
         { status: 404 }
       );
     }
 
-    const suggestions = await autoSuggestMappings(
-      connection.id,
-      session.user.organizationId
-    );
+    const accounts = await fetchXeroAccounts(connection.id);
 
-    return NextResponse.json(suggestions);
+    return NextResponse.json({ accounts });
   } catch (error) {
-    console.error("[QBO Auto-Suggest] Error:", error);
+    console.error("[Xero Accounts] Error:", error);
     return NextResponse.json(
-      { error: "Failed to generate mapping suggestions" },
+      { error: "Failed to fetch Xero accounts" },
       { status: 500 }
     );
   }

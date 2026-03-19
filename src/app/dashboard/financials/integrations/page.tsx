@@ -4,10 +4,8 @@ import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Check,
@@ -22,15 +20,13 @@ import {
   ArrowRight,
 } from "lucide-react"
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+type Provider = "qbo" | "xero"
 
-interface QboStatus {
+interface ConnectionStatus {
   connected: boolean
   setupComplete: boolean
   companyName?: string
-  realmId?: string
+  tenantId?: string
   lastSyncAt?: string
   connectedAt?: string
   pendingSync?: number
@@ -38,13 +34,15 @@ interface QboStatus {
   mappingsCount?: number
 }
 
-interface QboAccount {
-  Id: string
-  Name: string
-  FullyQualifiedName: string
-  AccountType: string
-  AccountSubType: string
-  Active: boolean
+interface ExternalAccount {
+  Id?: string
+  accountID?: string
+  Name?: string
+  name?: string
+  FullyQualifiedName?: string
+  AccountType?: string
+  type?: string
+  Active?: boolean
 }
 
 interface MappingSuggestion {
@@ -52,12 +50,12 @@ interface MappingSuggestion {
   glCodeCode: string
   glCodeDescription: string
   glCodeType: string
-  suggestedQboAccountId: string | null
-  suggestedQboAccountName: string | null
+  suggestedAccountId: string | null
+  suggestedAccountName: string | null
   confidence: "high" | "medium" | "low" | "none"
   candidates: Array<{
-    qboAccountId: string
-    qboAccountName: string
+    accountId: string
+    accountName: string
     accountType: string
     score: number
   }>
@@ -65,12 +63,12 @@ interface MappingSuggestion {
 
 interface SpecialAccountSuggestion {
   mappingType: string
-  suggestedQboAccountId: string | null
-  suggestedQboAccountName: string | null
+  suggestedAccountId: string | null
+  suggestedAccountName: string | null
   confidence: "high" | "medium" | "low" | "none"
   candidates: Array<{
-    qboAccountId: string
-    qboAccountName: string
+    accountId: string
+    accountName: string
     accountType: string
   }>
 }
@@ -81,7 +79,7 @@ interface SyncLog {
   uplifterEntityId: string
   action: string
   status: string
-  qboEntityId?: string
+  externalEntityId?: string
   errorMessage?: string
   durationMs?: number
   createdAt: string
@@ -93,34 +91,87 @@ interface SyncStatus {
   lastSyncAt?: string
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const PROVIDER_CONFIG: Record<Provider, {
+  label: string
+  logoText: string
+  logoBg: string
+  buttonBg: string
+  description: string
+  features: string[]
+}> = {
+  qbo: {
+    label: "QuickBooks Online",
+    logoText: "qb",
+    logoBg: "bg-[#2CA01C]",
+    buttonBg: "bg-[#2CA01C] hover:bg-[#2CA01C]/90",
+    description: "Automatically sync your invoices, payments, and financial data to QuickBooks",
+    features: [
+      "Customers (guardians)",
+      "Invoices and line items",
+      "Payments received",
+      "Refunds",
+      "Journal entries from your ledger",
+      "Adyen payout deposits",
+    ],
+  },
+  xero: {
+    label: "Xero",
+    logoText: "X",
+    logoBg: "bg-[#13B5EA]",
+    buttonBg: "bg-[#13B5EA] hover:bg-[#13B5EA]/90",
+    description: "Automatically sync your invoices, payments, and financial data to Xero",
+    features: [
+      "Contacts (guardians)",
+      "Invoices and line items",
+      "Payments received",
+      "Credit notes (refunds)",
+      "Manual journals from your ledger",
+      "Bank transactions (payouts)",
+    ],
+  },
+}
+
+function normalizeAccount(provider: Provider, raw: any): { id: string; name: string; type: string } {
+  if (provider === "qbo") {
+    return { id: raw.Id, name: raw.FullyQualifiedName || raw.Name, type: raw.AccountType }
+  }
+  return { id: raw.accountID, name: raw.name, type: raw.type || raw.class }
+}
 
 export default function IntegrationsPage() {
-  const [status, setStatus] = useState<QboStatus | null>(null)
+  const [qboStatus, setQboStatus] = useState<ConnectionStatus | null>(null)
+  const [xeroStatus, setXeroStatus] = useState<ConnectionStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState<Provider | null>(null)
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatuses = useCallback(async () => {
     try {
-      const res = await fetch("/api/integrations/qbo/status")
-      if (res.ok) setStatus(await res.json())
+      const [qboRes, xeroRes] = await Promise.all([
+        fetch("/api/integrations/qbo/status"),
+        fetch("/api/integrations/xero/status"),
+      ])
+      if (qboRes.ok) setQboStatus(await qboRes.json())
+      if (xeroRes.ok) setXeroStatus(await xeroRes.json())
     } catch {
-      // Silently fail - status will show disconnected
+      // Silently fail
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchStatus()
-  }, [fetchStatus])
+    fetchStatuses()
+  }, [fetchStatuses])
 
   if (loading) return <IntegrationsLoading />
 
-  const state: "disconnected" | "setup" | "connected" =
+  const getState = (status: ConnectionStatus | null): "disconnected" | "setup" | "connected" =>
     !status?.connected ? "disconnected" : !status.setupComplete ? "setup" : "connected"
+
+  const qboState = getState(qboStatus)
+  const xeroState = getState(xeroStatus)
+
+  const hasSetupInProgress = qboState === "setup" || xeroState === "setup"
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -131,106 +182,146 @@ export default function IntegrationsPage() {
         </p>
       </div>
 
-      {state === "disconnected" && (
+      {qboState === "setup" && qboStatus && (
+        <SetupView
+          provider="qbo"
+          status={qboStatus}
+          onComplete={fetchStatuses}
+        />
+      )}
+
+      {xeroState === "setup" && xeroStatus && (
+        <SetupView
+          provider="xero"
+          status={xeroStatus}
+          onComplete={fetchStatuses}
+        />
+      )}
+
+      {!hasSetupInProgress && (
         <div className="grid gap-6 md:grid-cols-2">
-          <DisconnectedView setActionLoading={setActionLoading} actionLoading={actionLoading} />
-          <XeroComingSoon />
+          {qboState === "disconnected" ? (
+            <DisconnectedCard
+              provider="qbo"
+              actionLoading={actionLoading === "qbo"}
+              onConnect={() => {
+                setActionLoading("qbo")
+                window.location.href = "/api/integrations/qbo/connect"
+              }}
+            />
+          ) : qboState === "connected" && qboStatus ? (
+            <ConnectedCard
+              provider="qbo"
+              status={qboStatus}
+              onDisconnect={fetchStatuses}
+            />
+          ) : null}
+
+          {xeroState === "disconnected" ? (
+            <DisconnectedCard
+              provider="xero"
+              actionLoading={actionLoading === "xero"}
+              onConnect={() => {
+                setActionLoading("xero")
+                window.location.href = "/api/integrations/xero/connect"
+              }}
+            />
+          ) : xeroState === "connected" && xeroStatus ? (
+            <ConnectedCard
+              provider="xero"
+              status={xeroStatus}
+              onDisconnect={fetchStatuses}
+            />
+          ) : null}
         </div>
       )}
-      {state === "setup" && status && <SetupView status={status} onComplete={fetchStatus} />}
-      {state === "connected" && status && <ConnectedView status={status} onDisconnect={fetchStatus} />}
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Disconnected state
-// ---------------------------------------------------------------------------
-
-function DisconnectedView({
-  setActionLoading,
+function DisconnectedCard({
+  provider,
   actionLoading,
+  onConnect,
 }: {
-  setActionLoading: (v: boolean) => void
+  provider: Provider
   actionLoading: boolean
+  onConnect: () => void
 }) {
+  const config = PROVIDER_CONFIG[provider]
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#2CA01C] text-white font-bold text-xl">
-            qb
+          <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold text-xl`}>
+            {config.logoText}
           </div>
           <div>
-            <CardTitle>QuickBooks Online</CardTitle>
-            <CardDescription>
-              Automatically sync your invoices, payments, and financial data to QuickBooks
-            </CardDescription>
+            <CardTitle>{config.label}</CardTitle>
+            <CardDescription>{config.description}</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground space-y-2">
-          <p>Connect your QuickBooks Online account to automatically sync:</p>
+          <p>Connect your {config.label} account to automatically sync:</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>Customers (guardians)</li>
-            <li>Invoices and line items</li>
-            <li>Payments received</li>
-            <li>Refunds</li>
-            <li>Journal entries from your ledger</li>
-            <li>Adyen payout deposits</li>
+            {config.features.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
           </ul>
           <p className="mt-3">
-            After connecting, you&apos;ll map your GL codes to QuickBooks accounts.
+            After connecting, you&apos;ll map your GL codes to {config.label} accounts.
             We&apos;ll auto-suggest the best matches to save you time.
           </p>
         </div>
       </CardContent>
       <CardFooter>
         <Button
-          className="w-full bg-[#2CA01C] hover:bg-[#2CA01C]/90"
+          className={`w-full ${config.buttonBg}`}
           disabled={actionLoading}
-          onClick={() => {
-            setActionLoading(true)
-            window.location.href = "/api/integrations/qbo/connect"
-          }}
+          onClick={onConnect}
         >
           {actionLoading ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
           ) : (
             <ExternalLink className="h-4 w-4 mr-2" />
           )}
-          Connect to QuickBooks
+          Connect to {config.label}
         </Button>
       </CardFooter>
     </Card>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Setup state: account mapping with auto-suggest
-// ---------------------------------------------------------------------------
-
-function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () => void }) {
+function SetupView({
+  provider,
+  status,
+  onComplete,
+}: {
+  provider: Provider
+  status: ConnectionStatus
+  onComplete: () => void
+}) {
+  const config = PROVIDER_CONFIG[provider]
   const [suggestions, setSuggestions] = useState<{
     glCodeMappings: MappingSuggestion[]
     specialAccounts: SpecialAccountSuggestion[]
   } | null>(null)
-  const [qboAccounts, setQboAccounts] = useState<QboAccount[]>([])
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // Selected mappings: glCodeId -> qboAccountId
   const [glMappings, setGlMappings] = useState<Record<string, { id: string; name: string }>>({})
-  // Special account selections: mappingType -> qboAccountId
   const [specialMappings, setSpecialMappings] = useState<Record<string, { id: string; name: string }>>({})
 
   useEffect(() => {
     async function loadData() {
       try {
         const [suggestRes, accountsRes] = await Promise.all([
-          fetch("/api/integrations/qbo/mappings/auto-suggest", { method: "POST" }),
-          fetch("/api/integrations/qbo/accounts"),
+          fetch(`/api/integrations/${provider}/mappings/auto-suggest`, { method: "POST" }),
+          fetch(`/api/integrations/${provider}/accounts`),
         ])
 
         if (suggestRes.ok && accountsRes.ok) {
@@ -238,21 +329,24 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
           const accountsData = await accountsRes.json()
 
           setSuggestions(suggestData)
-          setQboAccounts(accountsData.accounts || [])
 
-          // Pre-populate selections from suggestions
+          const normalizedAccounts = (accountsData.accounts || []).map(
+            (a: any) => normalizeAccount(provider, a)
+          )
+          setAccounts(normalizedAccounts)
+
           const preGl: Record<string, { id: string; name: string }> = {}
           for (const s of suggestData.glCodeMappings) {
-            if (s.suggestedQboAccountId && (s.confidence === "high" || s.confidence === "medium")) {
-              preGl[s.glCodeId] = { id: s.suggestedQboAccountId, name: s.suggestedQboAccountName || "" }
+            if (s.suggestedAccountId && (s.confidence === "high" || s.confidence === "medium")) {
+              preGl[s.glCodeId] = { id: s.suggestedAccountId, name: s.suggestedAccountName || "" }
             }
           }
           setGlMappings(preGl)
 
           const preSp: Record<string, { id: string; name: string }> = {}
           for (const s of suggestData.specialAccounts) {
-            if (s.suggestedQboAccountId && s.confidence !== "none") {
-              preSp[s.mappingType] = { id: s.suggestedQboAccountId, name: s.suggestedQboAccountName || "" }
+            if (s.suggestedAccountId && s.confidence !== "none") {
+              preSp[s.mappingType] = { id: s.suggestedAccountId, name: s.suggestedAccountName || "" }
             }
           }
           setSpecialMappings(preSp)
@@ -264,7 +358,7 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
       }
     }
     loadData()
-  }, [])
+  }, [provider])
 
   const handleSave = async () => {
     setSaving(true)
@@ -273,26 +367,25 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
         ...Object.entries(glMappings).map(([glCodeId, acct]) => ({
           mappingType: "GL_CODE" as const,
           uplifterEntityId: glCodeId,
-          qboAccountId: acct.id,
-          qboAccountName: acct.name,
+          externalAccountId: acct.id,
+          externalAccountName: acct.name,
         })),
         ...Object.entries(specialMappings).map(([type, acct]) => ({
           mappingType: type as any,
           uplifterEntityId: null,
-          qboAccountId: acct.id,
-          qboAccountName: acct.name,
+          externalAccountId: acct.id,
+          externalAccountName: acct.name,
         })),
       ]
 
-      const res = await fetch("/api/integrations/qbo/mappings", {
+      const res = await fetch(`/api/integrations/${provider}/mappings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mappings }),
       })
 
       if (res.ok) {
-        // Trigger initial sync
-        await fetch("/api/integrations/qbo/sync", { method: "POST" })
+        await fetch(`/api/integrations/${provider}/sync`, { method: "POST" })
         onComplete()
       }
     } catch (error) {
@@ -323,7 +416,7 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
   }
 
   const getAccountsByType = (types: string[]) =>
-    qboAccounts.filter((a) => types.includes(a.AccountType))
+    accounts.filter((a) => types.includes(a.type))
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -331,8 +424,8 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#2CA01C] text-white font-bold">
-                qb
+              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}>
+                {config.logoText}
               </div>
               <div>
                 <CardTitle className="text-lg">
@@ -364,7 +457,6 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
         </Card>
       ) : (
         <>
-          {/* Special accounts */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Special Accounts</CardTitle>
@@ -381,22 +473,24 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
                   let accountOptions = sa.candidates
                   if (accountOptions.length === 0) {
                     if (sa.mappingType === "BANK_ACCOUNT") {
-                      accountOptions = getAccountsByType(["Bank"]).map((a) => ({
-                        qboAccountId: a.Id,
-                        qboAccountName: a.FullyQualifiedName,
-                        accountType: a.AccountType,
+                      accountOptions = getAccountsByType(provider === "qbo" ? ["Bank"] : ["BANK"]).map((a) => ({
+                        accountId: a.id,
+                        accountName: a.name,
+                        accountType: a.type,
                       }))
                     } else if (sa.mappingType === "PROCESSING_FEES") {
-                      accountOptions = getAccountsByType(["Expense", "Other Expense"]).map((a) => ({
-                        qboAccountId: a.Id,
-                        qboAccountName: a.FullyQualifiedName,
-                        accountType: a.AccountType,
+                      accountOptions = getAccountsByType(
+                        provider === "qbo" ? ["Expense", "Other Expense"] : ["EXPENSE"]
+                      ).map((a) => ({
+                        accountId: a.id,
+                        accountName: a.name,
+                        accountType: a.type,
                       }))
                     } else {
-                      accountOptions = qboAccounts.map((a) => ({
-                        qboAccountId: a.Id,
-                        qboAccountName: a.FullyQualifiedName,
-                        accountType: a.AccountType,
+                      accountOptions = accounts.map((a) => ({
+                        accountId: a.id,
+                        accountName: a.name,
+                        accountType: a.type,
                       }))
                     }
                   }
@@ -411,22 +505,22 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
                       <Select
                         value={specialMappings[sa.mappingType]?.id || ""}
                         onValueChange={(val) => {
-                          const acct = accountOptions.find((a) => a.qboAccountId === val)
+                          const acct = accountOptions.find((a) => a.accountId === val)
                           if (acct) {
                             setSpecialMappings((prev) => ({
                               ...prev,
-                              [sa.mappingType]: { id: acct.qboAccountId, name: acct.qboAccountName },
+                              [sa.mappingType]: { id: acct.accountId, name: acct.accountName },
                             }))
                           }
                         }}
                       >
                         <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Select QBO account..." />
+                          <SelectValue placeholder="Select account..." />
                         </SelectTrigger>
                         <SelectContent>
                           {accountOptions.map((a) => (
-                            <SelectItem key={a.qboAccountId} value={a.qboAccountId}>
-                              {a.qboAccountName}
+                            <SelectItem key={a.accountId} value={a.accountId}>
+                              {a.accountName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -439,12 +533,11 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
             </CardContent>
           </Card>
 
-          {/* GL code mappings */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Revenue &amp; Expense Accounts</CardTitle>
               <CardDescription>
-                Map each GL code to its corresponding QuickBooks account.
+                Map each GL code to its corresponding {config.label} account.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -454,24 +547,21 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
                     <TableHead className="w-24">Code</TableHead>
                     <TableHead className="w-48">Description</TableHead>
                     <TableHead className="w-24">Type</TableHead>
-                    <TableHead>QuickBooks Account</TableHead>
+                    <TableHead>{config.label} Account</TableHead>
                     <TableHead className="w-28">Match</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {suggestions?.glCodeMappings.map((gl) => {
-                    const allowedTypes = GL_TYPE_MAP[gl.glCodeType] || []
                     const options =
                       gl.candidates.length > 0
                         ? gl.candidates
-                        : qboAccounts
-                            .filter((a) => allowedTypes.includes(a.AccountType))
-                            .map((a) => ({
-                              qboAccountId: a.Id,
-                              qboAccountName: a.FullyQualifiedName,
-                              accountType: a.AccountType,
-                              score: 0,
-                            }))
+                        : accounts.map((a) => ({
+                            accountId: a.id,
+                            accountName: a.name,
+                            accountType: a.type,
+                            score: 0,
+                          }))
 
                     return (
                       <TableRow key={gl.glCodeId}>
@@ -486,11 +576,11 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
                           <Select
                             value={glMappings[gl.glCodeId]?.id || ""}
                             onValueChange={(val) => {
-                              const acct = options.find((a) => a.qboAccountId === val)
+                              const acct = options.find((a) => a.accountId === val)
                               if (acct) {
                                 setGlMappings((prev) => ({
                                   ...prev,
-                                  [gl.glCodeId]: { id: acct.qboAccountId, name: acct.qboAccountName },
+                                  [gl.glCodeId]: { id: acct.accountId, name: acct.accountName },
                                 }))
                               }
                             }}
@@ -500,8 +590,8 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
                             </SelectTrigger>
                             <SelectContent>
                               {options.map((a) => (
-                                <SelectItem key={a.qboAccountId} value={a.qboAccountId}>
-                                  {a.qboAccountName}
+                                <SelectItem key={a.accountId} value={a.accountId}>
+                                  {a.accountName}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -516,18 +606,17 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
             </CardContent>
           </Card>
 
-          {/* Confirm */}
           <div className="flex justify-end gap-3">
             <Button
               variant="outline"
               onClick={() => {
-                window.location.href = "/api/integrations/qbo/connect"
+                window.location.href = `/api/integrations/${provider}/connect`
               }}
             >
               Reconnect
             </Button>
             <Button
-              className="bg-[#2CA01C] hover:bg-[#2CA01C]/90"
+              className={config.buttonBg}
               disabled={saving || Object.keys(glMappings).length === 0}
               onClick={handleSave}
             >
@@ -545,23 +634,21 @@ function SetupView({ status, onComplete }: { status: QboStatus; onComplete: () =
   )
 }
 
-const GL_TYPE_MAP: Record<string, string[]> = {
-  REVENUE: ["Income", "Other Income"],
-  EXPENSE: ["Expense", "Other Expense", "Cost of Goods Sold"],
-  ASSET: ["Other Current Asset", "Fixed Asset", "Other Asset", "Bank"],
-  LIABILITY: ["Other Current Liability", "Long Term Liability", "Credit Card"],
-  EQUITY: ["Equity"],
-}
-
-// ---------------------------------------------------------------------------
-// Connected state: sync dashboard
-// ---------------------------------------------------------------------------
-
-function ConnectedView({ status, onDisconnect }: { status: QboStatus; onDisconnect: () => void }) {
+function ConnectedCard({
+  provider,
+  status,
+  onDisconnect,
+}: {
+  provider: Provider
+  status: ConnectionStatus
+  onDisconnect: () => void
+}) {
+  const config = PROVIDER_CONFIG[provider]
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
   const [loadingSync, setLoadingSync] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [showLogs, setShowLogs] = useState(false)
 
   useEffect(() => {
     fetchSyncStatus()
@@ -569,7 +656,7 @@ function ConnectedView({ status, onDisconnect }: { status: QboStatus; onDisconne
 
   async function fetchSyncStatus() {
     try {
-      const res = await fetch("/api/integrations/qbo/sync/status")
+      const res = await fetch(`/api/integrations/${provider}/sync/status`)
       if (res.ok) setSyncStatus(await res.json())
     } catch {
       // ignore
@@ -581,7 +668,7 @@ function ConnectedView({ status, onDisconnect }: { status: QboStatus; onDisconne
   async function triggerSync() {
     setSyncing(true)
     try {
-      await fetch("/api/integrations/qbo/sync", { method: "POST" })
+      await fetch(`/api/integrations/${provider}/sync`, { method: "POST" })
       await fetchSyncStatus()
     } finally {
       setSyncing(false)
@@ -589,10 +676,10 @@ function ConnectedView({ status, onDisconnect }: { status: QboStatus; onDisconne
   }
 
   async function handleDisconnect() {
-    if (!confirm("Are you sure you want to disconnect QuickBooks? All sync mappings will be removed.")) return
+    if (!confirm(`Are you sure you want to disconnect ${config.label}? All sync mappings will be removed.`)) return
     setDisconnecting(true)
     try {
-      await fetch("/api/integrations/qbo/disconnect", { method: "POST" })
+      await fetch(`/api/integrations/${provider}/disconnect`, { method: "POST" })
       onDisconnect()
     } finally {
       setDisconnecting(false)
@@ -600,221 +687,139 @@ function ConnectedView({ status, onDisconnect }: { status: QboStatus; onDisconne
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Connection info */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#2CA01C] text-white font-bold">
-                qb
-              </div>
-              <div>
-                <CardTitle className="text-lg">
-                  QuickBooks Online
-                  {status.companyName && (
-                    <span className="text-muted-foreground font-normal"> — {status.companyName}</span>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  Connected {status.connectedAt && `since ${new Date(status.connectedAt).toLocaleDateString()}`}
-                </CardDescription>
-              </div>
-            </div>
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              Connected
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              Last sync: {status.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString() : "Never"}
-            </div>
-            {(status.pendingSync ?? 0) > 0 && (
-              <div className="flex items-center gap-1.5 text-yellow-600">
-                <AlertCircle className="h-4 w-4" />
-                {status.pendingSync} pending
-              </div>
-            )}
-            {(status.failedSync ?? 0) > 0 && (
-              <div className="flex items-center gap-1.5 text-red-600">
-                <XCircle className="h-4 w-4" />
-                {status.failedSync} failed
-              </div>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className="gap-3">
-          <Button
-            variant="outline"
-            onClick={triggerSync}
-            disabled={syncing}
-          >
-            {syncing ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Sync Now
-          </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <a href="/dashboard/financials/integrations?edit_mappings=true">
-              Edit Mappings
-            </a>
-          </Button>
-          <div className="flex-1" />
-          <Button
-            variant="outline"
-            className="text-red-600 hover:text-red-600 hover:bg-red-50"
-            onClick={handleDisconnect}
-            disabled={disconnecting}
-          >
-            {disconnecting ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Unplug className="h-4 w-4 mr-2" />
-            )}
-            Disconnect
-          </Button>
-        </CardFooter>
-      </Card>
-
-      {/* Sync queue status */}
-      {loadingSync ? (
-        <Card>
-          <CardContent className="py-6">
-            <Skeleton className="h-4 w-48 mb-4" />
-            <Skeleton className="h-20 w-full" />
-          </CardContent>
-        </Card>
-      ) : syncStatus && (
-        <>
-          <div className="grid grid-cols-4 gap-4">
-            <StatusCard label="Pending" count={syncStatus.queue.pending} icon={<Clock className="h-4 w-4 text-yellow-500" />} />
-            <StatusCard label="Processing" count={syncStatus.queue.processing} icon={<Loader2 className="h-4 w-4 text-blue-500 animate-spin" />} />
-            <StatusCard label="Completed" count={syncStatus.queue.completed} icon={<CheckCircle2 className="h-4 w-4 text-green-500" />} />
-            <StatusCard label="Failed" count={syncStatus.queue.failed} icon={<XCircle className="h-4 w-4 text-red-500" />} />
-          </div>
-
-          {/* Recent sync logs */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Recent Sync Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {syncStatus.recentLogs.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  No sync activity yet. Click &quot;Sync Now&quot; to start.
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>QBO ID</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Time</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {syncStatus.recentLogs.slice(0, 20).map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell>
-                          <Badge variant="secondary" className="text-xs font-mono">
-                            {log.entityType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">{log.action}</TableCell>
-                        <TableCell>
-                          {log.status === "COMPLETED" ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              OK
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Failed
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {log.qboEntityId || "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {log.durationMs ? `${log.durationMs}ms` : "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(log.createdAt).toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
-    </div>
-  )
-}
-
-function StatusCard({ label, count, icon }: { label: string; count: number; icon: React.ReactNode }) {
-  return (
     <Card>
-      <CardContent className="flex items-center gap-3 py-4 px-4">
-        {icon}
-        <div>
-          <div className="text-2xl font-bold">{count}</div>
-          <div className="text-xs text-muted-foreground">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Xero coming soon
-// ---------------------------------------------------------------------------
-
-function XeroComingSoon() {
-  return (
-    <Card className="opacity-60">
       <CardHeader>
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#13B5EA] text-white font-bold text-xl">
-            X
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.logoBg} text-white font-bold`}>
+              {config.logoText}
+            </div>
+            <div>
+              <CardTitle className="text-lg">
+                {config.label}
+                {status.companyName && (
+                  <span className="text-muted-foreground font-normal text-sm"> — {status.companyName}</span>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Connected {status.connectedAt && `since ${new Date(status.connectedAt).toLocaleDateString()}`}
+              </CardDescription>
+            </div>
           </div>
-          <div className="flex-1">
-            <CardTitle>Xero</CardTitle>
-            <CardDescription>Beautiful accounting software</CardDescription>
-          </div>
-          <Badge variant="secondary">Coming Soon</Badge>
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Connected
+          </Badge>
         </div>
       </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">
-          Xero integration is on our roadmap. Sync your invoices, payments, and financial data directly to Xero.
-        </p>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            Last sync: {status.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString() : "Never"}
+          </div>
+        </div>
+
+        {!loadingSync && syncStatus && (
+          <div className="grid grid-cols-4 gap-2">
+            <MiniStatusCard label="Pending" count={syncStatus.queue.pending} icon={<Clock className="h-3.5 w-3.5 text-yellow-500" />} />
+            <MiniStatusCard label="Processing" count={syncStatus.queue.processing} icon={<Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />} />
+            <MiniStatusCard label="Completed" count={syncStatus.queue.completed} icon={<CheckCircle2 className="h-3.5 w-3.5 text-green-500" />} />
+            <MiniStatusCard label="Failed" count={syncStatus.queue.failed} icon={<XCircle className="h-3.5 w-3.5 text-red-500" />} />
+          </div>
+        )}
+
+        {showLogs && syncStatus && syncStatus.recentLogs.length > 0 && (
+          <div className="border rounded-md overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {syncStatus.recentLogs.slice(0, 10).map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-xs font-mono">
+                        {log.entityType}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {log.status === "COMPLETED" ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5 text-red-500" />
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {log.externalEntityId || "—"}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
-      <CardFooter>
-        <Button className="w-full" disabled>
-          Connect to Xero
+      <CardFooter className="gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={triggerSync}
+          disabled={syncing}
+        >
+          {syncing ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-1.5" />
+          )}
+          Sync Now
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowLogs(!showLogs)}
+        >
+          {showLogs ? "Hide" : "Show"} Logs
+        </Button>
+        <div className="flex-1" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-600 hover:text-red-600 hover:bg-red-50"
+          onClick={handleDisconnect}
+          disabled={disconnecting}
+        >
+          {disconnecting ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+          ) : (
+            <Unplug className="h-4 w-4 mr-1.5" />
+          )}
+          Disconnect
         </Button>
       </CardFooter>
     </Card>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Loading skeleton
-// ---------------------------------------------------------------------------
+function MiniStatusCard({ label, count, icon }: { label: string; count: number; icon: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 rounded-md border p-2">
+      {icon}
+      <div>
+        <div className="text-lg font-bold leading-none">{count}</div>
+        <div className="text-[10px] text-muted-foreground">{label}</div>
+      </div>
+    </div>
+  )
+}
 
 function IntegrationsLoading() {
   return (
@@ -823,7 +828,10 @@ function IntegrationsLoading() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-96" />
       </div>
-      <Skeleton className="h-64 w-full max-w-2xl" />
+      <div className="grid gap-6 md:grid-cols-2">
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
     </div>
   )
 }

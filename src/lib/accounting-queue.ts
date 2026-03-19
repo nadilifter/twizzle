@@ -1,19 +1,15 @@
 import { db } from "@/lib/db";
-import type { QboEntityType, QboSyncAction } from "@prisma/client";
+import type { AccountingEntityType, AccountingSyncAction, AccountingProvider } from "@prisma/client";
 
-/**
- * Queue an entity for sync to QuickBooks Online.
- * Deduplicates by (connectionId, entityType, uplifterEntityId) — if a PENDING
- * entry already exists, it is updated rather than duplicated.
- */
 export async function enqueueSync(
   organizationId: string,
-  entityType: QboEntityType,
+  provider: AccountingProvider,
+  entityType: AccountingEntityType,
   uplifterEntityId: string,
-  action: QboSyncAction = "CREATE"
+  action: AccountingSyncAction = "CREATE"
 ): Promise<void> {
-  const connection = await db.qboConnection.findUnique({
-    where: { organizationId },
+  const connection = await db.accountingConnection.findUnique({
+    where: { organizationId_provider: { organizationId, provider } },
     select: { id: true, isActive: true, setupComplete: true },
   });
 
@@ -21,8 +17,7 @@ export async function enqueueSync(
     return;
   }
 
-  // Upsert: if a PENDING item already exists for this entity, update it
-  const existing = await db.qboSyncQueue.findFirst({
+  const existing = await db.accountingSyncQueue.findFirst({
     where: {
       connectionId: connection.id,
       entityType,
@@ -33,12 +28,12 @@ export async function enqueueSync(
   });
 
   if (existing) {
-    await db.qboSyncQueue.update({
+    await db.accountingSyncQueue.update({
       where: { id: existing.id },
       data: { action, createdAt: new Date() },
     });
   } else {
-    await db.qboSyncQueue.create({
+    await db.accountingSyncQueue.create({
       data: {
         connectionId: connection.id,
         entityType,
@@ -50,15 +45,12 @@ export async function enqueueSync(
   }
 }
 
-/**
- * Queue all existing entities for an initial full sync.
- * Called when a gym first completes their account mapping setup.
- */
 export async function enqueueFullSync(
-  organizationId: string
+  organizationId: string,
+  provider: AccountingProvider
 ): Promise<{ queued: number }> {
-  const connection = await db.qboConnection.findUnique({
-    where: { organizationId },
+  const connection = await db.accountingConnection.findUnique({
+    where: { organizationId_provider: { organizationId, provider } },
     select: { id: true, isActive: true, setupComplete: true },
   });
 
@@ -66,7 +58,6 @@ export async function enqueueFullSync(
     return { queued: 0 };
   }
 
-  // Fetch all entity IDs to sync, in dependency order
   const [users, invoices, payments, ledgerEntries, payouts] = await Promise.all([
     db.invoice.findMany({
       where: { organizationId },
@@ -93,13 +84,12 @@ export async function enqueueFullSync(
 
   const items: Array<{
     connectionId: string;
-    entityType: QboEntityType;
+    entityType: AccountingEntityType;
     uplifterEntityId: string;
-    action: QboSyncAction;
+    action: AccountingSyncAction;
     priority: number;
   }> = [];
 
-  // Customers (unique users who have invoices)
   const uniqueUserIds = [...new Set(users.map((u) => u.userId).filter(Boolean))] as string[];
   for (const userId of uniqueUserIds) {
     items.push({
@@ -111,7 +101,6 @@ export async function enqueueFullSync(
     });
   }
 
-  // Invoices
   for (const inv of invoices) {
     items.push({
       connectionId: connection.id,
@@ -122,7 +111,6 @@ export async function enqueueFullSync(
     });
   }
 
-  // Payments
   for (const pay of payments) {
     items.push({
       connectionId: connection.id,
@@ -133,7 +121,6 @@ export async function enqueueFullSync(
     });
   }
 
-  // Journal Entries
   for (const le of ledgerEntries) {
     items.push({
       connectionId: connection.id,
@@ -144,7 +131,6 @@ export async function enqueueFullSync(
     });
   }
 
-  // Deposits
   for (const po of payouts) {
     items.push({
       connectionId: connection.id,
@@ -156,24 +142,20 @@ export async function enqueueFullSync(
   }
 
   if (items.length > 0) {
-    await db.qboSyncQueue.createMany({ data: items });
+    await db.accountingSyncQueue.createMany({ data: items });
   }
 
   return { queued: items.length };
 }
 
-/**
- * Priority determines processing order within a cron run.
- * Lower number = processed first. Ensures dependencies are met.
- */
-function getEntityPriority(entityType: QboEntityType): number {
-  const priorities: Record<QboEntityType, number> = {
+function getEntityPriority(entityType: AccountingEntityType): number {
+  const priorities: Record<AccountingEntityType, number> = {
     ACCOUNT: 0,
     ITEM: 1,
     CUSTOMER: 2,
     INVOICE: 3,
     PAYMENT: 4,
-    REFUND_RECEIPT: 5,
+    REFUND: 5,
     JOURNAL_ENTRY: 6,
     DEPOSIT: 7,
   };

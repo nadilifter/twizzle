@@ -144,8 +144,8 @@ model Organization {
   // Organization-Athlete junction (tracks which athletes are visible to this org)
   organizationAthletes OrganizationAthlete[]
 
-  // QuickBooks Online Integration
-  qboConnection QboConnection?
+  // Accounting Integrations (QuickBooks Online, Xero)
+  accountingConnections AccountingConnection[]
 }
 
 model OrganizationMember {
@@ -4403,123 +4403,132 @@ model AthletePass {
 }
 
 // ============================================
-// QUICKBOOKS ONLINE INTEGRATION
+// ACCOUNTING INTEGRATIONS (QBO, Xero)
 // ============================================
 
-model QboConnection {
-  id               String    @id @default(cuid())
-  organizationId   String    @unique
-  realmId          String
-  accessToken      String    @db.Text
-  refreshToken     String    @db.Text
+model AccountingConnection {
+  id               String             @id @default(cuid())
+  organizationId   String
+  provider         AccountingProvider
+  tenantId         String
+  accessToken      String             @db.Text
+  refreshToken     String             @db.Text
   tokenExpiresAt   DateTime
   refreshExpiresAt DateTime
   scope            String
   companyName      String?
-  isActive         Boolean   @default(true)
-  setupComplete    Boolean   @default(false)
+  isActive         Boolean            @default(true)
+  setupComplete    Boolean            @default(false)
   lastSyncAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
-  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  accountMappings QboAccountMapping[]
-  syncMappings    QboSyncMapping[]
-  syncQueue       QboSyncQueue[]
-  syncLogs        QboSyncLog[]
+  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accountMappings AccountingAccountMapping[]
+  syncMappings    AccountingSyncMapping[]
+  syncQueue       AccountingSyncQueue[]
+  syncLogs        AccountingSyncLog[]
+
+  @@unique([organizationId, provider])
+  @@index([provider, isActive, setupComplete])
 }
 
-model QboAccountMapping {
-  id               String         @id @default(cuid())
-  connectionId     String
-  mappingType      QboMappingType
-  uplifterEntityId String?
-  qboAccountId     String
-  qboAccountName   String
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+model AccountingAccountMapping {
+  id                  String               @id @default(cuid())
+  connectionId        String
+  mappingType         AccountingMappingType
+  uplifterEntityId    String?
+  externalAccountId   String
+  externalAccountName String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
-  connection QboConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection AccountingConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@unique([connectionId, mappingType, uplifterEntityId])
   @@index([connectionId])
 }
 
-model QboSyncMapping {
-  id               String        @id @default(cuid())
+model AccountingSyncMapping {
+  id               String               @id @default(cuid())
   connectionId     String
-  entityType       QboEntityType
+  entityType       AccountingEntityType
   uplifterEntityId String
-  qboEntityId      String
+  externalEntityId String
   lastSyncedAt     DateTime
   checksum         String?
 
-  connection QboConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection AccountingConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@unique([connectionId, entityType, uplifterEntityId])
   @@index([connectionId, entityType])
 }
 
-model QboSyncQueue {
-  id               String        @id @default(cuid())
+model AccountingSyncQueue {
+  id               String               @id @default(cuid())
   connectionId     String
-  entityType       QboEntityType
+  entityType       AccountingEntityType
   uplifterEntityId String
-  action           QboSyncAction
-  status           QboSyncStatus @default(PENDING)
-  priority         Int           @default(0)
-  attempts         Int           @default(0)
+  action           AccountingSyncAction
+  status           AccountingSyncStatus @default(PENDING)
+  priority         Int                  @default(0)
+  attempts         Int                  @default(0)
   lastAttemptAt    DateTime?
-  errorMessage     String?       @db.Text
-  createdAt        DateTime      @default(now())
+  errorMessage     String?              @db.Text
+  createdAt        DateTime             @default(now())
 
-  connection QboConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection AccountingConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@index([connectionId, status])
   @@index([status, priority, createdAt])
 }
 
-model QboSyncLog {
-  id               String        @id @default(cuid())
+model AccountingSyncLog {
+  id               String               @id @default(cuid())
   connectionId     String
-  entityType       QboEntityType
+  entityType       AccountingEntityType
   uplifterEntityId String
-  action           QboSyncAction
-  status           QboSyncStatus
-  qboEntityId      String?
-  errorMessage     String?       @db.Text
+  action           AccountingSyncAction
+  status           AccountingSyncStatus
+  externalEntityId String?
+  errorMessage     String?              @db.Text
   durationMs       Int?
-  createdAt        DateTime      @default(now())
+  createdAt        DateTime             @default(now())
 
-  connection QboConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection AccountingConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@index([connectionId, createdAt])
 }
 
-enum QboEntityType {
+enum AccountingProvider {
+  QBO
+  XERO
+}
+
+enum AccountingEntityType {
   ACCOUNT
   CUSTOMER
   ITEM
   INVOICE
   PAYMENT
-  REFUND_RECEIPT
+  REFUND
   JOURNAL_ENTRY
   DEPOSIT
 }
 
-enum QboSyncAction {
+enum AccountingSyncAction {
   CREATE
   UPDATE
 }
 
-enum QboSyncStatus {
+enum AccountingSyncStatus {
   PENDING
   PROCESSING
   COMPLETED
   FAILED
 }
 
-enum QboMappingType {
+enum AccountingMappingType {
   GL_CODE
   BANK_ACCOUNT
   PROCESSING_FEES

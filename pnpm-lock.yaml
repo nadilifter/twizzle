@@ -260,6 +260,9 @@ importers:
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      xero-node:
+        specifier: ^14.0.0
+        version: 14.0.0
       zod:
         specifier: ^4.1.13
         version: 4.1.13
@@ -4533,6 +4536,9 @@ packages:
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
+
+  xero-node@14.0.0:
+    resolution: {integrity: sha512-wXFiirv2ryaAWTBaQ4TbYRbcqXv04J+r8VzDPcIWbwxOEzGYZVcdNE0b3DgMqgRVnsmU7tRwwfQfuyXo/cMIeA==}
 
   xmlbuilder@13.0.2:
     resolution: {integrity: sha512-Eux0i2QdDYKbdbA6AM6xE4m6ZTZr4G4xF9kahI2ukSEMCzwce2eX9WlTI5J3s+NU7hpasFsr8hWIONae7LluAQ==}
@@ -9692,6 +9698,13 @@ snapshots:
       strip-ansi: 7.1.2
 
   wrappy@1.0.2: {}
+
+  xero-node@14.0.0:
+    dependencies:
+      axios: 1.13.4
+      openid-client: 5.7.1
+    transitivePeerDependencies:
+      - debug
 
   xmlbuilder@13.0.2: {}
 

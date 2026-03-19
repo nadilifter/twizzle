@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processQboSyncQueue } from "@/lib/qbo-sync";
+import { processXeroSyncQueue } from "@/lib/xero-sync";
 import { isQboConfigured } from "@/lib/qbo";
+import { isXeroConfigured } from "@/lib/xero";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -14,22 +16,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!isQboConfigured()) {
-      return NextResponse.json({
-        skipped: true,
-        reason: "QBO integration not configured",
-      });
+    const results: Record<string, any> = {};
+
+    if (isQboConfigured()) {
+      results.qbo = await processQboSyncQueue();
+    } else {
+      results.qbo = { skipped: true, reason: "QBO not configured" };
     }
 
-    const result = await processQboSyncQueue();
+    if (isXeroConfigured()) {
+      results.xero = await processXeroSyncQueue();
+    } else {
+      results.xero = { skipped: true, reason: "Xero not configured" };
+    }
 
     return NextResponse.json({
       success: true,
-      ...result,
+      results,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("[QBO Cron] Error processing sync queue:", error);
+    console.error("[Accounting Cron] Error processing sync queue:", error);
     return NextResponse.json(
       {
         error: "Failed to process sync queue",

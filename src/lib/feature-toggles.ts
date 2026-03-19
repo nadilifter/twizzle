@@ -12,7 +12,7 @@ export const FEATURE_KEYS = [
   "sms",
   "emailCampaigns",
   "customDomains",
-  "qboIntegration",
+  "accountingIntegrations",
   "training",
   "pointOfSale",
   "memberships",
@@ -30,7 +30,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   sms: false,
   emailCampaigns: false,
   customDomains: false,
-  qboIntegration: false,
+  accountingIntegrations: false,
   training: false,
   pointOfSale: false,
   memberships: false,
@@ -45,7 +45,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   sms: "SMS Messaging",
   emailCampaigns: "Email Campaigns",
   customDomains: "Custom Domains",
-  qboIntegration: "QuickBooks Integration",
+  accountingIntegrations: "Accounting Integrations",
   training: "Training",
   pointOfSale: "Point of Sale",
   memberships: "Memberships",
@@ -60,7 +60,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   sms: "SMS campaigns, conversations, and messaging via Twilio",
   emailCampaigns: "Email campaign creation and delivery",
   customDomains: "Custom domain configuration for your marketing site",
-  qboIntegration: "QuickBooks Online accounting integration",
+  accountingIntegrations: "Accounting software integrations (QuickBooks Online, Xero)",
   training: "Skills tracking, evaluations, levels, and training programs",
   pointOfSale: "Point of Sale terminal and checkout via the POS portal",
   memberships: "Membership management, restrictions, and storefront purchasing",
@@ -117,7 +117,7 @@ export const FEATURE_SIDEBAR_MAP: Record<
   customDomains: {
     // Handled at page level within the Website page, no sidebar change
   },
-  qboIntegration: {
+  accountingIntegrations: {
     subItems: [
       {
         section: "Financials",
@@ -166,7 +166,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   sms: ["/api/sms"],
   emailCampaigns: ["/api/email/campaigns"],
   customDomains: [], // Handled inline in website route
-  qboIntegration: ["/api/integrations"],
+  accountingIntegrations: ["/api/integrations"],
   training: [
     "/api/skills",
     "/api/levels",
@@ -186,6 +186,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
 /** Map of legacy feature key names to their current key */
 const LEGACY_KEY_MAP: Record<string, FeatureKey> = {
   advancedRegistrations: "competitions",
+  qboIntegration: "accountingIntegrations",
 };
 
 export function parseFeatureToggles(
