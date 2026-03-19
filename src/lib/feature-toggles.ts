@@ -184,7 +184,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
  * Returns a complete FeatureToggles object with defaults for missing keys.
  */
 /** Map of legacy feature key names to their current key */
-const LEGACY_KEY_MAP: Record<string, FeatureKey> = {
+export const LEGACY_KEY_MAP: Record<string, FeatureKey> = {
   advancedRegistrations: "competitions",
   qboIntegration: "accountingIntegrations",
 };

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getOrganizationFeatures } from "@/lib/feature-resolver";
-import { parseFeatureToggles, FEATURE_KEYS } from "@/lib/feature-toggles";
+import { parseFeatureToggles, FEATURE_KEYS, LEGACY_KEY_MAP } from "@/lib/feature-toggles";
 import { z } from "zod";
 
 const featureOverrideSchema = z.object({
@@ -94,16 +94,19 @@ export async function PUT(
       );
     }
 
-    const { featureToggles } = parsed.data;
+    const { featureToggles: rawToggles } = parsed.data;
 
-    // Validate all keys are valid feature keys
-    for (const key of Object.keys(featureToggles)) {
-      if (!FEATURE_KEYS.includes(key as any)) {
+    // Remap legacy keys and validate
+    const featureToggles: Record<string, boolean> = {};
+    for (const [key, value] of Object.entries(rawToggles)) {
+      const remappedKey = LEGACY_KEY_MAP[key] || key;
+      if (!FEATURE_KEYS.includes(remappedKey as any)) {
         return NextResponse.json(
           { error: `Invalid feature key: ${key}` },
           { status: 400 }
         );
       }
+      featureToggles[remappedKey] = value;
     }
 
     // If empty object, delete the override record
