@@ -1205,9 +1205,9 @@ model Event {
 
 enum EventType {
   CLASS
-  CAMP
+  CLINIC
   PARTY
-  COMPETITION
+  TRYOUT
   MEETING
   OTHER
 }

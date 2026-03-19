@@ -321,9 +321,9 @@ classDiagram
     class EventType {
         <<enumeration>>
         CLASS
-        CAMP
+        CLINIC
         PARTY
-        COMPETITION
+        TRYOUT
         MEETING
         OTHER
     }
@@ -747,7 +747,7 @@ flowchart TD
 | Role | ADMIN, COACH, VOLUNTEER, ACCOUNTANT, CUSTOM, PARENT, STAFF |
 | AthleteStatus | ACTIVE, INACTIVE, TRIAL, GRADUATED |
 | ProgramStatus | ACTIVE, INACTIVE, ARCHIVED |
-| EventType | CLASS, CAMP, PARTY, COMPETITION, MEETING, OTHER |
+| EventType | CLASS, CLINIC, PARTY, TRYOUT, MEETING, OTHER |
 | AttendanceStatus | REGISTERED, PRESENT, ABSENT, LATE, EXCUSED |
 | InvoiceStatus | DRAFT, SENT, PAID, OVERDUE, CANCELLED, PARTIAL |
 | PaymentStatus | PENDING, COMPLETED, FAILED, REFUNDED |

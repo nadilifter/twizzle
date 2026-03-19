@@ -71,9 +71,9 @@ import { toast } from "sonner"
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   CLASS: "Class",
-  CAMP: "Camp",
+  CLINIC: "Clinic",
   PARTY: "Party",
-  COMPETITION: "Competition",
+  TRYOUT: "Tryout",
   MEETING: "Meeting",
   OTHER: "Other",
 }
@@ -219,7 +219,7 @@ export default function EventDetailPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold">{event.title}</h1>
               <Badge
-                variant={event.type === "CAMP" || event.type === "COMPETITION" ? "default" : "secondary"}
+                variant={event.type === "CLINIC" || event.type === "TRYOUT" ? "default" : "secondary"}
               >
                 {EVENT_TYPE_LABELS[event.type] || event.type}
               </Badge>

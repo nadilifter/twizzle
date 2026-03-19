@@ -1,6 +1,6 @@
 // Types for Events API - matches Prisma schema and API responses
 
-export type EventType = "CLASS" | "CAMP" | "PARTY" | "COMPETITION" | "MEETING" | "OTHER";
+export type EventType = "CLASS" | "CLINIC" | "PARTY" | "TRYOUT" | "MEETING" | "OTHER";
 
 export interface EventProgram {
   id: string;

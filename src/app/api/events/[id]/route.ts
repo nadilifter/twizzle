@@ -10,7 +10,7 @@ const updateEventSchema = z.object({
   date: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
-  type: z.enum(["CLASS", "CAMP", "PARTY", "COMPETITION", "MEETING", "OTHER"]).optional(),
+  type: z.enum(["CLASS", "CLINIC", "PARTY", "TRYOUT", "MEETING", "OTHER"]).optional(),
   description: z.string().optional().nullable(),
   meetingLink: z.string().optional().nullable(),
   location: z.object({

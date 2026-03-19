@@ -79,8 +79,8 @@ interface OverviewData {
 
 const EVENT_TYPE_STYLES: Record<string, string> = {
   CLASS: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  CAMP: "bg-green-500/10 text-green-700 dark:text-green-400",
-  COMPETITION: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  CLINIC: "bg-green-500/10 text-green-700 dark:text-green-400",
+  TRYOUT: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
   MEETING: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
   OTHER: "bg-muted text-muted-foreground",
 };

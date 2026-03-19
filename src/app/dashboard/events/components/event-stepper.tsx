@@ -136,9 +136,9 @@ interface EventStepperProps {
 
 const EVENT_TYPES: { value: EventType; label: string; description: string }[] = [
   { value: "CLASS", label: "Class", description: "Regular training class or lesson" },
-  { value: "CAMP", label: "Camp", description: "Multi-session camp or workshop" },
+  { value: "CLINIC", label: "Clinic", description: "One-time skills or instructional session" },
   { value: "PARTY", label: "Party", description: "Birthday party or celebration" },
-  { value: "COMPETITION", label: "Competition", description: "Tournament, meet, or showcase" },
+  { value: "TRYOUT", label: "Tryout", description: "Athlete evaluation or team selection" },
   { value: "MEETING", label: "Meeting", description: "Staff meeting or parent meeting" },
   { value: "OTHER", label: "Other", description: "Any other type of event" },
 ]

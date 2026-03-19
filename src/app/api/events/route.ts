@@ -18,7 +18,7 @@ const createEventSchema = z.object({
   date: z.string().min(1, "Date is required"),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
-  type: z.enum(["CLASS", "CAMP", "PARTY", "COMPETITION", "MEETING", "OTHER"]).default("CLASS"),
+  type: z.enum(["CLASS", "CLINIC", "PARTY", "TRYOUT", "MEETING", "OTHER"]).default("CLASS"),
   description: z.string().optional(),
   meetingLink: z.string().optional(),
   timezone: z.string().optional(),
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
           { description: { contains: search, mode: "insensitive" as const } },
         ],
       }),
-      ...(type && { type: type as "CLASS" | "CAMP" | "PARTY" | "COMPETITION" | "MEETING" | "OTHER" }),
+      ...(type && { type: type as "CLASS" | "CLINIC" | "PARTY" | "TRYOUT" | "MEETING" | "OTHER" }),
       ...(programId && { programId }),
       ...(coachId && { coachId }),
       ...(startDate && endDate && {

@@ -86,9 +86,9 @@ export default function CoachSchedulePage() {
     switch (type) {
       case "CLASS":
         return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800";
-      case "CAMP":
+      case "CLINIC":
         return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
-      case "COMPETITION":
+      case "TRYOUT":
         return "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800";
       case "MEETING":
         return "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800";

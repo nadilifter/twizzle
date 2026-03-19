@@ -22,9 +22,9 @@ import { format } from "date-fns"
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   CLASS: "Class",
-  CAMP: "Camp",
+  CLINIC: "Clinic",
   PARTY: "Party",
-  COMPETITION: "Competition",
+  TRYOUT: "Tryout",
   MEETING: "Meeting",
   OTHER: "Other",
 }
@@ -119,7 +119,7 @@ export default function EventsPage() {
                       </div>
                     </div>
                     <Badge
-                      variant={event.type === "CAMP" || event.type === "COMPETITION" ? "default" : "secondary"}
+                      variant={event.type === "CLINIC" || event.type === "TRYOUT" ? "default" : "secondary"}
                       className="text-[10px] shrink-0"
                     >
                       {EVENT_TYPE_LABELS[event.type] || event.type}
