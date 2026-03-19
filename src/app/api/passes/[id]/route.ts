@@ -14,6 +14,7 @@ const updatePassSchema = z.object({
   coversAllPrograms: z.boolean().optional(),
   programIds: z.array(z.string()).optional(),
   status: z.enum(["ACTIVE", "EXPIRED", "CANCELLED", "ARCHIVED"]).optional(),
+  glCodeId: z.string().optional().nullable(),
 });
 
 export async function GET(

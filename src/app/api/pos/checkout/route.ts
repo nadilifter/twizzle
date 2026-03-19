@@ -102,19 +102,27 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create line items
+      // Resolve default GL code for products as fallback
+      const defaultProductGLCode = await tx.gLCode.findFirst({
+        where: { organizationId: session.user.organizationId, isDefault: true, defaultForType: "PRODUCT" },
+        select: { id: true },
+      });
+
+      // Create line items with GL codes from products
       const lineItems = await Promise.all(
-        validatedData.items.map((item) =>
-          tx.lineItem.create({
+        validatedData.items.map((item) => {
+          const product = productMap.get(item.referenceId);
+          return tx.lineItem.create({
             data: {
               invoiceId: invoice.id,
               description: item.name,
               quantity: item.quantity,
               unitPrice: item.price,
               total: item.price * item.quantity,
+              glCodeId: product?.glCodeId ?? defaultProductGLCode?.id ?? undefined,
             },
-          })
-        )
+          });
+        })
       );
 
       if (validatedData.paymentMethod === "CASH") {

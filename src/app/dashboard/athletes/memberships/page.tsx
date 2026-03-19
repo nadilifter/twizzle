@@ -54,6 +54,7 @@ import { useMembershipGroup } from "@/hooks/use-membership-group"
 import { useFeatures } from "@/components/feature-context"
 import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import { toast } from "sonner"
+import { GLCodeSelector } from "@/components/gl-code-selector"
 import type { MembershipGroup, MembershipInstance, BillingInterval, MembershipInstanceStatus } from "@/types/memberships"
 
 export default function MembershipsPage() {
@@ -66,6 +67,7 @@ export default function MembershipsPage() {
 
   // Create group form state
   const [newGroupRecurring, setNewGroupRecurring] = React.useState(false)
+  const [newGroupGlCodeId, setNewGroupGlCodeId] = React.useState<string | null>(null)
 
   const handleCreateGroup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -79,12 +81,14 @@ export default function MembershipsPage() {
       defaultPrice: formData.get("defaultPrice") ? parseFloat(formData.get("defaultPrice") as string) : undefined,
       defaultBillingInterval: (formData.get("defaultBillingInterval") as BillingInterval) || (newGroupRecurring ? "YEARLY" : "ONE_TIME"),
       programTypes: (formData.get("programTypes") as string || "").split(",").map(s => s.trim()).filter(Boolean),
-    })
+      glCodeId: newGroupGlCodeId,
+    } as any)
 
     if (result) {
       toast.success("Membership Group created")
       setIsCreateGroupOpen(false)
       setNewGroupRecurring(false)
+      setNewGroupGlCodeId(null)
     }
   }
 
@@ -254,6 +258,11 @@ export default function MembershipsPage() {
                   <Label htmlFor="allowAutoRenew">Allow Auto-Renewal</Label>
                 </div>
               )}
+              <GLCodeSelector
+                value={newGroupGlCodeId}
+                onChange={setNewGroupGlCodeId}
+                entityType="MEMBERSHIP"
+              />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsCreateGroupOpen(false)}>Cancel</Button>

@@ -69,6 +69,7 @@ const createProgramSchema = z.object({
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
     isPrimary: z.boolean().default(false),
   })).optional(),
+  glCodeId: z.string().optional().nullable(),
 });
 
 /**
@@ -288,6 +289,7 @@ export async function POST(request: NextRequest) {
           waitlistEnabled: validatedData.waitlistEnabled,
           waitlistAutoPromote: validatedData.waitlistAutoPromote,
           waitlistCapacity: validatedData.waitlistCapacity,
+          glCodeId: validatedData.glCodeId ?? undefined,
           organizationId: session.user.organizationId,
           ...(validatedData.membershipRequirementIds?.length && {
             requiredMemberships: {

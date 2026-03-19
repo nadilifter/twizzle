@@ -28,6 +28,7 @@ const updateEventSchema = z.object({
   coachId: z.string().optional().nullable(),
   hasFileRequirement: z.boolean().optional(),
   fileRequirementConfig: z.any().optional().nullable(),
+  glCodeId: z.string().optional().nullable(),
 });
 
 // GET /api/events/[id]

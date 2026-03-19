@@ -276,6 +276,38 @@ export async function createSweep(
 }
 
 // ---------------------------------------------------------------------------
+// Transfer Instruments (bank account lookup)
+// ---------------------------------------------------------------------------
+
+/**
+ * Retrieve a transfer instrument (bank account) from Adyen.
+ * Returns the last 4 digits of the bank account number, or null on failure.
+ */
+export async function getTransferInstrumentLast4(
+  transferInstrumentId: string
+): Promise<string | null> {
+  try {
+    const response = await getLemApi().TransferInstrumentsApi.getTransferInstrument(
+      transferInstrumentId
+    );
+    const accountNumber =
+      response?.bankAccount?.accountNumber ||
+      response?.bankAccount?.iban ||
+      "";
+    if (accountNumber.length >= 4) {
+      return accountNumber.slice(-4);
+    }
+    return null;
+  } catch (error: any) {
+    console.error("adyen-platform: getTransferInstrumentLast4 failed", {
+      transferInstrumentId,
+      status: error.statusCode,
+    });
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Refunds (Checkout Modifications API)
 // ---------------------------------------------------------------------------
 

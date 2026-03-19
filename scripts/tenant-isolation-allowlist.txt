@@ -23,6 +23,7 @@ src/app/api/attendance/metrics/route.ts
 # --- Manual organizationId in where ---
 src/app/api/invoices/route.ts
 src/app/api/ledgers/route.ts
+src/app/api/ledgers/[id]/route.ts
 src/app/api/ledgers/entries/route.ts
 src/app/api/transactions/route.ts
 src/app/api/payouts/route.ts

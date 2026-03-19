@@ -13,6 +13,7 @@ const updateProductSchema = z.object({
   maxInventory: z.number().int().positive().optional().nullable(),
   currentInventory: z.number().int().min(0).optional().nullable(),
   isActive: z.boolean().optional(),
+  glCodeId: z.string().optional().nullable(),
 });
 
 // GET /api/products/[id] - Get a single product

@@ -798,9 +798,13 @@ model Program {
   // Gender Restriction Values
   allowedGenders GenderDeclaration[] // empty = unrestricted
 
+  // GL Code
+  glCodeId String?
+
   // Relations
   organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   facility            Facility?                   @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  glCode              GLCode?                     @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   events              Event[]
   lessonPlans         LessonPlan[]
   enrollments         Enrollment[]
@@ -823,6 +827,7 @@ model Program {
   queueReservations QueueReservation[]
 
   @@index([facilityId])
+  @@index([glCodeId])
 }
 
 enum ProgramStatus {
@@ -918,14 +923,20 @@ model MembershipGroup {
   minAge         Int?
   maxAge         Int?
 
+  // GL Code
+  glCodeId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
   organization       Organization                       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  glCode             GLCode?                            @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   instances          MembershipInstance[]
   levelRequirements  MembershipGroupLevelRequirement[]
   waiverRequirements MembershipGroupWaiverRequirement[]
+
+  @@index([glCodeId])
 }
 
 model MembershipInstance {
@@ -1187,6 +1198,7 @@ model Event {
   requiredMemberships MembershipInstance[]
   hasFileRequirement  Boolean              @default(false)
   fileRequirementConfig Json?
+  glCodeId            String?
   organizationId      String
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -1196,11 +1208,14 @@ model Event {
   program           Program?     @relation(fields: [programId], references: [id])
   coach             User?        @relation("EventCoach", fields: [coachId], references: [id])
   facility          Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  glCode            GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   attendances       Attendance[]
   lineItems         LineItem[]
   media             Media[]
   staffAssignments  EventStaff[]
   registrationFiles RegistrationFile[]
+
+  @@index([glCodeId])
 }
 
 enum EventType {
@@ -1288,6 +1303,7 @@ model LineItem {
   passId                String? // What pass is this for?
   competitionId         String? // What competition is this for?
   competitionCategoryId String? // What competition category?
+  glCodeId              String? // GL code at time of sale
   createdAt             DateTime @default(now())
 
   // Relations
@@ -1300,6 +1316,9 @@ model LineItem {
   pass                Pass?                @relation(fields: [passId], references: [id])
   competition         Competition?         @relation(fields: [competitionId], references: [id])
   competitionCategory CompetitionCategory? @relation(fields: [competitionCategoryId], references: [id])
+  glCode              GLCode?              @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+
+  @@index([glCodeId])
 }
 
 model Payment {
@@ -1384,18 +1403,30 @@ enum DiscountStatus {
 }
 
 model GLCode {
-  id             String       @id @default(cuid())
-  code           String       @unique
-  description    String
-  type           GLCodeType
-  status         GLCodeStatus @default(ACTIVE)
-  organizationId String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id              String            @id @default(cuid())
+  code            String
+  description     String
+  type            GLCodeType
+  status          GLCodeStatus      @default(ACTIVE)
+  isDefault       Boolean           @default(false)
+  defaultForType  GLCodeEntityType?
+  organizationId  String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   // Relations
-  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ledgerEntries LedgerEntry[]
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ledgerEntries    LedgerEntry[]
+  programs         Program[]
+  events           Event[]
+  competitions     Competition[]
+  products         Product[]
+  membershipGroups MembershipGroup[]
+  passes           Pass[]
+  lineItems        LineItem[]
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
 }
 
 enum GLCodeType {
@@ -1409,6 +1440,15 @@ enum GLCodeType {
 enum GLCodeStatus {
   ACTIVE
   INACTIVE
+}
+
+enum GLCodeEntityType {
+  PROGRAM
+  EVENT
+  COMPETITION
+  MEMBERSHIP
+  PASS
+  PRODUCT
 }
 
 model LedgerEntry {
@@ -1451,15 +1491,18 @@ model Transaction {
   description    String?
   metadata       Json?
   settledAt      DateTime?
+  payoutId       String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   payment      Payment?     @relation(fields: [paymentId], references: [id])
+  payout       Payout?      @relation(fields: [payoutId], references: [id])
 
   @@index([organizationId])
   @@index([pspReference])
+  @@index([payoutId])
 }
 
 enum TransactionType {
@@ -1496,10 +1539,12 @@ model Payout {
   bankAccount    String? // Last 4 digits
   scheduledAt    DateTime?
   paidAt         DateTime?
+  estimatedArrivalTime DateTime?
   createdAt      DateTime     @default(now())
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 
   @@index([organizationId])
 }
@@ -2458,15 +2503,18 @@ model Product {
   maxInventory     Int? // null = unlimited
   currentInventory Int? // null = unlimited
   isActive         Boolean  @default(true)
+  glCodeId         String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   // Relations
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  glCode         GLCode?         @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   stockMovements StockMovement[]
 
   @@unique([organizationId, sku])
   @@index([organizationId])
+  @@index([glCodeId])
 }
 
 model StockMovement {
@@ -3970,6 +4018,9 @@ model Competition {
   pricingMode CompetitionPricingMode @default(FREE)
   entryFee    Decimal?               @db.Decimal(10, 2) // Used for PER_COMPETITION and PER_EVENT modes
 
+  // GL Code
+  glCodeId String?
+
   // Publishing
   publishStatus       String? // LIVE, DRAFT, SCHEDULED
   scheduledGoLiveDate DateTime?
@@ -3981,6 +4032,7 @@ model Competition {
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  glCode       GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
 
   categories        CompetitionCategory[]
   entries           CompetitionEntry[]
@@ -3992,6 +4044,7 @@ model Competition {
 
   @@index([organizationId])
   @@index([status])
+  @@index([glCodeId])
 }
 
 // Links a competition to a specific category entry with result and seed mark configuration
@@ -4304,12 +4357,14 @@ model Pass {
   limitPeriod       PassLimitPeriod @default(WEEKLY)
   coversAllPrograms Boolean         @default(false)
   status            PassStatus      @default(ACTIVE)
+  glCodeId          String?
   organizationId    String
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   // Relations
   organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  glCode              GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   coveredPrograms     Program[]    @relation("PassCoveredPrograms")
   requiredForPrograms Program[]    @relation("PassRequiredForPrograms")
   athletePasses       AthletePass[]
@@ -4317,6 +4372,7 @@ model Pass {
 
   @@index([organizationId])
   @@index([status])
+  @@index([glCodeId])
 }
 
 model AthletePass {

@@ -41,6 +41,8 @@ const createMembershipGroupSchema = z.object({
   allowedGenders: z.array(genderEnum).default([]),
   minAge: z.number().int().min(0).max(100).nullable().optional(),
   maxAge: z.number().int().min(0).max(100).nullable().optional(),
+
+  glCodeId: z.string().optional().nullable(),
 });
 
 // GET /api/memberships - List Membership Groups

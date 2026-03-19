@@ -45,6 +45,7 @@ import {
   Copy,
 } from "lucide-react"
 import { toast } from "sonner"
+import { GLCodeSelector } from "@/components/gl-code-selector"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
 import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useFeatures } from "@/components/feature-context"
@@ -208,6 +209,9 @@ interface CompetitionFormData {
   publishStatus: PublishStatus
   scheduledGoLiveDate: Date | null
   scheduledGoLiveTime: string
+
+  // GL Code
+  glCodeId: string | null
 }
 
 interface CompetitionStepperProps {
@@ -315,6 +319,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
     publishStatus: "DRAFT",
     scheduledGoLiveDate: null,
     scheduledGoLiveTime: "09:00",
+
+    // GL Code
+    glCodeId: null,
   })
 
   const [isSaving, setIsSaving] = React.useState(false)
@@ -525,6 +532,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           publishStatus: data.publishStatus || "DRAFT",
           scheduledGoLiveDate: data.scheduledGoLiveDate ? new Date(data.scheduledGoLiveDate) : null,
           scheduledGoLiveTime: data.scheduledGoLiveTime || "09:00",
+          glCodeId: data.glCodeId || null,
         })
       } catch (error) {
         console.error("Failed to load competition:", error)
@@ -940,6 +948,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         publishStatus: formData.publishStatus,
         scheduledGoLiveDate: formData.scheduledGoLiveDate?.toISOString(),
         scheduledGoLiveTime: formData.scheduledGoLiveTime,
+        glCodeId: formData.glCodeId,
       }
 
       const url = isEditing ? `/api/competitions/${competitionId}` : "/api/competitions"
@@ -2539,6 +2548,13 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                   </p>
                 </div>
               )}
+
+              {/* GL Code */}
+              <GLCodeSelector
+                value={formData.glCodeId}
+                onChange={(v) => setFormData(prev => ({ ...prev, glCodeId: v }))}
+                entityType="COMPETITION"
+              />
             </CardContent>
           </Card>
         )}

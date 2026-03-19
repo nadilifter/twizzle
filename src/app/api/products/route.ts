@@ -13,6 +13,7 @@ const createProductSchema = z.object({
   maxInventory: z.number().int().positive().optional().nullable(),
   currentInventory: z.number().int().min(0).optional().nullable(),
   isActive: z.boolean().default(true),
+  glCodeId: z.string().optional().nullable(),
 });
 
 // GET /api/products - List products

@@ -13,7 +13,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Download, MoreHorizontal, Plus, Upload } from "lucide-react"
+import { Download, MoreHorizontal, Plus, Upload, ExternalLink } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
@@ -72,7 +74,11 @@ export const columns: ColumnDef<GLCode>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Code" />
     ),
-    cell: ({ row }) => <div className="font-medium">{row.getValue("code")}</div>,
+    cell: ({ row }) => (
+      <Link href={`/dashboard/financials/ledgers/${row.original.id}`} className="font-medium text-primary hover:underline">
+        {row.getValue("code")}
+      </Link>
+    ),
   },
   {
     accessorKey: "description",
@@ -122,6 +128,12 @@ export const columns: ColumnDef<GLCode>[] = [
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link href={`/dashboard/financials/ledgers/${glCode.id}`}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View Details
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => navigator.clipboard.writeText(glCode.code)}
               >
@@ -144,6 +156,7 @@ interface GLCodesTableProps {
 }
 
 export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
+  const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -256,6 +269,8 @@ export function GLCodesTable({ data, onAddClick }: GLCodesTableProps) {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/dashboard/financials/ledgers/${row.original.id}`)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

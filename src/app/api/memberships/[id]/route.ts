@@ -41,6 +41,8 @@ const updateMembershipGroupSchema = z.object({
   allowedGenders: z.array(genderEnum).optional(),
   minAge: z.number().int().min(0).max(100).nullable().optional(),
   maxAge: z.number().int().min(0).max(100).nullable().optional(),
+
+  glCodeId: z.string().optional().nullable(),
 });
 
 // GET /api/memberships/[id]

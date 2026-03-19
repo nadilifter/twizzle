@@ -147,6 +147,8 @@ const createCompetitionSchema = z.object({
   publishStatus: z.enum(["LIVE", "DRAFT", "SCHEDULED"]).default("DRAFT"),
   scheduledGoLiveDate: z.string().or(z.date()).nullable().optional(),
   scheduledGoLiveTime: z.string().optional(),
+
+  glCodeId: z.string().optional().nullable(),
 })
 
 /**
@@ -259,6 +261,8 @@ export async function POST(request: NextRequest) {
         hasMedicalRequirement: data.hasMedicalRequirement,
         hasFileRequirement: data.hasFileRequirement,
         fileRequirementConfig: data.fileRequirementConfig ?? undefined,
+
+        glCodeId: data.glCodeId ?? undefined,
 
         // Pricing
         pricingMode: data.pricingMode,

@@ -247,9 +247,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/invoices"],
   },
   "/dashboard/financials/ledgers": {
-    status: "demo",
-    description: "General ledger and GL codes management",
-    apiRoutes: ["/api/ledgers", "/api/ledgers/entries"],
+    status: "live",
+    description: "General ledger and GL codes management with entity assignments",
+    apiRoutes: ["/api/ledgers", "/api/ledgers/entries", "/api/ledgers/[id]"],
   },
   "/dashboard/financials/onboarding": {
     status: "live",

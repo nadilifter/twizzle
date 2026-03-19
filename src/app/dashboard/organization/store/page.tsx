@@ -68,6 +68,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { GLCodeSelector } from "@/components/gl-code-selector"
 
 type Product = {
   id: string
@@ -95,6 +96,7 @@ type ProductFormData = {
   currentInventory: number | null
   isUnlimited: boolean
   isActive: boolean
+  glCodeId: string | null
 }
 
 const defaultFormData: ProductFormData = {
@@ -108,6 +110,7 @@ const defaultFormData: ProductFormData = {
   currentInventory: null,
   isUnlimited: true,
   isActive: true,
+  glCodeId: null,
 }
 
 const defaultCategories = ["General", "Merchandise", "Drinks/Snacks", "Equipment", "Services"]
@@ -178,6 +181,7 @@ export default function StorePage() {
         maxInventory: formData.isUnlimited ? null : formData.maxInventory,
         currentInventory: formData.isUnlimited ? null : formData.currentInventory,
         isActive: formData.isActive,
+        glCodeId: formData.glCodeId,
       }
 
       let response: Response
@@ -277,6 +281,7 @@ export default function StorePage() {
       currentInventory: product.currentInventory,
       isUnlimited: product.maxInventory === null && product.currentInventory === null,
       isActive: product.isActive,
+      glCodeId: (product as any).glCodeId || null,
     })
     setDialogOpen(true)
   }
@@ -624,6 +629,12 @@ export default function StorePage() {
                   </div>
                 )}
               </div>
+
+              <GLCodeSelector
+                value={formData.glCodeId}
+                onChange={(v) => setFormData({ ...formData, glCodeId: v })}
+                entityType="PRODUCT"
+              />
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">

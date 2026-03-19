@@ -1,9 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, TrendingUp, DollarSign, CreditCard, Activity, RefreshCw, CheckCircle2, Settings, Loader2 } from "lucide-react"
+import { Plus, TrendingUp, DollarSign, CreditCard, Activity, Loader2, Layers } from "lucide-react"
 import { Pie, PieChart, Label as RechartsLabel } from "recharts"
-import Link from "next/link"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -36,26 +35,33 @@ import {
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
 import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
-import { RoutingRules } from "./routing-rules"
 import { GLCodesTable, GLCode } from "./gl-codes-table"
 import { LedgerTransactions } from "./ledger-transactions"
 import { FinancialReports } from "./financial-reports"
+import { GLCodeAssignments } from "./gl-code-assignments"
 
-const accountTypeConfig = {
-  amount: { label: "Amount" },
-  membership: { label: "Membership Revenue", color: "hsl(var(--chart-1))" },
-  merchandise: { label: "Merchandise Sales", color: "hsl(var(--chart-2))" },
-  events: { label: "Event Tickets", color: "hsl(var(--chart-3))" },
-  lessons: { label: "Private Lessons", color: "hsl(var(--chart-4))" },
-} satisfies ChartConfig
+const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(160, 60%, 45%)",
+  "hsl(200, 60%, 45%)",
+  "hsl(280, 60%, 45%)",
+]
 
-const expenseTypeConfig = {
-  amount: { label: "Amount" },
-  software: { label: "Software", color: "hsl(var(--chart-1))" },
-  supplies: { label: "Supplies", color: "hsl(var(--chart-2))" },
-  travel: { label: "Travel", color: "hsl(var(--chart-3))" },
-  contractors: { label: "Contractors", color: "hsl(var(--chart-4))" },
-} satisfies ChartConfig
+interface RevenueByCode {
+  id: string
+  code: string
+  description: string
+  amount: number
+}
+
+interface MonthlyRevenue {
+  month: string
+  total: number
+}
 
 export default function LedgersPage() {
   const [activeTab, setActiveTab] = React.useState("overview")
@@ -75,9 +81,8 @@ export default function LedgersPage() {
     totalLiabilities: 0,
     totalEquity: 0,
   })
-  
-  const [isSyncing, setIsSyncing] = React.useState(false)
-  const [lastSync, setLastSync] = React.useState<Date | null>(new Date(Date.now() - 3600000))
+  const [revenueByCode, setRevenueByCode] = React.useState<RevenueByCode[]>([])
+  const [monthlyRevenue, setMonthlyRevenue] = React.useState<MonthlyRevenue[]>([])
 
   const fetchGLCodes = React.useCallback(async () => {
     try {
@@ -85,7 +90,6 @@ export default function LedgersPage() {
       if (!response.ok) throw new Error("Failed to fetch GL codes")
       
       const data = await response.json()
-      // Map API response to match GLCode interface
       const mappedCodes = data.data.map((code: Record<string, unknown>) => ({
         id: code.id,
         code: code.code,
@@ -95,6 +99,8 @@ export default function LedgersPage() {
       }))
       setGlCodes(mappedCodes)
       setStats(data.stats)
+      setRevenueByCode(data.revenueByCode || [])
+      setMonthlyRevenue(data.monthlyRevenue || [])
     } catch (error) {
       console.error("Error fetching GL codes:", error)
       toast.error("Failed to load GL codes")
@@ -137,32 +143,23 @@ export default function LedgersPage() {
       setSaving(false)
     }
   }
-  
-  const handleSync = () => {
-    setIsSyncing(true)
-    toast.info("Syncing with QuickBooks Online...")
-    
-    setTimeout(() => {
-      setIsSyncing(false)
-      setLastSync(new Date())
-      toast.success("Sync completed successfully")
-    }, 2000)
+
+  // Build chart config and data from real GL code revenue breakdown
+  const revenueChartConfig: ChartConfig = {
+    amount: { label: "Amount" },
+    ...Object.fromEntries(
+      revenueByCode.map((rc, i) => [
+        rc.code,
+        { label: rc.description, color: CHART_COLORS[i % CHART_COLORS.length] },
+      ])
+    ),
   }
 
-  // Prepare chart data from stats
-  const accountTypeData = [
-    { category: "membership", amount: stats.totalRevenue * 0.62, fill: "var(--color-membership)" },
-    { category: "merchandise", amount: stats.totalRevenue * 0.17, fill: "var(--color-merchandise)" },
-    { category: "events", amount: stats.totalRevenue * 0.12, fill: "var(--color-events)" },
-    { category: "lessons", amount: stats.totalRevenue * 0.09, fill: "var(--color-lessons)" },
-  ]
-
-  const expenseTypeData = [
-    { category: "software", amount: stats.totalExpenses * 0.16, fill: "var(--color-software)" },
-    { category: "supplies", amount: stats.totalExpenses * 0.08, fill: "var(--color-supplies)" },
-    { category: "travel", amount: stats.totalExpenses * 0.23, fill: "var(--color-travel)" },
-    { category: "contractors", amount: stats.totalExpenses * 0.53, fill: "var(--color-contractors)" },
-  ]
+  const revenueChartData = revenueByCode.map((rc, i) => ({
+    category: rc.code,
+    amount: rc.amount,
+    fill: CHART_COLORS[i % CHART_COLORS.length],
+  }))
 
   if (loading) {
     return (
@@ -178,31 +175,8 @@ export default function LedgersPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight">Ledgers & GL Codes</h1>
           <p className="text-muted-foreground">
-            Manage your general ledger codes, routing rules, and view revenue breakdowns.
+            Manage your general ledger codes, entity assignments, and view revenue breakdowns.
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-end mr-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-emerald-600">
-              <CheckCircle2 className="h-4 w-4" />
-              QBO Connected
-            </div>
-            {lastSync && (
-              <span className="text-xs text-muted-foreground">
-                Last sync: {lastSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-          </div>
-          <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-            {isSyncing ? "Syncing..." : "Sync Now"}
-          </Button>
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard/financials/integrations">
-              <Settings className="h-4 w-4" />
-              <span className="sr-only">Integration Settings</span>
-            </Link>
-          </Button>
         </div>
       </div>
 
@@ -213,9 +187,11 @@ export default function LedgersPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Across all revenue accounts
+              From invoiced line items
             </p>
           </CardContent>
         </Card>
@@ -227,19 +203,21 @@ export default function LedgersPage() {
           <CardContent>
             <div className="text-2xl font-bold">{glCodes.filter(c => c.status === "Active").length}</div>
             <p className="text-xs text-muted-foreground">
-              In use for routing
+              {glCodes.length} total codes
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium">Liabilities</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalExpenses.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${stats.totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
             <p className="text-xs text-muted-foreground">
-              This period
+              From ledger entries
             </p>
           </CardContent>
         </Card>
@@ -249,8 +227,8 @@ export default function LedgersPage() {
         <ResponsiveTabsList value={activeTab} onValueChange={setActiveTab}>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="reports">Financial Reports</TabsTrigger>
-          <TabsTrigger value="rules">Routing Rules</TabsTrigger>
         </ResponsiveTabsList>
         <TabsContent value="overview" className="space-y-4">
           <div className="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-7">
@@ -258,7 +236,7 @@ export default function LedgersPage() {
               <CardHeader>
                 <CardTitle>GL Codes</CardTitle>
                 <CardDescription>
-                  Manage your chart of accounts and routing rules.
+                  Manage your chart of accounts and entity assignments.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -267,7 +245,7 @@ export default function LedgersPage() {
                     <DialogHeader>
                       <DialogTitle>Create New GL Code</DialogTitle>
                       <DialogDescription>
-                        Add a new General Ledger code for transaction routing.
+                        Add a new General Ledger code for categorizing revenue.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -335,188 +313,111 @@ export default function LedgersPage() {
             <div className="col-span-3 flex flex-col gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Revenue by Account Type</CardTitle>
+                  <CardTitle>Revenue by GL Code</CardTitle>
                   <CardDescription>
-                    Distribution of revenue across ledger accounts.
+                    Distribution of invoiced revenue across GL codes.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 pb-0">
-                  <ChartContainer
-                    config={accountTypeConfig}
-                    className="mx-auto aspect-square max-h-[300px]"
-                  >
-                    <PieChart>
-                      <ChartTooltip
-                        cursor={false}
-                        content={
-                          <ChartTooltipContent 
-                            hideLabel 
-                            className="w-[200px]"
-                            formatter={(value, name, item) => (
-                              <>
-                                <div
-                                  className="h-2.5 w-2.5 shrink-0 rounded-[2px] bg-[--color-bg]"
-                                  style={
-                                    {
-                                      "--color-bg": item.payload.fill || item.color,
-                                    } as React.CSSProperties
-                                  }
-                                />
-                                <div className="flex flex-1 justify-between leading-none items-center">
-                                  <span className="text-muted-foreground mr-2">{name}</span>
-                                  <span className="font-mono font-medium tabular-nums text-foreground">
-                                    ${Number(value).toLocaleString()}
-                                  </span>
-                                </div>
-                              </>
-                            )}
-                          />
-                        }
-                      />
-                      <Pie
-                        data={accountTypeData}
-                        dataKey="amount"
-                        nameKey="category"
-                        innerRadius={60}
-                        strokeWidth={5}
-                      >
-                        <RechartsLabel
-                          content={({ viewBox }) => {
-                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                              return (
-                                <text
-                                  x={viewBox.cx}
-                                  y={viewBox.cy}
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                >
-                                  <tspan
+                  {revenueChartData.length > 0 ? (
+                    <ChartContainer
+                      config={revenueChartConfig}
+                      className="mx-auto aspect-square max-h-[300px]"
+                    >
+                      <PieChart>
+                        <ChartTooltip
+                          cursor={false}
+                          content={
+                            <ChartTooltipContent 
+                              hideLabel 
+                              className="w-[200px]"
+                              formatter={(value, name, item) => (
+                                <>
+                                  <div
+                                    className="h-2.5 w-2.5 shrink-0 rounded-[2px] bg-[--color-bg]"
+                                    style={
+                                      {
+                                        "--color-bg": item.payload.fill || item.color,
+                                      } as React.CSSProperties
+                                    }
+                                  />
+                                  <div className="flex flex-1 justify-between leading-none items-center">
+                                    <span className="text-muted-foreground mr-2">{name}</span>
+                                    <span className="font-mono font-medium tabular-nums text-foreground">
+                                      ${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
+                            />
+                          }
+                        />
+                        <Pie
+                          data={revenueChartData}
+                          dataKey="amount"
+                          nameKey="category"
+                          innerRadius={60}
+                          strokeWidth={5}
+                        >
+                          <RechartsLabel
+                            content={({ viewBox }) => {
+                              if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                const formatted = stats.totalRevenue >= 1000
+                                  ? `$${(stats.totalRevenue / 1000).toFixed(1)}k`
+                                  : `$${stats.totalRevenue.toFixed(0)}`
+                                return (
+                                  <text
                                     x={viewBox.cx}
                                     y={viewBox.cy}
-                                    className="fill-foreground text-3xl font-bold"
+                                    textAnchor="middle"
+                                    dominantBaseline="middle"
                                   >
-                                    ${(stats.totalRevenue / 1000).toFixed(1)}k
-                                  </tspan>
-                                  <tspan
-                                    x={viewBox.cx}
-                                    y={(viewBox.cy || 0) + 24}
-                                    className="fill-muted-foreground text-sm"
-                                  >
-                                    Total
-                                  </tspan>
-                                </text>
-                              )
-                            }
-                          }}
-                        />
-                      </Pie>
-                      <ChartLegend
-                        content={<ChartLegendContent nameKey="category" className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center text-foreground font-medium" />}
-                      />
-                    </PieChart>
-                  </ChartContainer>
-                </CardContent>
-                <CardFooter className="flex-col gap-2 text-sm">
-                  <div className="flex items-center gap-2 font-medium leading-none">
-                    Revenue breakdown <TrendingUp className="h-4 w-4" />
-                  </div>
-                  <div className="leading-none text-muted-foreground">
-                    Showing total revenue distribution for current period
-                  </div>
-                </CardFooter>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Expense by Account Type</CardTitle>
-                  <CardDescription>
-                    Distribution of expenses across ledger accounts.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 pb-0">
-                  <ChartContainer
-                    config={expenseTypeConfig}
-                    className="mx-auto aspect-square max-h-[300px]"
-                  >
-                    <PieChart>
-                      <ChartTooltip
-                        cursor={false}
-                        content={
-                          <ChartTooltipContent 
-                            hideLabel 
-                            className="w-[200px]"
-                            formatter={(value, name, item) => (
-                              <>
-                                <div
-                                  className="h-2.5 w-2.5 shrink-0 rounded-[2px] bg-[--color-bg]"
-                                  style={
-                                    {
-                                      "--color-bg": item.payload.fill || item.color,
-                                    } as React.CSSProperties
-                                  }
-                                />
-                                <div className="flex flex-1 justify-between leading-none items-center">
-                                  <span className="text-muted-foreground mr-2">{name}</span>
-                                  <span className="font-mono font-medium tabular-nums text-foreground">
-                                    ${Number(value).toLocaleString()}
-                                  </span>
-                                </div>
-                              </>
-                            )}
+                                    <tspan
+                                      x={viewBox.cx}
+                                      y={viewBox.cy}
+                                      className="fill-foreground text-3xl font-bold"
+                                    >
+                                      {formatted}
+                                    </tspan>
+                                    <tspan
+                                      x={viewBox.cx}
+                                      y={(viewBox.cy || 0) + 24}
+                                      className="fill-muted-foreground text-sm"
+                                    >
+                                      Total
+                                    </tspan>
+                                  </text>
+                                )
+                              }
+                            }}
                           />
-                        }
-                      />
-                      <Pie
-                        data={expenseTypeData}
-                        dataKey="amount"
-                        nameKey="category"
-                        innerRadius={60}
-                        strokeWidth={5}
-                      >
-                        <RechartsLabel
-                          content={({ viewBox }) => {
-                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                              return (
-                                <text
-                                  x={viewBox.cx}
-                                  y={viewBox.cy}
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                >
-                                  <tspan
-                                    x={viewBox.cx}
-                                    y={viewBox.cy}
-                                    className="fill-foreground text-3xl font-bold"
-                                  >
-                                    ${(stats.totalExpenses / 1000).toFixed(1)}k
-                                  </tspan>
-                                  <tspan
-                                    x={viewBox.cx}
-                                    y={(viewBox.cy || 0) + 24}
-                                    className="fill-muted-foreground text-sm"
-                                  >
-                                    Total
-                                  </tspan>
-                                </text>
-                              )
-                            }
-                          }}
+                        </Pie>
+                        <ChartLegend
+                          content={<ChartLegendContent nameKey="category" className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center text-foreground font-medium" />}
                         />
-                      </Pie>
-                      <ChartLegend
-                        content={<ChartLegendContent nameKey="category" className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center text-foreground font-medium" />}
-                      />
-                    </PieChart>
-                  </ChartContainer>
+                      </PieChart>
+                    </ChartContainer>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <Layers className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                      <p className="text-sm text-muted-foreground text-center">
+                        No revenue recorded yet.
+                        <br />
+                        Revenue will appear here as invoices are created.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
-                <CardFooter className="flex-col gap-2 text-sm">
-                  <div className="flex items-center gap-2 font-medium leading-none">
-                    Expense breakdown <TrendingUp className="h-4 w-4 rotate-180" />
-                  </div>
-                  <div className="leading-none text-muted-foreground">
-                    Showing total expense distribution for current period
-                  </div>
-                </CardFooter>
+                {revenueChartData.length > 0 && (
+                  <CardFooter className="flex-col gap-2 text-sm">
+                    <div className="flex items-center gap-2 font-medium leading-none">
+                      Revenue breakdown by GL code <TrendingUp className="h-4 w-4" />
+                    </div>
+                    <div className="leading-none text-muted-foreground">
+                      From invoiced line items with assigned GL codes
+                    </div>
+                  </CardFooter>
+                )}
               </Card>
             </div>
           </div>
@@ -525,10 +426,10 @@ export default function LedgersPage() {
           <LedgerTransactions />
         </TabsContent>
         <TabsContent value="reports">
-          <FinancialReports />
+          <FinancialReports stats={stats} monthlyRevenue={monthlyRevenue} revenueByCode={revenueByCode} />
         </TabsContent>
-        <TabsContent value="rules">
-          <RoutingRules glCodes={glCodes} />
+        <TabsContent value="assignments">
+          <GLCodeAssignments />
         </TabsContent>
       </Tabs>
     </div>

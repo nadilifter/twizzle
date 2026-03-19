@@ -13,6 +13,7 @@ const createPassSchema = z.object({
   limitPeriod: z.enum(["WEEKLY", "MONTHLY"]).default("WEEKLY"),
   coversAllPrograms: z.boolean().default(false),
   programIds: z.array(z.string()).optional(),
+  glCodeId: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {

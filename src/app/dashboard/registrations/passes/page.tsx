@@ -45,6 +45,7 @@ import { usePasses, usePass } from "@/hooks/use-passes"
 import { useFeatures } from "@/components/feature-context"
 import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import { toast } from "sonner"
+import { GLCodeSelector } from "@/components/gl-code-selector"
 import type { Pass, BillingInterval, PassLimitPeriod } from "@/types/passes"
 
 function formatBillingInterval(interval: string) {
@@ -98,6 +99,7 @@ export default function PassesPage() {
   const [createLimitPeriod, setCreateLimitPeriod] = React.useState<PassLimitPeriod>("WEEKLY")
   const [createScopeMode, setCreateScopeMode] = React.useState<"all" | "specific">("all")
   const [createProgramIds, setCreateProgramIds] = React.useState<Set<string>>(new Set())
+  const [createGlCodeId, setCreateGlCodeId] = React.useState<string | null>(null)
 
   const resetCreateForm = () => {
     setCreateName("")
@@ -108,6 +110,7 @@ export default function PassesPage() {
     setCreateLimitPeriod("WEEKLY")
     setCreateScopeMode("all")
     setCreateProgramIds(new Set())
+    setCreateGlCodeId(null)
   }
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -138,7 +141,8 @@ export default function PassesPage() {
       limitPeriod: createLimitPeriod,
       coversAllPrograms: createScopeMode === "all",
       programIds: createScopeMode === "specific" ? Array.from(createProgramIds) : undefined,
-    })
+      glCodeId: createGlCodeId,
+    } as any)
 
     if (result) {
       toast.success("Pass created")
@@ -396,6 +400,12 @@ export default function PassesPage() {
                 </div>
               )}
             </div>
+
+            <GLCodeSelector
+              value={createGlCodeId}
+              onChange={setCreateGlCodeId}
+              entityType="PASS"
+            />
 
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsCreateOpen(false); resetCreateForm() }}>

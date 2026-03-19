@@ -1292,9 +1292,27 @@ async function main() {
   // ============================================
   console.log("\n📊 Creating GL codes...");
   const glCodeData = [
+    // Org1 defaults
+    { id: `${ORG1_ID}-gl-def-prog`, code: "4100", description: "Program Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "PROGRAM" as const, organizationId: ORG1_ID },
+    { id: `${ORG1_ID}-gl-def-event`, code: "4200", description: "Event Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "EVENT" as const, organizationId: ORG1_ID },
+    { id: `${ORG1_ID}-gl-def-comp`, code: "4300", description: "Competition Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "COMPETITION" as const, organizationId: ORG1_ID },
+    { id: `${ORG1_ID}-gl-def-memb`, code: "4400", description: "Membership Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "MEMBERSHIP" as const, organizationId: ORG1_ID },
+    { id: `${ORG1_ID}-gl-def-pass`, code: "4500", description: "Pass Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "PASS" as const, organizationId: ORG1_ID },
+    { id: `${ORG1_ID}-gl-def-prod`, code: "4600", description: "Product Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "PRODUCT" as const, organizationId: ORG1_ID },
+    { id: `${ORG1_ID}-gl-def-tax`, code: "2100", description: "Sales Tax Collected", type: "LIABILITY" as const, status: "ACTIVE" as const, isDefault: true, organizationId: ORG1_ID },
+    // Org1 custom codes
     { id: `${ORG1_ID}-gl-1`, code: "SGA-4100", description: "Tuition Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, organizationId: ORG1_ID },
     { id: `${ORG1_ID}-gl-2`, code: "SGA-5100", description: "Coach Salaries", type: "EXPENSE" as const, status: "ACTIVE" as const, organizationId: ORG1_ID },
     { id: `${ORG1_ID}-gl-3`, code: "SGA-5200", description: "Equipment", type: "EXPENSE" as const, status: "ACTIVE" as const, organizationId: ORG1_ID },
+    // Org2 defaults
+    { id: `${ORG2_ID}-gl-def-prog`, code: "4100", description: "Program Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "PROGRAM" as const, organizationId: ORG2_ID },
+    { id: `${ORG2_ID}-gl-def-event`, code: "4200", description: "Event Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "EVENT" as const, organizationId: ORG2_ID },
+    { id: `${ORG2_ID}-gl-def-comp`, code: "4300", description: "Competition Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "COMPETITION" as const, organizationId: ORG2_ID },
+    { id: `${ORG2_ID}-gl-def-memb`, code: "4400", description: "Membership Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "MEMBERSHIP" as const, organizationId: ORG2_ID },
+    { id: `${ORG2_ID}-gl-def-pass`, code: "4500", description: "Pass Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "PASS" as const, organizationId: ORG2_ID },
+    { id: `${ORG2_ID}-gl-def-prod`, code: "4600", description: "Product Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, isDefault: true, defaultForType: "PRODUCT" as const, organizationId: ORG2_ID },
+    { id: `${ORG2_ID}-gl-def-tax`, code: "2100", description: "Sales Tax Collected", type: "LIABILITY" as const, status: "ACTIVE" as const, isDefault: true, organizationId: ORG2_ID },
+    // Org2 custom codes
     { id: `${ORG2_ID}-gl-1`, code: "MSC-4100", description: "Program Revenue", type: "REVENUE" as const, status: "ACTIVE" as const, organizationId: ORG2_ID },
     { id: `${ORG2_ID}-gl-2`, code: "MSC-5100", description: "Staff Wages", type: "EXPENSE" as const, status: "ACTIVE" as const, organizationId: ORG2_ID },
   ];

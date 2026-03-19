@@ -13,7 +13,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Download, Search } from "lucide-react"
+import { Download, Search, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { format } from "date-fns"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
@@ -30,109 +32,22 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
 
-export interface LedgerEntry {
+interface LedgerEntry {
   id: string
   date: string
   description: string
-  glCode: string
-  glDescription: string
-  reference: string
+  reference: string | null
   debit: number | null
   credit: number | null
-  status: "Posted" | "Pending"
+  status: string
+  glCode: {
+    id: string
+    code: string
+    description: string
+  }
 }
-
-const initialEntries: LedgerEntry[] = [
-  {
-    id: "LE-001-1",
-    date: "2023-12-01",
-    description: "November Membership Revenue",
-    glCode: "1001",
-    glDescription: "Checking Account",
-    reference: "INV-2023-11",
-    debit: 45000.00,
-    credit: null,
-    status: "Posted",
-  },
-  {
-    id: "LE-001-2",
-    date: "2023-12-01",
-    description: "November Membership Revenue",
-    glCode: "4000",
-    glDescription: "Membership Income",
-    reference: "INV-2023-11",
-    debit: null,
-    credit: 45000.00,
-    status: "Posted",
-  },
-  {
-    id: "LE-002-1",
-    date: "2023-12-02",
-    description: "Office Supplies - Staples",
-    glCode: "5001",
-    glDescription: "Office Supplies",
-    reference: "EXP-2023-12-001",
-    debit: 145.50,
-    credit: null,
-    status: "Posted",
-  },
-  {
-    id: "LE-002-2",
-    date: "2023-12-02",
-    description: "Office Supplies - Staples",
-    glCode: "1001",
-    glDescription: "Checking Account",
-    reference: "EXP-2023-12-001",
-    debit: null,
-    credit: 145.50,
-    status: "Posted",
-  },
-  {
-    id: "LE-003-1",
-    date: "2023-12-05",
-    description: "Quarterly Rent Payment",
-    glCode: "5003",
-    glDescription: "Rent Expense",
-    reference: "BILL-2023-12-R",
-    debit: 3500.00,
-    credit: null,
-    status: "Posted",
-  },
-  {
-    id: "LE-003-2",
-    date: "2023-12-05",
-    description: "Quarterly Rent Payment",
-    glCode: "1001",
-    glDescription: "Checking Account",
-    reference: "BILL-2023-12-R",
-    debit: null,
-    credit: 3500.00,
-    status: "Posted",
-  },
-  {
-    id: "LE-004-1",
-    date: "2023-12-06",
-    description: "Pending: Event Deposit",
-    glCode: "1002",
-    glDescription: "Savings Account",
-    reference: "DEP-2023-12-E",
-    debit: 2500.00,
-    credit: null,
-    status: "Pending",
-  },
-  {
-    id: "LE-004-2",
-    date: "2023-12-06",
-    description: "Pending: Event Deposit",
-    glCode: "2000",
-    glDescription: "Deferred Revenue",
-    reference: "DEP-2023-12-E",
-    debit: null,
-    credit: 2500.00,
-    status: "Pending",
-  },
-]
 
 const formatCurrency = (value: number | null) => {
   if (!value) return null
@@ -142,13 +57,13 @@ const formatCurrency = (value: number | null) => {
   }).format(value)
 }
 
-export const columns: ColumnDef<LedgerEntry>[] = [
+const columns: ColumnDef<LedgerEntry>[] = [
   {
     accessorKey: "date",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Date" />
     ),
-    cell: ({ row }) => <div>{row.getValue("date")}</div>,
+    cell: ({ row }) => <div>{format(new Date(row.getValue("date")), "MMM d, yyyy")}</div>,
   },
   {
     accessorKey: "description",
@@ -158,14 +73,19 @@ export const columns: ColumnDef<LedgerEntry>[] = [
     cell: ({ row }) => <div>{row.getValue("description")}</div>,
   },
   {
-    accessorKey: "glCode",
+    id: "glCode",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="GL Code" />
     ),
     cell: ({ row }) => (
       <div className="flex flex-col">
-        <span className="font-medium">{row.getValue("glCode")}</span>
-        <span className="text-xs text-muted-foreground">{row.original.glDescription}</span>
+        <Link
+          href={`/dashboard/financials/ledgers/${row.original.glCode.id}`}
+          className="font-mono text-primary hover:underline font-medium"
+        >
+          {row.original.glCode.code}
+        </Link>
+        <span className="text-xs text-muted-foreground">{row.original.glCode.description}</span>
       </div>
     ),
   },
@@ -174,7 +94,9 @@ export const columns: ColumnDef<LedgerEntry>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Reference" />
     ),
-    cell: ({ row }) => <div className="font-mono text-xs">{row.getValue("reference")}</div>,
+    cell: ({ row }) => (
+      <div className="font-mono text-xs">{row.getValue("reference") || "-"}</div>
+    ),
   },
   {
     accessorKey: "debit",
@@ -206,8 +128,8 @@ export const columns: ColumnDef<LedgerEntry>[] = [
     cell: ({ row }) => {
       const status = row.getValue("status") as string
       return (
-        <Badge variant={status === "Posted" ? "outline" : "secondary"}>
-          {status}
+        <Badge variant={status === "POSTED" ? "outline" : "secondary"}>
+          {status === "POSTED" ? "Posted" : "Pending"}
         </Badge>
       )
     },
@@ -215,10 +137,28 @@ export const columns: ColumnDef<LedgerEntry>[] = [
 ]
 
 export function LedgerTransactions() {
-  const [data] = React.useState<LedgerEntry[]>(initialEntries)
+  const [data, setData] = React.useState<LedgerEntry[]>([])
+  const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+
+  React.useEffect(() => {
+    async function fetchEntries() {
+      try {
+        const response = await fetch("/api/ledgers/entries?limit=200")
+        if (!response.ok) throw new Error("Failed to fetch")
+        const result = await response.json()
+        setData(result.data || [])
+      } catch (error) {
+        console.error("Error fetching ledger entries:", error)
+        toast.error("Failed to load transactions")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchEntries()
+  }, [])
 
   const table = useReactTable({
     data,
@@ -240,12 +180,22 @@ export function LedgerTransactions() {
     },
   })
 
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-48">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>General Ledger Transactions</CardTitle>
+        <CardTitle>Ledger Transactions</CardTitle>
         <CardDescription>
-          View detailed debits and credits for all financial activities.
+          Debits and credits from manual journal entries.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -311,7 +261,7 @@ export function LedgerTransactions() {
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No results.
+                      No transactions found.
                     </TableCell>
                   </TableRow>
                 )}

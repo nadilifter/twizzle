@@ -41,6 +41,7 @@ const createEventSchema = z.object({
   hasFileRequirement: z.boolean().optional(),
   fileRequirementConfig: z.any().optional().nullable(),
   staffAssignments: z.array(staffAssignmentSchema).optional(),
+  glCodeId: z.string().optional().nullable(),
 }).refine((data) => {
   const dateTimeString = `${data.date}T${data.startTime}`;
   const eventDate = new Date(dateTimeString);
@@ -281,6 +282,7 @@ export async function POST(request: NextRequest) {
         capacity: validatedData.capacity,
         hasFileRequirement: validatedData.hasFileRequirement ?? false,
         fileRequirementConfig: validatedData.fileRequirementConfig ?? undefined,
+        glCodeId: validatedData.glCodeId ?? undefined,
         organizationId: session.user.organizationId,
     };
 

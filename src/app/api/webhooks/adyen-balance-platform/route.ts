@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { logger } from "@/lib/logger"
 import crypto from "crypto"
 import { AdyenOnboardingStatus } from "@prisma/client"
+import { getTransferInstrumentLast4 } from "@/lib/adyen-platform"
 
 // ---------------------------------------------------------------------------
 // HMAC verification (multi-key: one per webhook subscription)
@@ -317,10 +318,6 @@ async function handleBankTransfer(transfer: any) {
   const currency = transfer.amount?.currency || "USD"
   const status = transfer.status?.statusCode || transfer.status
 
-  const existingPayout = await db.payout.findFirst({
-    where: { reference: transferId },
-  })
-
   const payoutStatus =
     status === "booked"
       ? "PAID"
@@ -330,20 +327,45 @@ async function handleBankTransfer(transfer: any) {
           ? "FAILED"
           : "PENDING"
 
+  const estimatedArrivalTime =
+    transfer?.tracking?.estimatedArrivalTime ||
+    extractEstimatedArrival(transfer?.events)
+
+  const existingPayout = await db.payout.findFirst({
+    where: { reference: transferId },
+  })
+
+  // Resolve bank account last 4 digits (only on first creation or if missing)
+  let bankAccount: string | null = existingPayout?.bankAccount || null
+  if (!bankAccount && transfer?.counterparty?.transferInstrumentId) {
+    bankAccount = await getTransferInstrumentLast4(
+      transfer.counterparty.transferInstrumentId
+    )
+  }
+
+  const updateData: Record<string, any> = {
+    status: payoutStatus as any,
+    ...(payoutStatus === "PAID" ? { paidAt: new Date() } : {}),
+    ...(bankAccount ? { bankAccount } : {}),
+    ...(estimatedArrivalTime
+      ? { estimatedArrivalTime: new Date(estimatedArrivalTime) }
+      : {}),
+  }
+
+  let payoutId: string
+
   if (existingPayout) {
     await db.payout.update({
       where: { id: existingPayout.id },
-      data: {
-        status: payoutStatus as any,
-        ...(payoutStatus === "PAID" ? { paidAt: new Date() } : {}),
-      },
+      data: updateData,
     })
+    payoutId = existingPayout.id
     logger.info("[BP-WEBHOOK] Payout updated", {
-      payoutId: existingPayout.id,
+      payoutId,
       status: payoutStatus,
     })
   } else {
-    await db.payout.create({
+    const created = await db.payout.create({
       data: {
         organizationId: account.organizationId,
         reference: transferId,
@@ -352,16 +374,83 @@ async function handleBankTransfer(transfer: any) {
         net: amount,
         currency,
         status: payoutStatus as any,
+        bankAccount,
         ...(payoutStatus === "PAID" ? { paidAt: new Date() } : {}),
         ...(payoutStatus === "SCHEDULED"
           ? { scheduledAt: new Date() }
           : {}),
+        ...(estimatedArrivalTime
+          ? { estimatedArrivalTime: new Date(estimatedArrivalTime) }
+          : {}),
       },
     })
+    payoutId = created.id
     logger.info("[BP-WEBHOOK] Payout created", {
       transferId,
       organizationId: account.organizationId,
       status: payoutStatus,
+    })
+  }
+
+  // Link settled transactions to this payout when it reaches PAID status
+  if (payoutStatus === "PAID") {
+    await linkTransactionsToPayout(payoutId, account.organizationId)
+  }
+}
+
+/**
+ * Extract estimatedArrivalTime from the events array in the transfer webhook.
+ * Adyen includes this in tracking events with type "tracking".
+ */
+function extractEstimatedArrival(events: any[] | undefined): string | null {
+  if (!events) return null
+  for (const event of events) {
+    if (event.type === "tracking" && event.trackingData?.estimatedArrivalTime) {
+      return event.trackingData.estimatedArrivalTime
+    }
+    if (event.estimatedArrivalTime) {
+      return event.estimatedArrivalTime
+    }
+  }
+  return null
+}
+
+/**
+ * Link unsettled transactions (SETTLED status, no payoutId) to this payout.
+ * Uses the payout's createdAt as a cutoff -- any transaction settled before
+ * the payout was created belongs to it.
+ */
+async function linkTransactionsToPayout(
+  payoutId: string,
+  organizationId: string
+) {
+  try {
+    const payout = await db.payout.findUnique({
+      where: { id: payoutId },
+      select: { createdAt: true },
+    })
+    if (!payout) return
+
+    const result = await db.transaction.updateMany({
+      where: {
+        organizationId,
+        status: "SETTLED",
+        payoutId: null,
+        settledAt: { lte: payout.createdAt },
+      },
+      data: { payoutId },
+    })
+
+    if (result.count > 0) {
+      logger.info("[BP-WEBHOOK] Linked transactions to payout", {
+        payoutId,
+        transactionCount: result.count,
+      })
+    }
+  } catch (error) {
+    logger.error("[BP-WEBHOOK] Failed to link transactions to payout", {
+      payoutId,
+      error: error instanceof Error ? error.message : String(error),
     })
   }
 }

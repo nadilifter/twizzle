@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
       refundsThisMonth,
       chargebacksThisMonth,
       platformAccount,
+      nextScheduledPayout,
     ] = await Promise.all([
       // Revenue this month (from completed payments)
       db.payment.aggregate({
@@ -136,6 +137,22 @@ export async function GET(request: NextRequest) {
           balanceAccountId: true,
         },
       }),
+
+      // Next scheduled payout
+      db.payout.findFirst({
+        where: {
+          organizationId,
+          status: "SCHEDULED",
+        },
+        orderBy: { scheduledAt: "asc" },
+        select: {
+          id: true,
+          amount: true,
+          net: true,
+          scheduledAt: true,
+          estimatedArrivalTime: true,
+        },
+      }),
     ]);
 
     // Get revenue by month using Prisma instead of raw SQL
@@ -225,7 +242,14 @@ export async function GET(request: NextRequest) {
       payouts: {
         pending: Number(pendingPayouts._sum.net || 0),
         pendingCount: pendingPayouts._count || 0,
-        nextScheduled: null,
+        nextScheduled: nextScheduledPayout
+          ? {
+              id: nextScheduledPayout.id,
+              amount: Number(nextScheduledPayout.net || nextScheduledPayout.amount),
+              scheduledAt: nextScheduledPayout.scheduledAt,
+              estimatedArrivalTime: nextScheduledPayout.estimatedArrivalTime,
+            }
+          : null,
       },
       subscriptions: {
         active: activeSubscriptions,

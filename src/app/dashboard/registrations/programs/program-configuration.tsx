@@ -56,6 +56,7 @@ import type { ProgramStaffRole } from "@/types/staff"
 import type { SpaceWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
 import { ColorSelector } from "@/components/color-selector"
+import { GLCodeSelector } from "@/components/gl-code-selector"
 import { RecurrencePicker, parseRRule } from "@/components/ui/recurrence-picker"
 import {
   Dialog,
@@ -202,6 +203,9 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
       member: sa.member,
     })) || []) as StaffAssignment[],
     showCoachOnSite: program.showCoachOnSite ?? true,
+
+    // GL Code
+    glCodeId: (program.glCodeId || null) as string | null,
   }))
 
   // Fetch levels
@@ -520,6 +524,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
           isPrimary: sa.isPrimary,
         })),
         showCoachOnSite: formData.showCoachOnSite,
+        glCodeId: formData.glCodeId,
       } as any)
       toast.success("Program saved")
       if (onUpdated) await onUpdated()
@@ -693,6 +698,14 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
                 Optional. Leave blank or set to 0 for free programs. Maximum 2 decimal places.
               </p>
             </div>
+
+            {/* GL Code */}
+            <GLCodeSelector
+              value={formData.glCodeId}
+              onChange={(v) => setFormData((prev) => ({ ...prev, glCodeId: v }))}
+              entityType="PROGRAM"
+              label="GL Code"
+            />
 
           </TabsContent>
 

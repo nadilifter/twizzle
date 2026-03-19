@@ -43,6 +43,7 @@ import {
   Copy,
 } from "lucide-react"
 import { toast } from "sonner"
+import { GLCodeSelector } from "@/components/gl-code-selector"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
 import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useFeatures } from "@/components/feature-context"
@@ -127,6 +128,9 @@ interface EventFormData {
 
   // Step 4: Staff
   staffAssignments: StaffAssignment[]
+
+  // GL Code
+  glCodeId: string | null
 }
 
 interface EventStepperProps {
@@ -205,6 +209,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
     fileRequirementConfig: (event as any)?.fileRequirementConfig || null,
 
     staffAssignments: [],
+
+    glCodeId: (event as any)?.glCodeId || null,
   }))
 
   const [isSaving, setIsSaving] = React.useState(false)
@@ -443,6 +449,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
           memberId: sa.memberId,
           role: sa.role,
         })),
+        glCodeId: formData.glCodeId,
       }
 
       const url = isEditing ? `/api/events/${(event as any).id}` : "/api/events"
@@ -683,6 +690,13 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                   Optional. Leave blank or set to 0 for free events.
                 </p>
               </div>
+
+              {/* GL Code */}
+              <GLCodeSelector
+                value={formData.glCodeId}
+                onChange={(v) => setFormData(prev => ({ ...prev, glCodeId: v }))}
+                entityType="EVENT"
+              />
             </CardContent>
           </Card>
         )}

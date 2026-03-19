@@ -6,6 +6,7 @@ import { passwordSchema } from "@/lib/password"
 import { isSubdomainReserved } from "@/lib/reserved-domains"
 import { containsProfanity } from "@/lib/profanity"
 import { registerAllowedOrigin } from "@/lib/adyen-platform"
+import { createDefaultGLCodes } from "@/lib/gl-code-defaults"
 
 const MAX_NAME_LENGTH = 255
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
@@ -272,6 +273,9 @@ export async function POST(request: NextRequest) {
           )
         )
       }
+
+      // 8. Create default GL codes for the organization
+      await createDefaultGLCodes(organization.id, tx)
 
       return { organization, userId: resolvedUserId }
     })

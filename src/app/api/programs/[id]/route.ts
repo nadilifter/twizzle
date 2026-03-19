@@ -59,6 +59,7 @@ const updateProgramSchema = z.object({
     role: z.enum(["LEAD_COACH", "ASSISTANT_COACH", "SUBSTITUTE", "VOLUNTEER"]).default("ASSISTANT_COACH"),
     isPrimary: z.boolean().default(false),
   })).optional(),
+  glCodeId: z.string().optional().nullable(),
   // Flag to regenerate instances
   regenerateInstances: z.boolean().optional(),
 });
@@ -309,6 +310,7 @@ export async function PATCH(
       if (validatedData.waitlistEnabled !== undefined) updateData.waitlistEnabled = validatedData.waitlistEnabled;
       if (validatedData.waitlistAutoPromote !== undefined) updateData.waitlistAutoPromote = validatedData.waitlistAutoPromote;
       if (validatedData.waitlistCapacity !== undefined) updateData.waitlistCapacity = validatedData.waitlistCapacity;
+      if (validatedData.glCodeId !== undefined) updateData.glCodeId = validatedData.glCodeId;
 
       // Update the program
       const updatedProgram = await tx.program.update({

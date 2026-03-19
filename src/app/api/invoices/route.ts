@@ -211,6 +211,27 @@ export async function POST(request: NextRequest) {
     const subtotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
     const total = subtotal; // Add tax calculation if needed
 
+    // Resolve GL codes from programs and events
+    const programIds = lineItemsWithTotals.map((i) => i.programId).filter(Boolean) as string[];
+    const eventIds = lineItemsWithTotals.map((i) => i.eventId).filter(Boolean) as string[];
+    const entityGlCodes = new Map<string, string>();
+
+    if (programIds.length > 0) {
+      const programs = await db.program.findMany({ where: { id: { in: programIds } }, select: { id: true, glCodeId: true } });
+      for (const p of programs) if (p.glCodeId) entityGlCodes.set(`program:${p.id}`, p.glCodeId);
+    }
+    if (eventIds.length > 0) {
+      const events = await db.event.findMany({ where: { id: { in: eventIds } }, select: { id: true, glCodeId: true } });
+      for (const e of events) if (e.glCodeId) entityGlCodes.set(`event:${e.id}`, e.glCodeId);
+    }
+
+    // Fetch org default GL codes as fallbacks
+    const defaultGlCodes = await db.gLCode.findMany({
+      where: { organizationId: session.user.organizationId, isDefault: true, defaultForType: { not: null } },
+      select: { id: true, defaultForType: true },
+    });
+    const defaultByType = new Map(defaultGlCodes.map((d) => [d.defaultForType!, d.id]));
+
     const invoice = await db.invoice.create({
       data: {
         reference,
@@ -222,16 +243,30 @@ export async function POST(request: NextRequest) {
         notes: validatedData.notes,
         organizationId: session.user.organizationId,
         lineItems: {
-          create: lineItemsWithTotals.map((item) => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.total,
-            programId: item.programId,
-            eventId: item.eventId,
-            athleteId: item.athleteId,
-            discountId: item.discountId,
-          })),
+          create: lineItemsWithTotals.map((item) => {
+            let glCodeId: string | undefined =
+              (item.programId ? entityGlCodes.get(`program:${item.programId}`) : undefined)
+              ?? (item.eventId ? entityGlCodes.get(`event:${item.eventId}`) : undefined)
+              ?? undefined;
+
+            // Fallback to org default for the entity type
+            if (!glCodeId) {
+              if (item.programId) glCodeId = defaultByType.get("PROGRAM");
+              else if (item.eventId) glCodeId = defaultByType.get("EVENT");
+            }
+
+            return {
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              total: item.total,
+              programId: item.programId,
+              eventId: item.eventId,
+              athleteId: item.athleteId,
+              discountId: item.discountId,
+              glCodeId,
+            };
+          }),
         },
       },
       include: {

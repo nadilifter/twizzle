@@ -84,7 +84,7 @@ export async function getSuperadminOverview(
   startDate: Date,
   endDate: Date
 ): Promise<SuperadminOverview> {
-  const [transactions, payouts, orgCount, negativeBalanceCount] =
+  const [transactions, payouts, orgCount] =
     await Promise.all([
       db.transaction.findMany({
         where: {
@@ -100,10 +100,12 @@ export async function getSuperadminOverview(
         _sum: { net: true },
       }),
       db.organization.count({ where: { isActive: true } }),
-      db.adyenPlatformAccount.count({
-        where: { onboardingStatus: "VERIFIED" },
-      }),
     ])
+
+  // Negative balance count requires querying Adyen's Balance API or
+  // storing negative balance webhook events -- not yet implemented.
+  // Return 0 until negative balance state tracking is added.
+  const negativeBalanceCount = 0
 
   const totalGrossVolume = transactions
     .filter((t) => t.type === "PAYMENT" && t.status === "SETTLED")

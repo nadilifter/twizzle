@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       db.gLCode.count({ where }),
     ]);
 
-    // Get balance summaries by type
+    // Get balance summaries from ledger entries (manual journal entries)
     const balancesByType = await db.ledgerEntry.groupBy({
       by: ["glCodeId"],
       where: {
@@ -81,11 +81,38 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Get line item revenue totals per GL code (from actual transactions)
+    const lineItemTotals = await db.lineItem.groupBy({
+      by: ["glCodeId"],
+      where: {
+        glCodeId: { not: null },
+        invoice: { organizationId: session.user.organizationId },
+      },
+      _sum: { total: true },
+      _count: true,
+    });
+    const lineItemMap = new Map(
+      lineItemTotals.map((li) => [li.glCodeId, { total: Number(li._sum.total || 0), count: li._count }])
+    );
+
+    // Get monthly revenue data for the current year (from line items)
+    const yearStart = new Date(new Date().getFullYear(), 0, 1);
+    const monthlyRevenue: Array<{ month: Date; total: unknown }> = await db.$queryRaw`
+      SELECT DATE_TRUNC('month', i."createdAt") as month, SUM(li.total) as total
+      FROM "LineItem" li
+      JOIN "Invoice" i ON li."invoiceId" = i.id
+      WHERE i."organizationId" = ${session.user.organizationId}
+        AND i."createdAt" >= ${yearStart}
+      GROUP BY DATE_TRUNC('month', i."createdAt")
+      ORDER BY month ASC
+    `;
+
     // Map balances to GL codes
     const codesWithBalances = glCodes.map((glCode) => {
       const balance = balancesByType.find((b) => b.glCodeId === glCode.id);
       const debitTotal = Number(balance?._sum.debit || 0);
       const creditTotal = Number(balance?._sum.credit || 0);
+      const lineItemData = lineItemMap.get(glCode.id);
       
       return {
         ...glCode,
@@ -93,6 +120,8 @@ export async function GET(request: NextRequest) {
         debitTotal,
         creditTotal,
         balance: debitTotal - creditTotal,
+        lineItemTotal: lineItemData?.total || 0,
+        lineItemCount: lineItemData?.count || 0,
       };
     });
 
@@ -105,12 +134,21 @@ export async function GET(request: NextRequest) {
       totalEquity: 0,
     };
 
+    // Revenue stats from line items (real transaction data)
+    const revenueByCode: Array<{ id: string; code: string; description: string; amount: number }> = [];
+
     for (const code of codesWithBalances) {
+      if (code.type === "REVENUE") {
+        const amount = code.lineItemTotal;
+        stats.totalRevenue += amount;
+        if (amount > 0) {
+          revenueByCode.push({ id: code.id, code: code.code, description: code.description, amount });
+        }
+      }
+
+      // Ledger entry balances for other account types
       const balance = code.balance;
       switch (code.type) {
-        case "REVENUE":
-          stats.totalRevenue += Math.abs(balance);
-          break;
         case "EXPENSE":
           stats.totalExpenses += balance;
           break;
@@ -132,6 +170,11 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
       stats,
+      revenueByCode,
+      monthlyRevenue: monthlyRevenue.map((m) => ({
+        month: m.month,
+        total: Number(m.total || 0),
+      })),
     });
   } catch (error) {
     console.error("Error fetching GL codes:", error);
@@ -269,6 +312,19 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    // Check if GL code is a system default
+    const glCode = await db.gLCode.findFirst({
+      where: { id, organizationId: session.user.organizationId },
+      select: { isDefault: true },
+    });
+
+    if (glCode?.isDefault) {
+      return NextResponse.json(
+        { error: "Cannot delete a default GL code. You can deactivate it instead." },
+        { status: 400 }
+      );
     }
 
     // Check if GL code has any entries

@@ -853,13 +853,68 @@ export async function POST(
         }
     });
 
-    // 6. Create Line Items with appropriate metadata
+    // 6. Resolve GL codes for line items
+    const glCodeMap = new Map<string, string | null>();
+    const programIds = items.filter((i: CartItem) => i.type === "program" && i.details?.programId).map((i: CartItem) => i.details!.programId!);
+    const passIds = items.filter((i: CartItem) => i.type === "pass").map((i: CartItem) => i.details?.passId || i.referenceId).filter(Boolean);
+    const competitionIds = items.filter((i: CartItem) => i.type === "competition").map((i: CartItem) => i.details?.competitionId || i.referenceId).filter(Boolean);
+    const membershipInstanceIds = items.filter((i: CartItem) => i.type === "membership").map((i: CartItem) => i.details?.membershipInstanceId || i.referenceId).filter(Boolean);
+
+    if (programIds.length > 0) {
+      const programs = await db.program.findMany({ where: { id: { in: programIds } }, select: { id: true, glCodeId: true } });
+      for (const p of programs) if (p.glCodeId) glCodeMap.set(`program:${p.id}`, p.glCodeId);
+    }
+    if (passIds.length > 0) {
+      const passes = await db.pass.findMany({ where: { id: { in: passIds as string[] } }, select: { id: true, glCodeId: true } });
+      for (const p of passes) if (p.glCodeId) glCodeMap.set(`pass:${p.id}`, p.glCodeId);
+    }
+    if (competitionIds.length > 0) {
+      const comps = await db.competition.findMany({ where: { id: { in: competitionIds as string[] } }, select: { id: true, glCodeId: true } });
+      for (const c of comps) if (c.glCodeId) glCodeMap.set(`competition:${c.id}`, c.glCodeId);
+    }
+    if (membershipInstanceIds.length > 0) {
+      const instances = await db.membershipInstance.findMany({ where: { id: { in: membershipInstanceIds as string[] } }, select: { id: true, group: { select: { glCodeId: true } } } });
+      for (const i of instances) if (i.group.glCodeId) glCodeMap.set(`membership:${i.id}`, i.group.glCodeId);
+    }
+
+    // Fetch org default GL codes as fallbacks
+    const entityTypeToDefault = new Map<string, string>();
+    const defaultCodes = await db.gLCode.findMany({
+      where: { organizationId, isDefault: true, defaultForType: { not: null } },
+      select: { id: true, defaultForType: true },
+    });
+    for (const d of defaultCodes) {
+      if (d.defaultForType) entityTypeToDefault.set(d.defaultForType, d.id);
+    }
+
+    const ITEM_TYPE_TO_ENTITY_TYPE: Record<string, string> = {
+      program: "PROGRAM",
+      pass: "PASS",
+      competition: "COMPETITION",
+      membership: "MEMBERSHIP",
+      event: "EVENT",
+      item: "PRODUCT",
+    };
+
+    // 7. Create Line Items with appropriate metadata
     await db.lineItem.createMany({
         data: items.map((item: CartItem, index: number) => {
             const isCompetition = item.type === "competition";
             const serverPrice = isCompetition && competitionServerPrices.has(index)
               ? competitionServerPrices.get(index)!
               : Number(item.price) * item.quantity;
+
+            let glCodeId: string | undefined;
+            if (item.type === "program") glCodeId = glCodeMap.get(`program:${item.details?.programId}`) ?? undefined;
+            else if (item.type === "pass") glCodeId = glCodeMap.get(`pass:${item.details?.passId || item.referenceId}`) ?? undefined;
+            else if (item.type === "competition") glCodeId = glCodeMap.get(`competition:${item.details?.competitionId || item.referenceId}`) ?? undefined;
+            else if (item.type === "membership") glCodeId = glCodeMap.get(`membership:${item.details?.membershipInstanceId || item.referenceId}`) ?? undefined;
+
+            // Fallback to org default for this entity type
+            if (!glCodeId) {
+              const entityType = ITEM_TYPE_TO_ENTITY_TYPE[item.type];
+              if (entityType) glCodeId = entityTypeToDefault.get(entityType);
+            }
 
             return {
               invoiceId: invoice.id,
@@ -872,11 +927,12 @@ export async function POST(
               passId: item.type === 'pass' ? (item.details?.passId || item.referenceId) : undefined,
               competitionId: isCompetition ? (item.details?.competitionId || item.referenceId) : undefined,
               athleteId: item.athleteId || item.details?.athleteId || undefined,
+              glCodeId,
             };
         })
     });
 
-    // 7. Handle payment — skip Adyen entirely for $0 orders
+    // 8. Handle payment — skip Adyen entirely for $0 orders
     if (total === 0) {
       const payment = await db.payment.create({
         data: {

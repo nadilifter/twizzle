@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -10,9 +11,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DownloadIcon, LandmarkIcon, ArrowUpRightIcon, Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+  DownloadIcon,
+  LandmarkIcon,
+  ArrowUpRightIcon,
+  Loader2,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  InfoIcon,
+} from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 
@@ -27,6 +44,7 @@ interface Payout {
   bankAccount: string | null
   scheduledAt: string | null
   paidAt: string | null
+  estimatedArrivalTime: string | null
   createdAt: string
 }
 
@@ -39,6 +57,8 @@ interface PayoutStats {
   unsettledCount: number
 }
 
+const PAGE_SIZE = 20
+
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   PENDING: "outline",
   SCHEDULED: "secondary",
@@ -47,8 +67,14 @@ const statusColors: Record<string, "default" | "secondary" | "destructive" | "ou
 }
 
 export default function PayoutsPage() {
+  const router = useRouter()
   const [payouts, setPayouts] = React.useState<Payout[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [total, setTotal] = React.useState(0)
+  const [page, setPage] = React.useState(0)
+  const [statusFilter, setStatusFilter] = React.useState<string>("all")
+  const [startDate, setStartDate] = React.useState("")
+  const [endDate, setEndDate] = React.useState("")
   const [stats, setStats] = React.useState<PayoutStats>({
     pendingAmount: 0,
     pendingCount: 0,
@@ -60,11 +86,22 @@ export default function PayoutsPage() {
 
   const fetchPayouts = React.useCallback(async () => {
     try {
-      const response = await fetch("/api/payouts")
+      setLoading(true)
+      const params = new URLSearchParams()
+      params.set("limit", String(PAGE_SIZE))
+      params.set("offset", String(page * PAGE_SIZE))
+      if (statusFilter && statusFilter !== "all") {
+        params.set("status", statusFilter)
+      }
+      if (startDate) params.set("startDate", startDate)
+      if (endDate) params.set("endDate", endDate)
+
+      const response = await fetch(`/api/payouts?${params}`)
       if (!response.ok) throw new Error("Failed to fetch payouts")
 
       const data = await response.json()
       setPayouts(data.data)
+      setTotal(data.total)
       setStats(data.stats)
     } catch (error) {
       console.error("Error fetching payouts:", error)
@@ -72,11 +109,13 @@ export default function PayoutsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page, statusFilter, startDate, endDate])
 
   React.useEffect(() => {
     fetchPayouts()
   }, [fetchPayouts])
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   const handleExport = () => {
     const headers = ["Date", "Batch ID", "Bank Account", "Status", "Gross", "Fees", "Net"]
@@ -101,6 +140,15 @@ export default function PayoutsPage() {
     toast.success("Payouts exported")
   }
 
+  const handleResetFilters = () => {
+    setStatusFilter("all")
+    setStartDate("")
+    setEndDate("")
+    setPage(0)
+  }
+
+  const hasActiveFilters = statusFilter !== "all" || startDate || endDate
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
@@ -108,6 +156,10 @@ export default function PayoutsPage() {
         <p className="text-muted-foreground">
           Track settlements transferred to your bank account.
         </p>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <InfoIcon className="h-3 w-3" />
+          Payouts are processed daily via automated sweeps.
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -120,7 +172,7 @@ export default function PayoutsPage() {
               ${Number(stats.unsettledAmount).toFixed(2)}
             </div>
             <p className="text-xs opacity-80 mt-1">
-              {stats.nextPayout?.scheduledAt 
+              {stats.nextPayout?.scheduledAt
                 ? `Scheduled for ${format(new Date(stats.nextPayout.scheduledAt), "EEEE, MMM d")}`
                 : `From ${stats.unsettledCount} pending transaction${stats.unsettledCount !== 1 ? "s" : ""}`}
             </p>
@@ -163,6 +215,59 @@ export default function PayoutsPage() {
           <CardDescription>
             Detailed breakdown of batches paid out to your account.
           </CardDescription>
+
+          <div className="flex flex-wrap items-end gap-3 pt-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted-foreground">Status</label>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value)
+                  setPage(0)
+                }}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="FAILED">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted-foreground">From</label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value)
+                  setPage(0)
+                }}
+                className="w-[160px]"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted-foreground">To</label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value)
+                  setPage(0)
+                }}
+                className="w-[160px]"
+              />
+            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={handleResetFilters}>
+                Clear filters
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -171,50 +276,87 @@ export default function PayoutsPage() {
             </div>
           ) : payouts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No payouts yet. Payouts will appear here once settlements are processed.
+              {hasActiveFilters
+                ? "No payouts match the current filters."
+                : "No payouts yet. Payouts will appear here once settlements are processed."}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Batch ID</TableHead>
-                  <TableHead>Bank Account</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Gross Amount</TableHead>
-                  <TableHead className="text-right">Fees</TableHead>
-                  <TableHead className="text-right">Net Payout</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payouts.map((po) => (
-                  <TableRow key={po.id}>
-                    <TableCell>
-                      {po.paidAt 
-                        ? format(new Date(po.paidAt), "MMM d, yyyy")
-                        : format(new Date(po.createdAt), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {po.reference}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <LandmarkIcon className="h-3 w-3 text-muted-foreground" />
-                        {po.bankAccount ? `****${po.bankAccount}` : "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusColors[po.status] || "outline"}>
-                        {po.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">${Number(po.amount).toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-red-600">-${Number(po.fees).toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-bold">${Number(po.net).toFixed(2)}</TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Batch ID</TableHead>
+                    <TableHead>Bank Account</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Gross Amount</TableHead>
+                    <TableHead className="text-right">Fees</TableHead>
+                    <TableHead className="text-right">Net Payout</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {payouts.map((po) => (
+                    <TableRow
+                      key={po.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => router.push(`/dashboard/financials/payouts/${po.id}`)}
+                    >
+                      <TableCell>
+                        {po.paidAt
+                          ? format(new Date(po.paidAt), "MMM d, yyyy")
+                          : format(new Date(po.createdAt), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {po.reference}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <LandmarkIcon className="h-3 w-3 text-muted-foreground" />
+                          {po.bankAccount ? `****${po.bankAccount}` : "\u2014"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusColors[po.status] || "outline"}>
+                          {po.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">${Number(po.amount).toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-red-600">-${Number(po.fees).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-bold">${Number(po.net).toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      disabled={page === 0}
+                    >
+                      <ChevronLeftIcon className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {page + 1} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                      disabled={page >= totalPages - 1}
+                    >
+                      <ChevronRightIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

@@ -178,6 +178,8 @@ const updateCompetitionSchema = z.object({
   publishStatus: z.enum(["DRAFT", "LIVE", "SCHEDULED", "CLOSED", "COMPLETED"]).optional(),
   scheduledGoLiveDate: z.string().or(z.date()).nullable().optional(),
   scheduledGoLiveTime: z.string().optional(),
+
+  glCodeId: z.string().optional().nullable(),
 })
 
 /**
