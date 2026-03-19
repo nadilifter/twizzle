@@ -23,7 +23,6 @@ import {
   ClipboardList,
   FileText,
   Mail,
-  Plus,
   Star,
   Award,
   ExternalLink,
@@ -771,10 +770,6 @@ export default function InstanceDetailPage() {
                     Manage registrations and track attendance for this session
                   </CardDescription>
                 </div>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Registration
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
