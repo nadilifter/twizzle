@@ -179,6 +179,46 @@ export async function POST(request: NextRequest) {
       status = "DRAFT"
     }
 
+    if (data.facilityId) {
+      const facility = await db.facility.findFirst({
+        where: { id: data.facilityId, organizationId },
+        select: { id: true },
+      })
+      if (!facility) {
+        return NextResponse.json({ error: "Facility not found" }, { status: 404 })
+      }
+    }
+
+    if (data.levelRequirementIds.length > 0) {
+      const levels = await db.level.findMany({
+        where: { id: { in: data.levelRequirementIds }, organizationId },
+        select: { id: true },
+      })
+      if (levels.length !== data.levelRequirementIds.length) {
+        return NextResponse.json({ error: "One or more levels not found" }, { status: 404 })
+      }
+    }
+
+    if (data.membershipRequirementIds.length > 0) {
+      const instances = await db.membershipInstance.findMany({
+        where: { id: { in: data.membershipRequirementIds }, group: { organizationId } },
+        select: { id: true },
+      })
+      if (instances.length !== data.membershipRequirementIds.length) {
+        return NextResponse.json({ error: "One or more memberships not found" }, { status: 404 })
+      }
+    }
+
+    if (data.waiverRequirementIds.length > 0) {
+      const waivers = await db.waiver.findMany({
+        where: { id: { in: data.waiverRequirementIds }, organizationId },
+        select: { id: true },
+      })
+      if (waivers.length !== data.waiverRequirementIds.length) {
+        return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 })
+      }
+    }
+
     const competition = await db.competition.create({
       data: {
         organizationId,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const updateSkillSchema = z.object({
@@ -93,7 +93,8 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateSkillSchema.parse(body);
 
-    const skill = await db.skill.update({
+    const scopedDb = getScopedDb(session.user.organizationId);
+    const skill = await scopedDb.skill.update({
       where: { id },
       data: validatedData,
     });
@@ -166,7 +167,8 @@ export async function DELETE(
       );
     }
 
-    await db.skill.delete({
+    const scopedDb = getScopedDb(session.user.organizationId);
+    await scopedDb.skill.delete({
       where: { id },
     });
 

@@ -214,8 +214,24 @@ export async function PUT(
       },
     });
 
-    // Handle custom responses if provided
     if (customResponses && customResponses.length > 0) {
+      const questionIds = customResponses.map((r) => r.questionId);
+      const validQuestions = await db.customMedicalQuestion.findMany({
+        where: {
+          id: { in: questionIds },
+          organizationId: session.user.organizationId,
+        },
+        select: { id: true },
+      });
+      const validIds = new Set(validQuestions.map((q) => q.id));
+      const invalidIds = questionIds.filter((qid) => !validIds.has(qid));
+      if (invalidIds.length > 0) {
+        return NextResponse.json(
+          { error: "One or more custom questions not found" },
+          { status: 404 }
+        );
+      }
+
       for (const response of customResponses) {
         await db.customMedicalResponse.upsert({
           where: {

@@ -116,10 +116,14 @@ export async function POST(
       return NextResponse.json({ error: "User is already assigned to this facility" }, { status: 400 });
     }
 
-    // If this is set as primary, unset other primaries for this user
+    // If this is set as primary, unset other primaries for this user (scoped to this facility)
     if (validatedData.isPrimary) {
       await db.facilityAssignment.updateMany({
-        where: { userId: validatedData.userId, isPrimary: true },
+        where: {
+          facilityId,
+          userId: validatedData.userId,
+          isPrimary: true,
+        },
         data: { isPrimary: false },
       });
     }

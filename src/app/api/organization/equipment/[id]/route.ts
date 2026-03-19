@@ -113,7 +113,7 @@ export async function PATCH(
     }
 
     const equipment = await db.equipment.update({
-      where: { id },
+      where: { id, organizationId },
       data: updateData,
       include: {
         facility: {
@@ -163,7 +163,7 @@ export async function DELETE(
     }
 
     await db.equipment.delete({
-      where: { id },
+      where: { id, organizationId },
     });
 
     return NextResponse.json({ success: true });

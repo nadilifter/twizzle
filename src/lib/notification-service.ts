@@ -614,14 +614,14 @@ export async function buildTemplateContext(
       : undefined;
   }
 
-  // Get athlete
   if (data.athleteId) {
-    const athlete = await db.athlete.findUnique({
-      where: { id: data.athleteId },
+    const athlete = await db.athlete.findFirst({
+      where: {
+        id: data.athleteId,
+        organizationAthletes: { some: { organizationId } },
+      },
       include: {
-        organizationAthletes: organizationId
-          ? { where: { organizationId }, select: { level: true } }
-          : { select: { level: true }, take: 1 },
+        organizationAthletes: { where: { organizationId }, select: { level: true } },
       },
     });
     if (athlete) {
@@ -654,10 +654,12 @@ export async function buildTemplateContext(
     }
   }
 
-  // Get membership
   if (data.membershipId) {
-    const membership = await db.athleteMembership.findUnique({
-      where: { id: data.membershipId },
+    const membership = await db.athleteMembership.findFirst({
+      where: {
+        id: data.membershipId,
+        instance: { group: { organizationId } },
+      },
       include: {
         instance: {
           include: {
@@ -679,10 +681,9 @@ export async function buildTemplateContext(
     }
   }
 
-  // Get program
   if (data.programId) {
-    const program = await db.program.findUnique({
-      where: { id: data.programId },
+    const program = await db.program.findFirst({
+      where: { id: data.programId, organizationId },
     });
     if (program) {
       context.programName = program.name;
@@ -690,10 +691,9 @@ export async function buildTemplateContext(
     }
   }
 
-  // Get event
   if (data.eventId) {
-    const event = await db.event.findUnique({
-      where: { id: data.eventId },
+    const event = await db.event.findFirst({
+      where: { id: data.eventId, organizationId },
       include: {
         facility: true,
       },
@@ -707,10 +707,9 @@ export async function buildTemplateContext(
     }
   }
 
-  // Get invoice
   if (data.invoiceId) {
-    const invoice = await db.invoice.findUnique({
-      where: { id: data.invoiceId },
+    const invoice = await db.invoice.findFirst({
+      where: { id: data.invoiceId, organizationId },
       include: {
         lineItems: true,
       },

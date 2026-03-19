@@ -18,6 +18,7 @@
     "secrets:decrypt": "./scripts/secrets-decrypt.sh",
     "secrets:encrypt": "./scripts/secrets-encrypt.sh",
     "secrets:edit": "./scripts/secrets-edit.sh",
+    "lint:tenant": "bash scripts/check-tenant-isolation.sh",
     "prepare": "husky"
   },
   "dependencies": {

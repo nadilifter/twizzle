@@ -129,7 +129,8 @@ export async function PATCH(
     if (validated.status !== undefined) updateData.status = validated.status;
     if (validated.notes !== undefined) updateData.notes = validated.notes;
 
-    const instance = await db.programInstance.update({
+    const scopedDb = getScopedDb(session.user.organizationId);
+    const instance = await scopedDb.programInstance.update({
       where: { id: instanceId },
       data: updateData,
       include: {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const templateEntrySchema = z.object({
@@ -101,6 +101,10 @@ export async function PATCH(
     // If entries are provided, replace all entries
     if (validatedData.entries !== undefined) {
       await db.$transaction(async (tx) => {
+        const existing = await tx.scheduleTemplate.findFirst({ where: { id, organizationId } });
+        if (!existing) {
+          throw new Error("Schedule template not found");
+        }
         // Delete existing entries
         await tx.scheduleTemplateEntry.deleteMany({
           where: { templateId: id },
@@ -127,7 +131,8 @@ export async function PATCH(
       });
     } else {
       // Just update template metadata
-      await db.scheduleTemplate.update({
+      const scopedDb = getScopedDb(organizationId);
+      await scopedDb.scheduleTemplate.update({
         where: { id },
         data: {
           ...(validatedData.name !== undefined && { name: validatedData.name }),
@@ -198,7 +203,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Schedule template not found" }, { status: 404 });
     }
 
-    await db.scheduleTemplate.delete({
+    const scopedDb = getScopedDb(organizationId);
+    await scopedDb.scheduleTemplate.delete({
       where: { id },
     });
 

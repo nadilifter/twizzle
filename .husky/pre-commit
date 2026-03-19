@@ -22,3 +22,12 @@ if git diff --cached --name-only | grep -q "prisma/schema.prisma"; then
 
   echo "Migration files detected alongside schema change. Good to go."
 fi
+
+# Run tenant-isolation lint on staged API route files
+if git diff --cached --name-only | grep -q "src/app/api/.*route\.ts$"; then
+  if [ "${SKIP_TENANT_CHECK:-}" = "1" ]; then
+    echo "SKIP_TENANT_CHECK=1, skipping tenant isolation check."
+  else
+    bash scripts/check-tenant-isolation.sh --staged
+  fi
+fi

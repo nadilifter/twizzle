@@ -92,7 +92,7 @@ export async function PATCH(
       existing.status === "ACTIVE" && validatedData.status === "CANCELLED";
 
     const enrollment = await db.enrollment.update({
-      where: { id },
+      where: { id, program: { organizationId: session.user.organizationId } },
       data: {
         ...(validatedData.status && { status: validatedData.status }),
         ...(validatedData.endDate !== undefined && {
@@ -159,7 +159,9 @@ export async function DELETE(
     }
 
     const wasActive = existing.status === "ACTIVE";
-    await db.enrollment.delete({ where: { id } });
+    await db.enrollment.delete({
+      where: { id, program: { organizationId: session.user.organizationId } },
+    });
 
     if (wasActive) {
       promoteFromWaitlist(existing.programId).catch((err) =>

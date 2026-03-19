@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const createQuestionSchema = z.object({
@@ -173,10 +173,10 @@ export async function PATCH(request: NextRequest) {
       // Update all questions in a transaction
       await db.$transaction(
         validatedData.questions.map((q) =>
-          db.customMedicalQuestion.update({
+          db.customMedicalQuestion.update({ // tenant-isolation-ok: organizationId in where clause
             where: { 
               id: q.id,
-              organizationId: organizationId, // Ensure question belongs to org
+              organizationId: organizationId,
             },
             data: { displayOrder: q.displayOrder },
           })
@@ -204,7 +204,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Question not found" }, { status: 404 });
     }
 
-    const question = await db.customMedicalQuestion.update({
+    const scopedDb = getScopedDb(organizationId);
+    const question = await scopedDb.customMedicalQuestion.update({
       where: { id },
       data: {
         ...updateData,
@@ -273,7 +274,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Soft delete - set isActive to false
-    await db.customMedicalQuestion.update({
+    const scopedDb = getScopedDb(organizationId);
+    await scopedDb.customMedicalQuestion.update({
       where: { id },
       data: { isActive: false },
     });

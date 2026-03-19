@@ -139,8 +139,11 @@ export async function POST(request: NextRequest) {
 
     // Update invoice status if fully paid
     if (validatedData.invoiceId) {
-      const invoice = await db.invoice.findUnique({
-        where: { id: validatedData.invoiceId },
+      const invoice = await db.invoice.findFirst({
+        where: {
+          id: validatedData.invoiceId,
+          organizationId: session.user.organizationId,
+        },
         include: {
           payments: {
             where: { status: "COMPLETED" },
@@ -163,7 +166,10 @@ export async function POST(request: NextRequest) {
 
         if (newStatus !== invoice.status) {
           await db.invoice.update({
-            where: { id: validatedData.invoiceId },
+            where: {
+              id: validatedData.invoiceId,
+              organizationId: session.user.organizationId,
+            },
             data: { status: newStatus },
           });
         }

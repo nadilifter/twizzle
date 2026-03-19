@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const updateAchievementSchema = z.object({
@@ -114,7 +114,8 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateAchievementSchema.parse(body);
 
-    const achievement = await db.achievement.update({
+    const scopedDb = getScopedDb(session.user.organizationId!);
+    const achievement = await scopedDb.achievement.update({
       where: { id },
       data: validatedData,
       include: {
@@ -204,7 +205,8 @@ export async function DELETE(
     }
 
     // Delete achievement
-    await db.achievement.delete({
+    const scopedDb = getScopedDb(session.user.organizationId!);
+    await scopedDb.achievement.delete({
       where: { id },
     });
 

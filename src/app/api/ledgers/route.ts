@@ -161,8 +161,11 @@ export async function POST(request: NextRequest) {
     const validatedData = createGLCodeSchema.parse(body);
 
     // Check if code already exists
-    const existing = await db.gLCode.findUnique({
-      where: { code: validatedData.code },
+    const existing = await db.gLCode.findFirst({
+      where: {
+        code: validatedData.code,
+        organizationId: session.user.organizationId,
+      },
     });
 
     if (existing) {
@@ -270,7 +273,7 @@ export async function DELETE(request: NextRequest) {
 
     // Check if GL code has any entries
     const hasEntries = await db.ledgerEntry.count({
-      where: { glCodeId: id },
+      where: { glCodeId: id, organizationId: session.user.organizationId },
     });
 
     if (hasEntries > 0) {

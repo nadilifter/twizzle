@@ -35,8 +35,8 @@ export async function POST(
       reason?: string
     }
 
-    const transaction = await db.transaction.findUnique({
-      where: { id },
+    const transaction = await db.transaction.findFirst({
+      where: { id, organizationId: session.user.organizationId },
       include: { payment: { include: { invoice: true } } },
     })
 
@@ -138,11 +138,17 @@ export async function POST(
       const payment = transaction.payment
       if (payment?.invoiceId) {
         await db.payment.update({
-          where: { id: payment.id },
+          where: {
+            id: payment.id,
+            invoice: { organizationId: session.user.organizationId },
+          },
           data: { status: "REFUNDED" },
         })
         await db.invoice.update({
-          where: { id: payment.invoiceId },
+          where: {
+            id: payment.invoiceId,
+            organizationId: session.user.organizationId,
+          },
           data: { status: "CANCELLED" },
         })
       }

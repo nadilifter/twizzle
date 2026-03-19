@@ -279,9 +279,20 @@ export async function PUT(
       return { ...sr, passed };
     });
 
-    // Update evaluation and skill ratings in a transaction
     const evaluation = await db.$transaction(async (tx) => {
-      // Update evaluation fields
+      const verified = await tx.evaluation.findFirst({
+        where: {
+          id,
+          athlete: {
+            organizationAthletes: {
+              some: { organizationId: session.user.organizationId },
+            },
+          },
+        },
+        select: { id: true },
+      });
+      if (!verified) throw new Error("Evaluation not found or access denied");
+
       await tx.evaluation.update({
         where: { id },
         data: {
@@ -535,9 +546,15 @@ export async function DELETE(
       return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
     }
 
-    // Delete evaluation (cascade will delete skill ratings)
     await db.evaluation.delete({
-      where: { id },
+      where: {
+        id,
+        athlete: {
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
+        },
+      },
     });
 
     return NextResponse.json({ success: true });

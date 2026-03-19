@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -102,7 +102,8 @@ export async function PATCH(
     const oldStatus = existing.status;
     const newStatus = validatedData.status;
 
-    const invoice = await db.invoice.update({
+    const scopedDb = getScopedDb(session.user.organizationId);
+    const invoice = await scopedDb.invoice.update({
       where: { id },
       data: {
         ...validatedData,
@@ -202,7 +203,8 @@ export async function DELETE(
       );
     }
 
-    await db.invoice.delete({ where: { id } });
+    const scopedDb = getScopedDb(session.user.organizationId);
+    await scopedDb.invoice.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,0 +1,213 @@
+# Routes that legitimately use raw `db` without `getScopedDb`.
+# Each line is a path relative to the repo root.
+# Lines starting with # are comments.
+#
+# Valid reasons to be on this list:
+#   - Route scopes via a relation chain (e.g. program.organizationId)
+#   - Route only queries non-tenant models (User, Athlete, Sport, etc.)
+#   - Route is pre-auth (org-signup, invitations, sites/[slug])
+#   - Route uses manual organizationId in every where clause
+#
+# Before adding a file here, ensure it is actually scoped correctly.
+# Run `pnpm lint:tenant` to see which files are flagged.
+
+# --- Relation-scoped models (Enrollment, Payment, Evaluation, etc.) ---
+src/app/api/enrollments/route.ts
+src/app/api/enrollments/[id]/route.ts
+src/app/api/payments/route.ts
+src/app/api/evaluations/route.ts
+src/app/api/evaluations/[id]/route.ts
+src/app/api/attendance/route.ts
+src/app/api/attendance/metrics/route.ts
+
+# --- Manual organizationId in where ---
+src/app/api/invoices/route.ts
+src/app/api/ledgers/route.ts
+src/app/api/ledgers/entries/route.ts
+src/app/api/transactions/route.ts
+src/app/api/payouts/route.ts
+src/app/api/recurring/route.ts
+src/app/api/financials/overview/route.ts
+src/app/api/transactions/[id]/refund/route.ts
+src/app/api/competitions/route.ts
+src/app/api/competitions/[id]/entries/route.ts
+src/app/api/competitions/[id]/categories/route.ts
+src/app/api/competitions/[id]/events/[categoryId]/route.ts
+src/app/api/competitions/[id]/athletes/route.ts
+src/app/api/competitions/[id]/athletes/[athleteId]/route.ts
+src/app/api/competitions/[id]/results/route.ts
+src/app/api/competitions/[id]/results/[resultId]/route.ts
+src/app/api/competitions/[id]/entries/[entryId]/route.ts
+src/app/api/sms/route.ts
+src/app/api/sms/[id]/route.ts
+src/app/api/sms/sync/route.ts
+src/app/api/sms/campaigns/route.ts
+src/app/api/sms/conversations/route.ts
+src/app/api/email/campaigns/route.ts
+src/app/api/lesson-plans/route.ts
+src/app/api/levels/route.ts
+src/app/api/levels/reorder/route.ts
+src/app/api/skills/route.ts
+src/app/api/achievements/route.ts
+src/app/api/achievements/[id]/route.ts
+src/app/api/analytics/enrollments/route.ts
+
+# --- Non-tenant models or notification system ---
+src/app/api/notifications/route.ts
+src/app/api/notifications/read/route.ts
+src/app/api/notifications/read-all/route.ts
+src/app/api/users/route.ts
+src/app/api/users/[id]/route.ts
+src/app/api/users/[id]/send-password-reset/route.ts
+src/app/api/guardians/route.ts
+src/app/api/guardians/[id]/route.ts
+src/app/api/guardian-claims/route.ts
+src/app/api/guardian-claims/[id]/route.ts
+src/app/api/health/route.ts
+src/app/api/sports/route.ts
+src/app/api/sports/[sportId]/age-categories/route.ts
+src/app/api/sports/[sportId]/events/route.ts
+src/app/api/competition-categories/route.ts
+src/app/api/competition-categories/[id]/route.ts
+
+# --- Athlete routes (scoped via organizationAthletes relation) ---
+src/app/api/athletes/route.ts
+src/app/api/athletes/[id]/route.ts
+src/app/api/athletes/[id]/medical/route.ts
+src/app/api/athletes/[id]/guardians/route.ts
+src/app/api/athletes/[id]/guardian-settings/route.ts
+src/app/api/athletes/[id]/registrations/route.ts
+src/app/api/athletes/[id]/evaluations/route.ts
+src/app/api/athletes/[id]/skills/route.ts
+src/app/api/athletes/[id]/achievements/route.ts
+src/app/api/athletes/waivers/route.ts
+src/app/api/athletes/me/route.ts
+src/app/api/athletes/me/schedule/route.ts
+
+# --- Organization sub-routes (manual organizationId) ---
+src/app/api/organization/details/route.ts
+src/app/api/organization/subscription/route.ts
+src/app/api/organization/staff/route.ts
+src/app/api/organization/staff/[id]/availability/route.ts
+src/app/api/organization/facilities/route.ts
+src/app/api/organization/facilities/[id]/assignments/route.ts
+src/app/api/organization/facilities/[id]/assignments/[userId]/route.ts
+src/app/api/organization/facilities/[id]/spaces/route.ts
+src/app/api/organization/facilities/[id]/spaces/availability/route.ts
+src/app/api/organization/facilities/[id]/spaces/[spaceId]/route.ts
+src/app/api/organization/facilities/[id]/spaces/[spaceId]/availability/route.ts
+src/app/api/organization/facilities/[id]/operating-hours/route.ts
+src/app/api/organization/facilities/[id]/equipment/route.ts
+src/app/api/organization/equipment/route.ts
+src/app/api/organization/equipment/[id]/route.ts
+src/app/api/organization/schedule-templates/route.ts
+src/app/api/organization/schedule-templates/[id]/generate/route.ts
+src/app/api/organization/shifts/route.ts
+src/app/api/organization/members/[id]/route.ts
+src/app/api/organization/members/[id]/certifications/route.ts
+src/app/api/organization/members/[id]/availability/route.ts
+src/app/api/organization/certifications/route.ts
+src/app/api/organization/certifications/[id]/route.ts
+src/app/api/organization/certifications/[id]/members/route.ts
+src/app/api/organization/certifications/[id]/members/[memberId]/route.ts
+src/app/api/organization/sms-usage/route.ts
+src/app/api/organization/website/check-subdomain/route.ts
+src/app/api/organization/adyen-onboarding/route.ts
+src/app/api/organization/adyen-onboarding/finalize/route.ts
+src/app/api/organization/adyen-onboarding/link/route.ts
+src/app/api/organization/medical-config/route.ts
+src/app/api/organization/sports/route.ts
+src/app/api/organization/website/route.ts
+
+# --- Program sub-routes (scoped via program.organizationId) ---
+src/app/api/programs/[id]/staff/route.ts
+src/app/api/programs/[id]/staff/[staffId]/route.ts
+src/app/api/programs/[id]/pass-requirements/route.ts
+src/app/api/programs/[id]/evaluations/route.ts
+src/app/api/programs/[id]/evaluation-templates/route.ts
+src/app/api/programs/[id]/waitlist/route.ts
+src/app/api/programs/[id]/instances/route.ts
+src/app/api/programs/[id]/instances/[instanceId]/registrations/route.ts
+src/app/api/programs/[id]/instances/[instanceId]/registrations/[registrationId]/route.ts
+src/app/api/programs/[id]/instances/[instanceId]/evaluations/route.ts
+src/app/api/programs/[id]/instances/[instanceId]/attendance/route.ts
+src/app/api/programs/[id]/bulk-discounts/route.ts
+src/app/api/programs/[id]/bulk-discounts/[discountId]/route.ts
+src/app/api/programs/[id]/requirements/route.ts
+src/app/api/programs/[id]/requirements/[instanceId]/route.ts
+src/app/api/evaluation-templates/route.ts
+src/app/api/evaluation-templates/[id]/route.ts
+src/app/api/evaluation-templates/[id]/sync/route.ts
+
+# --- Event sub-routes (scoped via event.organizationId) ---
+src/app/api/events/[id]/staff/route.ts
+src/app/api/events/[id]/staff/[staffId]/route.ts
+
+# --- Calendar (scoped via programInstance.organizationId) ---
+src/app/api/calendar/instances/route.ts
+src/app/api/calendar/instance/[instanceId]/route.ts
+
+# --- Coach routes (scoped via coaching memberships) ---
+src/app/api/coach/programs/route.ts
+src/app/api/coach/events/route.ts
+src/app/api/coach/overview/route.ts
+src/app/api/coach/athletes/route.ts
+
+# --- Waiver routes (manual organizationId) ---
+src/app/api/waivers/check/route.ts
+src/app/api/waivers/[id]/sign/route.ts
+
+# --- Registration files (manual organizationId) ---
+src/app/api/registration-files/route.ts
+src/app/api/registration-files/[id]/route.ts
+src/app/api/registration-files/upload/route.ts
+src/app/api/discounts/validate/route.ts
+
+# --- Pre-auth / token-based routes ---
+src/app/api/invitations/[token]/route.ts
+src/app/api/org-signup/route.ts
+src/app/api/org-signup/check-subdomain/route.ts
+src/app/api/org-signup/plans/route.ts
+src/app/api/sites/[slug]/signup/route.ts
+src/app/api/sites/[slug]/checkout/session/route.ts
+src/app/api/sites/[slug]/athletes/route.ts
+src/app/api/sites/[slug]/athletes/[id]/claim/route.ts
+src/app/api/sites/[slug]/competitions/[id]/eligibility/route.ts
+src/app/api/sites/[slug]/info/route.ts
+
+# --- User-scoped routes (no org data, personal to user) ---
+src/app/api/user/billing-addresses/route.ts
+src/app/api/user/billing-addresses/[id]/route.ts
+src/app/api/user/contacts/route.ts
+src/app/api/user/contacts/[id]/route.ts
+src/app/api/payment-methods/route.ts
+src/app/api/payment-methods/session/route.ts
+src/app/api/payment-methods/[id]/route.ts
+src/app/api/payment-methods/[id]/default/route.ts
+
+# --- POS (scoped via invoice/program relations) ---
+src/app/api/pos/checkout/route.ts
+
+# --- Upload (file upload, no tenant models) ---
+src/app/api/upload/route.ts
+
+# --- Feedback (platform feature, not org-scoped) ---
+src/app/api/feedback/route.ts
+src/app/api/feedback/[id]/route.ts
+src/app/api/feedback/[id]/vote/route.ts
+src/app/api/feedback/[id]/comments/route.ts
+src/app/api/feedback/categories/route.ts
+
+# --- Queue (registration queue, scoped via queue config) ---
+src/app/api/queue/status/route.ts
+src/app/api/queue/enter/route.ts
+src/app/api/queue/complete/route.ts
+src/app/api/queue/abandon/route.ts
+
+# --- Media/announcements (manual org, non-list routes) ---
+src/app/api/media/route.ts
+src/app/api/announcements/route.ts
+
+# --- Admin routes (admin-only, non-superadmin) ---
+src/app/api/admin/reserved-domains/route.ts
+src/app/api/admin/reserved-domains/[id]/route.ts

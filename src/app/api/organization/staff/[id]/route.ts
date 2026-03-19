@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -125,7 +125,8 @@ export async function PATCH(
     if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
     if (validatedData.emergencyContact !== undefined) updateData.emergencyContact = validatedData.emergencyContact;
 
-    const member = await db.organizationMember.update({
+    const scopedDb = getScopedDb(organizationId);
+    const member = await scopedDb.organizationMember.update({
       where: { id },
       data: updateData,
       include: {
@@ -193,7 +194,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
     }
 
-    await db.organizationMember.delete({
+    const scopedDb = getScopedDb(organizationId);
+    await scopedDb.organizationMember.delete({
       where: { id },
     });
 

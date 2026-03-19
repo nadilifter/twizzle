@@ -81,7 +81,7 @@ export async function POST(
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
     }
 
-    const updated = await db.pass.update({
+    const updated = await scopedDb.pass.update({
       where: { id },
       data: {
         coveredPrograms: { connect: { id: programId } },
@@ -133,7 +133,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Pass not found" }, { status: 404 });
     }
 
-    await db.pass.update({
+    await scopedDb.pass.update({
       where: { id },
       data: {
         coveredPrograms: { disconnect: { id: programId } },

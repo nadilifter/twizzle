@@ -65,6 +65,11 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const organizationId = session.user.organizationId
+    if (!organizationId) {
+      return NextResponse.json({ error: "No organization selected" }, { status: 400 })
+    }
+
     const { id } = await params
     const template = await db.competitionCategoryTemplate.findUnique({
       where: { id },
@@ -73,6 +78,11 @@ export async function GET(
 
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 })
+    }
+
+    // Org-specific templates must belong to this organization
+    if (template.organizationId != null && template.organizationId !== organizationId) {
+      return NextResponse.json({ error: "Cannot access this template" }, { status: 403 })
     }
 
     return NextResponse.json(template)

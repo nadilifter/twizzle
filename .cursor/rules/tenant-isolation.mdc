@@ -11,16 +11,30 @@ globs:
 
 Every database query in an API route MUST be scoped to `session.user.organizationId`. Failing to do so creates a cross-organization data leak.
 
+## Default Import Pattern
+
+When creating or editing an API route, always start with both `db` and `getScopedDb`:
+
+```typescript
+import { db, getScopedDb } from "@/lib/db";
+
+export async function GET(request: NextRequest) {
+  const session = await getAuthSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const scopedDb = getScopedDb(session.user.organizationId);
+  // Use scopedDb for all tenant-model queries
+}
+```
+
+Only use raw `db` for:
+- Relation-scoped models (see table below)
+- Inside `$transaction` callbacks (where extensions don't apply)
+- Non-tenant models like `User`, `Athlete`, `Sport`
+
 ## Primary Mechanism: `getScopedDb`
 
 For models listed in `TENANT_MODELS` (see `src/lib/db.ts`), use `getScopedDb` instead of raw `db`. It automatically injects `organizationId` into all read, create, update, and delete operations.
-
-```typescript
-import { getScopedDb } from "@/lib/db";
-
-const scopedDb = getScopedDb(session.user.organizationId);
-const programs = await scopedDb.program.findMany(); // auto-filtered
-```
 
 ## Relation-Scoped Models
 
@@ -52,10 +66,77 @@ Some models don't have a direct `organizationId` field. Filter them through a re
 
 5. **Platform-level models** (`OrganizationSubscription`, `OrganizationFeatureOverride`, `OrganizationPaymentMethod`, `AdyenPlatformAccount`, `OrganizationStatusLog`) are managed by superadmins and excluded from tenant scoping.
 
+6. **Validate client-provided foreign keys.** When the client sends IDs for related records (e.g., `facilityId`, `levelIds`, `waiverIds`), verify those records belong to the org before using them in a create or update.
+
+## Common Mistakes
+
+### Mistake 1: Trusting client-provided organizationId
+
+```typescript
+// BAD - attacker can pass any org's ID
+const organizationId = body.organizationId || session.user.organizationId;
+
+// GOOD - always use session
+const organizationId = session.user.organizationId;
+```
+
+### Mistake 2: Check-then-act pattern
+
+```typescript
+// BAD - verify then mutate by id only (race condition, bypasses scoping)
+const existing = await db.skill.findFirst({ where: { id, organizationId } });
+if (!existing) return notFound();
+await db.skill.update({ where: { id }, data });
+
+// GOOD - use scopedDb for the mutation
+const scopedDb = getScopedDb(session.user.organizationId);
+await scopedDb.skill.update({ where: { id }, data });
+```
+
+### Mistake 3: Unvalidated foreign keys
+
+```typescript
+// BAD - facilityId from client could belong to another org
+await db.competition.create({ data: { facilityId: body.facilityId, ... } });
+
+// GOOD - verify first
+const facility = await scopedDb.facility.findUnique({ where: { id: body.facilityId } });
+if (!facility) return notFound();
+await scopedDb.competition.create({ data: { facilityId: body.facilityId, ... } });
+```
+
+### Mistake 4: Unscoped transaction mutations
+
+```typescript
+// BAD - tx has no getScopedDb extensions
+await db.$transaction(async (tx) => {
+  await tx.invoice.update({ where: { id }, data });
+});
+
+// GOOD - defensive check inside transaction
+await db.$transaction(async (tx) => {
+  const verified = await tx.invoice.findFirst({
+    where: { id, organizationId: session.user.organizationId },
+    select: { id: true },
+  });
+  if (!verified) throw new Error("Not found");
+  await tx.invoice.update({ where: { id }, data });
+});
+```
+
+## Enforcement
+
+- **Pre-commit hook**: Runs `scripts/check-tenant-isolation.sh --staged` on every commit that touches API routes. Catches missing `getScopedDb` imports, raw `db` mutations on tenant models, and client-provided `organizationId`.
+- **Dev-mode runtime warnings**: In development, the `db` client logs `[TENANT WARNING]` to the console when a tenant model is queried without `organizationId`. Watch your dev console for these.
+- **Manual lint**: Run `pnpm lint:tenant` to check all API routes.
+- **Suppressions**: Add `// tenant-isolation-ok: <reason>` to suppress false positives on specific lines. Add routes to `scripts/tenant-isolation-allowlist.txt` if they legitimately use raw `db` (with a comment explaining why).
+
 ## Checklist for New API Routes
 
 - [ ] All `findMany` / `findFirst` / `count` calls are org-scoped
 - [ ] Create operations set `organizationId` (auto if using `getScopedDb`)
 - [ ] Update/delete operations verify org ownership before mutating
 - [ ] No client-provided `organizationId` is trusted
+- [ ] Client-provided foreign keys are validated against the org
 - [ ] Related-model queries filter through the org relation chain
+- [ ] `pnpm lint:tenant` passes with no new violations

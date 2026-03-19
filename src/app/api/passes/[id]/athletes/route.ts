@@ -85,6 +85,17 @@ export async function POST(
       return NextResponse.json({ error: "Pass not found" }, { status: 404 });
     }
 
+    const athlete = await db.athlete.findFirst({
+      where: {
+        id: validatedData.athleteId,
+        organizationAthletes: { some: { organizationId: session.user.organizationId } },
+      },
+      select: { id: true },
+    });
+    if (!athlete) {
+      return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
+    }
+
     const existing = await db.athletePass.findUnique({
       where: { passId_athleteId: { passId: id, athleteId: validatedData.athleteId } },
     });

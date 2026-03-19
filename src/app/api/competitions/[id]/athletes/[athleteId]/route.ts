@@ -205,7 +205,7 @@ export async function GET(
       compliance.membership.required = true
 
       const requiredInstances = await db.membershipInstance.findMany({
-        where: { id: { in: competition.membershipRequirementIds } },
+        where: { id: { in: competition.membershipRequirementIds }, group: { organizationId } },
         select: { id: true, name: true, group: { select: { name: true } } },
       })
 
@@ -239,7 +239,7 @@ export async function GET(
       compliance.waivers.required = true
 
       const requiredWaivers = await db.waiver.findMany({
-        where: { id: { in: competition.waiverRequirementIds } },
+        where: { id: { in: competition.waiverRequirementIds }, organizationId },
         include: {
           pages: {
             orderBy: { pageNumber: "asc" },

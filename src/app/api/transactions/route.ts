@@ -145,9 +145,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createTransactionSchema.parse(body);
 
-    // Check if transaction already exists (idempotency)
-    const existing = await db.transaction.findUnique({
-      where: { pspReference: validatedData.pspReference },
+    const existing = await db.transaction.findFirst({
+      where: {
+        pspReference: validatedData.pspReference,
+        organizationId: session.user.organizationId,
+      },
     });
 
     if (existing) {

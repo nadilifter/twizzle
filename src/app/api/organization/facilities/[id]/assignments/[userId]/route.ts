@@ -46,10 +46,15 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateAssignmentSchema.parse(body);
 
-    // If this is set as primary, unset other primaries for this user
+    // If this is set as primary, unset other primaries for this user (scoped to this facility)
     if (validatedData.isPrimary) {
       await db.facilityAssignment.updateMany({
-        where: { userId, isPrimary: true, id: { not: existingAssignment.id } },
+        where: {
+          facilityId,
+          userId,
+          isPrimary: true,
+          id: { not: existingAssignment.id },
+        },
         data: { isPrimary: false },
       });
     }

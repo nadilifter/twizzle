@@ -105,7 +105,7 @@ export async function PUT(
     const validatedData = updateCertificationSchema.parse(body);
 
     const certification = await db.certification.update({
-      where: { id },
+      where: { id, organizationId },
       data: validatedData,
       include: {
         _count: {
@@ -148,7 +148,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Certification not found" }, { status: 404 });
     }
 
-    await db.certification.delete({ where: { id } });
+    await db.certification.delete({ where: { id, organizationId } });
 
     return NextResponse.json({ message: "Certification deleted" });
   } catch (error) {

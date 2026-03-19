@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { executeRecurringCharge } from "@/lib/recurring-billing-service";
 import { z } from "zod";
@@ -259,6 +259,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
+    const scopedDb = getScopedDb(session.user.organizationId);
 
     // If running a batch
     if (body.action === "run_batch") {
@@ -317,7 +318,7 @@ export async function PATCH(request: NextRequest) {
               nextDate.setFullYear(nextDate.getFullYear() + 1);
             }
 
-            await db.recurringCharge.update({
+            await scopedDb.recurringCharge.update({
               where: { id: charge.id },
               data: {
                 nextChargeDate: nextDate,
@@ -331,7 +332,7 @@ export async function PATCH(request: NextRequest) {
             const newFailureCount = charge.failureCount + 1;
             const MAX_RETRIES = 3;
 
-            await db.recurringCharge.update({
+            await scopedDb.recurringCharge.update({
               where: { id: charge.id },
               data: {
                 failureCount: newFailureCount,

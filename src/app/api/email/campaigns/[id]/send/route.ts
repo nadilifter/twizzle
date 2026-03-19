@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { executeEmailCampaign, checkEmailUsageLimits, getCampaignRecipients } from "@/lib/email-campaign-service";
 
 // POST /api/email/campaigns/[id]/send - Send a campaign
@@ -81,7 +81,8 @@ export async function POST(
     }
 
     // Update recipient count (in case it changed)
-    await db.emailCampaign.update({
+    const scopedDb = getScopedDb(session.user.organizationId);
+    await scopedDb.emailCampaign.update({
       where: { id },
       data: { totalRecipients: recipients.length },
     });

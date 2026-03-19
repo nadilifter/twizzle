@@ -132,6 +132,17 @@ export async function POST(
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
     }
 
+    const athlete = await db.athlete.findFirst({
+      where: {
+        id: data.athleteId,
+        organizationAthletes: { some: { organizationId } },
+      },
+      select: { id: true },
+    })
+    if (!athlete) {
+      return NextResponse.json({ error: "Athlete not found" }, { status: 404 })
+    }
+
     const resultType = category.resultType as ResultType
     const seedFields: SeedMarkFields = {
       seedHours: data.seedHours ?? null,

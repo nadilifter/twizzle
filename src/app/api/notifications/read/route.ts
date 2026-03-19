@@ -36,7 +36,14 @@ export async function POST(request: NextRequest) {
         update: {},
       })
     } else {
-      // Mark org announcement as read
+      const announcement = await db.announcement.findFirst({
+        where: { id: announcementId, organizationId: session.user.organizationId },
+        select: { id: true },
+      })
+      if (!announcement) {
+        return NextResponse.json({ error: "Announcement not found" }, { status: 404 })
+      }
+
       await db.announcementRead.upsert({
         where: {
           announcementId_userId: {

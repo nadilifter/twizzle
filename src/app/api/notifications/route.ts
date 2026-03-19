@@ -7,12 +7,9 @@ import { db } from "@/lib/db"
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession()
-    const { searchParams } = new URL(request.url)
-    const organizationId = searchParams.get("organizationId")
 
     const now = new Date()
 
-    // Fetch system announcements (available to all authenticated users)
     const systemAnnouncementsPromise = db.systemAnnouncement.findMany({
       where: {
         status: "PUBLISHED",
@@ -33,8 +30,7 @@ export async function GET(request: NextRequest) {
       take: 50,
     })
 
-    // Fetch organization announcements if user has an organization context
-    const effectiveOrgId = organizationId || session?.user?.organizationId
+    const effectiveOrgId = session?.user?.organizationId
     
     const orgAnnouncementsPromise = effectiveOrgId
       ? db.announcement.findMany({

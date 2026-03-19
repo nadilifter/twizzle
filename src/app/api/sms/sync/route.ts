@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { getMessageStatus, mapTwilioStatus, isTwilioConfigured } from "@/lib/twilio";
 
 /**
@@ -22,6 +22,7 @@ export async function POST() {
     }
 
     const organizationId = session.user.organizationId;
+    const scopedDb = getScopedDb(organizationId);
 
     // Find messages that are still pending (QUEUED, SENDING, SENT)
     // Only check messages from the last 24 hours to avoid excessive API calls
@@ -119,7 +120,7 @@ export async function POST() {
             updateData.errorMessage = twilioMessage.errorMessage || null;
           }
 
-          await db.smsMessage.update({
+          await scopedDb.smsMessage.update({
             where: { id: msg.id },
             data: updateData,
           });

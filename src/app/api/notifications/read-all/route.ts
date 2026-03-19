@@ -11,8 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await request.json().catch(() => ({}))
-    const organizationId = body.organizationId || session.user.organizationId
+    const organizationId = session.user.organizationId
     const now = new Date()
 
     // Get all unread system announcements

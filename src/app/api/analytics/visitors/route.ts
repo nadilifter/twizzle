@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
     // Get organization ID from session or query params
     const searchParams = request.nextUrl.searchParams;
-    const queryOrgId = searchParams.get("organizationId");
+    const queryOrgId = searchParams.get("organizationId"); // tenant-isolation-ok: superadmin-only override, guarded by isSuperAdmin check below
     
     // Allow super admins to query any org, otherwise use session org
     const organizationId = 

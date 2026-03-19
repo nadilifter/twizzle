@@ -157,9 +157,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createPayoutSchema.parse(body);
 
-    // Check if payout already exists (idempotency)
-    const existing = await db.payout.findUnique({
-      where: { reference: validatedData.reference },
+    const existing = await db.payout.findFirst({
+      where: {
+        reference: validatedData.reference,
+        organizationId: session.user.organizationId,
+      },
     });
 
     if (existing) {

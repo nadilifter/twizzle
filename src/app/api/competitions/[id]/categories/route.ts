@@ -136,7 +136,7 @@ export async function PATCH(
         if (cat.displayOrder !== undefined) updateData.displayOrder = cat.displayOrder
 
         return db.competitionCategory.update({
-          where: { id: cat.id },
+          where: { id: cat.id, competitionId: id },
           data: updateData,
         })
       })

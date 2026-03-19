@@ -121,7 +121,8 @@ export async function PATCH(
       });
     }
 
-    const facility = await db.facility.update({
+    const scopedDb = getScopedDb(organizationId);
+    const facility = await scopedDb.facility.update({
       where: { id },
       data: validatedData,
       include: {
@@ -200,7 +201,7 @@ export async function DELETE(
       });
 
       if (newDefault) {
-        await db.facility.update({
+        await scopedDb.facility.update({
           where: { id: newDefault.id },
           data: { isDefault: true },
         });

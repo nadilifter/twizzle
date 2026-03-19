@@ -76,7 +76,7 @@ export async function PATCH(
     if (data.notes !== undefined) updateData.notes = data.notes
 
     const result = await db.competitionResult.update({
-      where: { id: resultId },
+      where: { id: resultId, competitionId: id },
       data: updateData,
       include: {
         athlete: { select: { id: true, firstName: true, lastName: true, name: true } },
@@ -137,7 +137,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Result not found" }, { status: 404 })
     }
 
-    await db.competitionResult.delete({ where: { id: resultId } })
+    await db.competitionResult.delete({ where: { id: resultId, competitionId: id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {

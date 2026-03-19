@@ -93,7 +93,7 @@ export async function PATCH(
 
     const { programIds, ...scalarData } = validatedData;
 
-    const updated = await db.pass.update({
+    const updated = await scopedDb.pass.update({
       where: { id },
       data: {
         ...scalarData,

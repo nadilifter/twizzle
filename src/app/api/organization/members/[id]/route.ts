@@ -144,7 +144,7 @@ export async function PATCH(
 
     await db.$transaction(async (tx) => {
       await tx.organizationMember.update({
-        where: { id },
+        where: { id, organizationId },
         data: updateData,
       });
 

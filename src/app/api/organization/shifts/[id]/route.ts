@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -137,7 +137,8 @@ export async function PATCH(
     if (validatedData.notes !== undefined) updateData.notes = validatedData.notes;
     if (validatedData.status !== undefined) updateData.status = validatedData.status;
 
-    const shift = await db.shift.update({
+    const scopedDb = getScopedDb(organizationId);
+    const shift = await scopedDb.shift.update({
       where: { id },
       data: updateData,
       include: {
@@ -207,7 +208,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
 
-    await db.shift.delete({
+    const scopedDb = getScopedDb(organizationId);
+    await scopedDb.shift.delete({
       where: { id },
     });
 

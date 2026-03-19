@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthSession } from "@/lib/auth"
 import { checkFeatureGate } from "@/lib/feature-resolver"
-import { db } from "@/lib/db"
+import { db, getScopedDb } from "@/lib/db"
 import { parseDateOnly } from "@/lib/date-utils"
 import { z } from "zod"
 
@@ -269,7 +269,8 @@ export async function PATCH(
     if (data.scheduledGoLiveDate !== undefined) updateData.scheduledGoLiveDate = data.scheduledGoLiveDate ? parseDateOnly(String(data.scheduledGoLiveDate)) : null
     if (data.scheduledGoLiveTime !== undefined) updateData.scheduledGoLiveTime = data.scheduledGoLiveTime
 
-    const competition = await db.competition.update({
+    const scopedDb = getScopedDb(session.user.organizationId)
+    const competition = await scopedDb.competition.update({
       where: { id },
       data: updateData,
       include: competitionInclude,
@@ -326,7 +327,8 @@ export async function DELETE(
       )
     }
 
-    await db.competition.delete({ where: { id } })
+    const scopedDb = getScopedDb(session.user.organizationId)
+    await scopedDb.competition.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {
