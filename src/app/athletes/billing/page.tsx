@@ -391,6 +391,7 @@ export default function BillingPage() {
                     <Label htmlFor="contact-firstName">First Name *</Label>
                     <Input
                       id="contact-firstName"
+                      autoComplete="given-name"
                       value={contactForm.firstName}
                       onChange={(e) =>
                         setContactForm((f) => ({ ...f, firstName: e.target.value }))
@@ -401,6 +402,7 @@ export default function BillingPage() {
                     <Label htmlFor="contact-lastName">Last Name *</Label>
                     <Input
                       id="contact-lastName"
+                      autoComplete="family-name"
                       value={contactForm.lastName}
                       onChange={(e) =>
                         setContactForm((f) => ({ ...f, lastName: e.target.value }))
@@ -413,6 +415,7 @@ export default function BillingPage() {
                   <Input
                     id="contact-email"
                     type="email"
+                    autoComplete="email"
                     value={contactForm.email}
                     onChange={(e) =>
                       setContactForm((f) => ({ ...f, email: e.target.value }))

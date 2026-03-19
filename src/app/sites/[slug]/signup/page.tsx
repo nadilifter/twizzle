@@ -180,6 +180,7 @@ export default function MarketingSiteSignupPage() {
               type="text"
               id="name"
               name="name"
+              autoComplete="name"
               value={formData.name}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
@@ -197,6 +198,7 @@ export default function MarketingSiteSignupPage() {
               type="email"
               id="email"
               name="email"
+              autoComplete="email"
               value={formData.email}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
@@ -214,6 +216,7 @@ export default function MarketingSiteSignupPage() {
               type="password"
               id="password"
               name="password"
+              autoComplete="new-password"
               value={formData.password}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
@@ -232,6 +235,7 @@ export default function MarketingSiteSignupPage() {
               type="password"
               id="confirmPassword"
               name="confirmPassword"
+              autoComplete="new-password"
               value={formData.confirmPassword}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"

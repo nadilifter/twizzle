@@ -527,6 +527,7 @@ export default function SignupPage() {
                 <Input
                   id="name"
                   name="name"
+                  autoComplete="name"
                   placeholder="John Smith"
                   value={formData.name}
                   onChange={handleInputChange}
@@ -542,6 +543,7 @@ export default function SignupPage() {
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleInputChange}

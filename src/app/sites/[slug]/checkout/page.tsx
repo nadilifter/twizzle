@@ -862,7 +862,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <Label htmlFor="firstName">First Name</Label>
                 <Input 
                   id="firstName" 
-                  name="firstName" 
+                  name="firstName"
+                  autoComplete="given-name"
                   value={formData.firstName} 
                   onChange={handleInputChange} 
                   required 
@@ -873,7 +874,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <Label htmlFor="lastName">Last Name</Label>
                 <Input 
                   id="lastName" 
-                  name="lastName" 
+                  name="lastName"
+                  autoComplete="family-name"
                   value={formData.lastName} 
                   onChange={handleInputChange} 
                   required 
@@ -885,7 +887,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <Input 
                   id="email" 
                   name="email" 
-                  type="email" 
+                  type="email"
+                  autoComplete="email"
                   value={formData.email} 
                   onChange={handleInputChange} 
                   required 
@@ -897,7 +900,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <Input 
                   id="phone" 
                   name="phone" 
-                  type="tel" 
+                  type="tel"
+                  autoComplete="tel"
                   value={formData.phone} 
                   onChange={handleInputChange} 
                   required 
@@ -958,7 +962,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <Label htmlFor="address">Street Address</Label>
                 <Input 
                   id="address" 
-                  name="address" 
+                  name="address"
+                  autoComplete="street-address"
                   value={formData.address} 
                   onChange={handleInputChange} 
                   disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
@@ -968,7 +973,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <Label htmlFor="city">City</Label>
                 <Input 
                   id="city" 
-                  name="city" 
+                  name="city"
+                  autoComplete="address-level2"
                   value={formData.city} 
                   onChange={handleInputChange} 
                   disabled={checkoutStep !== "details" || (selectedAddressId !== "new" && !isEditingAddress)}
@@ -991,7 +997,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 </Label>
                 <Input 
                   id="postalCode" 
-                  name="postalCode" 
+                  name="postalCode"
+                  autoComplete="postal-code"
                   value={formData.postalCode} 
                   onChange={handleInputChange} 
                   placeholder={formData.country === "CA" ? "A1A 1A1" : formData.country === "US" ? "12345" : ""}

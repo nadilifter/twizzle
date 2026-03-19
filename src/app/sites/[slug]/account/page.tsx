@@ -325,6 +325,7 @@ export default function AccountPage() {
                     <Label htmlFor="contact-firstName">First Name *</Label>
                     <Input
                       id="contact-firstName"
+                      autoComplete="given-name"
                       value={contactForm.firstName}
                       onChange={(e) => setContactForm((f) => ({ ...f, firstName: e.target.value }))}
                     />
@@ -333,6 +334,7 @@ export default function AccountPage() {
                     <Label htmlFor="contact-lastName">Last Name *</Label>
                     <Input
                       id="contact-lastName"
+                      autoComplete="family-name"
                       value={contactForm.lastName}
                       onChange={(e) => setContactForm((f) => ({ ...f, lastName: e.target.value }))}
                     />
@@ -343,6 +345,7 @@ export default function AccountPage() {
                   <Input
                     id="contact-email"
                     type="email"
+                    autoComplete="email"
                     value={contactForm.email}
                     onChange={(e) => setContactForm((f) => ({ ...f, email: e.target.value }))}
                   />
@@ -352,6 +355,7 @@ export default function AccountPage() {
                   <Input
                     id="contact-phone"
                     type="tel"
+                    autoComplete="tel"
                     value={contactForm.phone}
                     onChange={(e) => setContactForm((f) => ({ ...f, phone: e.target.value }))}
                   />
@@ -477,6 +481,7 @@ export default function AccountPage() {
                   <Label htmlFor="address-street">Street Address *</Label>
                   <Input
                     id="address-street"
+                    autoComplete="street-address"
                     value={addressForm.street}
                     onChange={(e) => setAddressForm((f) => ({ ...f, street: e.target.value }))}
                   />
@@ -486,6 +491,7 @@ export default function AccountPage() {
                     <Label htmlFor="address-city">City *</Label>
                     <Input
                       id="address-city"
+                      autoComplete="address-level2"
                       value={addressForm.city}
                       onChange={(e) => setAddressForm((f) => ({ ...f, city: e.target.value }))}
                     />
@@ -494,6 +500,7 @@ export default function AccountPage() {
                     <Label htmlFor="address-stateProvince">State / Province</Label>
                     <Input
                       id="address-stateProvince"
+                      autoComplete="address-level1"
                       value={addressForm.stateProvince}
                       onChange={(e) => setAddressForm((f) => ({ ...f, stateProvince: e.target.value }))}
                     />
@@ -503,6 +510,7 @@ export default function AccountPage() {
                   <Label htmlFor="address-postalCode">Postal Code *</Label>
                   <Input
                     id="address-postalCode"
+                    autoComplete="postal-code"
                     value={addressForm.postalCode}
                     onChange={(e) => setAddressForm((f) => ({ ...f, postalCode: e.target.value }))}
                   />
