@@ -648,31 +648,43 @@ export default function InstanceDetailPage() {
                 <ClipboardList className="h-4 w-4 mr-2" />
                 View Program
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const params = new URLSearchParams({
+                  compose: "1",
+                  targetType: "PROGRAM_SPECIFIC_INSTANCE",
+                  programId: instance.programId,
+                  instanceId: instanceId as string,
+                });
+                router.push(`/dashboard/communication/email?${params}`);
+              }}>
                 <Mail className="h-4 w-4 mr-2" />
                 Email Attendees
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {instance.status === "SCHEDULED" && (
+              {(instance.status === "SCHEDULED" || instance.status === "CANCELLED") && (
                 <>
-                  <DropdownMenuItem onClick={() => updateInstanceStatus("COMPLETED")}>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Mark as Completed
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => setCancelDialogOpen(true)}
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Cancel Session
-                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {instance.status === "SCHEDULED" && (
+                    <>
+                      <DropdownMenuItem onClick={() => updateInstanceStatus("COMPLETED")}>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Mark as Completed
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => setCancelDialogOpen(true)}
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Cancel Session
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {instance.status === "CANCELLED" && (
+                    <DropdownMenuItem onClick={() => updateInstanceStatus("SCHEDULED")}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Restore Session
+                    </DropdownMenuItem>
+                  )}
                 </>
-              )}
-              {instance.status === "CANCELLED" && (
-                <DropdownMenuItem onClick={() => updateInstanceStatus("SCHEDULED")}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Restore Session
-                </DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

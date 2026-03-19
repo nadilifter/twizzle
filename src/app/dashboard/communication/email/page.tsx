@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useFeatures } from "@/components/feature-context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -445,6 +446,8 @@ const { useStepper: useEmailStepper } = defineStepper(
 // ============================================
 
 export default function EmailCampaignsPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const { isFeatureEnabled } = useFeatures()
   const membershipsEnabled = isFeatureEnabled("memberships")
 
@@ -639,6 +642,31 @@ export default function EmailCampaignsPage() {
   useEffect(() => {
     if (emailCurrentStepId === "preview") fetchPreview()
   }, [emailCurrentStepId, fetchPreview])
+
+  // ============================================
+  // Auto-open compose from query params (e.g. "Email Attendees" on instance page)
+  // ============================================
+
+  const didConsumeParams = useRef(false)
+
+  useEffect(() => {
+    if (didConsumeParams.current) return
+    if (searchParams.get("compose") !== "1") return
+    didConsumeParams.current = true
+
+    const qTargetType = searchParams.get("targetType") as TargetType | null
+    const qProgramId = searchParams.get("programId")
+    const qInstanceId = searchParams.get("instanceId")
+
+    if (qTargetType) setTargetType(qTargetType)
+    if (qProgramId) setTargetProgramId(qProgramId)
+    if (qInstanceId) setTargetProgramInstanceId(qInstanceId)
+
+    emailStepper.navigation.goTo("campaign")
+    setIsComposeOpen(true)
+
+    router.replace("/dashboard/communication/email", { scroll: false })
+  }, [searchParams, router, emailStepper.navigation])
 
   // ============================================
   // Actions
