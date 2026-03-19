@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
           primaryColor: validatedData.primaryColor || "#000000",
           secondaryColor: validatedData.secondaryColor || "#ffffff",
           isPublished: true,
-          heroHeadline: `Welcome to ${validatedData.orgName}`,
+          heroHeadline: "Welcome to",
           heroSubheadline: "Your organization's home on Uplifter",
         },
       })
