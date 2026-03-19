@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input"
 import { useCart } from "@/components/sites/cart-context"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
-import Link from "next/link"
 import { toast } from "sonner"
 import { verifyOrganizationMembership } from "@/app/actions/organization"
 import { getSubdomainUrl } from "@/lib/env-domains"
@@ -354,16 +353,16 @@ function POSPageContent() {
               variant="outline"
               className="h-12 md:h-14 text-base font-medium touch-manipulation"
               disabled={items.length === 0}
-              asChild
+              onClick={() => router.push("/pos/payment?method=cash")}
             >
-              <Link href="/pos/payment?method=cash">Cash</Link>
+              Cash
             </Button>
             <Button
               className="h-12 md:h-14 text-base font-medium touch-manipulation"
               disabled={items.length === 0}
-              asChild
+              onClick={() => router.push("/pos/payment?method=card")}
             >
-              <Link href="/pos/payment?method=card">Card</Link>
+              Card
             </Button>
           </div>
         </div>
