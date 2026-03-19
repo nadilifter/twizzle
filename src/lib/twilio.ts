@@ -142,6 +142,7 @@ export function calculateSegments(message: string): number {
 export interface SendSmsOptions {
   to: string;
   body: string;
+  from?: string;
   statusCallback?: string;
   organizationId?: string;
   campaignId?: string;
@@ -196,8 +197,10 @@ export async function sendSms(options: SendSmsOptions): Promise<SendSmsResult> {
       messageOptions.statusCallback = webhookUrl;
     }
 
-    // Use messaging service if available, otherwise use phone number
-    if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+    // Use explicit from number (pool), messaging service, or env fallback
+    if (options.from) {
+      messageOptions.from = options.from;
+    } else if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
       messageOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
     } else if (process.env.TWILIO_PHONE_NUMBER) {
       messageOptions.from = process.env.TWILIO_PHONE_NUMBER;

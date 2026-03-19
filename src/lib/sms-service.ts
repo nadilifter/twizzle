@@ -7,6 +7,7 @@ import {
   mapTwilioStatus,
   isTwilioConfigured,
 } from "@/lib/twilio";
+import { getPoolNumberForSend } from "@/lib/sms-number-pool";
 import type { SmsClassification, SmsStatus, SmsCampaignStatus, AnnouncementScope } from "@prisma/client";
 
 /**
@@ -385,6 +386,9 @@ export async function sendSingleSms(
   // Calculate segments
   const segments = calculateSegments(body);
 
+  // Resolve pool number for this recipient + org
+  const fromNumber = await getPoolNumberForSend(normalizedPhone, organizationId);
+
   // Create message record first (for tracking)
   const smsMessage = await db.smsMessage.create({
     data: {
@@ -392,7 +396,7 @@ export async function sendSingleSms(
       userId,
       campaignId,
       to: normalizedPhone,
-      from: process.env.TWILIO_PHONE_NUMBER || "",
+      from: fromNumber,
       body,
       segments,
       classification,
@@ -405,6 +409,7 @@ export async function sendSingleSms(
   const result = await sendSms({
     to: normalizedPhone,
     body,
+    from: fromNumber,
     organizationId,
     campaignId,
   });

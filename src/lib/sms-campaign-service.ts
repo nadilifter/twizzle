@@ -11,6 +11,7 @@ import {
   checkUsageLimits,
   recordUsage,
 } from "@/lib/sms-service";
+import { getPoolNumberForSend } from "@/lib/sms-number-pool";
 import type {
   SmsClassification,
   SmsTargetType,
@@ -830,6 +831,9 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
     // Calculate segments
     const segments = calculateSegments(personalizedBody);
 
+    // Resolve pool number for this recipient + org
+    const fromNumber = await getPoolNumberForSend(recipient.phone, campaign.organizationId);
+
     // Create message record
     const smsMessage = await db.smsMessage.create({
       data: {
@@ -837,7 +841,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
         userId: recipient.userId || undefined,
         campaignId,
         to: recipient.phone,
-        from: process.env.TWILIO_PHONE_NUMBER || "",
+        from: fromNumber,
         body: personalizedBody,
         segments,
         classification: campaign.classification,
@@ -850,6 +854,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
     const result = await sendSms({
       to: recipient.phone,
       body: personalizedBody,
+      from: fromNumber,
       organizationId: campaign.organizationId,
       campaignId,
     });

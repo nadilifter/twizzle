@@ -8,6 +8,7 @@ import {
   isTwilioConfigured,
 } from "@/lib/twilio";
 import { checkUsageLimits, recordUsage } from "@/lib/sms-service";
+import { getPoolNumberForSend, resolveOrgFromInbound } from "@/lib/sms-number-pool";
 import type { SmsConversationStatus } from "@prisma/client";
 
 /**
@@ -287,13 +288,18 @@ export async function sendConversationMessage(
 
   const segments = calculateSegments(body);
 
+  const fromNumber = await getPoolNumberForSend(
+    conversation.phoneNumber,
+    conversation.organizationId
+  );
+
   const smsMessage = await db.smsMessage.create({
     data: {
       organizationId: conversation.organizationId,
       userId: conversation.userId,
       conversationId,
       to: conversation.phoneNumber,
-      from: process.env.TWILIO_PHONE_NUMBER || "",
+      from: fromNumber,
       body,
       segments,
       direction: "OUTBOUND",
@@ -305,6 +311,7 @@ export async function sendConversationMessage(
   const result = await sendSms({
     to: conversation.phoneNumber,
     body,
+    from: fromNumber,
     organizationId: conversation.organizationId,
   });
 
@@ -380,10 +387,10 @@ export async function updateConversationStatus(
  * Route an inbound SMS message to the correct conversation.
  * Called from the Twilio webhook handler.
  *
- * Multi-tenant routing strategy:
- * 1. Look up users by phone number
- * 2. If multiple orgs have the same user phone, use the `To` number to match
- * 3. Fall back to most recent outbound message to that phone
+ * Routing strategy (deterministic, no cross-org duplication):
+ * 1. Look up (fromPhone, toNumber) in SmsNumberAssignment for a sticky match
+ * 2. Fall back to the org that most recently sent an outbound to this phone
+ * 3. Create an assignment for future deterministic routing
  */
 export async function routeInboundMessage(params: {
   from: string;
@@ -394,110 +401,100 @@ export async function routeInboundMessage(params: {
   const { from, to, body, twilioSid } = params;
   const normalizedFrom = normalizePhoneNumber(from);
 
-  // Build phone variants for flexible matching
   const digitsOnly = normalizedFrom.replace(/\D/g, "");
-  const withoutCountryCode = digitsOnly.startsWith("1") && digitsOnly.length === 11
-    ? digitsOnly.substring(1)
-    : digitsOnly;
-  const phoneVariants = [
-    normalizedFrom,
-    digitsOnly,
-    withoutCountryCode,
-  ];
+  const withoutCountryCode =
+    digitsOnly.startsWith("1") && digitsOnly.length === 11
+      ? digitsOnly.substring(1)
+      : digitsOnly;
+  const phoneVariants = [normalizedFrom, digitsOnly, withoutCountryCode];
 
-  // Find org members with this phone number via their user
-  const members = await db.organizationMember.findMany({
+  // 1. Try pool-based deterministic routing
+  const poolMatch = await resolveOrgFromInbound(from, to);
+
+  if (poolMatch) {
+    await routeToOrg(poolMatch.organizationId, poolMatch.userId, {
+      to, from: normalizedFrom, body, twilioSid,
+    });
+    return;
+  }
+
+  // 2. Fall back: find the org that most recently texted this phone
+  const recentOutbound = await db.smsMessage.findFirst({
     where: {
-      user: { phone: { in: phoneVariants } },
-      status: "ACTIVE",
+      to: { in: phoneVariants },
+      direction: "OUTBOUND",
     },
-    select: {
-      organizationId: true,
-      userId: true,
-      user: { select: { name: true } },
-    },
+    orderBy: { createdAt: "desc" },
+    select: { organizationId: true, userId: true },
   });
 
-  if (members.length === 0) {
-    // No matching user -- try to find by recent outbound messages
-    const recentOutbound = await db.smsMessage.findFirst({
-      where: {
-        to: { in: phoneVariants },
-        direction: "OUTBOUND",
-      },
-      orderBy: { createdAt: "desc" },
-      select: {
-        organizationId: true,
-        userId: true,
-      },
+  if (recentOutbound?.userId) {
+    await routeToOrg(recentOutbound.organizationId, recentOutbound.userId, {
+      to, from: normalizedFrom, body, twilioSid,
     });
 
-    if (recentOutbound?.userId) {
-      const conversationId = await getOrCreateConversation(
-        recentOutbound.organizationId,
-        recentOutbound.userId
-      );
-
-      await db.smsMessage.create({
-        data: {
-          organizationId: recentOutbound.organizationId,
-          userId: recentOutbound.userId,
-          conversationId,
-          to,
-          from: normalizedFrom,
-          body,
-          twilioSid,
-          twilioStatus: "DELIVERED",
-          direction: "INBOUND",
-          classification: "GENERAL",
-          deliveredAt: new Date(),
-        },
-      });
-
-      await db.smsConversation.update({
-        where: { id: conversationId },
-        data: {
-          lastMessageAt: new Date(),
-          lastMessageBody: body,
-          unreadCount: { increment: 1 },
-          status: "OPEN",
-        },
-      });
+    // Create an assignment so future replies route deterministically
+    const { getPoolNumberForSend: ensureAssignment } = await import("@/lib/sms-number-pool");
+    try {
+      await ensureAssignment(normalizedFrom, recentOutbound.organizationId);
+    } catch {
+      // Non-fatal: assignment creation can fail if pool is exhausted
     }
     return;
   }
 
-  // Route to each matching member's conversation
-  for (const member of members) {
-    const conversationId = await getOrCreateConversation(
-      member.organizationId,
-      member.userId
-    );
+  // 3. No outbound history — try org membership as last resort (single org only)
+  const member = await db.organizationMember.findFirst({
+    where: {
+      user: { phone: { in: phoneVariants } },
+      status: "ACTIVE",
+    },
+    orderBy: { joinedAt: "desc" },
+    select: { organizationId: true, userId: true },
+  });
 
-    await db.smsMessage.create({
-      data: {
-        organizationId: member.organizationId,
-        userId: member.userId,
-        conversationId,
-        to,
-        from: normalizedFrom,
-        body,
-        twilioSid,
-        twilioStatus: "DELIVERED",
-        direction: "INBOUND",
-        classification: "GENERAL",
-        deliveredAt: new Date(),
-      },
+  if (member) {
+    await routeToOrg(member.organizationId, member.userId, {
+      to, from: normalizedFrom, body, twilioSid,
     });
-
-    await db.smsConversation.update({
-      where: { id: conversationId },
-      data: {
-        lastMessageAt: new Date(),
-        lastMessageBody: body,
-        unreadCount: { increment: 1 },
-        status: "OPEN",
-      },
-    });
+    return;
   }
+
+  console.warn(
+    `\x1b[33m[SMS INBOUND]\x1b[0m No routing match for inbound from ${normalizedFrom}. Message dropped.`
+  );
+}
+
+async function routeToOrg(
+  organizationId: string,
+  userId: string,
+  msg: { to: string; from: string; body: string; twilioSid: string }
+): Promise<void> {
+  const conversationId = await getOrCreateConversation(organizationId, userId);
+
+  await db.smsMessage.create({
+    data: {
+      organizationId,
+      userId,
+      conversationId,
+      to: msg.to,
+      from: msg.from,
+      body: msg.body,
+      twilioSid: msg.twilioSid,
+      twilioStatus: "DELIVERED",
+      direction: "INBOUND",
+      classification: "GENERAL",
+      deliveredAt: new Date(),
+    },
+  });
+
+  await db.smsConversation.update({
+    where: { id: conversationId },
+    data: {
+      lastMessageAt: new Date(),
+      lastMessageBody: msg.body,
+      unreadCount: { increment: 1 },
+      status: "OPEN",
+    },
+  });
 }

@@ -98,6 +98,7 @@ const TENANT_MODELS = [
   "SmsCampaign",
   "SmsConversation",
   "SmsUsage",
+  "SmsNumberAssignment",
   "EmailMessage",
   "EmailCampaign",
   "EmailUsage",

@@ -85,10 +85,11 @@ model Organization {
   scheduleTemplates ScheduleTemplate[]
 
   // SMS
-  smsMessages      SmsMessage[]
-  smsCampaigns     SmsCampaign[]
-  smsUsage         SmsUsage[]
-  smsConversations SmsConversation[]
+  smsMessages          SmsMessage[]
+  smsCampaigns         SmsCampaign[]
+  smsUsage             SmsUsage[]
+  smsConversations     SmsConversation[]
+  smsNumberAssignments SmsNumberAssignment[]
 
   // Email
   emailMessages  EmailMessage[]
@@ -2171,6 +2172,22 @@ model SmsUsage {
   @@unique([organizationId, periodStart])
   @@index([organizationId])
   @@index([periodStart])
+}
+
+model SmsNumberAssignment {
+  id             String @id @default(cuid())
+  phone          String // Guardian's phone (E.164 normalized)
+  twilioNumber   String // Pool number assigned to this phone+org
+  organizationId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([phone, organizationId])
+  @@unique([phone, twilioNumber])
+  @@index([twilioNumber, phone])
 }
 
 // ============================================
