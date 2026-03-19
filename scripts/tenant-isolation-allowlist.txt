@@ -212,3 +212,15 @@ src/app/api/announcements/route.ts
 # --- Admin routes (admin-only, non-superadmin) ---
 src/app/api/admin/reserved-domains/route.ts
 src/app/api/admin/reserved-domains/[id]/route.ts
+
+# --- QBO integration (platform-level models with unique organizationId) ---
+src/app/api/integrations/qbo/connect/route.ts
+src/app/api/integrations/qbo/callback/route.ts
+src/app/api/integrations/qbo/disconnect/route.ts
+src/app/api/integrations/qbo/status/route.ts
+src/app/api/integrations/qbo/accounts/route.ts
+src/app/api/integrations/qbo/mappings/route.ts
+src/app/api/integrations/qbo/mappings/auto-suggest/route.ts
+src/app/api/integrations/qbo/sync/route.ts
+src/app/api/integrations/qbo/sync/status/route.ts
+src/app/api/integrations/qbo/sync/mappings/route.ts
