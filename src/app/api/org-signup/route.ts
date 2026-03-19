@@ -5,6 +5,7 @@ import { z } from "zod"
 import { passwordSchema } from "@/lib/password"
 import { isSubdomainReserved } from "@/lib/reserved-domains"
 import { containsProfanity } from "@/lib/profanity"
+import { registerAllowedOrigin } from "@/lib/adyen-platform"
 
 const MAX_NAME_LENGTH = 255
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
@@ -304,6 +305,8 @@ export async function POST(request: NextRequest) {
         console.error("Failed to claim orphaned payment methods:", err)
       }
     }
+
+    void registerAllowedOrigin(validatedData.subdomain)
 
     return NextResponse.json({
       success: true,

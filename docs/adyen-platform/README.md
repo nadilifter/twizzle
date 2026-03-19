@@ -188,6 +188,61 @@ The platform model is opt-in per organization. The system maintains backward com
 
 This is implemented via a simple check: if `AdyenPlatformAccount` exists and is verified, use platform path; otherwise, use legacy path.
 
+## Allowed Origins (CORS)
+
+Adyen's client-side checkout SDK requires each origin that loads the Drop-in or Components to be registered as an "allowed origin" on the API credential. Adyen does **not** support wildcard origins, so each org subdomain needs its own entry.
+
+### How it works
+
+| Event | Action | File |
+|---|---|---|
+| Org signup | `registerAllowedOrigin(subdomain)` called fire-and-forget | `src/app/api/org-signup/route.ts` |
+| Org deactivated | `removeAllowedOrigin(subdomain)` called fire-and-forget | `src/app/api/superadmin/organizations/[id]/status/route.ts` |
+| Org reactivated | `registerAllowedOrigin(subdomain)` called fire-and-forget | `src/app/api/superadmin/organizations/[id]/status/route.ts` |
+
+Both helpers live in `src/lib/adyen-platform.ts` and use the `MyAPICredentialApi` (part of the Management API). They are:
+
+- **Idempotent** — check existing origins before adding/removing
+- **Non-blocking** — catch and log errors so signup/deactivation flows are never delayed
+- **Environment-aware** — use `getSubdomainUrl()` from `src/lib/env-domains.ts` to build the correct origin for the current environment
+
+### Fixed subdomains
+
+The following subdomains are shared infrastructure and must be registered **manually** in the [Adyen Customer Area](https://ca-test.adyen.com) under the API credential's allowed origins:
+
+- `startup` — org signup checkout
+- `admin` — admin dashboard
+- `athletes` — athlete billing
+
+Register the appropriate full URLs for each environment (e.g. `https://startup.upliftergymnastics.com` for staging, `https://startup.uplifterinc.com` for production).
+
+### Backfill script
+
+To register origins for all existing active organizations:
+
+```bash
+npx tsx scripts/backfill-adyen-allowed-origins.ts            # run for real
+npx tsx scripts/backfill-adyen-allowed-origins.ts --dry-run   # preview only
+```
+
+The script also registers the fixed subdomains. It reads `APP_ENVIRONMENT` / `ADYEN_ENVIRONMENT` from `.env` to determine the target environment.
+
+### Local development
+
+For local development, add these origins manually in the Adyen Customer Area:
+
+- `http://localhost:3000`
+- `http://<your-test-subdomain>.uplifterinc.localhost:3000`
+
+### Troubleshooting
+
+If a new org's checkout page shows CORS errors when loading the Adyen Drop-in:
+
+1. Check the browser console for the blocked origin URL
+2. Verify it exists in the Adyen Customer Area → API Credentials → Allowed Origins
+3. If missing, either run the backfill script or add it manually
+4. Check the server logs for "Failed to register Adyen allowed origin" errors from the signup flow
+
 ## Source Plan
 
 The overarching plan document with critical assessment of the original consultant proposal is at: `adyen_plan.md` (project root).

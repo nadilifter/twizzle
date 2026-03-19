@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { registerAllowedOrigin, removeAllowedOrigin } from "@/lib/adyen-platform";
 
 const DEACTIVATION_REASONS = [
   "Non-payment",
@@ -42,7 +43,7 @@ export async function PATCH(
 
     const organization = await db.organization.findUnique({
       where: { id },
-      include: { subscription: true },
+      include: { subscription: true, websiteConfig: true },
     });
 
     if (!organization) {
@@ -97,6 +98,10 @@ export async function PATCH(
         });
       });
 
+      if (organization.websiteConfig?.subdomain) {
+        void removeAllowedOrigin(organization.websiteConfig.subdomain);
+      }
+
       return NextResponse.json({
         success: true,
         message: "Organization deactivated successfully",
@@ -143,6 +148,10 @@ export async function PATCH(
           },
         });
       });
+
+      if (organization.websiteConfig?.subdomain) {
+        void registerAllowedOrigin(organization.websiteConfig.subdomain);
+      }
 
       return NextResponse.json({
         success: true,

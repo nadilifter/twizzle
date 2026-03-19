@@ -313,6 +313,49 @@ export async function refundPayment(
 }
 
 // ---------------------------------------------------------------------------
+// Allowed Origins (CORS whitelist for Adyen client-side SDK)
+// ---------------------------------------------------------------------------
+
+import { getSubdomainUrl } from "@/lib/env-domains";
+
+/**
+ * Register a subdomain as an allowed origin for the current Adyen API credential.
+ * Idempotent — skips if already registered. Catches errors so callers are never blocked.
+ */
+export async function registerAllowedOrigin(subdomain: string): Promise<void> {
+  const origin = getSubdomainUrl(subdomain);
+  try {
+    const api = getManagementApi();
+    const existing = await api.MyAPICredentialApi.getAllowedOrigins();
+    const origins: any[] = existing.data ?? existing ?? [];
+    if (origins.some((o: any) => o.domain === origin)) return;
+    await api.MyAPICredentialApi.addAllowedOrigin({ domain: origin });
+    console.log(`Adyen: registered allowed origin ${origin}`);
+  } catch (err) {
+    console.error(`Failed to register Adyen allowed origin for ${origin}:`, err);
+  }
+}
+
+/**
+ * Remove a subdomain's allowed origin from the current Adyen API credential.
+ * Idempotent — no-ops if not found. Catches errors so callers are never blocked.
+ */
+export async function removeAllowedOrigin(subdomain: string): Promise<void> {
+  const origin = getSubdomainUrl(subdomain);
+  try {
+    const api = getManagementApi();
+    const existing = await api.MyAPICredentialApi.getAllowedOrigins();
+    const origins: any[] = existing.data ?? existing ?? [];
+    const match = origins.find((o: any) => o.domain === origin);
+    if (!match) return;
+    await api.MyAPICredentialApi.removeAllowedOrigin(match.id);
+    console.log(`Adyen: removed allowed origin ${origin}`);
+  } catch (err) {
+    console.error(`Failed to remove Adyen allowed origin for ${origin}:`, err);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Management API
 // ---------------------------------------------------------------------------
 
