@@ -238,8 +238,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/discounts"],
   },
   "/dashboard/financials/integrations": {
-    status: "demo",
-    description: "Integration settings preview (hidden from sidebar)",
+    status: "live",
+    description: "Accounting integrations with QuickBooks Online and Xero",
+    apiRoutes: ["/api/integrations/qbo", "/api/integrations/xero"],
   },
   "/dashboard/financials/invoices": {
     status: "live",
