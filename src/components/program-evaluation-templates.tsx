@@ -40,7 +40,10 @@ import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 import { api } from "@/lib/api-client"
+import { Calendar as CalendarPicker } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { 
   EvaluationTemplateWithSkills,
   ProgramEvaluationTemplate,
@@ -266,13 +269,27 @@ export function ProgramEvaluationTemplates({ programId, programName }: ProgramEv
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="dueDate">Due Date (optional)</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
+                <Label>Due Date (optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {dueDate ? format(new Date(dueDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker
+                      mode="single"
+                      selected={dueDate ? new Date(dueDate + "T12:00:00Z") : undefined}
+                      onSelect={(date) => setDueDate(date ? format(date, "yyyy-MM-dd") : "")}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <DialogFooter>

@@ -78,6 +78,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useStaff, useMemberAvailability } from "@/hooks/use-staff"
 import { useShifts } from "@/hooks/use-shifts"
 import { api } from "@/lib/api-client"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { 
   ShiftWithRelations, 
   ShiftStatus, 
@@ -342,13 +346,27 @@ export default function SchedulesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input 
-                      id="date" 
-                      type="date" 
-                      value={formDate}
-                      onChange={(e) => setFormDate(e.target.value)}
-                    />
+                    <Label>Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn("w-full justify-start text-left font-normal", !formDate && "text-muted-foreground")}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formDate ? format(new Date(formDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={formDate ? new Date(formDate + "T12:00:00Z") : undefined}
+                          onSelect={(date) => setFormDate(date ? format(date, "yyyy-MM-dd") : "")}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">

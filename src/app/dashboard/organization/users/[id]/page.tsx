@@ -25,6 +25,9 @@ import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Calendar as CalendarPicker } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import {
   Card,
   CardContent,
@@ -706,13 +709,27 @@ export default function UserDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="hireDate">Hire Date</Label>
-                  <Input
-                    id="hireDate"
-                    type="date"
-                    value={hireDate}
-                    onChange={(e) => setHireDate(e.target.value)}
-                  />
+                  <Label>Hire Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn("w-full justify-start text-left font-normal", !hireDate && "text-muted-foreground")}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {hireDate ? format(new Date(hireDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarPicker
+                        mode="single"
+                        selected={hireDate ? new Date(hireDate + "T12:00:00Z") : undefined}
+                        onSelect={(date) => setHireDate(date ? format(date, "yyyy-MM-dd") : "")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
@@ -1087,13 +1104,26 @@ export default function UserDetailPage() {
 
             <div className="grid gap-2">
               <Label>Granted Date</Label>
-              <Input
-                type="date"
-                value={grantForm.grantedAt}
-                onChange={(e) =>
-                  setGrantForm((prev) => ({ ...prev, grantedAt: e.target.value }))
-                }
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal", !grantForm.grantedAt && "text-muted-foreground")}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {grantForm.grantedAt ? format(new Date(grantForm.grantedAt + "T12:00:00Z"), "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker
+                    mode="single"
+                    selected={grantForm.grantedAt ? new Date(grantForm.grantedAt + "T12:00:00Z") : undefined}
+                    onSelect={(date) => setGrantForm((prev) => ({ ...prev, grantedAt: date ? format(date, "yyyy-MM-dd") : "" }))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="grid gap-2">

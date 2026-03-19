@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   DownloadIcon,
   LandmarkIcon,
@@ -29,9 +28,13 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   InfoIcon,
+  Calendar as CalendarIcon,
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 interface Payout {
   id: string
@@ -73,8 +76,8 @@ export default function PayoutsPage() {
   const [total, setTotal] = React.useState(0)
   const [page, setPage] = React.useState(0)
   const [statusFilter, setStatusFilter] = React.useState<string>("all")
-  const [startDate, setStartDate] = React.useState("")
-  const [endDate, setEndDate] = React.useState("")
+  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined)
   const [stats, setStats] = React.useState<PayoutStats>({
     pendingAmount: 0,
     pendingCount: 0,
@@ -93,8 +96,8 @@ export default function PayoutsPage() {
       if (statusFilter && statusFilter !== "all") {
         params.set("status", statusFilter)
       }
-      if (startDate) params.set("startDate", startDate)
-      if (endDate) params.set("endDate", endDate)
+      if (startDate) params.set("startDate", format(startDate, "yyyy-MM-dd"))
+      if (endDate) params.set("endDate", format(endDate, "yyyy-MM-dd"))
 
       const response = await fetch(`/api/payouts?${params}`)
       if (!response.ok) throw new Error("Failed to fetch payouts")
@@ -142,8 +145,8 @@ export default function PayoutsPage() {
 
   const handleResetFilters = () => {
     setStatusFilter("all")
-    setStartDate("")
-    setEndDate("")
+    setStartDate(undefined)
+    setEndDate(undefined)
     setPage(0)
   }
 
@@ -240,27 +243,54 @@ export default function PayoutsPage() {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-muted-foreground">From</label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value)
-                  setPage(0)
-                }}
-                className="w-[160px]"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("w-[160px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "MMM d, yyyy") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      setStartDate(date)
+                      setPage(0)
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-muted-foreground">To</label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value)
-                  setPage(0)
-                }}
-                className="w-[160px]"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("w-[160px] justify-start text-left font-normal", !endDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "MMM d, yyyy") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => {
+                      setEndDate(date)
+                      setPage(0)
+                    }}
+                    disabled={(date) => startDate ? date < startDate : false}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={handleResetFilters}>

@@ -61,7 +61,10 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { Calendar as CalendarPicker } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface Feature {
   id: string
@@ -718,11 +721,26 @@ export default function SuperadminFeedbackPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Target Date</Label>
-                <Input
-                  type="date"
-                  value={editTargetDate}
-                  onChange={(e) => setEditTargetDate(e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !editTargetDate && "text-muted-foreground")}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {editTargetDate ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker
+                      mode="single"
+                      selected={editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined}
+                      onSelect={(date) => setEditTargetDate(date ? format(date, "yyyy-MM-dd") : "")}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="grid gap-2">
@@ -797,11 +815,26 @@ export default function SuperadminFeedbackPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Target Date</Label>
-                <Input
-                  type="date"
-                  value={editTargetDate}
-                  onChange={(e) => setEditTargetDate(e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !editTargetDate && "text-muted-foreground")}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {editTargetDate ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker
+                      mode="single"
+                      selected={editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined}
+                      onSelect={(date) => setEditTargetDate(date ? format(date, "yyyy-MM-dd") : "")}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="grid gap-2">
@@ -866,11 +899,26 @@ export default function SuperadminFeedbackPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Target Date (optional)</Label>
-                <Input
-                  type="date"
-                  value={editTargetDate}
-                  onChange={(e) => setEditTargetDate(e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !editTargetDate && "text-muted-foreground")}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {editTargetDate ? format(new Date(editTargetDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker
+                      mode="single"
+                      selected={editTargetDate ? new Date(editTargetDate + "T12:00:00Z") : undefined}
+                      onSelect={(date) => setEditTargetDate(date ? format(date, "yyyy-MM-dd") : "")}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           )}

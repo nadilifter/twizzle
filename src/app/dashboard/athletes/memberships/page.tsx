@@ -1,8 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Settings, Eye, RefreshCw, Shield, Users, Clock } from "lucide-react"
+import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Settings, Eye, RefreshCw, Shield, Users, Clock, Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -299,6 +302,9 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
   const trainingEnabled = isFeatureEnabled("training")
   const [isCreatingInstance, setIsCreatingInstance] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<"instances" | "restrictions">("instances")
+  const [instanceStartDate, setInstanceStartDate] = React.useState<Date | undefined>(undefined)
+  const [instanceEndDate, setInstanceEndDate] = React.useState<Date | undefined>(undefined)
+  const [instanceAutoRenewDate, setInstanceAutoRenewDate] = React.useState<Date | undefined>(undefined)
 
   React.useEffect(() => {
     fetchGroup(groupId)
@@ -313,15 +319,18 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
       name: formData.get("name") as string,
       price: parseFloat(formData.get("price") as string),
       billingInterval: formData.get("interval") as BillingInterval,
-      startDate: formData.get("startDate") as string,
-      endDate: formData.get("endDate") as string,
-      autoRenewDate: formData.get("autoRenewDate") as string || undefined,
+      startDate: instanceStartDate ? format(instanceStartDate, "yyyy-MM-dd") : "",
+      endDate: instanceEndDate ? format(instanceEndDate, "yyyy-MM-dd") : "",
+      autoRenewDate: instanceAutoRenewDate ? format(instanceAutoRenewDate, "yyyy-MM-dd") : undefined,
       status: (formData.get("status") as MembershipInstanceStatus) || "DRAFT",
     })
 
     if (result) {
       toast.success("Instance created")
       setIsCreatingInstance(false)
+      setInstanceStartDate(undefined)
+      setInstanceEndDate(undefined)
+      setInstanceAutoRenewDate(undefined)
     }
   }
 
@@ -428,11 +437,53 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label>Start Date</Label>
-                      <Input name="startDate" type="date" required />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal", !instanceStartDate && "text-muted-foreground")}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {instanceStartDate ? format(instanceStartDate, "PPP") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={instanceStartDate}
+                            onSelect={(date) => {
+                              setInstanceStartDate(date)
+                              if (instanceEndDate && date && instanceEndDate < date) setInstanceEndDate(undefined)
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="grid gap-2">
                       <Label>End Date</Label>
-                      <Input name="endDate" type="date" required />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal", !instanceEndDate && "text-muted-foreground")}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {instanceEndDate ? format(instanceEndDate, "PPP") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={instanceEndDate}
+                            onSelect={setInstanceEndDate}
+                            disabled={(date) => instanceStartDate ? date < instanceStartDate : false}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -448,7 +499,26 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                     </div>
                     <div className="grid gap-2">
                       <Label>Auto-Renew Date</Label>
-                      <Input name="autoRenewDate" type="date" />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal", !instanceAutoRenewDate && "text-muted-foreground")}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {instanceAutoRenewDate ? format(instanceAutoRenewDate, "PPP") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={instanceAutoRenewDate}
+                            onSelect={setInstanceAutoRenewDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                   <Button type="submit">Create Instance</Button>

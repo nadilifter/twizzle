@@ -65,6 +65,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { format } from "date-fns"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface ProgramConfigProps {
   program: any
@@ -716,37 +719,61 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
             {/* Date Selection */}
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="config-start-date">Start Date *</Label>
-                <Input
-                  id="config-start-date"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      startDate: e.target.value,
-                      endDate:
-                        e.target.value &&
-                        prev.endDate &&
-                        prev.endDate < e.target.value
-                          ? ""
-                          : prev.endDate,
-                    }))
-                  }
-                />
+                <Label>Start Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !formData.startDate && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.startDate ? format(new Date(formData.startDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.startDate ? new Date(formData.startDate + "T12:00:00Z") : undefined}
+                      onSelect={(date) =>
+                        setFormData((prev) => {
+                          const newStart = date ? format(date, "yyyy-MM-dd") : ""
+                          return {
+                            ...prev,
+                            startDate: newStart,
+                            endDate: newStart && prev.endDate && prev.endDate < newStart ? "" : prev.endDate,
+                          }
+                        })
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="config-end-date">End Date *</Label>
-                <Input
-                  id="config-end-date"
-                  type="date"
-                  value={formData.endDate}
-                  min={formData.startDate || undefined}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, endDate: e.target.value }))
-                  }
-                />
+                <Label>End Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !formData.endDate && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.endDate ? format(new Date(formData.endDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.endDate ? new Date(formData.endDate + "T12:00:00Z") : undefined}
+                      onSelect={(date) =>
+                        setFormData((prev) => ({ ...prev, endDate: date ? format(date, "yyyy-MM-dd") : "" }))
+                      }
+                      disabled={(date) => formData.startDate ? date < new Date(formData.startDate + "T12:00:00Z") : false}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 

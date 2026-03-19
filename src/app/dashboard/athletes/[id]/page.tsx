@@ -71,6 +71,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Calendar as CalendarPicker } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
 import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { type ColumnDef } from "@tanstack/react-table"
@@ -1099,14 +1102,27 @@ function EnrollInProgramDialog({
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="start-date">Start Date</Label>
-            <Input
-              id="start-date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-            />
+            <Label>Start Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {startDate ? format(new Date(startDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarPicker
+                  mode="single"
+                  selected={startDate ? new Date(startDate + "T12:00:00Z") : undefined}
+                  onSelect={(date) => setStartDate(date ? format(date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"))}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button

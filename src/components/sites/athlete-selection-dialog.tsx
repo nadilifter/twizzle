@@ -3,7 +3,11 @@
 import { useState, useEffect, useMemo } from "react"
 import { Loader2, Plus, User, Calendar, ChevronLeft, AlertCircle, Shield, Info } from "lucide-react"
 import { toast } from "sonner"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 import { calculateAge, isAgeEligible } from "@/lib/age-utils"
+import { Calendar as CalendarPicker } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 import {
   Dialog,
@@ -309,16 +313,31 @@ export function AthleteSelectionDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="athlete-birth-date">Date of Birth</Label>
-              <Input
-                id="athlete-birth-date"
-                type="date"
-                value={newAthlete.birthDate}
-                onChange={(e) =>
-                  setNewAthlete((prev) => ({ ...prev, birthDate: e.target.value }))
-                }
-                disabled={isCreating}
-              />
+              <Label>Date of Birth</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isCreating}
+                    className={cn("w-full justify-start text-left font-normal", !newAthlete.birthDate && "text-muted-foreground")}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {newAthlete.birthDate ? format(new Date(newAthlete.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker
+                    mode="single"
+                    selected={newAthlete.birthDate ? new Date(newAthlete.birthDate + "T12:00:00Z") : undefined}
+                    onSelect={(date) => setNewAthlete((prev) => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                    captionLayout="dropdown"
+                    fromYear={1940}
+                    toYear={new Date().getFullYear()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">

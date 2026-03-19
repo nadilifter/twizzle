@@ -50,7 +50,10 @@ import {
   Eye,
 } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { api, ApiError } from "@/lib/api-client";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import type { 
   EvaluationWithRelations, 
@@ -588,13 +591,27 @@ function CoachEvaluationsContent() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={evaluationDate}
-                onChange={(e) => setEvaluationDate(e.target.value)}
-              />
+              <Label>Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal", !evaluationDate && "text-muted-foreground")}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {evaluationDate ? format(new Date(evaluationDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker
+                    mode="single"
+                    selected={evaluationDate ? new Date(evaluationDate + "T12:00:00Z") : undefined}
+                    onSelect={(date) => setEvaluationDate(date ? format(date, "yyyy-MM-dd") : "")}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             {selectedTemplateId && (

@@ -30,6 +30,7 @@ import {
   Trash2,
   Heart,
   FileText,
+  Calendar as CalendarIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -717,11 +718,52 @@ export function CompetitionConfiguration({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Start Date</Label>
-                    <Input type="date" value={formData.startDate ? format(formData.startDate, "yyyy-MM-dd") : ""} onChange={e => { const [y, m, d] = (e.target.value || "").split("-").map(Number); setFormData(prev => ({ ...prev, startDate: e.target.value ? new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)) : null })); }} />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn("w-full justify-start text-left font-normal", !formData.startDate && "text-muted-foreground")}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.startDate ? format(formData.startDate, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={formData.startDate || undefined}
+                          onSelect={(date) => setFormData(prev => ({
+                            ...prev,
+                            startDate: date || null,
+                            endDate: prev.endDate && date && prev.endDate < date ? date : prev.endDate,
+                          }))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                 </div>
                 <div className="space-y-2">
                     <Label>End Date</Label>
-                    <Input type="date" value={formData.endDate ? format(formData.endDate, "yyyy-MM-dd") : ""} onChange={e => { const [y, m, d] = (e.target.value || "").split("-").map(Number); setFormData(prev => ({ ...prev, endDate: e.target.value ? new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)) : null })); }} />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn("w-full justify-start text-left font-normal", !formData.endDate && "text-muted-foreground")}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.endDate ? format(formData.endDate, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={formData.endDate || undefined}
+                          onSelect={(date) => setFormData(prev => ({ ...prev, endDate: date || null }))}
+                          disabled={(date) => formData.startDate ? date < formData.startDate : false}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                 </div>
             </div>
 
@@ -1375,7 +1417,26 @@ export function CompetitionConfiguration({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Date</Label>
-                            <Input type="date" value={formData.scheduledGoLiveDate ? format(formData.scheduledGoLiveDate, "yyyy-MM-dd") : ""} onChange={e => { const [y, m, d] = (e.target.value || "").split("-").map(Number); setFormData(prev => ({ ...prev, scheduledGoLiveDate: e.target.value ? new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)) : null })); }} />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn("w-full justify-start text-left font-normal", !formData.scheduledGoLiveDate && "text-muted-foreground")}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {formData.scheduledGoLiveDate ? format(formData.scheduledGoLiveDate, "PPP") : "Pick a date"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={formData.scheduledGoLiveDate || undefined}
+                                  onSelect={(date) => setFormData(prev => ({ ...prev, scheduledGoLiveDate: date || null }))}
+                                  disabled={(date) => date < new Date()}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                         </div>
                         <div className="space-y-2">
                             <Label>Time</Label>

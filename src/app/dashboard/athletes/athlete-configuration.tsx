@@ -6,11 +6,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, User } from "lucide-react"
+import { Loader2, User, Calendar as CalendarIcon } from "lucide-react"
 import { toast } from "sonner"
 import { useGuardians } from "@/hooks/use-guardians"
 import { useLevels } from "@/hooks/use-levels"
 import type { AthleteStatus, UpdateAthletePayload } from "@/types/athletes"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface AthleteData {
   id: string
@@ -135,13 +139,30 @@ export function AthleteConfiguration({ athlete, onClose, onUpdated }: AthleteCon
           {/* Date of Birth & Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="config-dob">Date of Birth</Label>
-              <Input
-                id="config-dob"
-                type="date"
-                value={formData.birthDate}
-                onChange={(e) => setFormData((prev) => ({ ...prev, birthDate: e.target.value }))}
-              />
+              <Label>Date of Birth</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal", !formData.birthDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.birthDate ? format(new Date(formData.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.birthDate ? new Date(formData.birthDate + "T12:00:00Z") : undefined}
+                    onSelect={(date) => setFormData((prev) => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                    captionLayout="dropdown"
+                    fromYear={1940}
+                    toYear={new Date().getFullYear()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label htmlFor="config-status">Status *</Label>
