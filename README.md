@@ -158,7 +158,8 @@ APP_ENVIRONMENT=production
   * `check-schema-drift.sh` - Detects schema/migration drift (see below)
   * `deploy-staging.sh` - Staging deployment helper
   * `secrets-decrypt.sh` / `secrets-encrypt.sh` / `secrets-edit.sh` - Secrets management
-  * `provision-adyen-staging.ts` - Provisions Adyen webhooks and HMAC keys for staging via the Management API, then SSHs into EC2 to update `.env.uplifter` (run with `npx tsx scripts/provision-adyen-staging.ts`)
+  * `provision-adyen.ts` - Provisions Adyen API credentials, webhooks, and HMAC keys for any environment via the Management API (run with `npx tsx scripts/provision-adyen.ts --env staging`)
+  * `provision-adyen-staging.ts` - (Legacy) Staging-only Adyen webhook provisioning; use `provision-adyen.ts` instead
   * `migrate-states.ts` - One-time migration that converts full state/province names (e.g. "Virginia") to 2-letter ISO codes (e.g. "VA") across all address tables
 * `.husky/` - Git hooks
   * `pre-commit` - Blocks commits that modify `schema.prisma` without a corresponding migration
@@ -423,6 +424,20 @@ Each environment has:
 | Others | TEST | ca-test.adyen.com |
 
 Set `ADYEN_ENVIRONMENT=TEST` for non-production environments.
+
+**Balance Platform model**: The platform uses Adyen's Balance Platform (marketplace model) for onboarding, payouts, and fund management. Each onboarded organization gets:
+- A Legal Entity, Account Holder, and Balance Account in Adyen
+- A daily sweep that automatically transfers collected funds to the org's bank account
+- Webhook-driven payout tracking (status updates, bank account details, estimated arrival times)
+
+**Provisioning**: Use the provisioning script to set up Adyen API credentials, webhooks, and HMAC keys for any environment:
+
+```bash
+npx tsx scripts/provision-adyen.ts --env staging --dry-run    # preview
+npx tsx scripts/provision-adyen.ts --env staging --output .env.adyen  # create
+```
+
+See `docs/adyen-platform/README.md` for the full integration spec and phase breakdown.
 
 ### SMS (Twilio)
 

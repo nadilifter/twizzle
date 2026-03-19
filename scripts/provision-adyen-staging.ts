@@ -1,5 +1,11 @@
 /**
- * Adyen Staging Provisioning Script
+ * @deprecated Use scripts/provision-adyen.ts instead, which supports all
+ * environments and also creates API credentials programmatically:
+ *   npx tsx scripts/provision-adyen.ts --env staging --deploy-ssh uplifter-staging
+ *
+ * ---
+ *
+ * Adyen Staging Provisioning Script (LEGACY)
  *
  * Automates the creation of Adyen webhook subscriptions and HMAC keys
  * for the staging environment, then patches the EC2 .env.uplifter file

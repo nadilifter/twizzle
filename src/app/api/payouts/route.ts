@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
 
     const payout = await scopedDb.payout.create({
       data: {
+        organizationId: session.user.organizationId,
         reference: validatedData.reference,
         amount: validatedData.amount,
         fees: validatedData.fees,

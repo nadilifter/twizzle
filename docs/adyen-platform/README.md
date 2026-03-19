@@ -28,6 +28,7 @@ flowchart TD
     P5["Phase 5: Recurring"]
     P6["Phase 6: Negative Balance"]
     P7["Phase 7: Reporting"]
+    P8["Phase 8: Payouts"]
 
     P0 --> P1
     P1 --> P2
@@ -39,6 +40,8 @@ flowchart TD
     P2 --> P7
     P4 --> P7
     P5 --> P7
+    P2 --> P8
+    P7 --> P8
 ```
 
 ## Phase Index
@@ -53,8 +56,9 @@ flowchart TD
 | 5 | [Recurring Charges](phase-5-recurring-charges.md) | Backend (new + modify) | 2-3 days | Medium |
 | 6 | [Negative Balance](phase-6-negative-balance.md) | Backend (new) | 1-2 days | None |
 | 7 | [Reporting](phase-7-reporting.md) | Backend + frontend | 3-5 days | Low |
+| 8 | [Payouts](phase-8-payouts.md) | Backend + frontend + DevOps | 3-5 days | Low |
 
-**Total estimated effort**: 13-22 days
+**Total estimated effort**: 16-27 days
 
 ## Key Files
 
@@ -71,6 +75,11 @@ flowchart TD
 | `src/app/api/recurring/route.ts` | Recurring charge batch | Phase 5 |
 | `src/app/dashboard/financials/onboarding/page.tsx` | Onboarding dashboard | Phase 3 |
 | `src/app/dashboard/financials/page.tsx` | Financial dashboard | Phase 7 |
+| `src/app/api/payouts/route.ts` | Payouts list/create API | Phase 8 |
+| `src/app/api/payouts/[id]/route.ts` | Payout detail API | Phase 8 |
+| `src/app/dashboard/financials/payouts/page.tsx` | Payouts list page | Phase 8 |
+| `src/app/dashboard/financials/payouts/[id]/page.tsx` | Payout detail page | Phase 8 |
+| `scripts/provision-adyen.ts` | Multi-env Adyen provisioning | Phase 8 |
 
 ## Environment Variables
 
@@ -152,23 +161,35 @@ When testing the Adyen hosted onboarding flow in the `TEST` environment, use the
 
 ### Automated provisioning (recommended)
 
-The `scripts/provision-adyen-staging.ts` script automates webhook creation and HMAC key distribution:
+The `scripts/provision-adyen.ts` script automates API credential creation, webhook setup, and HMAC key generation for any environment:
 
 ```bash
-npx tsx scripts/provision-adyen-staging.ts          # run for real
-npx tsx scripts/provision-adyen-staging.ts --dry-run # preview only
+# Preview what will be created
+npx tsx scripts/provision-adyen.ts --env staging --dry-run
+
+# Create credentials and webhooks, output .env fragment
+npx tsx scripts/provision-adyen.ts --env staging --output .env.adyen
+
+# Create and deploy directly to remote host via SSH
+npx tsx scripts/provision-adyen.ts --env staging --deploy-ssh uplifter-staging
+
+# Production
+npx tsx scripts/provision-adyen.ts --env production --output .env.adyen
 ```
 
 The script:
 1. Discovers the Company ID from the Management API using your local `ADYEN_API_KEY`
-2. Creates 4 webhook subscriptions (1 standard payment + 3 balance platform) pointing to `https://admin.upliftergymnastics.com`
-3. Generates HMAC keys for each webhook
-4. SSHs into the EC2 instance via `uplifter-staging` and patches `~/.env.uplifter`
+2. Creates or finds 3 API credentials (checkout, platform, LEM) and generates API keys
+3. Creates 4 webhook subscriptions (1 standard payment + 3 balance platform) pointing to the environment's admin URL
+4. Generates HMAC keys for each webhook
+5. Outputs all keys as a `.env` fragment (optionally writes to file or deploys via SSH)
 
 After running, redeploy to pick up the new environment variables:
 ```bash
 ./scripts/deploy-staging.sh
 ```
+
+> **Legacy**: The older `scripts/provision-adyen-staging.ts` is kept for backward compatibility but `provision-adyen.ts` is the preferred replacement.
 
 ### Manual alternative
 

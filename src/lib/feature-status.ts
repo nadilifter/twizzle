@@ -257,9 +257,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     apiRoutes: ["/api/organization/adyen-onboarding", "/api/organization/adyen-onboarding/finalize", "/api/organization/adyen-onboarding/link"],
   },
   "/dashboard/financials/payouts": {
-    status: "demo",
+    status: "live",
     description: "Payout tracking and settlement history",
-    apiRoutes: ["/api/payouts"],
+    apiRoutes: ["/api/payouts", "/api/payouts/[id]"],
   },
   "/dashboard/financials/recurring": {
     status: "live",
