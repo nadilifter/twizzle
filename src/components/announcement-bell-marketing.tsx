@@ -9,14 +9,21 @@ import { useState } from "react"
 interface AnnouncementBellMarketingProps {
   organizationId?: string
   unreadCount?: number
+  onClose?: () => void
 }
 
 export function AnnouncementBellMarketing({
   organizationId,
   unreadCount = 0,
+  onClose,
 }: AnnouncementBellMarketingProps) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = React.useState(false)
+
+  const handleOpenChange = (value: boolean) => {
+    setOpen(value)
+    if (!value) onClose?.()
+  }
 
   React.useEffect(() => {
     setMounted(true)
@@ -31,7 +38,7 @@ export function AnnouncementBellMarketing({
   }
 
   return (
-    <AnnouncementsTray open={open} onOpenChange={setOpen} organizationId={organizationId}>
+    <AnnouncementsTray open={open} onOpenChange={handleOpenChange} organizationId={organizationId}>
       <Button
         variant="ghost"
         size="icon"

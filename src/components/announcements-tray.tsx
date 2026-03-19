@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AnnouncementCard, type AnnouncementItem } from "./announcement-card"
 import { CheckCheck, Loader2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface AnnouncementsTrayProps {
   children: React.ReactNode
@@ -95,7 +96,9 @@ export function AnnouncementsTray({
         <SheetHeader className="space-y-1">
           <div className="flex items-center justify-between">
             <SheetTitle>Announcements</SheetTitle>
-            {unreadCount > 0 && (
+            {loading ? (
+              <Skeleton className="h-7 w-24 rounded-md" />
+            ) : unreadCount > 0 ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -110,19 +113,25 @@ export function AnnouncementsTray({
                 )}
                 Mark all read
               </Button>
-            )}
+            ) : null}
           </div>
-          <SheetDescription>
-            {unreadCount > 0
-              ? `You have ${unreadCount} unread announcement${unreadCount !== 1 ? "s" : ""}`
-              : "You're all caught up!"}
-          </SheetDescription>
+          {loading ? (
+            <Skeleton className="h-4 w-40" />
+          ) : (
+            <SheetDescription>
+              {unreadCount > 0
+                ? `You have ${unreadCount} unread announcement${unreadCount !== 1 ? "s" : ""}`
+                : "You're all caught up!"}
+            </SheetDescription>
+          )}
         </SheetHeader>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="space-y-3 py-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
             </div>
           ) : announcements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">

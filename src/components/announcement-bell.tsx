@@ -7,17 +7,24 @@ import { useState } from "react"
 
 interface AnnouncementBellProps extends React.ComponentPropsWithoutRef<"button"> {
   unreadCount?: number
+  onClose?: () => void
 }
 
 export function AnnouncementBell({
   className,
   unreadCount = 0,
+  onClose,
   ...props
 }: AnnouncementBellProps) {
   const [open, setOpen] = useState(false)
 
+  const handleOpenChange = (value: boolean) => {
+    setOpen(value)
+    if (!value) onClose?.()
+  }
+
   return (
-    <AnnouncementsTray open={open} onOpenChange={setOpen}>
+    <AnnouncementsTray open={open} onOpenChange={handleOpenChange}>
       <button
         onClick={() => setOpen(true)}
         className={cn(
