@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { verifyWebhookSignature } from "@/lib/adyen"
 import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice-processing"
 import { sendTemplatedEmail } from "@/lib/email"
+import { getSubdomainUrl } from "@/lib/env-domains"
 
 /**
  * POST /api/webhooks/adyen
@@ -191,15 +192,12 @@ async function handleAuthorisation(
     const recipientName = invoice.user?.name?.split(" ")[0]
 
     if (recipientEmail) {
-      const protocol = request.headers.get("x-forwarded-proto") || "https"
-      const host = request.headers.get("host")
-
       const config = await db.websiteConfig.findFirst({
         where: { organizationId: invoice.organizationId },
         select: { subdomain: true },
       })
       const slug = config?.subdomain || ""
-      const receiptUrl = `${protocol}://${host}/sites/${slug}/receipt/${invoice.id}`
+      const receiptUrl = `${getSubdomainUrl(slug)}/receipt/${invoice.id}`
 
       const lineItemsHtml = invoice.lineItems
         .map((li) =>

@@ -735,7 +735,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     }
     await completeRegistration()
     clearCart()
-    router.push(`/sites/${params.slug}/receipt/${freeCheckoutInvoiceId}`)
+    router.push(`/receipt/${freeCheckoutInvoiceId}`)
   }
 
   const handlePaymentCompleted = async (result: any) => {
@@ -752,7 +752,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       clearCart()
       await completeRegistration()
       if (checkoutInvoiceId) {
-        router.push(`/sites/${params.slug}/receipt/${checkoutInvoiceId}`)
+        router.push(`/receipt/${checkoutInvoiceId}`)
       }
     } else {
       setPaymentError(`Payment was not successful (${result.resultCode}). Please try again.`)

@@ -945,7 +945,7 @@ export async function POST(
     // We'll use the invoice ID as reference so we can update it later
     const protocol = request.headers.get("x-forwarded-proto") || "http";
     const host = request.headers.get("host");
-    const returnUrl = `${protocol}://${host}/sites/${subdomain}/receipt/${invoice.id}`;
+    const returnUrl = `${protocol}://${host}/receipt/${invoice.id}`;
 
     const session = await createPaymentSession(
         total,
