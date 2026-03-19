@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const athleteId = formData.get("athleteId") as string;
-    const organizationId = formData.get("organizationId") as string;
+    const organizationId = session.user.organizationId;
     const programId = (formData.get("programId") as string) || null;
     const competitionId = (formData.get("competitionId") as string) || null;
     const eventId = (formData.get("eventId") as string) || null;

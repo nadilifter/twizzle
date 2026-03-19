@@ -205,11 +205,32 @@ export async function DELETE(
       return NextResponse.json({ error: "type and id query params are required" }, { status: 400 });
     }
 
+    const scopedDb = getScopedDb(session.user.organizationId);
+    const group = await scopedDb.membershipGroup.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!group) {
+      return NextResponse.json({ error: "Membership Group not found" }, { status: 404 });
+    }
+
     if (type === "level") {
+      const req = await db.membershipGroupLevelRequirement.findFirst({
+        where: { id: requirementId, membershipGroupId: params.id },
+      });
+      if (!req) {
+        return NextResponse.json({ error: "Requirement not found" }, { status: 404 });
+      }
       await db.membershipGroupLevelRequirement.delete({
         where: { id: requirementId },
       });
     } else if (type === "waiver") {
+      const req = await db.membershipGroupWaiverRequirement.findFirst({
+        where: { id: requirementId, membershipGroupId: params.id },
+      });
+      if (!req) {
+        return NextResponse.json({ error: "Requirement not found" }, { status: 404 });
+      }
       await db.membershipGroupWaiverRequirement.delete({
         where: { id: requirementId },
       });

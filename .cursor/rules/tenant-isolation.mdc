@@ -1,0 +1,61 @@
+---
+description: Multi-tenant data isolation requirements to prevent cross-organization data leakage
+globs:
+  - src/app/api/**/*.ts
+  - src/lib/db.ts
+  - src/lib/auth.ts
+  - prisma/seed*.ts
+---
+
+# Tenant Isolation
+
+Every database query in an API route MUST be scoped to `session.user.organizationId`. Failing to do so creates a cross-organization data leak.
+
+## Primary Mechanism: `getScopedDb`
+
+For models listed in `TENANT_MODELS` (see `src/lib/db.ts`), use `getScopedDb` instead of raw `db`. It automatically injects `organizationId` into all read, create, update, and delete operations.
+
+```typescript
+import { getScopedDb } from "@/lib/db";
+
+const scopedDb = getScopedDb(session.user.organizationId);
+const programs = await scopedDb.program.findMany(); // auto-filtered
+```
+
+## Relation-Scoped Models
+
+Some models don't have a direct `organizationId` field. Filter them through a relation:
+
+| Model | Filter via |
+|---|---|
+| `Payment` | `invoice: { organizationId }` |
+| `Enrollment` | `program: { organizationId }` |
+| `AthleteMembership` | `instance: { group: { organizationId } }` |
+| `Attendance` / `InstanceAttendance` | `event: { organizationId }` / `programInstance: { organizationId }` |
+| `WaiverAcceptance` | `waiver: { organizationId }` |
+| `CompetitionEntry` | `competition: { organizationId }` |
+| `LineItem` | `invoice: { organizationId }` |
+| `Evaluation` | `program: { organizationId }` (or coach membership for unlinked evals) |
+| `Athlete` (list) | `organizationAthletes: { some: { organizationId } }` |
+
+## Rules
+
+1. **Always use `session.user.organizationId`** from the NextAuth session. NEVER trust a client-provided `organizationId` from request body, query params, or form data.
+
+2. **Mutations must be scoped, not just reads.** Do NOT use a "check-then-act" pattern where you verify ownership with an org filter but then `update`/`delete` with only `where: { id }`. Either:
+   - Use `getScopedDb` for the mutation (preferred outside transactions), or
+   - Add `organizationId` to the `where` clause inside transactions via `findFirst` verification
+
+3. **Inside `$transaction` callbacks**, the `tx` client does NOT have `getScopedDb` extensions. Add a defensive `tx.model.findFirst({ where: { id, organizationId } })` check before mutating.
+
+4. **Shared data exception:** `AthleteMedicalInfo` is intentionally shared across organizations for safety. Do NOT filter medical info by org.
+
+5. **Platform-level models** (`OrganizationSubscription`, `OrganizationFeatureOverride`, `OrganizationPaymentMethod`, `AdyenPlatformAccount`, `OrganizationStatusLog`) are managed by superadmins and excluded from tenant scoping.
+
+## Checklist for New API Routes
+
+- [ ] All `findMany` / `findFirst` / `count` calls are org-scoped
+- [ ] Create operations set `organizationId` (auto if using `getScopedDb`)
+- [ ] Update/delete operations verify org ownership before mutating
+- [ ] No client-provided `organizationId` is trusted
+- [ ] Related-model queries filter through the org relation chain

@@ -89,11 +89,13 @@ export async function GET(
           orderBy: { isPrimary: "desc" as const },
         },
         enrollments: {
+          where: { program: { organizationId: session.user.organizationId } },
           include: {
             program: true,
           },
         },
         attendances: {
+          where: { event: { organizationId: session.user.organizationId } },
           orderBy: { createdAt: "desc" },
           take: 20,
           include: {
@@ -108,6 +110,12 @@ export async function GET(
           },
         },
         evaluations: {
+          where: {
+            OR: [
+              { program: { organizationId: session.user.organizationId } },
+              { programId: null, coach: { memberships: { some: { organizationId: session.user.organizationId } } } },
+            ],
+          },
           orderBy: { date: "desc" },
           include: {
             coach: {
@@ -124,6 +132,7 @@ export async function GET(
           },
         },
         lineItems: {
+          where: { invoice: { organizationId: session.user.organizationId } },
           orderBy: { createdAt: "desc" },
           take: 10,
           include: {
@@ -144,9 +153,12 @@ export async function GET(
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
-    // Fetch memberships for this athlete
+    // Fetch memberships for this athlete (scoped to current org)
     const athleteMemberships = await db.athleteMembership.findMany({
-      where: { athleteId: id },
+      where: {
+        athleteId: id,
+        instance: { group: { organizationId: session.user.organizationId } },
+      },
       include: {
         instance: {
           include: {
@@ -167,9 +179,12 @@ export async function GET(
       endDate: m.endDate?.toISOString() ?? null,
     }));
 
-    // Fetch waiver acceptances and signatures for this athlete
+    // Fetch waiver acceptances and signatures for this athlete (scoped to current org)
     const waiverAcceptances = await db.waiverAcceptance.findMany({
-      where: { athleteId: id },
+      where: {
+        athleteId: id,
+        waiver: { organizationId: session.user.organizationId },
+      },
       include: {
         waiver: {
           include: {
@@ -228,9 +243,12 @@ export async function GET(
       }),
     }));
 
-    // Fetch competition entries for this athlete
+    // Fetch competition entries for this athlete (scoped to current org)
     const competitionEntries = await db.competitionEntry.findMany({
-      where: { athleteId: id },
+      where: {
+        athleteId: id,
+        competition: { organizationId: session.user.organizationId },
+      },
       include: {
         competition: {
           select: {
@@ -258,9 +276,12 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    // Fetch instance registrations (event sessions) for this athlete
+    // Fetch instance registrations (event sessions) for this athlete (scoped to current org)
     const instanceRegistrations = await db.instanceRegistration.findMany({
-      where: { athleteId: id },
+      where: {
+        athleteId: id,
+        programInstance: { organizationId: session.user.organizationId },
+      },
       include: {
         programInstance: {
           include: {
@@ -272,9 +293,12 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    // Fetch instance attendance records to pair with registrations
+    // Fetch instance attendance records to pair with registrations (scoped to current org)
     const instanceAttendances = await db.instanceAttendance.findMany({
-      where: { athleteId: id },
+      where: {
+        athleteId: id,
+        programInstance: { organizationId: session.user.organizationId },
+      },
       select: { programInstanceId: true, status: true },
     });
     const attendanceByInstance = new Map(

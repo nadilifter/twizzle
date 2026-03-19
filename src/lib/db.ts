@@ -12,7 +12,10 @@ if (process.env.NODE_ENV !== "production") {
   globalThis.prismaClient = db;
 }
 
-// Models that have a direct organizationId field
+// Models that have a direct organizationId field and should be auto-scoped.
+// Platform-level models (OrganizationSubscription, OrganizationFeatureOverride,
+// OrganizationPaymentMethod, AdyenPlatformAccount, OrganizationStatusLog) are
+// intentionally excluded -- they are managed by superadmins.
 const TENANT_MODELS = [
   "Program",
   "Event",
@@ -29,6 +32,38 @@ const TENANT_MODELS = [
   "LedgerEntry",
   "Product",
   "Waiver",
+  "OrganizationInvitation",
+  "OrganizationAthlete",
+  "MedicalFormConfig",
+  "CustomMedicalQuestion",
+  "Level",
+  "ProgramInstance",
+  "Transaction",
+  "Payout",
+  "RecurringCharge",
+  "EvaluationTemplate",
+  "Achievement",
+  "SmsMessage",
+  "SmsCampaign",
+  "SmsConversation",
+  "SmsUsage",
+  "EmailMessage",
+  "EmailCampaign",
+  "EmailUsage",
+  "Media",
+  "Facility",
+  "Equipment",
+  "Shift",
+  "ScheduleTemplate",
+  "RegistrationQueueConfig",
+  "NotificationRule",
+  "NotificationLog",
+  "Competition",
+  "CompetitionTeam",
+  "RegistrationFile",
+  "Certification",
+  "OrganizationSport",
+  "OrganizationCategoryPreference",
 ] as const;
 
 // Helper type for models that have organizationId

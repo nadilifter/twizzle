@@ -20,9 +20,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = validateDiscountSchema.parse(body);
 
-    // Find the discount by code
-    const discount = await db.discount.findUnique({
-      where: { code: validatedData.code },
+    const discount = await db.discount.findFirst({
+      where: { code: validatedData.code, organizationId: session.user.organizationId },
     });
 
     if (!discount) {

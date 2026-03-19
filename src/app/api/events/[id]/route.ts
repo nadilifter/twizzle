@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -174,7 +174,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    const event = await db.event.update({
+    const scopedDb = getScopedDb(session.user.organizationId);
+    const event = await scopedDb.event.update({
       where: { id },
       data: {
         title: validatedData.title,
@@ -246,7 +247,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    await db.event.delete({ where: { id } });
+    const scopedDb = getScopedDb(session.user.organizationId);
+    await scopedDb.event.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

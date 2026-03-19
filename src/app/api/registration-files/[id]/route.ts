@@ -17,8 +17,8 @@ export async function GET(
 
     const { id } = await params;
 
-    const file = await db.registrationFile.findUnique({
-      where: { id },
+    const file = await db.registrationFile.findFirst({
+      where: { id, organizationId: session.user.organizationId },
     });
 
     if (!file) {
@@ -61,15 +61,14 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const file = await db.registrationFile.findUnique({
-      where: { id },
+    const file = await db.registrationFile.findFirst({
+      where: { id, organizationId: session.user.organizationId },
     });
 
     if (!file) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    // Delete from storage
     if (file.storageKey) {
       try {
         await deleteFile("documents", file.storageKey);
@@ -84,7 +83,7 @@ export async function DELETE(
       }
     }
 
-    await db.registrationFile.delete({ where: { id } });
+    await db.registrationFile.delete({ where: { id: file.id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

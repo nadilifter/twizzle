@@ -57,6 +57,10 @@ export async function GET(
 
     const where = {
       athleteId,
+      OR: [
+        { program: { organizationId: session.user.organizationId } },
+        { programId: null, coach: { memberships: { some: { organizationId: session.user.organizationId } } } },
+      ],
       ...(status && { status: status as "PENDING" | "IN_PROGRESS" | "PASS" | "RETRY" | "EXCELLENT" | "SATISFACTORY" }),
       ...(startDate && endDate && {
         date: {

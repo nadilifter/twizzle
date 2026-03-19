@@ -322,9 +322,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    // Check if entry is pending
-    const entry = await db.ledgerEntry.findUnique({
-      where: { id },
+    const entry = await db.ledgerEntry.findFirst({
+      where: { id, organizationId: session.user.organizationId },
     });
 
     if (!entry) {

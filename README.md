@@ -200,16 +200,23 @@ This uses `prisma migrate diff` under the hood and exits non-zero if there is un
 
 ---
 
-## Multi-Tenant and White-Label Assumptions
+## Tenant Isolation
 
-This base does not implement full multi-tenancy out of the box, but it **must not prevent** the following:
+The platform is multi-tenant: every organization's data must be isolated from every other organization's data. The current user's organization is determined by `session.user.organizationId` from the NextAuth JWT.
 
-* White-labeled applications
-* Customer-facing marketing websites
-* Custom domains and subdomains per customer
-* Hosting many independent sites on shared infrastructure
-* Strong isolation between tenants
-* Large registration or checkout surges
+### Enforcement Mechanism
+
+`getScopedDb(organizationId)` in `src/lib/db.ts` returns a Prisma client extension that automatically injects `organizationId` filters into all read, create, update, and delete operations for models listed in the `TENANT_MODELS` array. All API routes should use `getScopedDb` instead of the raw `db` import for tenant-scoped models.
+
+### Key Rules
+
+* **Never trust client-provided `organizationId`** — always use `session.user.organizationId`
+* **Mutations must be scoped**, not just reads — do not check ownership then mutate by `{ id }` alone
+* **Models without a direct `organizationId`** (e.g. `Payment`, `Enrollment`) must be filtered through their relation chain (e.g. `invoice: { organizationId }`)
+* **`AthleteMedicalInfo`** is intentionally shared across organizations for safety
+* **Platform-level models** (`OrganizationSubscription`, `OrganizationFeatureOverride`, `OrganizationPaymentMethod`, `AdyenPlatformAccount`, `OrganizationStatusLog`) are managed by superadmins and excluded from tenant scoping
+
+See `src/app/api/README.md` for detailed API development conventions and scoping patterns.
 
 ---
 

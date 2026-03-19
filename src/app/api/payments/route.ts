@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     const where: Record<string, unknown> = {
+      invoice: { organizationId: session.user.organizationId },
       ...(userId ? { userId } : {}),
       ...(invoiceId && { invoiceId }),
       ...(status && { status: status as "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" }),

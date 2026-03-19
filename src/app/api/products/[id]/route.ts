@@ -113,8 +113,7 @@ export async function PUT(
       }
     }
 
-    // Update the product
-    const product = await db.product.update({
+    const product = await scopedDb.product.update({
       where: { id },
       data: validatedData,
     });
@@ -171,8 +170,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    // Soft delete - just set isActive to false
-    const product = await db.product.update({
+    const product = await scopedDb.product.update({
       where: { id },
       data: { isActive: false },
     });

@@ -92,7 +92,14 @@ export async function PUT(
     const validatedData = updateWaiverSchema.parse(body);
 
     const waiver = await db.$transaction(async (tx) => {
-      // Update waiver fields
+      const verified = await tx.waiver.findFirst({
+        where: { id, organizationId: session.user.organizationId },
+        select: { id: true },
+      });
+      if (!verified) {
+        throw new Error("Waiver not found or access denied");
+      }
+
       await tx.waiver.update({
         where: { id },
         data: {
@@ -179,7 +186,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Waiver not found" }, { status: 404 });
     }
 
-    await db.waiver.delete({
+    await scopedDb.waiver.delete({
       where: { id },
     });
 

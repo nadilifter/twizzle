@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -29,8 +29,9 @@ export async function GET(
     }
 
     const { id } = await params;
-    
-    const discount = await db.discount.findUnique({
+    const scopedDb = getScopedDb(session.user.organizationId);
+
+    const discount = await scopedDb.discount.findUnique({
       where: { id },
       include: {
         lineItems: {
@@ -135,8 +136,9 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const validatedData = updateDiscountSchema.parse(body);
+    const scopedDb = getScopedDb(session.user.organizationId);
 
-    const existing = await db.discount.findUnique({
+    const existing = await scopedDb.discount.findUnique({
       where: { id },
     });
 
@@ -146,7 +148,7 @@ export async function PATCH(
 
     // If changing code, check for uniqueness
     if (validatedData.code && validatedData.code !== existing.code) {
-      const existingWithCode = await db.discount.findUnique({
+      const existingWithCode = await scopedDb.discount.findFirst({
         where: { code: validatedData.code },
       });
       if (existingWithCode) {
@@ -178,7 +180,7 @@ export async function PATCH(
     if (validatedData.usageLimit !== undefined) updateData.usageLimit = validatedData.usageLimit;
     if (validatedData.status !== undefined) updateData.status = validatedData.status;
 
-    const discount = await db.discount.update({
+    const discount = await scopedDb.discount.update({
       where: { id },
       data: updateData,
     });
@@ -218,8 +220,9 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const scopedDb = getScopedDb(session.user.organizationId);
 
-    const existing = await db.discount.findUnique({
+    const existing = await scopedDb.discount.findUnique({
       where: { id },
       include: {
         _count: {
@@ -234,7 +237,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Discount not found" }, { status: 404 });
     }
 
-    // Prevent deletion of discounts that have been used
     if (existing._count.lineItems > 0) {
       return NextResponse.json(
         { error: "Cannot delete a discount that has been used. Set it to expired instead." },
@@ -242,7 +244,7 @@ export async function DELETE(
       );
     }
 
-    await db.discount.delete({ where: { id } });
+    await scopedDb.discount.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

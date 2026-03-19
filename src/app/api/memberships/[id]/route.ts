@@ -132,6 +132,14 @@ export async function PATCH(
     }
 
     const result = await db.$transaction(async (tx) => {
+      const verified = await tx.membershipGroup.findFirst({
+        where: { id: params.id, organizationId: session.user.organizationId },
+        select: { id: true },
+      });
+      if (!verified) {
+        throw new Error("Membership group not found or access denied");
+      }
+
       const updatedGroup = await tx.membershipGroup.update({
         where: { id: params.id },
         data: validatedData,

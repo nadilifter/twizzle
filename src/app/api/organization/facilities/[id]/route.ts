@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const updateFacilitySchema = z.object({
@@ -187,7 +187,8 @@ export async function DELETE(
       }
     }
 
-    await db.facility.delete({
+    const scopedDb = getScopedDb(organizationId);
+    await scopedDb.facility.delete({
       where: { id },
     });
 

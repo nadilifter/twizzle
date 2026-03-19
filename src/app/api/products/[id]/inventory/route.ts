@@ -123,9 +123,15 @@ export async function POST(
       return NextResponse.json(product);
     }
 
-    // Update product and create stock movement in a transaction
     const updatedProduct = await db.$transaction(async (tx) => {
-      // Create stock movement record
+      const verified = await tx.product.findFirst({
+        where: { id, organizationId: session.user.organizationId },
+        select: { id: true },
+      });
+      if (!verified) {
+        throw new Error("Product not found or access denied");
+      }
+
       await tx.stockMovement.create({
         data: {
           productId: id,

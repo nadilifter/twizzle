@@ -82,7 +82,7 @@ export async function GET(
       },
     });
 
-    if (!user) {
+    if (!user || user.athleteGuardians.length === 0) {
       return NextResponse.json({ error: "Guardian not found" }, { status: 404 });
     }
 

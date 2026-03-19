@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const updateMediaSchema = z.object({
@@ -132,7 +132,8 @@ export async function PATCH(
       }
     }
 
-    const media = await db.media.update({
+    const scopedDb = getScopedDb(session.user.organizationId);
+    const media = await scopedDb.media.update({
       where: { id },
       data: {
         ...(validatedData.title !== undefined && { title: validatedData.title }),
@@ -197,7 +198,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Media not found" }, { status: 404 });
     }
 
-    await db.media.delete({
+    const scopedDb = getScopedDb(session.user.organizationId);
+    await scopedDb.media.delete({
       where: { id },
     });
 

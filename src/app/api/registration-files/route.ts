@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "athleteId is required" }, { status: 400 });
     }
 
-    const where: Record<string, unknown> = { athleteId };
+    const where: Record<string, unknown> = {
+      athleteId,
+      organizationId: session.user.organizationId,
+    };
 
     const entityType = searchParams.get("entityType");
     if (entityType === "program") {
