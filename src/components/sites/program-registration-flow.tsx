@@ -229,6 +229,8 @@ export function ProgramRegistrationFlow({
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null)
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set())
   const [selectedMembership, setSelectedMembership] = useState<RequiredMembership | null>(null)
+  const [athleteHasMembership, setAthleteHasMembership] = useState(false)
+  const [isCheckingMembership, setIsCheckingMembership] = useState(false)
   const [selectedPass, setSelectedPass] = useState<RequiredPass | null>(null)
   const [athleteHasPass, setAthleteHasPass] = useState(false)
   const [isCheckingPass, setIsCheckingPass] = useState(false)
@@ -265,17 +267,19 @@ export function ProgramRegistrationFlow({
 
   // ---------- Visible steps ----------
 
+  const needsMembershipPurchase = needsMembership && !athleteHasMembership
+
   const visibleStepIds = useMemo(() => {
     const ids = ["athlete"]
     if (isPerInstance) ids.push("sessions")
-    if (needsMembership) ids.push("membership")
+    if (needsMembershipPurchase) ids.push("membership")
     if (needsPass) ids.push("pass")
     if (needsWaivers) ids.push("waivers")
     if (needsMedicalStep) ids.push("medical")
     if (needsFiles) ids.push("files")
     ids.push("review")
     return ids
-  }, [isPerInstance, needsMembership, needsPass, needsWaivers, needsMedicalStep, needsFiles])
+  }, [isPerInstance, needsMembershipPurchase, needsPass, needsWaivers, needsMedicalStep, needsFiles])
 
   const getNextStepId = useCallback(
     (currentId: string): string | null => {
@@ -477,10 +481,33 @@ export function ProgramRegistrationFlow({
   // ---------- Membership helpers ----------
 
   useEffect(() => {
-    if (needsMembership && program.requiredMemberships.length === 1) {
+    if (needsMembership && selectedAthlete && session?.user?.email) {
+      setIsCheckingMembership(true)
+      setAthleteHasMembership(false)
+      fetch(
+        `/api/public/athletes/${selectedAthlete.id}/memberships?email=${encodeURIComponent(session.user.email)}`
+      )
+        .then((r) => r.json())
+        .then((data) => {
+          const activeIds: string[] = data.activeMembershipInstanceIds || []
+          const requiredIds = program.requiredMemberships.map((m) => m.id)
+          const alreadyHas = requiredIds.some((id) => activeIds.includes(id))
+          setAthleteHasMembership(alreadyHas)
+          if (!alreadyHas && program.requiredMemberships.length === 1) {
+            setSelectedMembership(program.requiredMemberships[0])
+          }
+        })
+        .catch(() => {
+          setAthleteHasMembership(false)
+          if (program.requiredMemberships.length === 1) {
+            setSelectedMembership(program.requiredMemberships[0])
+          }
+        })
+        .finally(() => setIsCheckingMembership(false))
+    } else if (needsMembership && program.requiredMemberships.length === 1) {
       setSelectedMembership(program.requiredMemberships[0])
     }
-  }, [needsMembership, program.requiredMemberships])
+  }, [needsMembership, selectedAthlete, session?.user?.email, program.requiredMemberships])
 
   // ---------- Pass helpers ----------
 
@@ -686,7 +713,7 @@ export function ProgramRegistrationFlow({
     return program.basePrice || 0
   }, [isPerInstance, selectedInstanceIds.size, program.perSessionPrice, program.basePrice])
 
-  const membershipPrice = selectedMembership ? selectedMembership.price : 0
+  const membershipPrice = (needsMembershipPurchase && selectedMembership) ? selectedMembership.price : 0
   const passPrice = (needsPass && selectedPass && !athleteHasPass) ? selectedPass.price : 0
   const combinedTotal = totalPrice + membershipPrice + passPrice
 
@@ -697,7 +724,7 @@ export function ProgramRegistrationFlow({
 
     const athleteName = `${selectedAthlete.firstName} ${selectedAthlete.lastName}`.trim()
 
-    if (needsMembership && selectedMembership) {
+    if (needsMembershipPurchase && selectedMembership) {
       addItem({
         referenceId: selectedMembership.id,
         type: "membership",
@@ -813,7 +840,7 @@ export function ProgramRegistrationFlow({
 
   const canProceedFromAthlete = selectedAthlete !== null
   const canProceedFromSessions = selectedInstanceIds.size > 0
-  const canProceedFromMembership = selectedMembership !== null
+  const canProceedFromMembership = athleteHasMembership || selectedMembership !== null
   const canProceedFromPass = athleteHasPass || selectedPass !== null
 
   return (
@@ -973,6 +1000,8 @@ export function ProgramRegistrationFlow({
                       onClick={() => {
                         setSelectedAthlete(null)
                         setSelectedInstanceIds(new Set())
+                        setAthleteHasMembership(false)
+                        setSelectedMembership(null)
                       }}
                     >
                       Change
@@ -1535,7 +1564,18 @@ export function ProgramRegistrationFlow({
               </div>
 
               {/* Membership */}
-              {needsMembership && selectedMembership && (
+              {needsMembership && athleteHasMembership && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Membership
+                  </h3>
+                  <div className="flex items-center gap-3 p-2 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
+                    <Check className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                    <span className="text-sm text-green-800 dark:text-green-200">Active membership on file</span>
+                  </div>
+                </div>
+              )}
+              {needsMembershipPurchase && selectedMembership && (
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Membership
@@ -1560,7 +1600,7 @@ export function ProgramRegistrationFlow({
                   </span>
                   <span className="font-medium">{formatPrice(totalPrice)}</span>
                 </div>
-                {needsMembership && selectedMembership && (
+                {needsMembershipPurchase && selectedMembership && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{selectedMembership.name}</span>
                     <span className="font-medium">{formatPrice(selectedMembership.price)}</span>

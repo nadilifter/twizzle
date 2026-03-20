@@ -220,6 +220,61 @@ export async function POST(
           }
         }
       }
+
+      // Program membership requirement validation
+      const programsWithMembership = await db.program.findMany({
+        where: {
+          id: { in: programIds },
+          organizationId,
+          hasMembershipRestriction: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          requiredMemberships: { select: { id: true } },
+        },
+      });
+
+      if (programsWithMembership.length > 0) {
+        const membershipProgramMap = new Map(
+          programsWithMembership.map((p) => [p.id, p])
+        );
+
+        for (const item of programItems) {
+          const pid = item.details?.programId || item.referenceId;
+          const athleteId = item.athleteId || item.details?.athleteId;
+          const athleteLabel = item.athleteName || athleteId || "unknown";
+          const prog = pid ? membershipProgramMap.get(pid) : undefined;
+          if (!prog || prog.requiredMemberships.length === 0 || !athleteId) continue;
+
+          const requiredIds = prog.requiredMemberships.map((m) => m.id);
+
+          const activeMembership = await db.athleteMembership.findFirst({
+            where: {
+              athleteId,
+              status: "ACTIVE",
+              membershipInstanceId: { in: requiredIds },
+            },
+            select: { id: true },
+          });
+
+          if (!activeMembership) {
+            const membershipInCart = items.some((i: CartItem) => {
+              if (i.type !== "membership") return false;
+              const mInstanceId = i.details?.membershipInstanceId || i.referenceId;
+              const mAthleteId = i.athleteId || i.details?.athleteId;
+              return requiredIds.includes(mInstanceId) && mAthleteId === athleteId;
+            });
+
+            if (!membershipInCart) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" does not have the required membership for "${prog.name}". Please add the membership to your cart or contact the organization.` },
+                { status: 400 }
+              );
+            }
+          }
+        }
+      }
     }
 
     // 2c. Server-side membership restriction validation
