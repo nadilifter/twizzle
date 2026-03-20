@@ -32,12 +32,20 @@ import { PlanSelector } from "./plan-selector"
 import { getUsageStats } from "@/lib/sms-service"
 import { getEmailUsageStats, checkEmailUsageLimits } from "@/lib/email-campaign-service"
 import { PaymentMethodsCard } from "@/components/billing/payment-methods-card"
+import { syncPaymentMethodsFromAdyen } from "@/lib/payment-method-sync"
 
 export default async function BillingPage() {
   const session = await getAuthSession()
   
   if (!session?.user?.organizationId) {
     redirect("/login")
+  }
+
+  // Sync payment methods with Adyen before reading local records
+  try {
+    await syncPaymentMethodsFromAdyen(session.user.organizationId)
+  } catch (error) {
+    console.error("Adyen payment method sync failed:", error)
   }
 
   // Fetch organization with subscription and payment methods

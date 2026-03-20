@@ -408,6 +408,21 @@ export function parseRecurringTokenWebhook(payload: string): TokenWebhookData | 
     }
 
     const additionalData = notificationItem.additionalData || {};
+    const pmType: string = notificationItem.paymentMethod || "";
+
+    // Resolve last-four digits from the best available source:
+    //  - Cards / wallets backed by a card → additionalData.cardSummary
+    //  - ACH                              → last 4 of bank account number
+    //  - SEPA                             → last 4 of IBAN
+    const lastFour =
+      additionalData.cardSummary ||
+      additionalData.bankAccountNumber?.slice(-4) ||
+      additionalData.iban?.slice(-4);
+
+    // Brand: for card-based methods use the card network; for others use the type itself
+    const brand = additionalData.cardBin
+      ? additionalData.cardPaymentMethod
+      : pmType || undefined;
 
     return {
       eventCode: notificationItem.eventCode,
@@ -415,12 +430,12 @@ export function parseRecurringTokenWebhook(payload: string): TokenWebhookData | 
       shopperReference: additionalData["recurring.shopperReference"] || "",
       storedPaymentMethodId: additionalData["recurring.recurringDetailReference"],
       paymentMethod: {
-        type: notificationItem.paymentMethod,
-        brand: additionalData.cardBin ? additionalData.cardPaymentMethod : notificationItem.paymentMethod,
-        lastFour: additionalData.cardSummary,
+        type: pmType,
+        brand,
+        lastFour,
         expiryMonth: additionalData.expiryDate?.split("/")[0],
         expiryYear: additionalData.expiryDate?.split("/")[1] ? `20${additionalData.expiryDate.split("/")[1]}` : undefined,
-        holderName: additionalData.cardHolderName,
+        holderName: additionalData.cardHolderName || additionalData.shopperName,
       },
       success: notificationItem.success === "true" || notificationItem.success === true,
     };
