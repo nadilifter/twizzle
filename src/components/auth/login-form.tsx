@@ -47,7 +47,9 @@ export function LoginForm() {
   const emailLoginTokenParam = searchParams.get("emailLoginToken")
   const mfaVerifiedParam = searchParams.get("mfaVerified")
   const googleFormRef = useRef<HTMLFormElement>(null)
+  const microsoftFormRef = useRef<HTMLFormElement>(null)
   const [autoGoogleTriggered, setAutoGoogleTriggered] = useState(false)
+  const [autoMicrosoftTriggered, setAutoMicrosoftTriggered] = useState(false)
   
   const callbackUrl = useMemo(() => {
     if (urlCallbackParam) return urlCallbackParam;
@@ -59,6 +61,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [csrfToken, setCsrfToken] = useState<string>("")
   const [googleCsrfToken, setGoogleCsrfToken] = useState<string>("")
+  const [microsoftCsrfToken, setMicrosoftCsrfToken] = useState<string>("")
 
   // MFA + email code state
   const [loginMode, setLoginMode] = useState<LoginMode>("credentials")
@@ -72,6 +75,7 @@ export function LoginForm() {
       if (token) {
         setCsrfToken(token)
         setGoogleCsrfToken(token)
+        setMicrosoftCsrfToken(token)
       }
     })
   }, [])
@@ -86,6 +90,16 @@ export function LoginForm() {
     }
   }, [providerParam, googleCsrfToken, autoGoogleTriggered])
 
+  useEffect(() => {
+    if (providerParam === "microsoft" && microsoftCsrfToken && !autoMicrosoftTriggered && microsoftFormRef.current) {
+      if (!isLocalSubdomain()) {
+        setAutoMicrosoftTriggered(true)
+        setIsLoading(true)
+        microsoftFormRef.current.submit()
+      }
+    }
+  }, [providerParam, microsoftCsrfToken, autoMicrosoftTriggered])
+
   const urlError = searchParams.get("error")
   const getInitialError = () => {
     if (urlError === "NoAccount") {
@@ -96,6 +110,9 @@ export function LoginForm() {
     }
     if (urlError === "google") {
       return "Google sign-in failed. Please check that the redirect URI is configured correctly in Google Cloud Console."
+    }
+    if (urlError === "azure-ad") {
+      return "Microsoft sign-in failed. Please check that the redirect URI is configured correctly in Microsoft Entra admin center."
     }
     if (urlError === "OAuthCallback") {
       return "OAuth callback error. Please try again."
@@ -454,6 +471,23 @@ export function LoginForm() {
     }
   }
 
+  const handleMicrosoftSignIn = () => {
+    setIsLoading(true)
+    setError(null)
+    
+    if (isLocalSubdomain()) {
+      const redirectUrl = new URL("http://localhost:3000/login")
+      redirectUrl.searchParams.set("provider", "microsoft")
+      redirectUrl.searchParams.set("callbackUrl", callbackUrl)
+      window.location.href = redirectUrl.toString()
+      return
+    }
+    
+    if (microsoftFormRef.current) {
+      microsoftFormRef.current.submit()
+    }
+  }
+
   const resetToCredentials = () => {
     setLoginMode("credentials")
     setVerificationCode("")
@@ -646,6 +680,17 @@ export function LoginForm() {
         <input type="hidden" name="callbackUrl" value={callbackUrl} />
       </form>
 
+      <form 
+        ref={microsoftFormRef}
+        id="microsoft-signin-form"
+        action="/api/auth/signin/azure-ad"
+        method="POST"
+        style={{ display: 'none' }}
+      >
+        <input type="hidden" name="csrfToken" value={microsoftCsrfToken} />
+        <input type="hidden" name="callbackUrl" value={callbackUrl} />
+      </form>
+
       <Card className="relative overflow-hidden w-full max-w-[400px]">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
@@ -658,6 +703,19 @@ export function LoginForm() {
         
         <CardContent className="grid gap-4">
           <form onSubmit={handleSubmit} className="grid gap-4">
+          <Button type="button" variant="outline" className="w-full" onClick={handleMicrosoftSignIn} disabled={isLoading || !microsoftCsrfToken}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 21 21"
+              className="h-5 w-5"
+            >
+              <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+              <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+              <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+              <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+            </svg>
+            <span className="ml-2">Continue with Microsoft</span>
+          </Button>
           <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || !googleCsrfToken}>
             <svg
               xmlns="http://www.w3.org/2000/svg"

@@ -1,6 +1,7 @@
 import { NextAuthOptions, getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers/azure-ad";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -131,12 +132,12 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             // SECURITY NOTE: Email account linking
             // This setting allows linking OAuth accounts to existing accounts with the same email.
-            // While convenient, it can be a security risk if an attacker controls a Google account
+            // While convenient, it can be a security risk if an attacker controls an OAuth account
             // with the same email as an existing user.
             // 
             // Mitigations in place:
             // 1. signIn callback verifies user exists in our database
-            // 2. Only @uplifterinc.com emails can be auto-created
+            // 2. Only Uplifter staff domain emails can be auto-created
             // 3. External users must be pre-created by an admin
             //
             // Set ALLOW_OAUTH_ACCOUNT_LINKING=false to disable this behavior
@@ -146,6 +147,23 @@ export const authOptions: NextAuthOptions = {
               params: {
                 access_type: "offline",
                 response_type: "code",
+              },
+            },
+          }),
+        ]
+      : []),
+    // Only add Azure AD provider if credentials are configured
+    ...(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET && process.env.AZURE_AD_TENANT_ID
+      ? [
+          AzureADProvider({
+            clientId: process.env.AZURE_AD_CLIENT_ID,
+            clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
+            tenantId: process.env.AZURE_AD_TENANT_ID,
+            allowDangerousEmailAccountLinking:
+              process.env.ALLOW_OAUTH_ACCOUNT_LINKING !== "false",
+            authorization: {
+              params: {
+                scope: "openid profile email User.Read",
               },
             },
           }),
@@ -278,23 +296,22 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       try {
-        // For OAuth providers (like Google)
-        if (account?.provider === "google") {
+        const provider = account?.provider;
+        const isOAuthProvider = provider === "google" || provider === "azure-ad";
+
+        if (isOAuthProvider) {
           const email = user.email!;
-          const isUplifterEmail = email.endsWith("@uplifterinc.com");
+          const isStaffEmail = isUplifterEmail(email);
           
           let existingUser = await db.user.findUnique({
             where: { email },
             include: {
-              accounts: true, // Include linked OAuth accounts
+              accounts: true,
             },
           });
 
-          // Auto-create super admin users for @uplifterinc.com emails
-          if (!existingUser && isUplifterEmail) {
-            console.log(`Creating super admin for Uplifter email: ${email}`);
-            // Use Google OAuth name if available, otherwise default to "Uplifter User"
-            // Superadmins can update the name later if needed
+          if (!existingUser && isStaffEmail) {
+            console.log(`Creating super admin for Uplifter email: ${email} (via ${provider})`);
             const displayName = user.name || "Uplifter User";
             existingUser = await db.user.create({
               data: {
@@ -309,34 +326,26 @@ export const authOptions: NextAuthOptions = {
                 accounts: true,
               },
             });
-            
-            // Super admins get wildcard via isSuperAdmin flag in buildAuthorizedUser
           } else if (!existingUser) {
-            // Non-uplifter emails must have an existing account
             return "/login?error=NoAccount";
           } else {
-            // Security check: If user exists with a password but no OAuth link,
-            // and ALLOW_OAUTH_ACCOUNT_LINKING is disabled, reject the login
             const hasPassword = !!existingUser.passwordHash;
-            const hasGoogleLink = existingUser.accounts.some(
-              (acc) => acc.provider === "google"
+            const hasProviderLink = existingUser.accounts.some(
+              (acc) => acc.provider === provider
             );
             
-            if (hasPassword && !hasGoogleLink && process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "false") {
+            if (hasPassword && !hasProviderLink && process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "false") {
               console.warn(
-                `OAuth linking blocked for ${email}: User has password but no Google link`
+                `OAuth linking blocked for ${email}: User has password but no ${provider} link`
               );
               return "/login?error=AccountNotLinked";
             }
             
-            // For uplifter emails, ensure super admin status
-            if (isUplifterEmail && !existingUser.isSuperAdmin) {
+            if (isStaffEmail && !existingUser.isSuperAdmin) {
               await db.user.update({
                 where: { id: existingUser.id },
                 data: { isSuperAdmin: true },
               });
-              
-              // Super admins get wildcard via isSuperAdmin flag in buildAuthorizedUser
             }
           }
 
@@ -366,8 +375,8 @@ export const authOptions: NextAuthOptions = {
         }
         
         // OAuth sign-in - fetch user data from database
-        if (account?.provider === "google" && user?.email) {
-          console.log("JWT callback: Google sign in for user:", user.email);
+        if ((account?.provider === "google" || account?.provider === "azure-ad") && user?.email) {
+          console.log(`JWT callback: ${account.provider} sign in for user:`, user.email);
           
           const dbUser = await db.user.findUnique({
             where: { email: user.email },
@@ -472,8 +481,8 @@ export const authOptions: NextAuthOptions = {
       // LOCAL DEVELOPMENT: Handle cross-domain OAuth redirect
       // When OAuth completes on localhost:3000 but the callbackUrl is for a local subdomain,
       // we need to redirect through the session bridge to set the cookie on the correct domain.
-      // This is only needed in local dev because Google doesn't allow localhost subdomains
-      // as OAuth redirect URIs.
+      // This is only needed in local dev because OAuth providers don't allow localhost
+      // subdomains as redirect URIs.
       
       const isLocalhost = baseUrl === "http://localhost:3000";
       const callbackIsLocalSubdomain = url.includes(baseDomain);
@@ -557,7 +566,15 @@ export async function verifyPassword(
   return bcrypt.compare(password, hashedPassword);
 }
 
+const UPLIFTER_STAFF_DOMAINS = [
+  "@uplifterinc.com",
+  "@upliftergymnastics.com",
+  "@uplifter.app",
+  "@uplifterincca.onmicrosoft.com",
+];
+
 // Helper to check if email is an Uplifter staff email (super admin eligible)
 export function isUplifterEmail(email: string): boolean {
-  return email.toLowerCase().endsWith("@uplifterinc.com");
+  const lower = email.toLowerCase();
+  return UPLIFTER_STAFF_DOMAINS.some((domain) => lower.endsWith(domain));
 }

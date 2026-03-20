@@ -32,11 +32,11 @@ export async function POST(
     const validatedData = signupSchema.parse(body);
     const email = validatedData.email.toLowerCase().trim();
 
-    // Reject @uplifterinc.com emails - they must use Google OAuth
+    // Reject Uplifter staff emails - they must use Microsoft OAuth
     if (isUplifterEmail(email)) {
       return NextResponse.json(
         { 
-          error: "Uplifter staff should sign in with Google instead.",
+          error: "Uplifter staff should sign in with Microsoft instead.",
           code: "UPLIFTER_EMAIL" 
         },
         { status: 400 }
