@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 import { toast } from "sonner"
 import { verifyOrganizationMembership } from "@/app/actions/organization"
-import { getSubdomainUrl } from "@/lib/env-domains"
+import { getClientSubdomainUrl } from "@/lib/client-domains"
 
 type Product = {
   id: string
@@ -205,7 +205,7 @@ function POSPageContent() {
                   <p className="text-sm mt-2">
                     Add products in the{" "}
                     <a 
-                      href={`${getSubdomainUrl("admin")}/organization/store`} 
+                      href={`${getClientSubdomainUrl("admin")}/organization/store`} 
                       className="text-primary underline"
                     >
                       Store settings
