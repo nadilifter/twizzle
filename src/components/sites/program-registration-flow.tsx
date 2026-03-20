@@ -36,7 +36,7 @@ import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
 import type { FileRequirementConfig } from "@/types/file-requirements"
 import {
   User,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   MapPin,
   Plus,
@@ -53,7 +53,6 @@ import {
   ClipboardList,
   ExternalLink,
   Ticket,
-  Calendar as CalendarIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
@@ -1006,7 +1005,7 @@ export function ProgramRegistrationFlow({
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                                   {birthLabel && (
                                     <span className="flex items-center gap-1">
-                                      <Calendar className="h-3 w-3" />
+                                      <CalendarIcon className="h-3 w-3" />
                                       {birthLabel}
                                     </span>
                                   )}
@@ -1085,7 +1084,7 @@ export function ProgramRegistrationFlow({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <CalendarIcon className="h-5 w-5" />
               Select Sessions for {selectedAthlete?.firstName}
             </CardTitle>
             <CardDescription>
@@ -1147,7 +1146,7 @@ export function ProgramRegistrationFlow({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium text-foreground">
                             {format(new Date(instance.date), "EEE, MMM d")}
                           </span>
