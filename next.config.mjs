@@ -51,16 +51,14 @@ const isLocal = currentEnv === 'local';
 const protocol = envConfig.useHttps ? 'https' : 'http';
 
 // Determine CSP directives based on environment
-// In local dev, we need to allow connections/forms to localhost:3000 for Google OAuth
-// (Google doesn't allow localhost subdomains as OAuth redirect URIs)
+// In local dev, we need to allow connections/forms to localhost:3000 for OAuth
+// (OAuth providers don't allow localhost subdomains as redirect URIs)
 // In cloud environments, everything goes through the login subdomain directly
 const getFormActionCsp = () => {
   if (isLocal) {
-    // Local development: allow localhost:3000 for OAuth
-    return "form-action 'self' http://localhost:3000 https://accounts.google.com";
+    return "form-action 'self' http://localhost:3000 https://accounts.google.com https://login.microsoftonline.com";
   }
-  // Cloud environments: use the environment's login subdomain
-  return `form-action 'self' ${protocol}://login.${envConfig.baseDomain} https://accounts.google.com`;
+  return `form-action 'self' ${protocol}://login.${envConfig.baseDomain} https://accounts.google.com https://login.microsoftonline.com`;
 };
 
 const getConnectSrcCsp = () => {
