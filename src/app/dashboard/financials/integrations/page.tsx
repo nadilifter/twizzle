@@ -172,6 +172,7 @@ export default function IntegrationsPage() {
   const xeroState = getState(xeroStatus)
 
   const hasSetupInProgress = qboState === "setup" || xeroState === "setup"
+  const hasActiveConnection = qboState !== "disconnected" || xeroState !== "disconnected"
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -199,8 +200,14 @@ export default function IntegrationsPage() {
       )}
 
       {!hasSetupInProgress && (
-        <div className="grid gap-6 md:grid-cols-2">
-          {qboState === "disconnected" ? (
+        <div className={hasActiveConnection ? "flex flex-col gap-6" : "grid gap-6 md:grid-cols-2"}>
+          {qboState === "connected" && qboStatus ? (
+            <ConnectedCard
+              provider="qbo"
+              status={qboStatus}
+              onDisconnect={fetchStatuses}
+            />
+          ) : qboState === "disconnected" && !hasActiveConnection ? (
             <DisconnectedCard
               provider="qbo"
               actionLoading={actionLoading === "qbo"}
@@ -209,15 +216,15 @@ export default function IntegrationsPage() {
                 window.location.href = "/api/integrations/qbo/connect"
               }}
             />
-          ) : qboState === "connected" && qboStatus ? (
-            <ConnectedCard
-              provider="qbo"
-              status={qboStatus}
-              onDisconnect={fetchStatuses}
-            />
           ) : null}
 
-          {xeroState === "disconnected" ? (
+          {xeroState === "connected" && xeroStatus ? (
+            <ConnectedCard
+              provider="xero"
+              status={xeroStatus}
+              onDisconnect={fetchStatuses}
+            />
+          ) : xeroState === "disconnected" && !hasActiveConnection ? (
             <DisconnectedCard
               provider="xero"
               actionLoading={actionLoading === "xero"}
@@ -225,12 +232,6 @@ export default function IntegrationsPage() {
                 setActionLoading("xero")
                 window.location.href = "/api/integrations/xero/connect"
               }}
-            />
-          ) : xeroState === "connected" && xeroStatus ? (
-            <ConnectedCard
-              provider="xero"
-              status={xeroStatus}
-              onDisconnect={fetchStatuses}
             />
           ) : null}
         </div>
