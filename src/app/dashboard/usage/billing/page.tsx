@@ -41,53 +41,54 @@ export default async function BillingPage() {
   }
 
   // Fetch organization with subscription and payment methods
-  const organization = await db.organization.findUnique({
-    where: { id: session.user.organizationId },
-    include: {
-      _count: {
-        select: {
-          invoices: true,
-          organizationAthletes: true,
-          members: true,
-          programs: true,
-          events: true,
-        }
+  const [organization, availablePlans, totalCollected] = await Promise.all([
+    db.organization.findUnique({
+      where: { id: session.user.organizationId },
+      include: {
+        _count: {
+          select: {
+            invoices: true,
+            organizationAthletes: true,
+            members: true,
+            programs: true,
+            events: true,
+          }
+        },
+        subscription: {
+          include: {
+            plan: true
+          }
+        },
+        organizationPaymentMethods: {
+          where: { isActive: true },
+          orderBy: [
+            { isDefault: "desc" },
+            { createdAt: "desc" },
+          ],
+        },
       },
-      invoices: {
-        where: { status: "PAID" },
-        select: { total: true },
-        take: 100,
+    }),
+    db.subscriptionPlan.findMany({
+      where: {
+        isActive: true,
+        isPublic: true,
       },
-      subscription: {
-        include: {
-          plan: true
-        }
+      orderBy: { displayOrder: "asc" }
+    }),
+    db.invoice.aggregate({
+      where: {
+        organizationId: session.user.organizationId,
+        status: "PAID",
       },
-      organizationPaymentMethods: {
-        where: { isActive: true },
-        orderBy: [
-          { isDefault: "desc" },
-          { createdAt: "desc" },
-        ],
-      },
-    },
-  })
+      _sum: { total: true },
+    }),
+  ])
 
   if (!organization) {
     redirect("/login")
   }
 
-  // Fetch available plans
-  const availablePlans = await db.subscriptionPlan.findMany({
-    where: {
-      isActive: true,
-      isPublic: true,
-    },
-    orderBy: { displayOrder: "asc" }
-  })
-
-  // Calculate some basic metrics
-  const totalRevenue = organization.invoices.reduce((sum, inv) => sum + Number(inv.total), 0)
+  const totalRevenue = Number(totalCollected._sum.total ?? 0)
   
   const currentPlan = organization.subscription?.plan
   const subscription = organization.subscription
