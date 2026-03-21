@@ -37,6 +37,7 @@ const competitionInclude = {
           firstName: true,
           lastName: true,
           name: true,
+          avatar: true,
         },
       },
       category: { select: { id: true, resultType: true } },

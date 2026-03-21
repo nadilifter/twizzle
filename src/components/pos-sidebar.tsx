@@ -140,7 +140,7 @@ export function POSSidebar({
             </div>
           </div>
         ) : (
-          <NavUser user={user} />
+          <NavUser user={user} accountUrl="/athletes/account" />
         )}
       </SidebarFooter>
       <SidebarRail />

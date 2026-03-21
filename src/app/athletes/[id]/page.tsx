@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarUpload } from "@/components/avatar-upload";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +31,7 @@ interface Guardian {
   user: {
     name: string;
     email: string;
+    avatar?: string | null;
   } | null;
 }
 
@@ -196,11 +198,15 @@ export default function AthleteDetailPage() {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
-            <Avatar className="w-16 h-16">
-              <AvatarFallback className="text-lg font-bold bg-primary/10 text-primary">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <AvatarUpload
+              currentAvatar={athlete.avatar}
+              name={displayName}
+              uploadUrl={`/api/athletes/${athleteId}/avatar`}
+              onAvatarChange={(url) =>
+                setAthlete((prev: any) => prev ? { ...prev, avatar: url } : prev)
+              }
+              size="sm"
+            />
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h1 className="text-xl font-bold">{displayName}</h1>
@@ -263,9 +269,12 @@ export default function AthleteDetailPage() {
                 .map((g) => (
                   <div key={g.id} className="flex items-center justify-between p-3 rounded-lg border">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                        {g.user?.name?.[0] || "?"}
-                      </div>
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={g.user?.avatar || undefined} alt={g.user?.name || "Guardian"} />
+                        <AvatarFallback className="text-sm">
+                          {g.user?.name?.[0] || "?"}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">{g.user?.name || "Unknown"}</span>

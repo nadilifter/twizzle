@@ -48,6 +48,7 @@ export async function GET(
             id: true,
             name: true,
             email: true,
+            avatar: true,
           },
         },
       },
@@ -65,6 +66,7 @@ export async function GET(
             id: g.user.id,
             name: g.user.name,
             email: g.user.email,
+            avatar: g.user.avatar,
           }
         : null,
     }));

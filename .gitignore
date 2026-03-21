@@ -46,6 +46,9 @@ next-env.d.ts
 *.tfstate.backup
 .terraform.lock.hcl
 
+# Local uploads (dev only, S3 in production)
+/public/uploads/
+
 # Reference directory
 /_reference_lwtfc_registration/
 

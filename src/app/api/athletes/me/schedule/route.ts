@@ -9,6 +9,7 @@ export interface ScheduleEvent {
   athleteId: string;
   athleteFirstName: string;
   athleteLastName: string;
+  athleteAvatar: string | null;
   type: "instance" | "competition" | "enrollment";
   title: string;
   organizationName: string;
@@ -79,15 +80,15 @@ export async function GET(request: NextRequest) {
     // Get all athletes for this user (same logic as /api/athletes/me)
     const userGuardianLinks = await db.athleteGuardian.findMany({
       where: { userId },
-      select: { athleteId: true, athlete: { select: { id: true, firstName: true, lastName: true } } },
+      select: { athleteId: true, athlete: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
     });
 
     const selfAthletes = await db.athlete.findMany({
       where: { userId },
-      select: { id: true, firstName: true, lastName: true },
+      select: { id: true, firstName: true, lastName: true, avatar: true },
     });
 
-    const athleteMap = new Map<string, { id: string; firstName: string; lastName: string }>();
+    const athleteMap = new Map<string, { id: string; firstName: string; lastName: string; avatar: string | null }>();
     for (const link of userGuardianLinks) {
       athleteMap.set(link.athlete.id, link.athlete);
     }
@@ -132,6 +133,7 @@ export async function GET(request: NextRequest) {
         athleteId: reg.athleteId,
         athleteFirstName: athlete.firstName,
         athleteLastName: athlete.lastName,
+        athleteAvatar: athlete.avatar,
         type: "instance",
         title: inst.program?.name || "Session",
         organizationName: inst.organization?.name || "",
@@ -180,6 +182,7 @@ export async function GET(request: NextRequest) {
         athleteId: entry.athleteId,
         athleteFirstName: athlete.firstName,
         athleteLastName: athlete.lastName,
+        athleteAvatar: athlete.avatar,
         type: "competition",
         title: comp.name,
         organizationName: comp.organization?.name || "",
@@ -233,6 +236,7 @@ export async function GET(request: NextRequest) {
           athleteId: enrollment.athleteId,
           athleteFirstName: athlete.firstName,
           athleteLastName: athlete.lastName,
+          athleteAvatar: athlete.avatar,
           type: "enrollment",
           title: prog.name,
           organizationName: prog.organization?.name || "",

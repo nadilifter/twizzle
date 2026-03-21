@@ -153,7 +153,6 @@ const nextConfig = {
     pagesBufferLength: 5,
   },
   experimental: {
-    // Optimize memory usage during development
     optimizePackageImports: [
       "@radix-ui/react-alert-dialog",
       "@radix-ui/react-avatar",

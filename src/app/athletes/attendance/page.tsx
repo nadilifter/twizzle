@@ -192,6 +192,7 @@ export default function AthleteAttendancePage() {
               )}
             >
               <Avatar className="h-10 w-10">
+                <AvatarImage src={athlete.avatar || undefined} alt={athlete.name} />
                 <AvatarFallback>{athlete.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="text-left">

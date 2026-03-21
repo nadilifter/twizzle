@@ -43,6 +43,7 @@ export async function GET(
                 name: true,
                 firstName: true,
                 lastName: true,
+                avatar: true,
                 birthDate: true,
                 gender: true,
                 organizationAthletes: {

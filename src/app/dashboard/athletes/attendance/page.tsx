@@ -430,6 +430,7 @@ export default function AttendancePage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
+                              <AvatarImage src={item.avatar || undefined} alt={item.name} />
                               <AvatarFallback>{item.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{item.name}</span>
@@ -609,6 +610,7 @@ export default function AttendancePage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
+                              <AvatarImage src={item.avatar || undefined} alt={item.name} />
                               <AvatarFallback>{item.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>

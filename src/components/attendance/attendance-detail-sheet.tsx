@@ -102,6 +102,7 @@ export function AttendanceDetailSheet({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
+                  <AvatarImage src={athlete?.avatar || undefined} alt={athleteName || athlete?.name || "Athlete"} />
                   <AvatarFallback className="text-lg">
                     {(athleteName || athlete?.name || "?").charAt(0)}
                   </AvatarFallback>

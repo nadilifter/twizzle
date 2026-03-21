@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User, Users, ChevronRight, Shield, Calendar } from "lucide-react";
 import { format } from "date-fns";
@@ -15,6 +15,7 @@ interface AthleteWithGuardians {
   firstName: string;
   lastName: string;
   name: string;
+  avatar: string | null;
   birthDate: string | null;
   gender: string | null;
   status: string;
@@ -159,6 +160,7 @@ export default function AthletesPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <Avatar className="w-12 h-12">
+                        <AvatarImage src={athlete.avatar || undefined} alt={displayName} />
                         <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">
                           {initials}
                         </AvatarFallback>

@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -474,6 +474,7 @@ function CoachEvaluationsContent() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
+                                <AvatarImage src={evaluation.athlete.avatar || undefined} alt={evaluation.athlete.name} />
                                 <AvatarFallback>
                                   {evaluation.athlete.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                 </AvatarFallback>

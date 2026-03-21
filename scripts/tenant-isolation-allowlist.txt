@@ -76,6 +76,7 @@ src/app/api/athletes/route.ts
 src/app/api/athletes/[id]/route.ts
 src/app/api/athletes/[id]/medical/route.ts
 src/app/api/athletes/[id]/guardians/route.ts
+src/app/api/athletes/[id]/avatar/route.ts
 src/app/api/athletes/[id]/guardian-settings/route.ts
 src/app/api/athletes/[id]/registrations/route.ts
 src/app/api/athletes/[id]/evaluations/route.ts
@@ -180,6 +181,8 @@ src/app/api/sites/[slug]/discount/validate/route.ts
 src/app/api/sites/[slug]/info/route.ts
 
 # --- User-scoped routes (no org data, personal to user) ---
+src/app/api/avatar/route.ts
+src/app/api/user/profile/route.ts
 src/app/api/user/billing-addresses/route.ts
 src/app/api/user/billing-addresses/[id]/route.ts
 src/app/api/user/contacts/route.ts

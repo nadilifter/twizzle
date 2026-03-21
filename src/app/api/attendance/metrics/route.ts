@@ -118,6 +118,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+            avatar: true,
             organizationAthletes: {
               where: { organizationId: orgId },
               select: { level: true },
@@ -133,6 +134,7 @@ export async function GET(request: NextRequest) {
           return {
             id,
             name: athlete?.name || "Unknown",
+            avatar: athlete?.avatar || null,
             level: athlete?.organizationAthletes?.[0]?.level || null,
             ...s,
             rate: calcRate(s),
@@ -174,18 +176,18 @@ export async function GET(request: NextRequest) {
         .sort((a, b) => b.total - a.total);
     } else if (groupBy === "coach") {
       // Coach breakdown only applies to Event-based attendance (events have a coach; instances don't)
-      const coachStats = new Map<string, { id: string; name: string; email: string | null; total: number; present: number; absent: number; late: number; excused: number }>();
+      const coachStats = new Map<string, { id: string; name: string; email: string | null; avatar: string | null; total: number; present: number; absent: number; late: number; excused: number }>();
 
       const eventAtts = await db.attendance.findMany({
         where: eventWhere,
-        select: { status: true, event: { select: { coachId: true, coach: { select: { id: true, name: true, email: true } } } } },
+        select: { status: true, event: { select: { coachId: true, coach: { select: { id: true, name: true, email: true, avatar: true } } } } },
       });
 
       for (const att of eventAtts) {
         const cid = att.event.coachId;
         if (!cid) continue;
         if (!coachStats.has(cid)) {
-          coachStats.set(cid, { id: cid, name: att.event.coach?.name || "Unknown", email: att.event.coach?.email || null, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
+          coachStats.set(cid, { id: cid, name: att.event.coach?.name || "Unknown", email: att.event.coach?.email || null, avatar: att.event.coach?.avatar || null, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
         }
         addStatus(coachStats.get(cid)!, att.status);
       }

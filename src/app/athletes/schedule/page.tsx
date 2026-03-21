@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -20,6 +20,7 @@ interface ScheduleEvent {
   athleteId: string;
   athleteFirstName: string;
   athleteLastName: string;
+  athleteAvatar: string | null;
   type: "instance" | "competition" | "enrollment";
   title: string;
   organizationName: string;
@@ -223,6 +224,7 @@ export default function SchedulePage() {
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
                             <Avatar className="w-9 h-9 shrink-0 mt-0.5">
+                              <AvatarImage src={event.athleteAvatar || undefined} alt={`${event.athleteFirstName} ${event.athleteLastName}`} />
                               <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                                 {initials}
                               </AvatarFallback>

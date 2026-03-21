@@ -105,6 +105,7 @@ export interface AttendanceMetricsSummary {
 export interface AttendanceBreakdownItem {
   id: string;
   name: string;
+  avatar?: string | null;
   total: number;
   present: number;
   absent: number;

@@ -281,7 +281,7 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
             </div>
           </div>
         ) : (
-          <NavUser user={user} />
+          <NavUser user={user} accountUrl="/athletes/account" />
         )}
       </SidebarFooter>
       <SidebarRail />

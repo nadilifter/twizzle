@@ -830,6 +830,7 @@ function FacilityUsageCard({
               >
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
+                    <AvatarImage src={shift.member.user.avatar || undefined} alt={shift.member.user.name} />
                     <AvatarFallback>{getInitials(shift.member.user.name)}</AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium">{shift.member.user.name}</span>
@@ -988,6 +989,7 @@ function WeeklyCalendarView({
                       </div>
                       <div className="flex items-center gap-1 mt-1">
                         <Avatar className="h-4 w-4">
+                          <AvatarImage src={shift.member.user.avatar || undefined} alt={shift.member.user.name} />
                           <AvatarFallback className="text-[8px]">
                             {getInitials(shift.member.user.name)}
                           </AvatarFallback>

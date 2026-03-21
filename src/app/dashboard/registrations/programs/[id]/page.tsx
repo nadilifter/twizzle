@@ -633,9 +633,10 @@ export default function ProgramDetailPage() {
                                             <TableRow key={reg.id}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                                            {reg.athlete.name?.charAt(0) || "?"}
-                                                        </div>
+                                                        <Avatar className="h-8 w-8">
+                                                            <AvatarImage src={reg.athlete.avatar || undefined} alt={reg.athlete.name} />
+                                                            <AvatarFallback>{reg.athlete.name?.charAt(0) || "?"}</AvatarFallback>
+                                                        </Avatar>
                                                         <div>
                                                             <div className="font-medium">{reg.athlete.name}</div>
                                                             <div className="text-xs text-muted-foreground">

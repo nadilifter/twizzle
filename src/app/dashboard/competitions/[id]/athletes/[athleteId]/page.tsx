@@ -31,7 +31,7 @@ import {
 import { calculateAge } from "@/lib/age-utils"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -82,6 +82,7 @@ interface AthleteDetail {
     id: string
     firstName: string | null
     lastName: string | null
+    avatar: string | null
     birthDate: string | null
     gender: string | null
     level: { id: string; name: string } | null
@@ -256,6 +257,7 @@ export default function CompetitionAthleteDetailPage() {
           <CardContent className="pt-8 pb-6">
             <div className="flex flex-col items-center text-center">
               <Avatar className="h-24 w-24 border-4 border-background shadow-md">
+                <AvatarImage src={athlete.avatar || undefined} alt={athleteName ?? "Athlete"} />
                 <AvatarFallback className="text-2xl font-bold bg-primary/10">
                   {getInitials(athlete.firstName, athlete.lastName)}
                 </AvatarFallback>

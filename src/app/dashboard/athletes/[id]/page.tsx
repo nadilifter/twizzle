@@ -44,6 +44,7 @@ import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 import { useAthlete } from "@/hooks/use-athletes"
 import { useFeatures } from "@/components/feature-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarUpload } from "@/components/avatar-upload"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -278,7 +279,7 @@ export default function AthleteProfilePage() {
   }
 
   const age = calculateAge(athlete.birthDate)
-  const guardians = ((athlete as any).guardians ?? []) as { id: string; userId: string; isPrimary: boolean; relationship: string | null; user: { id: string; name: string | null; email: string } | null }[]
+  const guardians = ((athlete as any).guardians ?? []) as { id: string; userId: string; isPrimary: boolean; relationship: string | null; user: { id: string; name: string | null; email: string; avatar: string | null } | null }[]
   const primaryGuardianUser = guardians[0]?.user ?? null
   const levelInfo = (athlete as any).levelInfo as { id: string; name: string; color: string | null } | null
   const memberships = ((athlete as any).memberships ?? []) as AthleteMembershipSummary[]
@@ -294,12 +295,13 @@ export default function AthleteProfilePage() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <Avatar className="h-14 w-14 border-2 border-background shadow-sm shrink-0">
-            <AvatarImage src={athlete.avatar ?? undefined} alt={athlete.name} />
-            <AvatarFallback className="text-lg font-bold bg-primary/10">
-              {getInitials(athlete.name)}
-            </AvatarFallback>
-          </Avatar>
+          <AvatarUpload
+            currentAvatar={athlete.avatar ?? undefined}
+            name={athlete.name}
+            uploadUrl={`/api/athletes/${athlete.id}/avatar`}
+            onAvatarChange={(url) => fetchAthlete()}
+            size="sm"
+          />
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-semibold tracking-tight">{athlete.name}</h1>
@@ -442,6 +444,7 @@ export default function AthleteProfilePage() {
                     {guardians.map((g) => (
                       <div key={g.id} className="flex items-center gap-3 rounded-lg border p-3">
                         <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarImage src={g.user?.avatar || undefined} alt={g.user?.name || "Guardian"} />
                           <AvatarFallback className="text-xs bg-primary/10">
                             {getInitials(g.user?.name ?? g.user?.email ?? "?")}
                           </AvatarFallback>

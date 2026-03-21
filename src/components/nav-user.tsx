@@ -1,6 +1,7 @@
 "use client"
 
-import { LogOutIcon, MoreVerticalIcon } from "lucide-react"
+import { LogOutIcon, MoreVerticalIcon, UserIcon } from "lucide-react"
+import Link from "next/link"
 
 import {
   Avatar,
@@ -25,12 +26,14 @@ import { logout } from "@/lib/logout"
 
 export function NavUser({
   user,
+  accountUrl,
 }: {
   user: {
     name: string
     email: string
     avatar?: string | null
   }
+  accountUrl?: string
 }) {
   const { isMobile } = useSidebar()
 
@@ -91,6 +94,14 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {accountUrl && (
+              <DropdownMenuItem asChild>
+                <Link href={accountUrl}>
+                  <UserIcon />
+                  Account
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOutIcon />
               Log out

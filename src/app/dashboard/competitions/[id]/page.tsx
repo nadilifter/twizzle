@@ -36,7 +36,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 // Timeline is rendered inline in the Overview tab
 import { CompetitionConfiguration } from "../competition-configuration"
@@ -123,6 +123,7 @@ interface CompetitionDetail {
       firstName: string | null
       lastName: string | null
       name: string | null
+      avatar: string | null
     }
   }[]
   lineItems: CompetitionLineItem[]
@@ -162,6 +163,7 @@ interface CompetitionResult {
 interface LatestRegistration {
   athleteId: string
   athleteName: string
+  athleteAvatar: string | null
   registeredAt: string
 }
 
@@ -173,6 +175,7 @@ function getLatestRegistrations(competition: CompetitionDetail): LatestRegistrat
     seen.set(athlete.id, {
       athleteId: athlete.id,
       athleteName: [athlete.firstName, athlete.lastName].filter(Boolean).join(" ") || athlete.name || "Unknown athlete",
+      athleteAvatar: athlete.avatar,
       registeredAt: entry.createdAt,
     })
   }
@@ -753,6 +756,7 @@ export default function CompetitionProfilePage() {
                           >
                             <div className="flex items-center gap-3">
                               <Avatar className="h-10 w-10">
+                                <AvatarImage src={reg.athleteAvatar || undefined} alt={reg.athleteName} />
                                 <AvatarFallback>
                                   {reg.athleteName
                                     .split(" ")
