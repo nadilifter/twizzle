@@ -24,7 +24,9 @@ export async function GET(
     }
 
     const { id: athleteId } = await params;
-    const userId = session.user.id;
+    const userId = (session.user.isSuperAdmin && session.user.viewingAsUserId)
+      ? session.user.viewingAsUserId
+      : session.user.id;
 
     // Verify current user has access to this athlete (guardian or self)
     const athlete = await db.athlete.findUnique({

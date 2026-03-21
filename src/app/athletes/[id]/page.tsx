@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { RegistrationFilesSection } from "@/components/registration-files-section";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context";
 
 interface Guardian {
   id: string;
@@ -156,6 +157,14 @@ export default function AthleteDetailPage() {
     return Array.from(groups.values());
   }, [registrations?.instanceRegistrations]);
 
+  const athleteDisplayName = athlete
+    ? `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name
+    : undefined;
+  useBreadcrumbOverride(
+    athlete ? `/athletes/${athleteId}` : undefined,
+    athleteDisplayName,
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -168,7 +177,7 @@ export default function AthleteDetailPage() {
 
   if (!athlete) return null;
 
-  const displayName = `${athlete.firstName} ${athlete.lastName}`.trim() || athlete.name;
+  const displayName = athleteDisplayName!;
   const initials = `${athlete.firstName?.[0] || ""}${athlete.lastName?.[0] || ""}`.toUpperCase();
   const totalRegistrations =
     (registrations?.instanceRegistrations?.length || 0) +

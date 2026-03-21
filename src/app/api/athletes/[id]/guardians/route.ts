@@ -22,11 +22,14 @@ export async function GET(
     }
 
     const { id: athleteId } = await params;
+    const userId = (session.user.isSuperAdmin && session.user.viewingAsUserId)
+      ? session.user.viewingAsUserId
+      : session.user.id;
 
     const userGuardianLink = await db.athleteGuardian.findFirst({
       where: {
         athleteId,
-        userId: session.user.id,
+        userId,
       },
     });
 
