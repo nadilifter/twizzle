@@ -78,8 +78,13 @@ const config: Config = {
 			shine: "shine var(--duration) infinite linear",
 			'gradient-shift': "gradient-shift 15s ease-in-out infinite",
 			'gradient-shift-alt': "gradient-shift-alt 12s ease-in-out infinite",
+			'caret-blink': "caret-blink 1.25s ease-out infinite",
 		},
 		keyframes: {
+			'caret-blink': {
+				"0%, 70%, 100%": { opacity: "1" },
+				"20%, 50%": { opacity: "0" },
+			},
 			shine: {
 				"0%": {
 					"background-position": "0% 0%",

@@ -26,13 +26,21 @@ import {
   ArrowRight,
   ArrowLeft,
   ShieldCheck,
+  RotateCw,
 } from "lucide-react"
 import { toast } from "sonner"
+import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp"
 import { validatePassword, PASSWORD_MESSAGES, PASSWORD_MIN_LENGTH } from "@/lib/password"
 
 import { COUNTRIES, isValidPostalCode } from "@/lib/location-data"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp"
 import { Label } from "@/components/ui/label"
 import { PhoneInput } from "@/components/ui/phone-input"
 import { isValidPhoneNumber } from "react-phone-number-input"
@@ -287,11 +295,19 @@ export default function SignupPage() {
     }
   }
 
-  // Email verification
   const handleSendVerificationCode = async () => {
+    const newErrors: Record<string, string> = {}
+    if (!formData.name.trim()) {
+      newErrors.name = "Your name is required"
+    } else if (formData.name.length > MAX_NAME_LENGTH) {
+      newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or less`
+    }
     const email = formData.email.trim().toLowerCase()
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setErrors(prev => ({ ...prev, email: "Please enter a valid email" }))
+      newErrors.email = "Please enter a valid email"
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(prev => ({ ...prev, ...newErrors }))
       return
     }
 
@@ -321,8 +337,9 @@ export default function SignupPage() {
     }
   }
 
-  const handleVerifyCode = async () => {
-    if (!verificationCode.trim()) return
+  const handleVerifyCode = async (codeToVerify?: string) => {
+    const code = codeToVerify || verificationCode
+    if (!code.trim()) return
 
     setEmailVerification("verifying")
     try {
@@ -331,7 +348,7 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: formData.email.trim().toLowerCase(),
-          code: verificationCode.trim(),
+          code: code.trim(),
         }),
       })
 
@@ -346,10 +363,12 @@ export default function SignupPage() {
         toast.success("Email verified successfully")
       } else {
         setEmailVerification("sent")
+        setVerificationCode("")
         toast.error("Invalid or expired code. Please try again.")
       }
     } catch (error) {
       setEmailVerification("sent")
+      setVerificationCode("")
       toast.error(error instanceof Error ? error.message : "Verification failed")
     }
   }
@@ -360,26 +379,15 @@ export default function SignupPage() {
     return `${loginBase}?callbackUrl=${encodeURIComponent(callbackUrl)}`
   }
 
-  // Per-step validation
   const validateAccountStep = (): boolean => {
     if (useExistingAccount) return true
 
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Your name is required"
-    } else if (formData.name.length > MAX_NAME_LENGTH) {
-      newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or less`
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email"
-    }
-
     if (emailVerification !== "verified") {
       newErrors.email = "Please verify your email before continuing"
+      setErrors(newErrors)
+      return false
     }
 
     if (!formData.password) {
@@ -671,6 +679,157 @@ export default function SignupPage() {
                     </CardContent>
                   </Card>
                 </div>
+              ) : emailVerification === "sent" || emailVerification === "verifying" ? (
+                <Card>
+                  <CardHeader className="text-center">
+                    <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                      <Mail className="h-6 w-6 text-primary" />
+                    </div>
+                    <CardTitle>Check your email</CardTitle>
+                    <CardDescription>
+                      We sent a verification code to{" "}
+                      <span className="font-medium text-foreground">{formData.email}</span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center gap-4">
+                    <InputOTP
+                      maxLength={6}
+                      pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
+                      value={verificationCode}
+                      onChange={setVerificationCode}
+                      onComplete={(code) => handleVerifyCode(code)}
+                      disabled={emailVerification === "verifying"}
+                      autoFocus
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                      </InputOTPGroup>
+                      <InputOTPSeparator />
+                      <InputOTPGroup>
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+
+                    {emailVerification === "verifying" && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Verifying...</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <span>Didn&apos;t receive the code?</span>
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-sm"
+                        onClick={handleSendVerificationCode}
+                        disabled={emailVerification === "verifying"}
+                      >
+                        <RotateCw className="mr-1 h-3 w-3" />
+                        Resend
+                      </Button>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      onClick={() => {
+                        setEmailVerification("idle")
+                        setVerificationCode("")
+                      }}
+                    >
+                      <ArrowLeft className="mr-1 h-3 w-3" />
+                      Use a different email
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : emailVerification === "exists" ? (
+                <Card>
+                  <CardHeader className="text-center">
+                    <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
+                      <UserCheck className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <CardTitle>Account already exists</CardTitle>
+                    <CardDescription>
+                      An account with{" "}
+                      <span className="font-medium text-foreground">{formData.email}</span>{" "}
+                      already exists. Sign in to continue creating your organization.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => { window.location.href = getLoginUrl() }}
+                    >
+                      Sign in instead
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      onClick={() => {
+                        setEmailVerification("idle")
+                        setFormData(prev => ({ ...prev, email: "" }))
+                      }}
+                    >
+                      <ArrowLeft className="mr-1 h-3 w-3" />
+                      Use a different email
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : emailVerification === "verified" ? (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-green-600" />
+                      <CardTitle>Create your password</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Email verified as <span className="font-medium text-foreground">{formData.email}</span>.
+                      Set a password to secure your account.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder={`Min. ${PASSWORD_MIN_LENGTH} chars, upper, lower, number, special`}
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        className={errors.password ? "border-destructive" : ""}
+                      />
+                      {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="Confirm your password"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        className={errors.confirmPassword ? "border-destructive" : ""}
+                      />
+                      {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
+                    </div>
+                  </CardContent>
+                </Card>
               ) : (
                 <Card>
                   <CardHeader>
@@ -679,11 +838,11 @@ export default function SignupPage() {
                       <CardTitle>Your Account</CardTitle>
                     </div>
                     <CardDescription>
-                      Create your administrator account
+                      Enter your name and email to get started
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="grid gap-4 sm:grid-cols-2">
-                    <div className="sm:col-span-2 space-y-2">
+                  <CardContent className="grid gap-4">
+                    <div className="space-y-2">
                       <Label htmlFor="name">Your Name</Label>
                       <Input
                         id="name"
@@ -698,133 +857,21 @@ export default function SignupPage() {
                       {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
                       <p className="text-xs text-muted-foreground">{formData.name.length}/{MAX_NAME_LENGTH}</p>
                     </div>
-                    <div className="sm:col-span-2 space-y-2">
+                    <div className="space-y-2">
                       <Label htmlFor="email">Email Address</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          autoComplete="email"
-                          placeholder="you@example.com"
-                          value={formData.email}
-                          onChange={(e) => {
-                            handleInputChange(e)
-                            if (emailVerification !== "idle") {
-                              setEmailVerification("idle")
-                              setVerificationCode("")
-                            }
-                          }}
-                          onBlur={handleEmailBlur}
-                          disabled={emailVerification === "verified"}
-                          className={cn(
-                            "flex-1",
-                            errors.email ? "border-destructive" : "",
-                            emailVerification === "verified" ? "border-green-500" : ""
-                          )}
-                        />
-                        {emailVerification === "verified" ? (
-                          <div className="flex items-center gap-1.5 text-green-600 px-3">
-                            <ShieldCheck className="h-4 w-4" />
-                            <span className="text-sm font-medium">Verified</span>
-                          </div>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleSendVerificationCode}
-                            disabled={emailVerification === "sending" || !formData.email.trim()}
-                          >
-                            {emailVerification === "sending" ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : emailVerification === "sent" ? (
-                              "Resend Code"
-                            ) : (
-                              "Verify Email"
-                            )}
-                          </Button>
-                        )}
-                      </div>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        onBlur={handleEmailBlur}
+                        className={errors.email ? "border-destructive" : ""}
+                      />
                       {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-
-                      {emailVerification === "exists" && (
-                        <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950 p-3 space-y-2">
-                          <p className="text-sm text-amber-800 dark:text-amber-200">
-                            An account with this email already exists. Please sign in to continue.
-                          </p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => { window.location.href = getLoginUrl() }}
-                          >
-                            Sign in instead
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-
-                      {(emailVerification === "sent" || emailVerification === "verifying") && (
-                        <div className="space-y-2 pt-1">
-                          <p className="text-sm text-muted-foreground">
-                            Enter the 6-digit code sent to <span className="font-medium">{formData.email}</span>
-                          </p>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Enter code"
-                              value={verificationCode}
-                              onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-                              maxLength={6}
-                              className="font-mono tracking-widest max-w-[180px]"
-                            />
-                            <Button
-                              type="button"
-                              onClick={handleVerifyCode}
-                              disabled={emailVerification === "verifying" || verificationCode.length < 6}
-                            >
-                              {emailVerification === "verifying" ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Verify"
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
                     </div>
-
-                    {emailVerification === "verified" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="password">Password</Label>
-                          <Input
-                            id="password"
-                            name="password"
-                            type="password"
-                            autoComplete="new-password"
-                            placeholder={`Min. ${PASSWORD_MIN_LENGTH} chars, upper, lower, number, special`}
-                            value={formData.password}
-                            onChange={handleInputChange}
-                            className={errors.password ? "border-destructive" : ""}
-                          />
-                          {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="confirmPassword">Confirm Password</Label>
-                          <Input
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            type="password"
-                            autoComplete="new-password"
-                            placeholder="Confirm your password"
-                            value={formData.confirmPassword}
-                            onChange={handleInputChange}
-                            className={errors.confirmPassword ? "border-destructive" : ""}
-                          />
-                          {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
-                        </div>
-                      </>
-                    )}
                   </CardContent>
                 </Card>
               )}
@@ -1338,67 +1385,93 @@ export default function SignupPage() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between">
-            <div>
-              {!stepper.state.isFirst && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => stepper.navigation.prev()}
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-              )}
-            </div>
+          {(() => {
+            const isAccountStep = currentStepId === "account"
+            const isChoosingOrMidVerification = isAccountStep && (
+              signupMode === "choosing" ||
+              emailVerification === "sent" ||
+              emailVerification === "verifying" ||
+              emailVerification === "exists"
+            )
 
-            <div>
-              {currentStepId === "account" && signupMode === "choosing" ? null : currentStepId === "account" && useExistingAccount ? (
-                <Button
-                  type="button"
-                  onClick={() => stepper.navigation.next()}
-                >
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : stepper.state.isLast ? (
-                (() => {
-                  const selectedPlan = plans.find(p => p.id === formData.planId)
-                  const isPaidPlan = selectedPlan && Number(selectedPlan.monthlyPrice) > 0
-                  return (
+            if (isChoosingOrMidVerification) return null
+
+            return (
+              <div className="flex items-center justify-between">
+                <div>
+                  {!stepper.state.isFirst && (
                     <Button
-                      type="submit"
-                      size="lg"
-                      disabled={isLoading || subdomainStatus === "checking"}
-                      className="min-w-[200px]"
+                      type="button"
+                      variant="outline"
+                      onClick={() => stepper.navigation.prev()}
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {isPaidPlan ? "Proceeding to Payment..." : "Creating Organization..."}
-                        </>
-                      ) : isPaidPlan ? (
-                        <>
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Continue to Payment
-                        </>
-                      ) : (
-                        "Create Organization"
-                      )}
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Back
                     </Button>
-                  )
-                })()
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                >
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
+                  )}
+                </div>
+
+                <div>
+                  {isAccountStep && useExistingAccount ? (
+                    <Button
+                      type="button"
+                      onClick={() => stepper.navigation.next()}
+                    >
+                      Next
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : isAccountStep && (emailVerification === "idle" || emailVerification === "sending") ? (
+                    <Button
+                      type="button"
+                      onClick={handleSendVerificationCode}
+                      disabled={emailVerification === "sending"}
+                    >
+                      {emailVerification === "sending" ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      Continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : stepper.state.isLast ? (
+                    (() => {
+                      const selectedPlan = plans.find(p => p.id === formData.planId)
+                      const isPaidPlan = selectedPlan && Number(selectedPlan.monthlyPrice) > 0
+                      return (
+                        <Button
+                          type="submit"
+                          size="lg"
+                          disabled={isLoading || subdomainStatus === "checking"}
+                          className="min-w-[200px]"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {isPaidPlan ? "Proceeding to Payment..." : "Creating Organization..."}
+                            </>
+                          ) : isPaidPlan ? (
+                            <>
+                              <CreditCard className="mr-2 h-4 w-4" />
+                              Continue to Payment
+                            </>
+                          ) : (
+                            "Create Organization"
+                          )}
+                        </Button>
+                      )
+                    })()
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={handleNext}
+                    >
+                      Next
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
 
           {stepper.state.isLast && (
             <p className="text-center text-sm text-muted-foreground">
