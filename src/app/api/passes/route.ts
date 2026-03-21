@@ -101,6 +101,24 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createPassSchema.parse(body);
+    const scopedDb = getScopedDb(session.user.organizationId);
+
+    if (validatedData.programIds && validatedData.programIds.length > 0 && !validatedData.coversAllPrograms) {
+      const validPrograms = await scopedDb.program.findMany({
+        where: { id: { in: validatedData.programIds } },
+        select: { id: true },
+      });
+      if (validPrograms.length !== validatedData.programIds.length) {
+        return NextResponse.json({ error: "One or more programs not found" }, { status: 404 });
+      }
+    }
+
+    if (validatedData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
+      if (!glCode) {
+        return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+      }
+    }
 
     const pass = await db.pass.create({
       data: {
@@ -112,6 +130,7 @@ export async function POST(request: NextRequest) {
         sessionLimit: validatedData.sessionLimit,
         limitPeriod: validatedData.limitPeriod,
         coversAllPrograms: validatedData.coversAllPrograms,
+        glCodeId: validatedData.glCodeId ?? undefined,
         ...(validatedData.programIds && validatedData.programIds.length > 0 && !validatedData.coversAllPrograms
           ? { coveredPrograms: { connect: validatedData.programIds.map((id) => ({ id })) } }
           : {}),

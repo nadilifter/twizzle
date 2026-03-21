@@ -173,14 +173,18 @@ export async function PUT(
       if (skills.length !== skillIds.length) {
         return NextResponse.json(
           { error: "One or more skills not found" },
-          { status: 400 }
+          { status: 404 }
         );
       }
     }
 
-    // Update template and skills in a transaction
     const template = await db.$transaction(async (tx) => {
-      // Update template fields
+      const verified = await tx.evaluationTemplate.findFirst({
+        where: { id, organizationId: session.user.organizationId },
+        select: { id: true },
+      });
+      if (!verified) throw new Error("Evaluation template not found or access denied");
+
       await tx.evaluationTemplate.update({
         where: { id },
         data: templateData,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolvePublicRequest } from "@/lib/public-api";
 
 // GET /api/public/programs/medical-requirements?programIds=id1,id2&organizationId=xxx
 // Public endpoint - check if any programs require medical information
@@ -8,11 +9,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const programIdsParam = searchParams.get("programIds");
-    const organizationId = searchParams.get("organizationId");
+    const result = await resolvePublicRequest(request, searchParams.get("organizationId"));
+    if (result instanceof NextResponse) return result;
+    const { organizationId } = result;
 
-    if (!programIdsParam || !organizationId) {
+    if (!programIdsParam) {
       return NextResponse.json(
-        { error: "programIds and organizationId are required" },
+        { error: "programIds is required" },
         { status: 400 }
       );
     }

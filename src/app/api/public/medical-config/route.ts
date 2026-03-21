@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolvePublicRequest } from "@/lib/public-api";
 
 /**
  * GET /api/public/medical-config?organizationId=xxx
@@ -10,14 +11,9 @@ import { db } from "@/lib/db";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get("organizationId");
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "organizationId is required" },
-        { status: 400 }
-      );
-    }
+    const result = await resolvePublicRequest(request, searchParams.get("organizationId"));
+    if (result instanceof NextResponse) return result;
+    const { organizationId } = result;
 
     // Fetch the organization's medical form config
     const config = await db.medicalFormConfig.findUnique({

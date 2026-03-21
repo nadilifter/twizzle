@@ -124,6 +124,13 @@ export async function PATCH(
     const validatedData = updateMembershipGroupSchema.parse(body);
     const scopedDb = getScopedDb(session.user.organizationId);
 
+    if (validatedData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
+      if (!glCode) {
+        return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+      }
+    }
+
     // Fetch current group to check if it's non-recurring (for price sync)
     const currentGroup = await scopedDb.membershipGroup.findUnique({
       where: { id: params.id },

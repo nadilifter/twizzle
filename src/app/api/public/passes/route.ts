@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
+import { resolvePublicRequest } from "@/lib/public-api";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get("organizationId");
-
-    if (!organizationId) {
-      return NextResponse.json({ error: "organizationId is required" }, { status: 400 });
-    }
+    const result = await resolvePublicRequest(request, searchParams.get("organizationId"));
+    if (result instanceof NextResponse) return result;
+    const { organizationId } = result;
 
     const passesEnabled = await isFeatureEnabled(organizationId, "passes");
     if (!passesEnabled) {

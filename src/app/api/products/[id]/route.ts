@@ -97,6 +97,13 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateProductSchema.parse(body);
 
+    if (validatedData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
+      if (!glCode) {
+        return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+      }
+    }
+
     // Check if SKU already exists for another product (if updating SKU)
     if (validatedData.sku && validatedData.sku !== existingProduct.sku) {
       const skuExists = await scopedDb.product.findFirst({

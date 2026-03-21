@@ -264,6 +264,28 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    const scopedDb = getScopedDb(session.user.organizationId);
+
+    if (validatedData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
+      if (!glCode) {
+        return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+      }
+    }
+
+    if (validatedData.requiredMembershipInstanceIds && validatedData.requiredMembershipInstanceIds.length > 0) {
+      const validInstances = await db.membershipInstance.findMany({
+        where: {
+          id: { in: validatedData.requiredMembershipInstanceIds },
+          group: { organizationId: session.user.organizationId },
+        },
+        select: { id: true },
+      });
+      if (validInstances.length !== validatedData.requiredMembershipInstanceIds.length) {
+        return NextResponse.json({ error: "One or more membership instances not found" }, { status: 404 });
+      }
+    }
+
     const data: any = {
         title: validatedData.title,
         color: validatedData.color,

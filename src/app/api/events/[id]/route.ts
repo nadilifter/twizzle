@@ -176,6 +176,31 @@ export async function PATCH(
     }
 
     const scopedDb = getScopedDb(session.user.organizationId);
+
+    if (validatedData.programId) {
+      const program = await scopedDb.program.findUnique({ where: { id: validatedData.programId } });
+      if (!program) {
+        return NextResponse.json({ error: "Program not found" }, { status: 404 });
+      }
+    }
+
+    if (validatedData.coachId) {
+      const coach = await db.organizationMember.findFirst({
+        where: { userId: validatedData.coachId, organizationId: session.user.organizationId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (!coach) {
+        return NextResponse.json({ error: "Coach not found" }, { status: 404 });
+      }
+    }
+
+    if (validatedData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
+      if (!glCode) {
+        return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+      }
+    }
+
     const event = await scopedDb.event.update({
       where: { id },
       data: {
@@ -246,6 +271,17 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    const linkedLineItems = await db.lineItem.count({
+      where: { eventId: id },
+    });
+
+    if (linkedLineItems > 0) {
+      return NextResponse.json(
+        { error: "Cannot delete an event that has associated invoice line items. Remove the line items first." },
+        { status: 400 }
+      );
     }
 
     const scopedDb = getScopedDb(session.user.organizationId);

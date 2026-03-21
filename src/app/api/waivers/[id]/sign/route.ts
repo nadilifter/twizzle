@@ -54,6 +54,16 @@ export async function POST(
     const userAgent = request.headers.get("user-agent") || null;
     const userId = validatedData.userId;
 
+    const validPageIds = new Set(waiver.pages.map(p => p.id));
+    for (const sig of validatedData.signatures) {
+      if (!validPageIds.has(sig.waiverPageId)) {
+        return NextResponse.json(
+          { error: "Invalid waiver page" },
+          { status: 400 }
+        );
+      }
+    }
+
     const result = await db.$transaction(async (tx) => {
       for (const sig of validatedData.signatures) {
         const existing = await tx.waiverSignature.findFirst({

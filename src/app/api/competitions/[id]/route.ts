@@ -216,6 +216,32 @@ export async function PATCH(
     const body = await request.json()
     const data = updateCompetitionSchema.parse(body)
 
+    const scopedDb = getScopedDb(organizationId)
+
+    if (data.facilityId) {
+      const facility = await scopedDb.facility.findUnique({ where: { id: data.facilityId } })
+      if (!facility) return NextResponse.json({ error: "Facility not found" }, { status: 404 })
+    }
+    if (data.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: data.glCodeId } })
+      if (!glCode) return NextResponse.json({ error: "GL code not found" }, { status: 404 })
+    }
+    if (data.levelRequirementIds?.length) {
+      const valid = await scopedDb.level.findMany({ where: { id: { in: data.levelRequirementIds } }, select: { id: true } })
+      if (valid.length !== data.levelRequirementIds.length) return NextResponse.json({ error: "One or more levels not found" }, { status: 404 })
+    }
+    if (data.membershipRequirementIds?.length) {
+      const valid = await db.membershipInstance.findMany({
+        where: { id: { in: data.membershipRequirementIds }, group: { organizationId } },
+        select: { id: true },
+      })
+      if (valid.length !== data.membershipRequirementIds.length) return NextResponse.json({ error: "One or more membership instances not found" }, { status: 404 })
+    }
+    if (data.waiverRequirementIds?.length) {
+      const valid = await scopedDb.waiver.findMany({ where: { id: { in: data.waiverRequirementIds } }, select: { id: true } })
+      if (valid.length !== data.waiverRequirementIds.length) return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 })
+    }
+
     const updateData: Record<string, unknown> = {}
     if (data.name !== undefined) updateData.name = data.name
     if (data.color !== undefined) updateData.color = data.color
@@ -271,7 +297,6 @@ export async function PATCH(
     if (data.scheduledGoLiveDate !== undefined) updateData.scheduledGoLiveDate = data.scheduledGoLiveDate ? parseDateOnly(String(data.scheduledGoLiveDate)) : null
     if (data.scheduledGoLiveTime !== undefined) updateData.scheduledGoLiveTime = data.scheduledGoLiveTime
 
-    const scopedDb = getScopedDb(session.user.organizationId)
     const competition = await scopedDb.competition.update({
       where: { id },
       data: updateData,

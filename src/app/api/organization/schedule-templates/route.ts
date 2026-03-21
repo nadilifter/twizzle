@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 
 const templateEntrySchema = z.object({
@@ -93,6 +93,25 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createTemplateSchema.parse(body);
+
+    if (validatedData.entries?.length) {
+      const scopedDb = getScopedDb(organizationId);
+      const facilityIds = [...new Set(validatedData.entries.map(e => e.facilityId).filter(Boolean))] as string[];
+      const memberIds = [...new Set(validatedData.entries.map(e => e.memberId).filter(Boolean))] as string[];
+
+      if (facilityIds.length > 0) {
+        const validFacilities = await scopedDb.facility.findMany({ where: { id: { in: facilityIds } }, select: { id: true } });
+        if (validFacilities.length !== facilityIds.length) {
+          return NextResponse.json({ error: "One or more facilities not found" }, { status: 404 });
+        }
+      }
+      if (memberIds.length > 0) {
+        const validMembers = await scopedDb.organizationMember.findMany({ where: { id: { in: memberIds } }, select: { id: true } });
+        if (validMembers.length !== memberIds.length) {
+          return NextResponse.json({ error: "One or more members not found" }, { status: 404 });
+        }
+      }
+    }
 
     const template = await db.scheduleTemplate.create({
       data: {

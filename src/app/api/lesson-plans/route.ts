@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -129,6 +129,21 @@ export async function POST(request: NextRequest) {
 
     if (!program) {
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
+    }
+
+    const scopedDb = getScopedDb(session.user.organizationId);
+    if (validatedData.rotations?.length) {
+      const allSkillIds = validatedData.rotations.flatMap(r => r.skillIds || []);
+      if (allSkillIds.length > 0) {
+        const uniqueSkillIds = [...new Set(allSkillIds)];
+        const validSkills = await scopedDb.skill.findMany({
+          where: { id: { in: uniqueSkillIds } },
+          select: { id: true },
+        });
+        if (validSkills.length !== uniqueSkillIds.length) {
+          return NextResponse.json({ error: "One or more skills not found" }, { status: 404 });
+        }
+      }
     }
 
     const lessonPlan = await db.lessonPlan.create({

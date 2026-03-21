@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolvePublicRequest } from "@/lib/public-api";
 
 /**
  * GET /api/public/memberships/waiver-requirements?membershipGroupIds=id1,id2&organizationId=xxx
@@ -11,11 +12,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const groupIdsParam = searchParams.get("membershipGroupIds");
-    const organizationId = searchParams.get("organizationId");
+    const result = await resolvePublicRequest(request, searchParams.get("organizationId"));
+    if (result instanceof NextResponse) return result;
+    const { organizationId } = result;
 
-    if (!groupIdsParam || !organizationId) {
+    if (!groupIdsParam) {
       return NextResponse.json(
-        { error: "membershipGroupIds and organizationId are required" },
+        { error: "membershipGroupIds is required" },
         { status: 400 }
       );
     }

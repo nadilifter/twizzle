@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { resolvePublicRequest } from "@/lib/public-api";
 
 const upsertMedicalInfoSchema = z.object({
   allergies: z.array(z.string()).optional(),
@@ -50,12 +51,15 @@ export async function GET(
   try {
     const { id: athleteId } = await params;
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get("organizationId");
     const email = searchParams.get("email");
 
-    if (!organizationId || !email) {
+    const orgResult = await resolvePublicRequest(request, searchParams.get("organizationId"));
+    if (orgResult instanceof NextResponse) return orgResult;
+    const { organizationId } = orgResult;
+
+    if (!email) {
       return NextResponse.json(
-        { error: "organizationId and email are required" },
+        { error: "email is required" },
         { status: 400 }
       );
     }
@@ -136,7 +140,10 @@ export async function PUT(
     const body = await request.json();
     const validatedData = upsertMedicalInfoSchema.parse(body);
 
-    const { organizationId, email, customResponses, ...medicalData } = validatedData;
+    const orgResult = await resolvePublicRequest(request, validatedData.organizationId);
+    if (orgResult instanceof NextResponse) return orgResult;
+
+    const { organizationId: _orgId, email, customResponses, ...medicalFields } = validatedData;
 
     const hasAccess = await verifyGuardian(athleteId, email);
     if (!hasAccess) {
@@ -152,27 +159,27 @@ export async function PUT(
     });
 
     const mergedData = {
-      allergies: medicalData.allergies ?? existing?.allergies ?? [],
-      medications: medicalData.medications ?? existing?.medications ?? [],
-      conditions: medicalData.conditions ?? existing?.conditions ?? [],
-      dietaryRestrictions: medicalData.dietaryRestrictions ?? existing?.dietaryRestrictions ?? [],
-      insuranceProvider: medicalData.insuranceProvider !== undefined
-        ? medicalData.insuranceProvider
+      allergies: medicalFields.allergies ?? existing?.allergies ?? [],
+      medications: medicalFields.medications ?? existing?.medications ?? [],
+      conditions: medicalFields.conditions ?? existing?.conditions ?? [],
+      dietaryRestrictions: medicalFields.dietaryRestrictions ?? existing?.dietaryRestrictions ?? [],
+      insuranceProvider: medicalFields.insuranceProvider !== undefined
+        ? medicalFields.insuranceProvider
         : existing?.insuranceProvider ?? null,
-      insurancePolicyNumber: medicalData.insurancePolicyNumber !== undefined
-        ? medicalData.insurancePolicyNumber
+      insurancePolicyNumber: medicalFields.insurancePolicyNumber !== undefined
+        ? medicalFields.insurancePolicyNumber
         : existing?.insurancePolicyNumber ?? null,
-      emergencyContactName: medicalData.emergencyContactName !== undefined
-        ? medicalData.emergencyContactName
+      emergencyContactName: medicalFields.emergencyContactName !== undefined
+        ? medicalFields.emergencyContactName
         : existing?.emergencyContactName ?? null,
-      emergencyContactPhone: medicalData.emergencyContactPhone !== undefined
-        ? medicalData.emergencyContactPhone
+      emergencyContactPhone: medicalFields.emergencyContactPhone !== undefined
+        ? medicalFields.emergencyContactPhone
         : existing?.emergencyContactPhone ?? null,
-      emergencyContactRelation: medicalData.emergencyContactRelation !== undefined
-        ? medicalData.emergencyContactRelation
+      emergencyContactRelation: medicalFields.emergencyContactRelation !== undefined
+        ? medicalFields.emergencyContactRelation
         : existing?.emergencyContactRelation ?? null,
-      additionalNotes: medicalData.additionalNotes !== undefined
-        ? medicalData.additionalNotes
+      additionalNotes: medicalFields.additionalNotes !== undefined
+        ? medicalFields.additionalNotes
         : existing?.additionalNotes ?? null,
     };
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolvePublicRequest } from "@/lib/public-api";
 
 // POST /api/public/waivers/check
 // Public endpoint - check waiver status by userId (or email) and org
@@ -7,12 +8,16 @@ import { db } from "@/lib/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { waiverIds, organizationId, athleteId, email } = body;
+    const { waiverIds, athleteId, email } = body;
     let { userId } = body;
 
-    if (!waiverIds?.length || !organizationId) {
+    const result = await resolvePublicRequest(request, body.organizationId);
+    if (result instanceof NextResponse) return result;
+    const { organizationId } = result;
+
+    if (!waiverIds?.length) {
       return NextResponse.json(
-        { error: "waiverIds and organizationId are required" },
+        { error: "waiverIds is required" },
         { status: 400 }
       );
     }

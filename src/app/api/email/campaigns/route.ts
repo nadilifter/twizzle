@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, getScopedDb } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import {
@@ -154,6 +154,30 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createCampaignSchema.parse(body);
+
+    // Validate targeting foreign keys belong to this org
+    const scopedDb = getScopedDb(session.user.organizationId);
+    if (validatedData.targetProgramId) {
+      const program = await scopedDb.program.findUnique({ where: { id: validatedData.targetProgramId } });
+      if (!program) return NextResponse.json({ error: "Target program not found" }, { status: 404 });
+    }
+    if (validatedData.targetEventId) {
+      const event = await scopedDb.event.findUnique({ where: { id: validatedData.targetEventId } });
+      if (!event) return NextResponse.json({ error: "Target event not found" }, { status: 404 });
+    }
+    if (validatedData.targetProgramInstanceId) {
+      const instance = await scopedDb.programInstance.findUnique({ where: { id: validatedData.targetProgramInstanceId } });
+      if (!instance) return NextResponse.json({ error: "Target program instance not found" }, { status: 404 });
+    }
+    if (validatedData.targetMembershipGroupIds?.length) {
+      const valid = await scopedDb.membershipGroup.findMany({
+        where: { id: { in: validatedData.targetMembershipGroupIds } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.targetMembershipGroupIds.length) {
+        return NextResponse.json({ error: "One or more target membership groups not found" }, { status: 404 });
+      }
+    }
 
     // Validate targeting requirements
     if (

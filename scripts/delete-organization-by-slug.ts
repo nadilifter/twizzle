@@ -53,9 +53,25 @@ const prisma = new PrismaClient();
 
 async function main() {
   const slug = process.argv[2];
+  const forceFlag = process.argv.includes("--yes-delete-production-data");
   if (!slug || slug.startsWith("-")) {
     console.error("Usage: delete-organization-by-slug.ts <slug>");
     console.error("Example: pnpm delete-org discover-circus");
+    process.exit(1);
+  }
+
+  const nodeEnv = process.env.NODE_ENV || "development";
+  const dbUrl = process.env.DATABASE_URL || "";
+  const looksLikeProduction =
+    nodeEnv === "production" ||
+    dbUrl.includes("prod") ||
+    dbUrl.includes("uplifterinc.com");
+
+  if (looksLikeProduction && !forceFlag) {
+    console.error(
+      "SAFETY: This looks like a production database. " +
+      "Pass --yes-delete-production-data to confirm."
+    );
     process.exit(1);
   }
 
@@ -67,6 +83,12 @@ async function main() {
   if (!org) {
     console.error(`Organization not found with slug: ${slug}`);
     process.exit(1);
+  }
+
+  if (looksLikeProduction) {
+    console.warn(
+      `WARNING: Deleting PRODUCTION organization "${org.name}" (${org.slug}, id: ${org.id}) and ALL related data.`
+    );
   }
 
   await prisma.organization.delete({

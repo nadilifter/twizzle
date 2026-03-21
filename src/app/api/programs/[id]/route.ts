@@ -271,9 +271,50 @@ export async function PATCH(
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
     }
 
-    // Use a transaction to update the program and related data
+    // Validate all client-provided foreign keys belong to this org
+    const scopedDb = getScopedDb(session.user.organizationId);
+    if (validatedData.facilityId) {
+      const facility = await scopedDb.facility.findUnique({ where: { id: validatedData.facilityId } });
+      if (!facility) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
+    }
+    if (validatedData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
+      if (!glCode) return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+    }
+    if (validatedData.levelRequirementIds?.length) {
+      const valid = await scopedDb.level.findMany({ where: { id: { in: validatedData.levelRequirementIds } }, select: { id: true } });
+      if (valid.length !== validatedData.levelRequirementIds.length) return NextResponse.json({ error: "One or more levels not found" }, { status: 404 });
+    }
+    if (validatedData.waiverRequirementIds?.length) {
+      const valid = await scopedDb.waiver.findMany({ where: { id: { in: validatedData.waiverRequirementIds } }, select: { id: true } });
+      if (valid.length !== validatedData.waiverRequirementIds.length) return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 });
+    }
+    if (validatedData.membershipRequirementIds?.length) {
+      const valid = await db.membershipInstance.findMany({
+        where: { id: { in: validatedData.membershipRequirementIds }, group: { organizationId: session.user.organizationId } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.membershipRequirementIds.length) return NextResponse.json({ error: "One or more membership instances not found" }, { status: 404 });
+    }
+    if (validatedData.passRequirementIds?.length) {
+      const valid = await scopedDb.pass.findMany({ where: { id: { in: validatedData.passRequirementIds } }, select: { id: true } });
+      if (valid.length !== validatedData.passRequirementIds.length) return NextResponse.json({ error: "One or more passes not found" }, { status: 404 });
+    }
+    if (validatedData.spaceIds?.length) {
+      const valid = await db.space.findMany({
+        where: { id: { in: validatedData.spaceIds }, facility: { organizationId: session.user.organizationId } },
+        select: { id: true },
+      });
+      if (valid.length !== validatedData.spaceIds.length) return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
+    }
+
     const program = await db.$transaction(async (tx) => {
-      // Prepare update data with proper type handling
+      const verified = await tx.program.findFirst({
+        where: { id, organizationId: session.user.organizationId },
+        select: { id: true },
+      });
+      if (!verified) throw new Error("Program not found or access denied");
+
       const updateData: Record<string, unknown> = {};
       
       if (validatedData.name !== undefined) updateData.name = validatedData.name;

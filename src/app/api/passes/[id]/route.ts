@@ -94,6 +94,23 @@ export async function PATCH(
 
     const { programIds, ...scalarData } = validatedData;
 
+    if (programIds && programIds.length > 0) {
+      const validPrograms = await scopedDb.program.findMany({
+        where: { id: { in: programIds } },
+        select: { id: true },
+      });
+      if (validPrograms.length !== programIds.length) {
+        return NextResponse.json({ error: "One or more programs not found" }, { status: 404 });
+      }
+    }
+
+    if (scalarData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: scalarData.glCodeId } });
+      if (!glCode) {
+        return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+      }
+    }
+
     const updated = await scopedDb.pass.update({
       where: { id },
       data: {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { resolvePublicRequest } from "@/lib/public-api";
 
 const publicSignWaiverSchema = z.object({
   organizationId: z.string().min(1),
@@ -25,11 +26,14 @@ export async function POST(
     const body = await request.json();
     const validatedData = publicSignWaiverSchema.parse(body);
 
-    // Verify waiver exists, is active, and belongs to the org
+    const orgResult = await resolvePublicRequest(request, validatedData.organizationId);
+    if (orgResult instanceof NextResponse) return orgResult;
+    const { organizationId } = orgResult;
+
     const waiver = await db.waiver.findFirst({
       where: {
         id: waiverId,
-        organizationId: validatedData.organizationId,
+        organizationId,
         status: "ACTIVE",
       },
       include: {
@@ -51,6 +55,16 @@ export async function POST(
       request.headers.get("x-real-ip") || null;
     const userAgent = request.headers.get("user-agent") || null;
     const athleteId = validatedData.athleteId || null;
+
+    const validPageIds = new Set(waiver.pages.map(p => p.id));
+    for (const sig of validatedData.signatures) {
+      if (!validPageIds.has(sig.waiverPageId)) {
+        return NextResponse.json(
+          { error: "Invalid waiver page" },
+          { status: 400 }
+        );
+      }
+    }
 
     const result = await db.$transaction(async (tx) => {
       for (const sig of validatedData.signatures) {
