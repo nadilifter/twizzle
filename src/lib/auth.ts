@@ -385,6 +385,7 @@ export const authOptions: NextAuthOptions = {
           token.organizationName = user.organizationName;
           token.permissions = user.permissions;
           token.isSuperAdmin = user.isSuperAdmin;
+          token.avatar = user.image || null;
         }
         
         // OAuth sign-in - fetch user data from database
@@ -393,7 +394,7 @@ export const authOptions: NextAuthOptions = {
           
           const dbUser = await db.user.findUnique({
             where: { email: user.email },
-            select: { id: true },
+            select: { id: true, avatar: true },
           });
           
           if (dbUser) {
@@ -405,6 +406,7 @@ export const authOptions: NextAuthOptions = {
               token.permissions = authUser.permissions;
               token.organizationId = authUser.organizationId;
               token.organizationName = authUser.organizationName;
+              token.avatar = dbUser.avatar || null;
             }
           }
         }
@@ -433,6 +435,11 @@ export const authOptions: NextAuthOptions = {
             token.viewingAsUserName = session.viewingAsUserName || undefined;
             token.viewingAsUserEmail = session.viewingAsUserEmail || undefined;
           }
+
+          // Handle avatar update
+          if (session.avatar !== undefined) {
+            token.avatar = session.avatar;
+          }
         }
 
         // console.log("JWT callback returning token:", JSON.stringify(token, null, 2));
@@ -456,6 +463,7 @@ export const authOptions: NextAuthOptions = {
           session.user.viewingAsUserId = token.viewingAsUserId as string | undefined;
           session.user.viewingAsUserName = token.viewingAsUserName as string | undefined;
           session.user.viewingAsUserEmail = token.viewingAsUserEmail as string | undefined;
+          session.user.image = (token.avatar as string) || null;
         }
         return session;
       } catch (error) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ interface UserProfile {
 }
 
 export default function AccountPage() {
+  const { update: updateSession } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -117,9 +119,10 @@ export default function AccountPage() {
               currentAvatar={profile.avatar}
               name={profile.name}
               uploadUrl="/api/avatar"
-              onAvatarChange={(url) =>
-                setProfile((prev) => (prev ? { ...prev, avatar: url } : prev))
-              }
+              onAvatarChange={(url) => {
+                setProfile((prev) => (prev ? { ...prev, avatar: url } : prev));
+                updateSession({ avatar: url });
+              }}
               size="lg"
             />
             <div>
