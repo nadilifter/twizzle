@@ -7,7 +7,7 @@
  */
 
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { getSESConfig } from './services-config';
 import { getCurrentEnvironment } from './env-domains';
@@ -281,6 +281,81 @@ export type EmailTemplate =
   | 'email-login-code'
   | 'no-account-login'
   | 'signup-verification-code';
+
+/**
+ * Wrap email body content in a branded Uplifter layout.
+ * Uses table-based structure for cross-client compatibility (Outlook, Gmail, Apple Mail).
+ */
+function wrapInBrandedLayout(options: {
+  preheaderText: string;
+  bodyHtml: string;
+}): string {
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <title>Uplifter</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <style>
+    td, th, div, p, a, h1, h2, h3, h4, h5, h6 { font-family: 'Segoe UI', Arial, sans-serif; }
+  </style>
+  <![endif]-->
+  <style>
+    @media only screen and (max-width: 620px) {
+      .email-container { width: 100% !important; padding: 0 16px !important; }
+      .code-text { font-size: 28px !important; letter-spacing: 4px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; width: 100%; background-color: #f4f4f7; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+  <!-- Preheader (hidden inbox preview text) -->
+  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">${options.preheaderText}</div>
+  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f7;">
+    <tr>
+      <td align="center" style="padding: 32px 16px 16px;">
+        <!-- Content card -->
+        <table role="presentation" class="email-container" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+          <!-- Purple accent stripe -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, #5655ED, #A07CFE); font-size: 0; line-height: 0;">&nbsp;</td>
+          </tr>
+          <!-- Body content -->
+          <tr>
+            <td style="padding: 40px 40px 32px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 24px; color: #374151;">
+              <p style="margin: 0 0 16px; font-size: 20px; font-weight: 700; color: #5655ED; letter-spacing: -0.3px;">Uplifter</p>
+              ${options.bodyHtml}
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <table role="presentation" class="email-container" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px;">
+          <tr>
+            <td align="center" style="padding: 24px 0 32px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; line-height: 18px; color: #9ca3af;">
+              &copy; ${year} Uplifter Inc. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
 
 /**
  * Render an email template with data
@@ -590,139 +665,219 @@ function renderTemplate(
     },
     'mfa-code': {
       subject: 'Your verification code',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #1f2937;">Verification Required</h1>
-          <p>Hello {{name}},</p>
-          <p>We noticed it&rsquo;s been a while since your last sign-in. To keep your account secure, please verify your identity using the code below:</p>
-          <div style="margin: 24px 0; text-align: center;">
-            <span style="display: inline-block; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; letter-spacing: 6px; background-color: #f3f4f6; padding: 16px 24px; border-radius: 8px; border: 1px solid #e5e7eb;">{{code}}</span>
-          </div>
-          <p style="text-align: center;">Or click the button below to verify directly:</p>
-          <p style="margin: 24px 0; text-align: center;">
-            <a href="{{verifyUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Verify and Sign In</a>
-          </p>
-          <p style="color: #6b7280; font-size: 14px;">This code expires in {{expiresIn}}.</p>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-          <p style="color: #6b7280; font-size: 12px;">If you didn&rsquo;t attempt to sign in, someone may have your password. We recommend resetting it immediately.</p>
-        </div>
-      `,
-      text: `
-        Verification Required
-        
-        Hello {{name}},
-        
-        We noticed it's been a while since your last sign-in. To keep your account secure, please verify your identity using the code below:
-        
-        {{code}}
-        
-        Or verify directly: {{verifyUrl}}
-        
-        This code expires in {{expiresIn}}.
-        
-        If you didn't attempt to sign in, someone may have your password. We recommend resetting it immediately.
-      `,
+      html: wrapInBrandedLayout({
+        preheaderText: 'Your Uplifter verification code. Expires in {{expiresIn}}.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Verification Required</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Confirm your identity to continue signing in</p>
+              <p style="margin: 0 0 24px;">We noticed it&#8217;s been a while since your last sign-in, {{name}}. To keep your account secure, please verify your identity using the code below:</p>
+              <!-- Code box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 0 0 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0effc; border-radius: 10px; border: 1px solid #e0dffa;">
+                      <tr>
+                        <td style="padding: 18px 32px;">
+                          <span class="code-text" style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: #5655ED;">{{code}}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 16px; text-align: center; color: #6b7280; font-size: 14px;">Or click the button below to verify directly:</p>
+              <!-- CTA button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 0 0 24px;">
+                    <a href="{{verifyUrl}}" style="display: inline-block; background-color: #5655ED; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">Verify and Sign In</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 20px; font-size: 13px; color: #6b7280;">&#9200; This code expires in {{expiresIn}}.</p>
+              <!-- Divider -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <!-- Security notice -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0 0 4px; font-size: 13px; font-weight: 600; color: #374151;">&#128274; Security Notice</p>
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">If you didn&#8217;t attempt to sign in, someone may have your password. We recommend resetting it immediately. Never share this code with anyone.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Verification Required
+
+We noticed it's been a while since your last sign-in, {{name}}. To keep your account secure, please verify your identity using the code below:
+
+{{code}}
+
+Or verify directly: {{verifyUrl}}
+
+This code expires in {{expiresIn}}.
+
+If you didn't attempt to sign in, someone may have your password. We recommend resetting it immediately. Never share this code with anyone.`,
     },
     'email-login-code': {
       subject: 'Your sign-in code',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #1f2937;">Sign In to Uplifter</h1>
-          <p>Hello,</p>
-          <p>Use the code below to sign in to your account:</p>
-          <div style="margin: 24px 0; text-align: center;">
-            <span style="display: inline-block; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; letter-spacing: 6px; background-color: #f3f4f6; padding: 16px 24px; border-radius: 8px; border: 1px solid #e5e7eb;">{{code}}</span>
-          </div>
-          <p style="text-align: center;">Or click the button below to sign in directly:</p>
-          <p style="margin: 24px 0; text-align: center;">
-            <a href="{{verifyUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Sign In</a>
-          </p>
-          <p style="color: #6b7280; font-size: 14px;">This code expires in {{expiresIn}}.</p>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-          <p style="color: #6b7280; font-size: 12px;">If you didn&rsquo;t request this code, you can safely ignore this email.</p>
-        </div>
-      `,
-      text: `
-        Sign In to Uplifter
-        
-        Hello,
-        
-        Use the code below to sign in to your account:
-        
-        {{code}}
-        
-        Or sign in directly: {{verifyUrl}}
-        
-        This code expires in {{expiresIn}}.
-        
-        If you didn't request this code, you can safely ignore this email.
-      `,
+      html: wrapInBrandedLayout({
+        preheaderText: 'Your Uplifter sign-in code. Expires in {{expiresIn}}.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Sign In to Uplifter</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Use this code to access your account</p>
+              <p style="margin: 0 0 24px;">Use the code below to sign in to your account:</p>
+              <!-- Code box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 0 0 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0effc; border-radius: 10px; border: 1px solid #e0dffa;">
+                      <tr>
+                        <td style="padding: 18px 32px;">
+                          <span class="code-text" style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: #5655ED;">{{code}}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 16px; text-align: center; color: #6b7280; font-size: 14px;">Or click the button below to sign in directly:</p>
+              <!-- CTA button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 0 0 24px;">
+                    <a href="{{verifyUrl}}" style="display: inline-block; background-color: #5655ED; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">Sign In</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 20px; font-size: 13px; color: #6b7280;">&#9200; This code expires in {{expiresIn}}.</p>
+              <!-- Divider -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <!-- Security notice -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">If you didn&#8217;t request this code, you can safely ignore this email. Never share this code with anyone.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Sign In to Uplifter
+
+Use the code below to sign in to your account:
+
+{{code}}
+
+Or sign in directly: {{verifyUrl}}
+
+This code expires in {{expiresIn}}.
+
+If you didn't request this code, you can safely ignore this email. Never share this code with anyone.`,
     },
     'signup-verification-code': {
       subject: 'Verify your email for Uplifter',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #1f2937;">Verify Your Email</h1>
-          <p>Hello,</p>
-          <p>Use the code below to verify your email address and create your organization on Uplifter:</p>
-          <div style="margin: 24px 0; text-align: center;">
-            <span style="display: inline-block; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; letter-spacing: 6px; background-color: #f3f4f6; padding: 16px 24px; border-radius: 8px; border: 1px solid #e5e7eb;">{{code}}</span>
-          </div>
-          <p style="color: #6b7280; font-size: 14px;">This code expires in {{expiresIn}}.</p>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-          <p style="color: #6b7280; font-size: 12px;">If you didn&rsquo;t request this code, you can safely ignore this email.</p>
-        </div>
-      `,
-      text: `
-        Verify Your Email
+      html: wrapInBrandedLayout({
+        preheaderText: 'Your Uplifter verification code. Expires in {{expiresIn}}.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Verify Your Email</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">One step to create your organization on Uplifter</p>
+              <p style="margin: 0 0 24px;">Use the code below to verify your email address and create your organization on Uplifter:</p>
+              <!-- Code box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 0 0 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0effc; border-radius: 10px; border: 1px solid #e0dffa;">
+                      <tr>
+                        <td style="padding: 18px 32px;">
+                          <span class="code-text" style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: #5655ED;">{{code}}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 20px; font-size: 13px; color: #6b7280;">&#9200; This code expires in {{expiresIn}}.</p>
+              <!-- Divider -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <!-- Security notice -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">If you didn&#8217;t request this code, you can safely ignore this email. Never share this code with anyone.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Verify Your Email
 
-        Hello,
+Use the code below to verify your email address and create your organization on Uplifter:
 
-        Use the code below to verify your email address and create your organization on Uplifter:
+{{code}}
 
-        {{code}}
+This code expires in {{expiresIn}}.
 
-        This code expires in {{expiresIn}}.
-
-        If you didn't request this code, you can safely ignore this email.
-      `,
+If you didn't request this code, you can safely ignore this email. Never share this code with anyone.`,
     },
     'no-account-login': {
       subject: 'Sign-in Attempted',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #1f2937;">Sign-in Attempted</h1>
-          <p>Hello,</p>
-          <p>Someone tried to sign in with this email address, but we don&rsquo;t have an account associated with <strong>{{email}}</strong>.</p>
-          <p>If you&rsquo;re trying to access an organization&rsquo;s platform, you may need to:</p>
-          <ul style="color: #4b5563;">
-            <li>Contact your club or organization administrator to get an invitation</li>
-            <li>Sign up through your organization&rsquo;s website</li>
-          </ul>
-          <p>If you want to create a new organization on Uplifter, you can get started here:</p>
-          <p style="margin: 24px 0;">
-            <a href="{{signupUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Create an Organization</a>
-          </p>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-          <p style="color: #6b7280; font-size: 12px;">If you didn&rsquo;t request this, you can safely ignore this email.</p>
-        </div>
-      `,
-      text: `
-        Sign-in Attempted
-        
-        Hello,
-        
-        Someone tried to sign in with this email address, but we don't have an account associated with {{email}}.
-        
-        If you're trying to access an organization's platform, you may need to:
-        - Contact your club or organization administrator to get an invitation
-        - Sign up through your organization's website
-        
-        If you want to create a new organization on Uplifter, you can get started here:
-        {{signupUrl}}
-        
-        If you didn't request this, you can safely ignore this email.
-      `,
+      html: wrapInBrandedLayout({
+        preheaderText: 'A sign-in was attempted with this email address on Uplifter.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Sign-in Attempted</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">No account found for this email address</p>
+              <p style="margin: 0 0 16px;">Someone tried to sign in with this email address, but we don&#8217;t have an account associated with <strong>{{email}}</strong>.</p>
+              <p style="margin: 0 0 8px;">If you&#8217;re trying to access an organization&#8217;s platform, you may need to:</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 20px;">
+                <tr>
+                  <td style="padding: 4px 0 4px 16px; color: #374151; font-size: 14px;">&#8226;&ensp;Contact your club or organization administrator to get an invitation</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0 4px 16px; color: #374151; font-size: 14px;">&#8226;&ensp;Sign up through your organization&#8217;s website</td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 16px;">If you want to create a new organization on Uplifter, you can get started here:</p>
+              <!-- CTA button -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 0 0 24px;">
+                    <a href="{{signupUrl}}" style="display: inline-block; background-color: #5655ED; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">Create an Organization</a>
+                  </td>
+                </tr>
+              </table>
+              <!-- Divider -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">If you didn&#8217;t request this, you can safely ignore this email.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Sign-in Attempted
+
+Someone tried to sign in with this email address, but we don't have an account associated with {{email}}.
+
+If you're trying to access an organization's platform, you may need to:
+- Contact your club or organization administrator to get an invitation
+- Sign up through your organization's website
+
+If you want to create a new organization on Uplifter, you can get started here:
+{{signupUrl}}
+
+If you didn't request this, you can safely ignore this email.`,
     },
   };
 
