@@ -1,6 +1,8 @@
 import { db } from "@/lib/db"
 import { FindYourClub } from "@/components/auth/find-your-club"
 
+export const dynamic = "force-dynamic"
+
 export default async function FindYourClubPage() {
   const [organizations, sports] = await Promise.all([
     db.organization.findMany({

@@ -136,9 +136,9 @@ export const authOptions: NextAuthOptions = {
             // with the same email as an existing user.
             // 
             // Mitigations in place:
-            // 1. signIn callback verifies user exists in our database
-            // 2. Only Uplifter staff domain emails can be auto-created
-            // 3. External users must be pre-created by an admin
+            // 1. signIn callback verifies user exists or auto-creates with minimal (PARENT) role
+            // 2. Uplifter staff domain emails are auto-provisioned as superadmins
+            // 3. New external users start with no organization until assigned
             //
             // Set ALLOW_OAUTH_ACCOUNT_LINKING=false to disable this behavior
             allowDangerousEmailAccountLinking: 
@@ -327,7 +327,20 @@ export const authOptions: NextAuthOptions = {
               },
             });
           } else if (!existingUser) {
-            return "/login?error=NoAccount";
+            console.log(`Creating new user via OAuth for: ${email} (via ${provider})`);
+            const displayName = user.name || email.split("@")[0];
+            existingUser = await db.user.create({
+              data: {
+                email,
+                name: displayName,
+                avatar: user.image,
+                role: "PARENT",
+                status: "ACTIVE",
+              },
+              include: {
+                accounts: true,
+              },
+            });
           } else {
             const hasPassword = !!existingUser.passwordHash;
             const hasProviderLink = existingUser.accounts.some(
