@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { useFeatures } from "@/components/feature-context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -912,7 +913,7 @@ export default function EmailCampaignsPage() {
                   <div
                     className="rounded-md border border-input bg-transparent px-3 py-2 text-sm prose prose-sm max-w-none dark:prose-invert overflow-y-auto max-h-[300px]"
                     dangerouslySetInnerHTML={{
-                      __html: deserializePlaceholders(selectedCampaign.htmlBody, PLACEHOLDER_LABEL_MAP),
+                      __html: sanitizeHtml(deserializePlaceholders(selectedCampaign.htmlBody, PLACEHOLDER_LABEL_MAP)),
                     }}
                   />
                 </div>

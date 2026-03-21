@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSession, signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { calculateAge, isAgeEligible } from "@/lib/age-utils"
@@ -1784,7 +1785,7 @@ function WaiverStep({
               <div
                 className="prose prose-sm dark:prose-invert max-w-none"
                 dangerouslySetInnerHTML={{
-                  __html: currentWaiverPages[currentPageIndex]?.content || "",
+                  __html: sanitizeHtml(currentWaiverPages[currentPageIndex]?.content || ""),
                 }}
               />
             </div>

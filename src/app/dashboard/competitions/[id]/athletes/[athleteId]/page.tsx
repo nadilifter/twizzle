@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import {
@@ -619,7 +620,7 @@ function WaiverViewerDialog({
 
               <div
                 className="prose prose-sm max-w-none text-sm border rounded-lg p-4 bg-muted/30"
-                dangerouslySetInnerHTML={{ __html: page.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content) }}
               />
 
               {page.signature ? (

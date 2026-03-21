@@ -2,6 +2,7 @@ import React from "react";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, MapPin, Trophy } from "lucide-react";
@@ -246,7 +247,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
             <div className="max-w-3xl mx-auto bg-card rounded-2xl p-8 md:p-12 shadow-sm border">
               <div 
                 className="prose prose-lg prose-slate mx-auto" 
-                dangerouslySetInnerHTML={{ __html: config.heroText! }} 
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(config.heroText!) }} 
               />
             </div>
           </div>

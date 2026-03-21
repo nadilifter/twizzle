@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       messageStatus: params.MessageStatus,
     });
 
-    // Validate Twilio signature in production
-    if (process.env.NODE_ENV === "production") {
+    // Validate Twilio signature whenever auth token is configured
+    if (process.env.TWILIO_AUTH_TOKEN) {
       const signature = request.headers.get("x-twilio-signature");
 
       if (!signature) {
@@ -65,7 +65,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Missing signature" }, { status: 401 });
       }
 
-      // Build the full webhook URL
       const webhookUrl = getWebhookUrl();
       if (webhookUrl) {
         const isValid = validateWebhookSignature(signature, webhookUrl, params);

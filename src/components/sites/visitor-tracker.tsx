@@ -91,7 +91,6 @@ async function trackVisitor(organizationId: string): Promise<void> {
     const deviceType = getDeviceType();
     
     const payload = JSON.stringify({
-      organizationId,
       visitorId,
       date: today,
       deviceType,

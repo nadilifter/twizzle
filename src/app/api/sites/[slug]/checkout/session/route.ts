@@ -6,6 +6,56 @@ import { subDays } from "date-fns";
 import { processInvoiceRegistrations } from "@/lib/invoice-processing";
 import { sendTemplatedEmail } from "@/lib/email";
 import { getAuthSession } from "@/lib/auth";
+import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { z } from "zod";
+
+const cartItemSchema = z.object({
+  referenceId: z.string().min(1),
+  type: z.enum(["program", "membership", "item", "event", "competition", "pass"]),
+  name: z.string().min(1).max(500),
+  description: z.string().max(2000).optional(),
+  price: z.number().min(0),
+  quantity: z.number().int().min(1),
+  athleteId: z.string().optional(),
+  athleteName: z.string().max(500).optional(),
+  details: z.object({
+    programId: z.string().optional(),
+    instanceId: z.string().optional(),
+    membershipInstanceId: z.string().optional(),
+    passId: z.string().optional(),
+    athleteId: z.string().optional(),
+    level: z.string().optional(),
+    interval: z.string().optional(),
+    billingInterval: z.string().optional(),
+    requiredMemberships: z.array(z.string()).optional(),
+    competitionId: z.string().optional(),
+    competitionName: z.string().optional(),
+    categoryIds: z.array(z.string()).optional(),
+    pricingMode: z.string().optional(),
+    entryFee: z.number().nullable().optional(),
+    seedMarks: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
+    waitlist: z.boolean().optional(),
+  }).optional(),
+});
+
+const checkoutBodySchema = z.object({
+  items: z.array(cartItemSchema).min(1).max(100),
+  userDetails: z.object({
+    firstName: z.string().min(1).max(255),
+    lastName: z.string().min(1).max(255),
+    email: z.string().email().max(320),
+    phone: z.string().max(30).optional().default(""),
+    address: z.string().max(500).optional().default(""),
+    city: z.string().max(255).optional().default(""),
+    stateProvince: z.string().max(255).optional().default(""),
+    postalCode: z.string().max(20).optional().default(""),
+  }),
+  contactId: z.string().optional(),
+  billingAddressId: z.string().optional(),
+  editingContact: z.boolean().optional(),
+  editingAddress: z.boolean().optional(),
+  discountCode: z.string().max(100).optional(),
+});
 
 interface CartItem {
   referenceId: string;
@@ -40,17 +90,20 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const rateLimitResponse = await checkApiRateLimit(request, "checkout", RATE_LIMITS.sensitive);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
-    const { items, userDetails, contactId, billingAddressId, editingContact, editingAddress, discountCode } = body as { 
-      items: CartItem[]; 
-      userDetails: any; 
-      contactId?: string;
-      billingAddressId?: string;
-      editingContact?: boolean;
-      editingAddress?: boolean;
-      discountCode?: string 
-    };
+    const parsed = checkoutBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request data", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { items: validatedItems, userDetails, contactId, billingAddressId, editingContact, editingAddress, discountCode } = parsed.data;
+    const items = validatedItems as CartItem[];
     const subdomain = params.slug;
 
     // Validate registration items have quantity of 1
@@ -852,6 +905,10 @@ export async function POST(
     const tax = Math.round(discountedSubtotal * taxRate * 100) / 100;
     const total = Math.round((discountedSubtotal + tax) * 100) / 100;
 
+    // Resolve the authenticated user early so we can verify ownership below
+    const checkoutAuthSession = await getAuthSession();
+    const checkoutUserId = checkoutAuthSession?.user?.id || null;
+
     // 4. Resolve User Contact and Billing Address
     // Use saved contact if contactId provided, else use form data
     let resolvedContact = {
@@ -863,6 +920,16 @@ export async function POST(
 
     if (contactId) {
       if (editingContact) {
+        if (!checkoutUserId) {
+          return NextResponse.json({ error: "Authentication required to update contact" }, { status: 401 });
+        }
+        const ownedContact = await db.userContact.findFirst({
+          where: { id: contactId, userId: checkoutUserId },
+          select: { id: true },
+        });
+        if (!ownedContact) {
+          return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+        }
         resolvedContact = {
           firstName: userDetails.firstName,
           lastName: userDetails.lastName,
@@ -901,6 +968,16 @@ export async function POST(
 
     if (billingAddressId) {
       if (editingAddress) {
+        if (!checkoutUserId) {
+          return NextResponse.json({ error: "Authentication required to update address" }, { status: 401 });
+        }
+        const ownedAddress = await db.userBillingAddress.findFirst({
+          where: { id: billingAddressId, userId: checkoutUserId },
+          select: { id: true },
+        });
+        if (!ownedAddress) {
+          return NextResponse.json({ error: "Address not found" }, { status: 404 });
+        }
         resolvedAddress = {
           street: userDetails.address || "",
           city: userDetails.city || "",
@@ -928,10 +1005,6 @@ export async function POST(
         }
       }
     }
-
-    // Resolve the authenticated user
-    const checkoutAuthSession = await getAuthSession();
-    const checkoutUserId = checkoutAuthSession?.user?.id || null;
 
     // Save contacts and addresses to the User profile
     if (checkoutUserId) {

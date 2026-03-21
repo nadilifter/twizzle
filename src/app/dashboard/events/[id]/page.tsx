@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { format } from "date-fns"
 import {
   ArrowLeft,
@@ -227,7 +228,7 @@ export default function EventDetailPage() {
             {event.description && (
               <div
                 className="text-muted-foreground mt-1 line-clamp-2 [&>p]:m-0"
-                dangerouslySetInnerHTML={{ __html: event.description }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(event.description) }}
               />
             )}
           </div>

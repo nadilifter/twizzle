@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/collapsible"
 import { ChevronDown, ChevronUp, Globe, Building2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { sanitizeHtml } from "@/lib/sanitize"
 
 export interface AnnouncementItem {
   id: string
@@ -142,7 +143,7 @@ export function AnnouncementCard({
           <CollapsibleContent>
             <div
               className="prose prose-sm dark:prose-invert max-w-none pt-2 text-sm"
-              dangerouslySetInnerHTML={{ __html: announcement.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(announcement.content) }}
             />
           </CollapsibleContent>
         </CardContent>

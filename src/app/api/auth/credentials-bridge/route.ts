@@ -38,18 +38,21 @@ export async function GET(req: NextRequest) {
   // In production/staging, cookies are already shared across subdomains via the
   // domain attribute (.upliftergymnastics.com). No bridge is needed - just redirect.
   if (currentEnv !== 'local') {
-    console.log(`Credentials bridge: Production passthrough, redirecting to ${callbackUrl}`);
+    if (process.env.AUTH_DEBUG === 'true') {
+      console.log(`Credentials bridge: Production passthrough, redirecting to ${callbackUrl}`);
+    }
     return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
   }
 
   try {
-    // Debug: Log all cookies to diagnose session issues
     const allCookies = req.cookies.getAll();
-    console.log("Credentials bridge: All cookies:", allCookies.map(c => c.name));
-    
     const sessionCookieName = getSessionCookieName();
     const sessionCookie = req.cookies.get(sessionCookieName);
-    console.log("Credentials bridge: Session cookie present:", !!sessionCookie, "name:", sessionCookieName);
+
+    if (process.env.AUTH_DEBUG === 'true') {
+      console.log("Credentials bridge: All cookies:", allCookies.map(c => c.name));
+      console.log("Credentials bridge: Session cookie present:", !!sessionCookie, "name:", sessionCookieName);
+    }
     
     // Get the JWT token from the current session
     const token = await getToken({ 
@@ -58,7 +61,9 @@ export async function GET(req: NextRequest) {
       cookieName: sessionCookieName,
     });
 
-    console.log("Credentials bridge: Token result:", token ? `Found (email: ${token.email})` : "Not found");
+    if (process.env.AUTH_DEBUG === 'true') {
+      console.log("Credentials bridge: Token result:", token ? `Found (email: ${token.email})` : "Not found");
+    }
 
     if (!token || !token.email) {
       console.error("Credentials bridge: No valid session found");
@@ -92,7 +97,9 @@ export async function GET(req: NextRequest) {
     bridgeUrl.searchParams.set("token", bridgeToken);
     bridgeUrl.searchParams.set("callbackUrl", callbackUrl);
 
-    console.log("Credentials bridge: Redirecting to session bridge for:", email);
+    if (process.env.AUTH_DEBUG === 'true') {
+      console.log("Credentials bridge: Redirecting to session bridge for:", email);
+    }
     return NextResponse.redirect(bridgeUrl);
   } catch (error) {
     console.error("Credentials bridge error:", error);

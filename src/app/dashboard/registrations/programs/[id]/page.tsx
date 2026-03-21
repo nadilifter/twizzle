@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { format } from "date-fns";
 import { 
     ArrowLeft, 
@@ -345,7 +346,7 @@ export default function ProgramDetailPage() {
                         {program.description && (
                             <div
                                 className="text-muted-foreground mt-1 [&>p]:m-0"
-                                dangerouslySetInnerHTML={{ __html: program.description }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(program.description) }}
                             />
                         )}
                     </div>

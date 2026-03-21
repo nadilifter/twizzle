@@ -53,11 +53,19 @@ export async function POST(request: NextRequest) {
     ""
   const hmacKeys = getBpHmacKeys()
 
-  if (hmacKeys.length > 0 && hmacSignature) {
-    if (!verifyHmac(body, hmacSignature)) {
-      logger.warn("[BP-WEBHOOK] HMAC verification failed")
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
-    }
+  if (hmacKeys.length === 0) {
+    logger.error("[BP-WEBHOOK] No HMAC keys configured (ADYEN_BP_*_WEBHOOK_HMAC_KEY)")
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
+  }
+
+  if (!hmacSignature) {
+    logger.warn("[BP-WEBHOOK] Missing HMAC signature header")
+    return NextResponse.json({ error: "Missing signature" }, { status: 401 })
+  }
+
+  if (!verifyHmac(body, hmacSignature)) {
+    logger.warn("[BP-WEBHOOK] HMAC verification failed")
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
   }
 
   try {

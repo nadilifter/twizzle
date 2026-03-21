@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -174,7 +175,7 @@ export default function ProgramsPage() {
                   {program.description && (
                     <div
                       className="text-sm text-muted-foreground line-clamp-2 mb-3 [&>p]:m-0"
-                      dangerouslySetInnerHTML={{ __html: program.description }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(program.description) }}
                     />
                   )}
 

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -130,7 +131,7 @@ export default function EventsPage() {
                   {event.description && (
                     <div
                       className="text-sm text-muted-foreground line-clamp-2 mb-3 [&>p]:m-0"
-                      dangerouslySetInnerHTML={{ __html: event.description }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(event.description) }}
                     />
                   )}
 

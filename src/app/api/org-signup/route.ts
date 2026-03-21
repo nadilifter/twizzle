@@ -8,6 +8,7 @@ import { containsProfanity } from "@/lib/profanity"
 import { registerAllowedOrigin } from "@/lib/adyen-platform"
 import { createDefaultGLCodes } from "@/lib/gl-code-defaults"
 import { getDefaultTaxRate } from "@/lib/tax-utils"
+import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
 
 const MAX_NAME_LENGTH = 255
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
@@ -78,6 +79,9 @@ const signupSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = await checkApiRateLimit(request, "org-signup", RATE_LIMITS.sensitive)
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const validatedData = signupSchema.parse(body)

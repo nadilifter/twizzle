@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/sanitize";
 import React, { useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Message, UserData } from "./data";
@@ -71,7 +72,7 @@ export function ChatList({
                  {/* Render HTML content safely */}
                 <span 
                     className="[&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_blockquote]:border-l-2 [&_blockquote]:border-primary [&_blockquote]:pl-4 [&_blockquote]:italic [&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:font-mono break-words"
-                    dangerouslySetInnerHTML={{ __html: message.message }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.message) }}
                 />
               </span>
             </div>

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redis, visitorKeys, VISITOR_TTL_SECONDS, DeviceType } from "@/lib/redis";
+import { db } from "@/lib/db";
+import { checkApiRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/analytics/track
@@ -9,20 +11,38 @@ import { redis, visitorKeys, VISITOR_TTL_SECONDS, DeviceType } from "@/lib/redis
  * 
  * This endpoint is designed for fire-and-forget tracking:
  * - No authentication required (public marketing sites)
+ * - organizationId is derived server-side from the Host header subdomain
  * - Returns 204 No Content immediately
  * - Silently handles errors (analytics should never break the page)
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check if Redis is configured
+    const rateLimitResponse = await checkApiRateLimit(request, "analytics-track", { limit: 60, windowSeconds: 60 });
+    if (rateLimitResponse) return rateLimitResponse;
+
     if (!redis) {
-      // Silently ignore if Redis not configured
       return new NextResponse(null, { status: 204 });
     }
 
-    // Parse request body
+    // Derive organizationId from Host header subdomain
+    const hostname = request.headers.get("host") || "";
+    const subdomain = hostname.split(".")[0];
+    if (!subdomain) {
+      return new NextResponse(null, { status: 204 });
+    }
+
+    const siteConfig = await db.websiteConfig.findUnique({
+      where: { subdomain },
+      select: { organizationId: true },
+    });
+
+    if (!siteConfig?.organizationId) {
+      return new NextResponse(null, { status: 204 });
+    }
+
+    const organizationId = siteConfig.organizationId;
+
     let body: { 
-      organizationId?: string; 
       visitorId?: string; 
       date?: string;
       deviceType?: string;
@@ -33,10 +53,9 @@ export async function POST(request: NextRequest) {
       return new NextResponse(null, { status: 204 });
     }
 
-    const { organizationId, visitorId, date, deviceType } = body;
+    const { visitorId, date, deviceType } = body;
 
-    // Validate required fields
-    if (!organizationId || !visitorId || !date) {
+    if (!visitorId || !date) {
       return new NextResponse(null, { status: 204 });
     }
 

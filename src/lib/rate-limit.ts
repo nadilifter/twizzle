@@ -56,11 +56,19 @@ export const RATE_LIMITS = {
 export async function checkRateLimit(
   identifier: string,
   prefix: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
+  { failClosed = false }: { failClosed?: boolean } = {}
 ): Promise<RateLimitResult> {
-  // If Redis is not available, allow the request (fail open for availability)
-  // In production, you might want to fail closed instead
   if (!isRedisAvailable() || !redis) {
+    if (failClosed) {
+      console.warn("Rate limiting: Redis unavailable, failing closed for security-critical endpoint");
+      return {
+        success: false,
+        remaining: 0,
+        reset: Date.now() + config.windowSeconds * 1000,
+        limit: config.limit,
+      };
+    }
     console.warn("Rate limiting disabled: Redis not configured");
     return {
       success: true,
@@ -115,7 +123,14 @@ export async function checkRateLimit(
     };
   } catch (error) {
     console.error("Rate limit check failed:", error);
-    // Fail open on error to maintain availability
+    if (failClosed) {
+      return {
+        success: false,
+        remaining: 0,
+        reset: Date.now() + config.windowSeconds * 1000,
+        limit: config.limit,
+      };
+    }
     return {
       success: true,
       remaining: config.limit,
@@ -175,7 +190,7 @@ export async function checkAuthRateLimit(
 ): Promise<Response | null> {
   const ip = getClientIp(request);
   const config = customConfig || RATE_LIMITS.auth;
-  const result = await checkRateLimit(ip, "auth", config);
+  const result = await checkRateLimit(ip, "auth", config, { failClosed: true });
 
   if (!result.success) {
     return new Response(

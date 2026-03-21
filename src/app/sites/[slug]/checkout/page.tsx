@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { useCart, CartItem } from "@/components/sites/cart-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -1153,7 +1154,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       <div
                         className="prose prose-sm dark:prose-invert max-w-none"
                         dangerouslySetInnerHTML={{
-                          __html: currentWaiverPages[currentPageIndex]?.content || "",
+                          __html: sanitizeHtml(currentWaiverPages[currentPageIndex]?.content || ""),
                         }}
                       />
                     </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarDays, User, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield, ClipboardList } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -203,7 +204,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
         {program.description && (
           <div
             className="text-sm text-muted-foreground line-clamp-2 [&>p]:m-0"
-            dangerouslySetInnerHTML={{ __html: program.description }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(program.description) }}
           />
         )}
 

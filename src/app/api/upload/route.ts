@@ -6,6 +6,8 @@ import {
   getPublicUrl 
 } from "@/lib/storage";
 import { getCurrentEnvironment } from "@/lib/env-domains";
+import { sanitizeSvg } from "@/lib/sanitize";
+import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { db } from "@/lib/db";
@@ -22,6 +24,9 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = await checkApiRateLimit(request, "upload", RATE_LIMITS.sensitive);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const session = await getAuthSession();
     if (!session) {
@@ -37,7 +42,16 @@ export async function POST(request: NextRequest) {
     }
 
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    let buffer = Buffer.from(bytes);
+
+    const ext = path.extname(file.name).toLowerCase();
+
+    if (ext === ".svg") {
+      const svgText = buffer.toString("utf-8");
+      const sanitized = sanitizeSvg(svgText);
+      buffer = Buffer.from(sanitized, "utf-8");
+    }
+
     const fileSizeBytes = buffer.length;
     const fileSizeMB = fileSizeBytes / (1024 * 1024);
 
@@ -71,7 +85,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const ext = path.extname(file.name).toLowerCase();
     const contentType = CONTENT_TYPES[ext] || file.type || 'application/octet-stream';
     
     // Generate storage key for the organization asset

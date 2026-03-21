@@ -52,7 +52,9 @@ export async function GET(req: NextRequest) {
   // This can happen if someone bookmarks a bridge URL or there's a redirect loop.
   // The session cookie is already set with the correct domain, so no action needed.
   if (!bridgeToken && currentEnv !== 'local') {
-    console.log(`Session bridge: Production passthrough (no token), redirecting to ${callbackUrl}`);
+    if (process.env.AUTH_DEBUG === 'true') {
+      console.log(`Session bridge: Production passthrough (no token), redirecting to ${callbackUrl}`);
+    }
     return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
   }
 

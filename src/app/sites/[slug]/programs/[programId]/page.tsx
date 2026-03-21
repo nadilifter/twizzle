@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import Link from "next/link";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { 
     ArrowLeft, 
     Calendar, 
@@ -236,7 +237,7 @@ export default async function ProgramDetailPage({
                     {program.description && (
                         <div
                             className="text-white/80 leading-relaxed max-w-2xl mb-6 prose prose-invert prose-p:my-1 [&>p]:text-white/80"
-                            dangerouslySetInnerHTML={{ __html: program.description }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(program.description) }}
                         />
                     )}
 

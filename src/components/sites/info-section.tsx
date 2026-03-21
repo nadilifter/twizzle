@@ -1,3 +1,5 @@
+import { sanitizeHtml } from "@/lib/sanitize";
+
 interface InfoSectionProps {
   infoBox1Title?: string | null;
   infoBox1Content?: string | null;
@@ -65,7 +67,7 @@ export function InfoSection({
               <h3 className="mb-2 font-semibold">{box.title}</h3>
               <div 
                 className="prose prose-sm text-muted-foreground" 
-                dangerouslySetInnerHTML={{ __html: box.content }} 
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(box.content) }} 
               />
             </div>
           ))}

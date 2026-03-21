@@ -368,9 +368,7 @@ export default function SignupPage() {
         throw new Error(data.error || data.message || "Failed to send verification code")
       }
 
-      if (data.exists) {
-        setEmailVerification("exists")
-      } else {
+      if (data.sent) {
         setEmailVerification("sent")
         toast.success("Verification code sent to your email")
       }

@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingUser) {
+      // Return same shape to prevent email enumeration
       return NextResponse.json(
-        { exists: true },
+        { sent: true },
         { headers: rateLimitHeaders(rateLimit) }
       )
     }
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(
-      { exists: false, sent: true },
+      { sent: true },
       { headers: rateLimitHeaders(rateLimit) }
     )
   } catch (error) {

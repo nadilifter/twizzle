@@ -23,17 +23,20 @@ export async function POST(request: NextRequest) {
     // Get raw body for signature verification
     const body = await request.text()
     
-    if (process.env.ADYEN_WEBHOOK_HMAC_KEY) {
-      const hmacSignature = request.headers.get("hmac-signature") || ""
-      if (!hmacSignature) {
-        console.error("Missing webhook HMAC signature header")
-        return NextResponse.json({ error: "Missing signature" }, { status: 401 })
-      }
-      const isValid = verifyWebhookSignature(body, hmacSignature)
-      if (!isValid) {
-        console.error("Invalid webhook signature")
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
-      }
+    if (!process.env.ADYEN_WEBHOOK_HMAC_KEY) {
+      console.error("ADYEN_WEBHOOK_HMAC_KEY is not configured")
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
+    }
+
+    const hmacSignature = request.headers.get("hmac-signature") || ""
+    if (!hmacSignature) {
+      console.error("Missing webhook HMAC signature header")
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 })
+    }
+    const isValid = verifyWebhookSignature(body, hmacSignature)
+    if (!isValid) {
+      console.error("Invalid webhook signature")
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
     }
 
     // Parse the webhook notification
