@@ -94,6 +94,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if organization name is already taken (case-insensitive)
+    const existingOrgName = await db.organization.findFirst({
+      where: {
+        name: { equals: validatedData.orgName.trim(), mode: "insensitive" },
+      },
+      select: { id: true },
+    })
+
+    if (existingOrgName) {
+      return NextResponse.json(
+        { error: "An organization with this name already exists" },
+        { status: 400 }
+      )
+    }
+
     const reservedCheck = await isSubdomainReserved(validatedData.subdomain.toLowerCase())
     if (reservedCheck.reserved) {
       return NextResponse.json(

@@ -236,3 +236,6 @@ src/app/api/integrations/xero/mappings/auto-suggest/route.ts
 src/app/api/integrations/xero/sync/route.ts
 src/app/api/integrations/xero/sync/status/route.ts
 src/app/api/integrations/xero/sync/mappings/route.ts
+
+# --- Public signup routes (no session/org context) ---
+src/app/api/org-signup/check-org-name/route.ts

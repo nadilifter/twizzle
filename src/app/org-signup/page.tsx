@@ -151,6 +151,11 @@ export default function SignupPage() {
     }
   }, [sessionStatus])
   
+  // Organization name availability check
+  const [orgNameStatus, setOrgNameStatus] = React.useState<"idle" | "checking" | "available" | "taken">("idle")
+  const [orgNameReason, setOrgNameReason] = React.useState<string>("")
+  const orgNameCheckTimeout = React.useRef<NodeJS.Timeout | null>(null)
+
   // Subdomain availability check
   const [subdomainStatus, setSubdomainStatus] = React.useState<"idle" | "checking" | "available" | "taken">("idle")
   const [subdomainReason, setSubdomainReason] = React.useState<string>("")
@@ -240,6 +245,44 @@ export default function SignupPage() {
     }
     fetchSports()
   }, [])
+
+  // Check organization name availability
+  const checkOrgName = React.useCallback(async (name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setOrgNameStatus("idle")
+      setOrgNameReason("")
+      return
+    }
+
+    setOrgNameStatus("checking")
+    try {
+      const response = await fetch(`/api/org-signup/check-org-name?name=${encodeURIComponent(trimmed)}`)
+      const data = await response.json()
+      setOrgNameStatus(data.available ? "available" : "taken")
+      setOrgNameReason(data.reason || "")
+    } catch {
+      setOrgNameStatus("idle")
+      setOrgNameReason("")
+    }
+  }, [])
+
+  // Debounced org name check
+  const handleOrgNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target
+    setFormData(prev => ({ ...prev, orgName: value }))
+    if (errors.orgName) {
+      setErrors(prev => ({ ...prev, orgName: "" }))
+    }
+
+    if (orgNameCheckTimeout.current) {
+      clearTimeout(orgNameCheckTimeout.current)
+    }
+
+    orgNameCheckTimeout.current = setTimeout(() => {
+      checkOrgName(value)
+    }, 500)
+  }
 
   // Check subdomain availability
   const checkSubdomain = React.useCallback(async (subdomain: string) => {
@@ -409,6 +452,8 @@ export default function SignupPage() {
 
     if (!formData.orgName.trim()) {
       newErrors.orgName = "Organization name is required"
+    } else if (orgNameStatus === "taken") {
+      newErrors.orgName = orgNameReason || "An organization with this name already exists"
     }
     if (!formData.orgEmail.trim()) {
       newErrors.orgEmail = "Organization email is required"
@@ -894,15 +939,40 @@ export default function SignupPage() {
                 <CardContent className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="orgName">Organization Name</Label>
-                    <Input
-                      id="orgName"
-                      name="orgName"
-                      placeholder="Your Gymnastics Club"
-                      value={formData.orgName}
-                      onChange={handleInputChange}
-                      className={errors.orgName ? "border-destructive" : ""}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="orgName"
+                        name="orgName"
+                        placeholder="Your Gymnastics Club"
+                        value={formData.orgName}
+                        onChange={handleOrgNameChange}
+                        className={cn(
+                          errors.orgName ? "border-destructive" : "",
+                          orgNameStatus === "available" ? "border-green-500 focus-visible:ring-green-500" : "",
+                          orgNameStatus === "taken" ? "border-destructive" : "",
+                          "pr-8"
+                        )}
+                      />
+                      {orgNameStatus !== "idle" && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                          {orgNameStatus === "checking" && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                          {orgNameStatus === "available" && (
+                            <Check className="h-4 w-4 text-green-500" />
+                          )}
+                          {orgNameStatus === "taken" && (
+                            <X className="h-4 w-4 text-destructive" />
+                          )}
+                        </div>
+                      )}
+                    </div>
                     {errors.orgName && <p className="text-sm text-destructive">{errors.orgName}</p>}
+                    {!errors.orgName && orgNameStatus === "taken" && (
+                      <p className="text-sm text-destructive">
+                        {orgNameReason || "An organization with this name already exists"}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="orgEmail">Organization Email</Label>
@@ -1440,7 +1510,7 @@ export default function SignupPage() {
                         <Button
                           type="submit"
                           size="lg"
-                          disabled={isLoading || subdomainStatus === "checking"}
+                          disabled={isLoading || subdomainStatus === "checking" || orgNameStatus === "checking"}
                           className="min-w-[200px]"
                         >
                           {isLoading ? (
