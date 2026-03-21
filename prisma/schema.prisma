@@ -57,6 +57,10 @@ model Organization {
   achievements        Achievement[]
   certifications      Certification[]
 
+  // Tax configuration
+  taxRate    Decimal?  @db.Decimal(5, 4) // e.g. 0.0600 = 6%; null = 0 (no tax)
+  taxEnabled Boolean   @default(true)
+
   // Financials
   discounts        Discount[]
   glCodes          GLCode[]

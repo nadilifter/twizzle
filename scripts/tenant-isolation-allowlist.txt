@@ -176,6 +176,7 @@ src/app/api/sites/[slug]/checkout/session/route.ts
 src/app/api/sites/[slug]/athletes/route.ts
 src/app/api/sites/[slug]/athletes/[id]/claim/route.ts
 src/app/api/sites/[slug]/competitions/[id]/eligibility/route.ts
+src/app/api/sites/[slug]/discount/validate/route.ts
 src/app/api/sites/[slug]/info/route.ts
 
 # --- User-scoped routes (no org data, personal to user) ---

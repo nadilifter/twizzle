@@ -722,19 +722,135 @@ export async function POST(
       }
     }
 
-    // 3. Calculate Totals - use server-verified prices for competitions
+    // 3. Server-side price verification for all item types
+    const serverPrices = new Map<number, number>();
+
+    // Copy competition prices already calculated above
+    for (const [idx, price] of competitionServerPrices) {
+      serverPrices.set(idx, price);
+    }
+
+    // Verify program prices
+    const programItemsForPrice = items
+      .map((item: CartItem, index: number) => ({ item, index }))
+      .filter(({ item }) => item.type === "program");
+    if (programItemsForPrice.length > 0) {
+      const allProgramIds = [...new Set(
+        programItemsForPrice.map(({ item }) => item.details?.programId || item.referenceId).filter(Boolean)
+      )] as string[];
+      const programsForPrice = await db.program.findMany({
+        where: { id: { in: allProgramIds }, organizationId },
+        select: { id: true, basePrice: true, perSessionPrice: true, pricingModel: true },
+      });
+      const programPriceMap = new Map(programsForPrice.map(p => [p.id, p]));
+      for (const { item, index } of programItemsForPrice) {
+        const programId = item.details?.programId || item.referenceId;
+        const prog = programPriceMap.get(programId);
+        if (prog) {
+          const price = prog.pricingModel === "PER_SESSION"
+            ? Number(prog.perSessionPrice ?? 0)
+            : Number(prog.basePrice ?? 0);
+          serverPrices.set(index, price * item.quantity);
+        }
+      }
+    }
+
+    // Verify membership prices
+    const membershipItemsForPrice = items
+      .map((item: CartItem, index: number) => ({ item, index }))
+      .filter(({ item }) => item.type === "membership");
+    if (membershipItemsForPrice.length > 0) {
+      const allMembershipIds = [...new Set(
+        membershipItemsForPrice.map(({ item }) => item.details?.membershipInstanceId || item.referenceId).filter(Boolean)
+      )] as string[];
+      const instancesForPrice = await db.membershipInstance.findMany({
+        where: { id: { in: allMembershipIds } },
+        select: { id: true, price: true },
+      });
+      const membershipPriceMap = new Map(instancesForPrice.map(m => [m.id, Number(m.price)]));
+      for (const { item, index } of membershipItemsForPrice) {
+        const instanceId = item.details?.membershipInstanceId || item.referenceId;
+        const price = membershipPriceMap.get(instanceId);
+        if (price !== undefined) {
+          serverPrices.set(index, price * item.quantity);
+        }
+      }
+    }
+
+    // Verify pass prices
+    const passItemsForPrice = items
+      .map((item: CartItem, index: number) => ({ item, index }))
+      .filter(({ item }) => item.type === "pass");
+    if (passItemsForPrice.length > 0) {
+      const allPassIds = [...new Set(
+        passItemsForPrice.map(({ item }) => item.details?.passId || item.referenceId).filter(Boolean)
+      )] as string[];
+      const passesForPrice = await db.pass.findMany({
+        where: { id: { in: allPassIds }, organizationId },
+        select: { id: true, price: true },
+      });
+      const passPriceMap = new Map(passesForPrice.map(p => [p.id, Number(p.price)]));
+      for (const { item, index } of passItemsForPrice) {
+        const passId = item.details?.passId || item.referenceId;
+        const price = passPriceMap.get(passId);
+        if (price !== undefined) {
+          serverPrices.set(index, price * item.quantity);
+        }
+      }
+    }
+
+    // Calculate totals using server-verified prices
+    const taxRate = config.organization.taxEnabled !== false
+      ? Number(config.organization.taxRate ?? 0)
+      : 0;
+
     const subtotal = items.reduce(
       (sum: number, item: CartItem, index: number) => {
-        if (item.type === "competition" && competitionServerPrices.has(index)) {
-          return sum + competitionServerPrices.get(index)!;
+        if (serverPrices.has(index)) {
+          return sum + serverPrices.get(index)!;
         }
         return sum + Number(item.price) * item.quantity;
       },
       0
     );
-    const taxRate = 0.13;
-    const tax = subtotal * taxRate;
-    const total = subtotal + tax;
+    // 3b. Validate and apply discount code
+    let discountRecord: { id: string; type: string; amount: any; name: string } | null = null;
+    let discountLineAmount = 0;
+
+    if (discountCode) {
+      const discount = await db.discount.findFirst({
+        where: { code: discountCode.toUpperCase(), organizationId },
+      });
+
+      if (discount) {
+        const now = new Date();
+        const validFrom = new Date(discount.validFrom);
+        const validTo = discount.validTo ? new Date(discount.validTo) : null;
+        const isValid =
+          discount.status !== "DRAFT" &&
+          validFrom <= now &&
+          (!validTo || validTo >= now) &&
+          (!discount.usageLimit || discount.usageCount < discount.usageLimit);
+
+        if (isValid) {
+          discountRecord = {
+            id: discount.id,
+            type: discount.type,
+            amount: discount.amount,
+            name: discount.name,
+          };
+          if (discount.type === "PERCENTAGE") {
+            discountLineAmount = Math.round((subtotal * Number(discount.amount)) / 100 * 100) / 100;
+          } else {
+            discountLineAmount = Math.round(Math.min(Number(discount.amount), subtotal) * 100) / 100;
+          }
+        }
+      }
+    }
+
+    const discountedSubtotal = Math.max(subtotal - discountLineAmount, 0);
+    const tax = Math.round(discountedSubtotal * taxRate * 100) / 100;
+    const total = Math.round((discountedSubtotal + tax) * 100) / 100;
 
     // 4. Resolve User Contact and Billing Address
     // Use saved contact if contactId provided, else use form data
@@ -896,10 +1012,10 @@ export async function POST(
     
     const invoice = await db.invoice.create({
         data: {
-            reference: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            reference: `INV-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             userId: checkoutUserId,
             organizationId,
-            subtotal,
+            subtotal: discountedSubtotal,
             tax,
             total,
             status: "DRAFT",
@@ -954,9 +1070,8 @@ export async function POST(
     // 7. Create Line Items with appropriate metadata
     await db.lineItem.createMany({
         data: items.map((item: CartItem, index: number) => {
-            const isCompetition = item.type === "competition";
-            const serverPrice = isCompetition && competitionServerPrices.has(index)
-              ? competitionServerPrices.get(index)!
+            const serverPrice = serverPrices.has(index)
+              ? serverPrices.get(index)!
               : Number(item.price) * item.quantity;
 
             let glCodeId: string | undefined;
@@ -975,17 +1090,36 @@ export async function POST(
               invoiceId: invoice.id,
               description: item.name,
               quantity: item.quantity,
-              unitPrice: isCompetition ? serverPrice : item.price,
+              unitPrice: serverPrices.has(index) ? serverPrice / item.quantity : item.price,
               total: serverPrice,
               programId: item.type === 'program' ? (item.details?.programId || undefined) : undefined,
               membershipInstanceId: item.type === 'membership' ? (item.details?.membershipInstanceId || item.referenceId) : undefined,
               passId: item.type === 'pass' ? (item.details?.passId || item.referenceId) : undefined,
-              competitionId: isCompetition ? (item.details?.competitionId || item.referenceId) : undefined,
+              competitionId: item.type === 'competition' ? (item.details?.competitionId || item.referenceId) : undefined,
               athleteId: item.athleteId || item.details?.athleteId || undefined,
               glCodeId,
             };
         })
     });
+
+    // 7b. Add discount line item and increment usage count
+    if (discountRecord && discountLineAmount > 0) {
+      await db.lineItem.create({
+        data: {
+          invoiceId: invoice.id,
+          description: `Discount: ${discountRecord.name}`,
+          quantity: 1,
+          unitPrice: -discountLineAmount,
+          total: -discountLineAmount,
+          discountId: discountRecord.id,
+        },
+      });
+
+      await db.discount.update({
+        where: { id: discountRecord.id },
+        data: { usageCount: { increment: 1 } },
+      });
+    }
 
     // 8. Handle payment — skip Adyen entirely for $0 orders
     if (total === 0) {
@@ -1046,6 +1180,7 @@ export async function POST(
       return NextResponse.json({
         freeCheckout: true,
         invoiceId: invoice.id,
+        taxRate,
         hasMembershipPurchases: membershipInvoiceItems.length > 0,
         hasProgramRegistrations: programItems.length > 0,
         hasCompetitionRegistrations: competitionItems.length > 0,
@@ -1070,6 +1205,7 @@ export async function POST(
         sessionId: session.id,
         sessionData: session.sessionData,
         invoiceId: invoice.id,
+        taxRate,
         hasMembershipPurchases: membershipInvoiceItems.length > 0,
         hasProgramRegistrations: programItems.length > 0,
         hasCompetitionRegistrations: competitionItems.length > 0,

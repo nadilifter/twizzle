@@ -19,8 +19,6 @@ import {
 import Link from "next/link"
 import { toast } from "sonner"
 
-const TAX_RATE = 0.13
-
 type PaymentStatus = "idle" | "generating" | "waiting" | "completed" | "failed" | "processing"
 
 function PaymentPageContent() {
@@ -35,9 +33,21 @@ function PaymentPageContent() {
   const [paymentLinkId, setPaymentLinkId] = useState<string | null>(null)
   const [invoiceId, setInvoiceId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [taxRate, setTaxRate] = useState(0)
 
-  const tax = subtotal * TAX_RATE
-  const total = subtotal + tax
+  useEffect(() => {
+    fetch("/api/organization/details")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.taxEnabled !== false && data?.taxRate != null) {
+          setTaxRate(Number(data.taxRate))
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const tax = Math.round(subtotal * taxRate * 100) / 100
+  const total = Math.round((subtotal + tax) * 100) / 100
 
   // Generate payment link for card payments
   const generatePaymentLink = useCallback(async () => {
@@ -375,7 +385,7 @@ function PaymentPageContent() {
               <span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Tax ({(TAX_RATE * 100).toFixed(0)}%)</span>
+              <span>Tax ({(taxRate * 100).toFixed(2).replace(/\.?0+$/, "")}%)</span>
               <span>${tax.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-xl font-bold pt-2 border-t">

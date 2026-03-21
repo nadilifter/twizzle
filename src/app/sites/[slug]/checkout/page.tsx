@@ -272,6 +272,15 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     }
   }
   const [discountCode, setDiscountCode] = useState("")
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    id: string
+    name: string
+    code: string
+    type: string
+    discountAmount: number
+    description: string
+  } | null>(null)
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSession, setPaymentSession] = useState<{ id: string; sessionData: string } | null>(null)
   const [checkoutInvoiceId, setCheckoutInvoiceId] = useState<string | null>(null)
@@ -285,6 +294,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [isLoadingWaiver, setIsLoadingWaiver] = useState(false)
   const [isSigningWaiver, setIsSigningWaiver] = useState(false)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
+  const [taxRate, setTaxRate] = useState(0)
   const [signAllMode, setSignAllMode] = useState(false)
   const signaturePadRef = useRef<SignaturePadRef>(null)
   const [signatureEmpty, setSignatureEmpty] = useState(true)
@@ -338,6 +348,23 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   // Queue gate
   const { isChecking, isAllowed, hasReservation, reservation } = useQueueGate(params.slug)
   const { complete: completeRegistration } = useCompleteRegistration(params.slug)
+
+  useEffect(() => {
+    fetch(`/api/public/site-config?slug=${params.slug}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          if (data.organizationId) {
+            setOrganizationId(data.organizationId)
+            organizationIdRef.current = data.organizationId
+          }
+          if (data.taxRate != null) {
+            setTaxRate(Number(data.taxRate))
+          }
+        }
+      })
+      .catch(() => {})
+  }, [params.slug])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -438,15 +465,15 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     setIsProcessing(true)
 
     try {
-      // First, get the org ID from the site config
-      const siteResponse = await fetch(`/api/public/site-config?slug=${params.slug}`)
       let orgId = organizationId
-
-      if (siteResponse.ok) {
-        const siteData = await siteResponse.json()
-        orgId = siteData.organizationId
-        setOrganizationId(orgId)
-        organizationIdRef.current = orgId
+      if (!orgId) {
+        const siteResponse = await fetch(`/api/public/site-config?slug=${params.slug}`)
+        if (siteResponse.ok) {
+          const siteData = await siteResponse.json()
+          orgId = siteData.organizationId
+          setOrganizationId(orgId)
+          organizationIdRef.current = orgId
+        }
       }
 
       if (!orgId) {
@@ -766,9 +793,46 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     toast.error("Payment failed. Please try again.")
   }
 
-  const taxRate = 0.13
-  const taxAmount = subtotal * taxRate
-  const total = subtotal + taxAmount
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) return
+    setIsValidatingDiscount(true)
+    try {
+      const res = await fetch(`/api/sites/${params.slug}/discount/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: discountCode.trim(), amount: subtotal }),
+      })
+      const data = await res.json()
+      if (data.valid) {
+        setAppliedDiscount({
+          id: data.discount.id,
+          name: data.discount.name,
+          code: data.discount.code,
+          type: data.discount.type,
+          discountAmount: data.calculation?.discountAmount ?? 0,
+          description: data.calculation?.discountDescription ?? "",
+        })
+        toast.success(`Discount applied: ${data.calculation?.discountDescription}`)
+      } else {
+        toast.error(data.error || "Invalid discount code")
+        setAppliedDiscount(null)
+      }
+    } catch {
+      toast.error("Failed to validate discount code")
+    } finally {
+      setIsValidatingDiscount(false)
+    }
+  }
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null)
+    setDiscountCode("")
+  }
+
+  const discountAmount = appliedDiscount?.discountAmount ?? 0
+  const taxableSubtotal = Math.max(subtotal - discountAmount, 0)
+  const taxAmount = Math.round(taxableSubtotal * taxRate * 100) / 100
+  const total = Math.round((taxableSubtotal + taxAmount) * 100) / 100
 
   // Show loading while checking queue status
   if (isChecking) {
@@ -1414,16 +1478,41 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
               <div className="space-y-2">
                 <Label htmlFor="discount">Discount Code</Label>
-                <div className="flex gap-2">
-                    <Input 
-                        id="discount" 
-                        value={discountCode}
-                        onChange={(e) => setDiscountCode(e.target.value)}
-                        placeholder="Enter code"
-                        disabled={checkoutStep !== "details"}
+                {appliedDiscount ? (
+                  <div className="flex items-center justify-between rounded-md border bg-green-50 dark:bg-green-950/20 p-2 text-sm">
+                    <div>
+                      <span className="font-medium text-green-700 dark:text-green-400">{appliedDiscount.code}</span>
+                      <span className="text-muted-foreground ml-1">— {appliedDiscount.description}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-muted-foreground hover:text-destructive"
+                      onClick={handleRemoveDiscount}
+                      disabled={checkoutStep !== "details"}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      id="discount"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value)}
+                      placeholder="Enter code"
+                      disabled={checkoutStep !== "details" || isValidatingDiscount}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyDiscount() } }}
                     />
-                    <Button variant="outline" disabled={checkoutStep !== "details"}>Apply</Button>
-                </div>
+                    <Button
+                      variant="outline"
+                      disabled={checkoutStep !== "details" || isValidatingDiscount || !discountCode.trim()}
+                      onClick={handleApplyDiscount}
+                    >
+                      {isValidatingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <Separator />
@@ -1433,8 +1522,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <span className="text-muted-foreground">Subtotal</span>
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
+                {appliedDiscount && discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span>Discount ({appliedDiscount.description})</span>
+                    <span>-${discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tax (13%)</span>
+                  <span className="text-muted-foreground">Tax ({(taxRate * 100).toFixed(2).replace(/\.?0+$/, "")}%)</span>
                   <span>${taxAmount.toFixed(2)}</span>
                 </div>
                 <Separator className="my-2" />

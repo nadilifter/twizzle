@@ -21,8 +21,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
 
-    const hmacSignature = request.headers.get("hmac-signature") || ""
-    if (process.env.ADYEN_WEBHOOK_HMAC_KEY && hmacSignature) {
+    if (process.env.ADYEN_WEBHOOK_HMAC_KEY) {
+      const hmacSignature = request.headers.get("hmac-signature") || ""
+      if (!hmacSignature) {
+        console.error("Missing webhook HMAC signature header")
+        return NextResponse.json({ error: "Missing signature" }, { status: 401 })
+      }
       const isValid = verifyWebhookSignature(body, hmacSignature)
       if (!isValid) {
         console.error("Invalid webhook signature")
@@ -35,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     if (!notificationItem) {
       console.error("Invalid webhook payload - no notification item")
-      return NextResponse.json({ "[accepted]": true })
+      return NextResponse.json({ notificationResponse: "[accepted]" })
     }
 
     const {
@@ -77,10 +81,10 @@ export async function POST(request: NextRequest) {
       await handleFailure(eventCode, notificationItem)
     }
 
-    return NextResponse.json({ "[accepted]": true })
+    return NextResponse.json({ notificationResponse: "[accepted]" })
   } catch (error) {
     console.error("Payment webhook processing error:", error)
-    return NextResponse.json({ "[accepted]": true })
+    return NextResponse.json({ notificationResponse: "[accepted]" })
   }
 }
 

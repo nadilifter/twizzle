@@ -77,15 +77,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // For cash payments or card payments with payment link, process the checkout
-    // For card payments, we should verify the payment link is completed first
-    // But for now, we'll trust the client that the payment was completed
-
-    // Generate invoice reference
-    const invoiceCount = await db.invoice.count({
-      where: { organizationId: session.user.organizationId },
+    // Recalculate totals server-side using verified DB prices
+    const org = await db.organization.findUnique({
+      where: { id: session.user.organizationId },
+      select: { taxRate: true, taxEnabled: true },
     });
-    const reference = `POS-${String(invoiceCount + 1).padStart(6, "0")}`;
+    const taxRate = org?.taxEnabled !== false
+      ? Number(org?.taxRate ?? 0)
+      : 0;
+
+    const subtotal = validatedData.items.reduce((sum, item) => {
+      const product = productMap.get(item.referenceId)!;
+      return sum + Number(product.price) * item.quantity;
+    }, 0);
+    const tax = Math.round(subtotal * taxRate * 100) / 100;
+    const total = Math.round((subtotal + tax) * 100) / 100;
+
+    const reference = `POS-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
     const result = await db.$transaction(async (tx) => {
       const invoice = await tx.invoice.create({
@@ -95,30 +103,29 @@ export async function POST(request: NextRequest) {
           organizationId: session.user.organizationId,
           status: validatedData.paymentMethod === "CASH" ? "PAID" : "DRAFT",
           dueDate: new Date(),
-          subtotal: validatedData.subtotal,
-          tax: validatedData.tax,
-          total: validatedData.total,
+          subtotal,
+          tax,
+          total,
           notes: `POS Sale - ${validatedData.paymentMethod}`,
         },
       });
 
-      // Resolve default GL code for products as fallback
       const defaultProductGLCode = await tx.gLCode.findFirst({
         where: { organizationId: session.user.organizationId, isDefault: true, defaultForType: "PRODUCT" },
         select: { id: true },
       });
 
-      // Create line items with GL codes from products
       const lineItems = await Promise.all(
         validatedData.items.map((item) => {
-          const product = productMap.get(item.referenceId);
+          const product = productMap.get(item.referenceId)!;
+          const verifiedPrice = Number(product.price);
           return tx.lineItem.create({
             data: {
               invoiceId: invoice.id,
               description: item.name,
               quantity: item.quantity,
-              unitPrice: item.price,
-              total: item.price * item.quantity,
+              unitPrice: verifiedPrice,
+              total: verifiedPrice * item.quantity,
               glCodeId: product?.glCodeId ?? defaultProductGLCode?.id ?? undefined,
             },
           });
@@ -130,7 +137,7 @@ export async function POST(request: NextRequest) {
           data: {
             invoiceId: invoice.id,
             userId: validatedData.userId || undefined,
-            amount: validatedData.total,
+            amount: total,
             method: "CASH",
             status: "COMPLETED",
             processedAt: new Date(),

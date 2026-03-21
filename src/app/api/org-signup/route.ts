@@ -7,6 +7,7 @@ import { isSubdomainReserved } from "@/lib/reserved-domains"
 import { containsProfanity } from "@/lib/profanity"
 import { registerAllowedOrigin } from "@/lib/adyen-platform"
 import { createDefaultGLCodes } from "@/lib/gl-code-defaults"
+import { getDefaultTaxRate } from "@/lib/tax-utils"
 
 const MAX_NAME_LENGTH = 255
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
@@ -185,6 +186,7 @@ export async function POST(request: NextRequest) {
 
     const result = await db.$transaction(async (tx) => {
       // 1. Create the organization
+      const defaultTaxRate = getDefaultTaxRate(validatedData.stateProvince, validatedData.country)
       const organization = await tx.organization.create({
         data: {
           name: validatedData.orgName,
@@ -196,6 +198,8 @@ export async function POST(request: NextRequest) {
           stateProvince: validatedData.stateProvince || null,
           postalCode: validatedData.postalCode || null,
           country: validatedData.country || null,
+          taxRate: defaultTaxRate,
+          taxEnabled: defaultTaxRate > 0,
         },
       })
 

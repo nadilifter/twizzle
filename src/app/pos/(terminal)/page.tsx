@@ -27,7 +27,6 @@ type Product = {
   isActive: boolean
 }
 
-const TAX_RATE = 0.13 // 13% tax
 
 // Wrapper component to handle Suspense for useSearchParams
 export default function POSPage() {
@@ -72,19 +71,28 @@ function POSPageContent() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All")
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [taxRate, setTaxRate] = useState(0)
   
   const { items, addItem, removeItem, updateQuantity, clearCart, subtotal, totalItems } = useCart()
 
-  // Fetch products
   const fetchProducts = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch("/api/products?activeOnly=true")
-      if (!response.ok) throw new Error("Failed to fetch products")
-      const data = await response.json()
+      const [prodRes, orgRes] = await Promise.all([
+        fetch("/api/products?activeOnly=true"),
+        fetch("/api/organization/details"),
+      ])
+      if (!prodRes.ok) throw new Error("Failed to fetch products")
+      const data = await prodRes.json()
       setProducts(data.data || [])
       if (data.categories?.length > 0) {
         setCategories(["All", ...data.categories])
+      }
+      if (orgRes.ok) {
+        const orgData = await orgRes.json()
+        if (orgData.taxEnabled !== false && orgData.taxRate != null) {
+          setTaxRate(Number(orgData.taxRate))
+        }
       }
     } catch (error) {
       console.error("Error fetching products:", error)
@@ -153,8 +161,8 @@ function POSPageContent() {
     return null
   }
 
-  const tax = subtotal * TAX_RATE
-  const total = subtotal + tax
+  const tax = Math.round(subtotal * taxRate * 100) / 100
+  const total = Math.round((subtotal + tax) * 100) / 100
 
   return (
     <div className="flex flex-1 min-h-0 w-full bg-background">
@@ -340,7 +348,7 @@ function POSPageContent() {
               <span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Tax ({(TAX_RATE * 100).toFixed(0)}%)</span>
+              <span>Tax ({(taxRate * 100).toFixed(2).replace(/\.?0+$/, "")}%)</span>
               <span>${tax.toFixed(2)}</span>
             </div>
           </div>

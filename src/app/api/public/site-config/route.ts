@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+            taxRate: true,
+            taxEnabled: true,
           },
         },
       },
@@ -32,6 +34,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       organizationId: config.organizationId,
       organizationName: config.organization.name,
+      taxRate: config.organization.taxEnabled !== false
+        ? Number(config.organization.taxRate ?? 0)
+        : 0,
+      taxEnabled: config.organization.taxEnabled,
     });
   } catch (error) {
     console.error("Error fetching site config:", error);

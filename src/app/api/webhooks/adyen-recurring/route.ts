@@ -23,9 +23,12 @@ export async function POST(request: NextRequest) {
     // Get raw body for signature verification
     const body = await request.text()
     
-    // Verify HMAC signature (if ADYEN_HMAC_KEY is configured)
-    const hmacSignature = request.headers.get("hmac-signature") || ""
-    if (process.env.ADYEN_WEBHOOK_HMAC_KEY && hmacSignature) {
+    if (process.env.ADYEN_WEBHOOK_HMAC_KEY) {
+      const hmacSignature = request.headers.get("hmac-signature") || ""
+      if (!hmacSignature) {
+        console.error("Missing webhook HMAC signature header")
+        return NextResponse.json({ error: "Missing signature" }, { status: 401 })
+      }
       const isValid = verifyWebhookSignature(body, hmacSignature)
       if (!isValid) {
         console.error("Invalid webhook signature")
@@ -75,13 +78,11 @@ export async function POST(request: NextRequest) {
         console.log(`Unhandled event type: ${tokenData.eventCode}`)
     }
 
-    // Always return [accepted] to acknowledge receipt
-    return NextResponse.json({ "[accepted]": true })
+    return NextResponse.json({ notificationResponse: "[accepted]" })
 
   } catch (error) {
     console.error("Webhook processing error:", error)
-    // Return 200 to prevent Adyen from retrying - log the error for investigation
-    return NextResponse.json({ "[accepted]": true })
+    return NextResponse.json({ notificationResponse: "[accepted]" })
   }
 }
 

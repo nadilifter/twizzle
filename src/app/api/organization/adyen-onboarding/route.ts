@@ -35,6 +35,9 @@ export async function GET() {
         stateProvince: true,
         postalCode: true,
         country: true,
+        phone: true,
+        taxRate: true,
+        taxEnabled: true,
       },
     })
 

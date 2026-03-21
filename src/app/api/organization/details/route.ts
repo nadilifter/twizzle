@@ -27,6 +27,8 @@ export async function GET() {
         stateProvince: true,
         postalCode: true,
         country: true,
+        taxRate: true,
+        taxEnabled: true,
         createdAt: true,
         _count: {
           select: {
@@ -92,7 +94,7 @@ export async function PATCH(request: Request) {
     }
 
     const data = await request.json()
-    const { name, email, phone, street, city, stateProvince, postalCode, country } = data
+    const { name, email, phone, street, city, stateProvince, postalCode, country, taxRate, taxEnabled } = data
 
     // Validate 2-letter codes for Adyen compliance
     if (stateProvince && stateProvince.length > 2) {
@@ -100,6 +102,10 @@ export async function PATCH(request: Request) {
     }
     if (country && country.length > 2) {
       return NextResponse.json({ error: "Country must be a 2-letter code" }, { status: 400 })
+    }
+
+    if (taxRate !== undefined && (typeof taxRate !== "number" || taxRate < 0 || taxRate > 1)) {
+      return NextResponse.json({ error: "Tax rate must be a number between 0 and 1" }, { status: 400 })
     }
 
     const organization = await db.organization.update({
@@ -113,6 +119,8 @@ export async function PATCH(request: Request) {
         ...(stateProvince !== undefined && { stateProvince }),
         ...(postalCode !== undefined && { postalCode }),
         ...(country !== undefined && { country }),
+        ...(taxRate !== undefined && { taxRate }),
+        ...(taxEnabled !== undefined && { taxEnabled }),
       },
     })
 
