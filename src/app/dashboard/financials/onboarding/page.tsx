@@ -27,9 +27,11 @@ import {
   RefreshCwIcon,
   ClockIcon,
   XCircleIcon,
-  ReceiptIcon,
+  MapPinIcon,
+  PhoneIcon,
 } from "lucide-react"
 import { toast } from "sonner"
+import { formatPhoneNumberIntl } from "react-phone-number-input"
 
 type OnboardingAccount = {
   onboardingStatus: string
@@ -204,13 +206,6 @@ export default function OnboardingPage() {
         />
       )}
 
-      {organization && (
-        <TaxConfigurationCard
-          organization={organization}
-          onUpdate={(org) => setOrganization(org)}
-        />
-      )}
-
       {!account && <NotStartedState onInitiate={handleInitiate} loading={actionLoading} />}
       {account?.onboardingStatus === "PENDING_HOSTED" && (
         <PendingHostedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
@@ -225,6 +220,13 @@ export default function OnboardingPage() {
       )}
       {account?.onboardingStatus === "REJECTED" && (
         <RejectedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
+      )}
+
+      {organization && (
+        <TaxConfigurationCard
+          organization={organization}
+          onUpdate={(org) => setOrganization(org)}
+        />
       )}
     </div>
   )
@@ -260,18 +262,16 @@ function OrganizationAddressCard({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium flex items-center justify-between">
-          <span>Organization Contact Details</span>
-          {!isEditing && (
-            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
-              Edit
-            </Button>
-          )}
-        </CardTitle>
+      <CardHeader className="relative">
+        <CardTitle>Organization Contact Details</CardTitle>
         <CardDescription>
           Your organization&apos;s physical address and phone number. These must be complete before initiating Adyen onboarding.
         </CardDescription>
+        {!isEditing && (
+          <Button variant="ghost" size="sm" className="absolute right-4 top-4" onClick={() => setIsEditing(true)}>
+            Edit
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {isEditing ? (
@@ -284,18 +284,36 @@ function OrganizationAddressCard({
             onCancel={() => setIsEditing(false)}
           />
         ) : (
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              {address ? (
-                <p className="text-sm font-medium">{address}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No address provided</p>
-              )}
-              {organization.phone ? (
-                <p className="text-sm text-muted-foreground">{organization.phone}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No phone provided</p>
-              )}
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center gap-4 p-4 border rounded-lg">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <MapPinIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold">Address</h4>
+                  {address ? (
+                    <p className="text-sm text-muted-foreground">{address}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Not provided</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 border rounded-lg">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <PhoneIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold">Phone</h4>
+                  {organization.phone ? (
+                    <p className="text-sm text-muted-foreground">
+                      {formatPhoneNumberIntl(organization.phone) || organization.phone}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Not provided</p>
+                  )}
+                </div>
+              </div>
             </div>
             {!isComplete && (
               <Badge variant="destructive">Missing required fields</Badge>
@@ -504,7 +522,7 @@ function VerifiedState({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Account Details</CardTitle>
+          <CardTitle>Account Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {account.balanceAccountId && (
@@ -544,6 +562,9 @@ function RejectedState({
     <Card>
       <CardHeader>
         <CardTitle>Verification Issues</CardTitle>
+        <CardDescription>
+          There are issues that need your attention before verification can proceed.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Alert variant="destructive">
@@ -623,10 +644,7 @@ function TaxConfigurationCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <ReceiptIcon className="h-4 w-4" />
-          Sales Tax Configuration
-        </CardTitle>
+        <CardTitle>Sales Tax Configuration</CardTitle>
         <CardDescription>
           Configure whether your organization collects sales tax and at what rate.
           The rate was defaulted from your state when you signed up.
@@ -790,7 +808,7 @@ function HelpCard() {
   return (
     <Card className="bg-muted/50">
       <CardHeader>
-        <CardTitle className="text-sm font-medium">Need Help?</CardTitle>
+        <CardTitle>Need Help?</CardTitle>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
         <p>
