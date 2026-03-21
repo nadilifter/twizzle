@@ -1312,14 +1312,14 @@ model LineItem {
 
   // Relations
   invoice             Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  program             Program?             @relation(fields: [programId], references: [id])
-  event               Event?               @relation(fields: [eventId], references: [id])
+  program             Program?             @relation(fields: [programId], references: [id], onDelete: SetNull)
+  event               Event?               @relation(fields: [eventId], references: [id], onDelete: SetNull)
   athlete             Athlete?             @relation(fields: [athleteId], references: [id])
   discount            Discount?            @relation(fields: [discountId], references: [id])
-  membershipInstance  MembershipInstance?  @relation(fields: [membershipInstanceId], references: [id])
-  pass                Pass?                @relation(fields: [passId], references: [id])
-  competition         Competition?         @relation(fields: [competitionId], references: [id])
-  competitionCategory CompetitionCategory? @relation(fields: [competitionCategoryId], references: [id])
+  membershipInstance  MembershipInstance?  @relation(fields: [membershipInstanceId], references: [id], onDelete: SetNull)
+  pass                Pass?                @relation(fields: [passId], references: [id], onDelete: SetNull)
+  competition         Competition?         @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  competitionCategory CompetitionCategory? @relation(fields: [competitionCategoryId], references: [id], onDelete: SetNull)
   glCode              GLCode?              @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
 
   @@index([glCodeId])

@@ -257,7 +257,7 @@ export default async function SiteLayout({
     >
     <SessionProviderWrapper>
     <QueueProvider organizationSlug={subdomain}>
-    <CartProvider>
+    <CartProvider organizationId={config.organizationId}>
     <div className="min-h-screen flex flex-col bg-background font-sans">
         <CartSheet />
         <CartFloatingButton />

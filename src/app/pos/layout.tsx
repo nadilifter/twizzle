@@ -23,5 +23,5 @@ export default async function POSLayout({
     return <FeatureUnavailablePage feature="pointOfSale" />
   }
 
-  return <CartProvider>{children}</CartProvider>
+  return <CartProvider organizationId={session.user.organizationId}>{children}</CartProvider>
 }

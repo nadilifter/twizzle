@@ -25,10 +25,10 @@ export function isRegistrationType(type: CartItem["type"]): boolean {
   return REGISTRATION_TYPES.includes(type)
 }
 
-const GUEST_CART_KEY = "uplifter-cart-guest"
-
-function getCartKey(userId: string | undefined): string {
-  return userId ? `uplifter-cart-${userId}` : GUEST_CART_KEY
+function getCartKey(userId: string | undefined, organizationId?: string): string {
+  const orgSuffix = organizationId ? `-${organizationId}` : ""
+  if (userId) return `uplifter-cart-${userId}${orgSuffix}`
+  return `uplifter-cart-guest${orgSuffix}`
 }
 
 interface CartContextType {
@@ -48,20 +48,42 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+async function validateCartItems(items: CartItem[]): Promise<CartItem[]> {
+  try {
+    const payload = items.map((i) => ({ referenceId: i.referenceId, type: i.type }))
+    const res = await fetch("/api/cart/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: payload }),
+    })
+    if (!res.ok) return items
+    const { valid } = (await res.json()) as { valid: string[] }
+    const validSet = new Set(valid)
+    return items.filter((i) => validSet.has(i.referenceId))
+  } catch {
+    return items
+  }
+}
+
+interface CartProviderProps {
+  children: React.ReactNode
+  organizationId?: string
+}
+
+export function CartProvider({ children, organizationId }: CartProviderProps) {
   const { data: session, status } = useSession()
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const currentUserIdRef = useRef<string | undefined>(undefined)
 
-  // Load cart from localStorage, scoped to the current user.
+  // Load cart from localStorage, scoped to the current user and organization.
   // When a guest logs in, their guest cart migrates to the user-specific key.
   useEffect(() => {
     if (status === "loading") return
 
     const userId = session?.user?.id
-    const cartKey = getCartKey(userId)
+    const cartKey = getCartKey(userId, organizationId)
 
     // Avoid re-loading when the user hasn't actually changed
     if (isInitialized && currentUserIdRef.current === userId) return
@@ -94,7 +116,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     // Migrate guest cart when a user logs in
     if (userId) {
-      const guestCart = localStorage.getItem(GUEST_CART_KEY)
+      const guestKey = getCartKey(undefined, organizationId)
+      const guestCart = localStorage.getItem(guestKey)
       if (guestCart) {
         try {
           const guestItems: CartItem[] = JSON.parse(guestCart)
@@ -113,20 +136,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         } catch {
           // ignore corrupt guest data
         }
-        localStorage.removeItem(GUEST_CART_KEY)
+        localStorage.removeItem(guestKey)
       }
     }
 
     setItems(parsed)
     setIsInitialized(true)
-  }, [session?.user?.id, status, isInitialized])
 
-  // Save to localStorage on change, using the user-scoped key
+    // Validate cart items against the server and remove any that reference deleted entities
+    if (parsed.length > 0) {
+      validateCartItems(parsed).then((validItems) => {
+        if (validItems.length < parsed.length) {
+          setItems(validItems)
+        }
+      })
+    }
+  }, [session?.user?.id, status, isInitialized, organizationId])
+
+  // Save to localStorage on change, using the user+org-scoped key
   useEffect(() => {
     if (!isInitialized) return
-    const cartKey = getCartKey(currentUserIdRef.current)
+    const cartKey = getCartKey(currentUserIdRef.current, organizationId)
     localStorage.setItem(cartKey, JSON.stringify(items))
-  }, [items, isInitialized])
+  }, [items, isInitialized, organizationId])
 
   const addItem = (item: Omit<CartItem, "id">) => {
     const registration = isRegistrationType(item.type)
@@ -173,9 +205,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = useCallback(() => {
     setItems([])
-    const cartKey = getCartKey(currentUserIdRef.current)
+    const cartKey = getCartKey(currentUserIdRef.current, organizationId)
     localStorage.removeItem(cartKey)
-  }, [])
+  }, [organizationId])
 
   // Find items that depend on the given item (e.g., programs that require a membership)
   const getDependentItems = (id: string): CartItem[] => {
