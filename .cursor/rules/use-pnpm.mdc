@@ -1,0 +1,26 @@
+---
+description: Enforce pnpm as the package manager — never use npm
+alwaysApply: true
+---
+
+# Use pnpm, not npm
+
+This project uses **pnpm** as its package manager. Never run or suggest npm commands.
+
+## Rules
+
+- Use `pnpm` for all package operations: `pnpm install`, `pnpm add`, `pnpm remove`, `pnpm run`, etc.
+- If you catch yourself about to run an `npm` command, stop and ask the user: *"This project uses pnpm. Did you mean for me to use npm here, or should I use pnpm?"*
+- Do not generate `package-lock.json` — this project uses `pnpm-lock.yaml`.
+- When writing docs or scripts, always reference `pnpm`, not `npm`.
+
+## Common mappings
+
+| Instead of | Use |
+|---|---|
+| `npm install` | `pnpm install` |
+| `npm install <pkg>` | `pnpm add <pkg>` |
+| `npm install -D <pkg>` | `pnpm add -D <pkg>` |
+| `npm uninstall <pkg>` | `pnpm remove <pkg>` |
+| `npm run <script>` | `pnpm run <script>` or `pnpm <script>` |
+| `npx <cmd>` | `pnpm dlx <cmd>` or `pnpm exec <cmd>` |
