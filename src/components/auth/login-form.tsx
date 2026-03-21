@@ -12,7 +12,7 @@ import { signIn, getCsrfToken } from "next-auth/react"
 import { toast } from "sonner"
 import { UplifterLogo } from "@/components/uplifter-logo"
 import { getClientSubdomainUrl } from "@/lib/client-domains"
-import { Mail } from "lucide-react"
+import { Mail, Search, Rocket } from "lucide-react"
 
 function isLocalSubdomain(): boolean {
   if (typeof window === "undefined") return false;
@@ -30,11 +30,6 @@ function isLocalSubdomain(): boolean {
 function getDefaultCallbackUrl(): string {
   if (typeof window === "undefined") return "/";
   return `${getClientSubdomainUrl('admin')}/`;
-}
-
-function getSignupUrl(): string {
-  if (typeof window === "undefined") return "/signup";
-  return `${getClientSubdomainUrl('startup')}/`;
 }
 
 type LoginMode = "credentials" | "mfa-verify" | "email-code"
@@ -694,11 +689,7 @@ export function LoginForm() {
       <Card className="relative overflow-hidden w-full max-w-[400px]">
         <ShineBorder shineColor={["#5655ED", "#A07CFE"]} className="text-center" />
         <CardHeader className="items-center pb-2">
-          <UplifterLogo width={180} height={36} className="h-9 mb-2" />
-          <h1 className="text-2xl font-bold">Welcome back</h1>
-          <p className="text-sm text-muted-foreground">
-            Login to your account
-          </p>
+          <UplifterLogo width={180} height={36} className="h-9 mb-4" />
         </CardHeader>
         
         <CardContent className="grid gap-4">
@@ -782,21 +773,26 @@ export function LoginForm() {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Logging in..." : "Login"}
           </Button>
-          <div className="text-center text-sm">
-              <Link
-                  href={`/forgot-password?email=${encodeURIComponent(email)}`}
-                  className="text-muted-foreground underline underline-offset-4"
-              >
-                  Forgot your password?
-              </Link>
-          </div>
-          <div className="text-center text-sm">
-            Don&apos;t have an account?{" "}
-            <a href={getSignupUrl()} className="underline">
-              Sign up
-            </a>
-          </div>
+          <Button variant="outline" className="w-full font-normal" asChild>
+            <Link href={`/forgot-password?email=${encodeURIComponent(email)}`}>
+              Forgot your password?
+            </Link>
+          </Button>
           </form>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 text-xs font-normal" asChild>
+              <Link href="/find-your-club">
+                <Search className="h-3.5 w-3.5" />
+                Find your club
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 text-xs font-normal" asChild>
+              <a href={getClientSubdomainUrl('startup')}>
+                <Rocket className="h-3.5 w-3.5" />
+                Get started
+              </a>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </>
