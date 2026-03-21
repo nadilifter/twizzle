@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { format } from "date-fns";
 import Link from "next/link";
 import { RegistrationFilesSection } from "@/components/registration-files-section";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 interface Guardian {
   id: string;
@@ -128,6 +129,32 @@ export default function AthleteDetailPage() {
       setIsSaving(false);
     }
   };
+
+  const groupedInstances = useMemo(() => {
+    if (!registrations?.instanceRegistrations?.length) return [];
+
+    const groups = new Map<string, { programName: string; instances: any[] }>();
+
+    for (const r of registrations.instanceRegistrations) {
+      const key = r.programInstance?.programId || r.programInstance?.program?.name || "unknown";
+      const programName = r.programInstance?.program?.name || "Session";
+
+      if (!groups.has(key)) {
+        groups.set(key, { programName, instances: [] });
+      }
+      groups.get(key)!.instances.push(r);
+    }
+
+    for (const group of groups.values()) {
+      group.instances.sort((a: any, b: any) => {
+        const dateA = a.programInstance?.date ? new Date(a.programInstance.date).getTime() : 0;
+        const dateB = b.programInstance?.date ? new Date(b.programInstance.date).getTime() : 0;
+        return dateA - dateB;
+      });
+    }
+
+    return Array.from(groups.values());
+  }, [registrations?.instanceRegistrations]);
 
   if (isLoading) {
     return (
@@ -330,21 +357,53 @@ export default function AthleteDetailPage() {
                   <Badge variant="outline">{e.status}</Badge>
                 </div>
               ))}
-              {registrations?.instanceRegistrations?.map((r: any) => (
-                <div key={r.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div>
-                    <div className="font-medium text-sm">
-                      {r.programInstance?.program?.name || "Session"}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {r.programInstance?.date
-                        ? format(new Date(r.programInstance.date), "MMM d, yyyy")
-                        : "Instance Registration"}
-                    </div>
-                  </div>
-                  <Badge variant="outline">{r.status}</Badge>
-                </div>
-              ))}
+              {groupedInstances.map((group) => {
+                const firstDate = group.instances[0]?.programInstance?.date;
+                const lastDate = group.instances[group.instances.length - 1]?.programInstance?.date;
+                let dateRange: string | null = null;
+                if (firstDate && lastDate) {
+                  const first = new Date(firstDate);
+                  const last = new Date(lastDate);
+                  if (group.instances.length === 1) {
+                    dateRange = format(first, "MMM d, yyyy");
+                  } else if (first.getFullYear() === last.getFullYear()) {
+                    dateRange = `${format(first, "MMM d")} – ${format(last, "MMM d, yyyy")}`;
+                  } else {
+                    dateRange = `${format(first, "MMM d, yyyy")} – ${format(last, "MMM d, yyyy")}`;
+                  }
+                }
+
+                return (
+                  <Collapsible key={group.programName}>
+                    <CollapsibleTrigger asChild>
+                      <button className="group w-full flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 text-left">
+                        <div>
+                          <div className="font-medium text-sm">{group.programName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {group.instances.length} session{group.instances.length !== 1 ? "s" : ""}
+                            {dateRange && ` · ${dateRange}`}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-4 mt-1 space-y-0.5 border-l pl-3 pb-1">
+                        {group.instances.map((r: any) => (
+                          <div key={r.id} className="flex items-center justify-between py-1.5 text-sm">
+                            <span className="text-muted-foreground">
+                              {r.programInstance?.date
+                                ? format(new Date(r.programInstance.date), "MMM d, yyyy")
+                                : "No date"}
+                            </span>
+                            <Badge variant="outline" className="text-xs">{r.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
               {registrations?.competitionEntries?.map((c: any) => (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
