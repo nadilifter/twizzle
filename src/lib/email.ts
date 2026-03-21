@@ -279,7 +279,8 @@ export type EmailTemplate =
   | 'feedback-roadmap'
   | 'mfa-code'
   | 'email-login-code'
-  | 'no-account-login';
+  | 'no-account-login'
+  | 'signup-verification-code';
 
 /**
  * Render an email template with data
@@ -654,6 +655,35 @@ function renderTemplate(
         
         This code expires in {{expiresIn}}.
         
+        If you didn't request this code, you can safely ignore this email.
+      `,
+    },
+    'signup-verification-code': {
+      subject: 'Verify your email for Uplifter',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #1f2937;">Verify Your Email</h1>
+          <p>Hello,</p>
+          <p>Use the code below to verify your email address and create your organization on Uplifter:</p>
+          <div style="margin: 24px 0; text-align: center;">
+            <span style="display: inline-block; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; letter-spacing: 6px; background-color: #f3f4f6; padding: 16px 24px; border-radius: 8px; border: 1px solid #e5e7eb;">{{code}}</span>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">This code expires in {{expiresIn}}.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #6b7280; font-size: 12px;">If you didn&rsquo;t request this code, you can safely ignore this email.</p>
+        </div>
+      `,
+      text: `
+        Verify Your Email
+
+        Hello,
+
+        Use the code below to verify your email address and create your organization on Uplifter:
+
+        {{code}}
+
+        This code expires in {{expiresIn}}.
+
         If you didn't request this code, you can safely ignore this email.
       `,
     },

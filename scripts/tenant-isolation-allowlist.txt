@@ -169,6 +169,8 @@ src/app/api/invitations/[token]/route.ts
 src/app/api/org-signup/route.ts
 src/app/api/org-signup/check-subdomain/route.ts
 src/app/api/org-signup/plans/route.ts
+src/app/api/org-signup/verify-email/route.ts
+src/app/api/org-signup/verify-email/confirm/route.ts
 src/app/api/sites/[slug]/signup/route.ts
 src/app/api/sites/[slug]/checkout/session/route.ts
 src/app/api/sites/[slug]/athletes/route.ts

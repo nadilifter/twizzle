@@ -20,7 +20,11 @@ export default async function SignupsLayout({
   children: React.ReactNode
 }) {
   const [headersList, session] = await Promise.all([headers(), getAuthSession()])
-  const loginUrl = getLoginUrlForHost(headersList.get("host"))
+  const host = headersList.get("host")
+  const loginBase = getLoginUrlForHost(host)
+  const protocol = host?.includes("localhost") ? "http" : "https"
+  const callbackUrl = `${protocol}://${host}/org-signup`
+  const loginUrl = `${loginBase}?callbackUrl=${encodeURIComponent(callbackUrl)}`
 
   return (
     <div className="flex flex-col min-h-screen bg-background relative overflow-hidden">

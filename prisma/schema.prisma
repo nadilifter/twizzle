@@ -327,6 +327,7 @@ model PasswordResetToken {
 enum VerificationCodeType {
   MFA_CHALLENGE
   EMAIL_LOGIN
+  SIGNUP_VERIFICATION
 }
 
 // Email verification codes for MFA challenges and passwordless email login
