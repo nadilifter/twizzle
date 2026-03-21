@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDateOnly } from "@/lib/date-utils";
 
 /**
  * GET /api/athletes/me
@@ -140,6 +141,128 @@ export async function GET(request: NextRequest) {
     console.error("GET /api/athletes/me error:", error);
     return NextResponse.json(
       { error: "Failed to fetch athletes" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/athletes/me
+ *
+ * Create a new athlete for the current user (athlete portal context).
+ * No organization context required — athlete is linked to the user as guardian.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+    const body = await request.json();
+    const { firstName, lastName, birthDate, gender, isSelf, allowGuardianClaims } = body;
+
+    if (!firstName || !lastName || !birthDate || !gender) {
+      return NextResponse.json(
+        { error: "firstName, lastName, birthDate, and gender are required" },
+        { status: 400 }
+      );
+    }
+
+    const validGenders = ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"];
+    if (!validGenders.includes(gender)) {
+      return NextResponse.json(
+        { error: "Invalid gender value" },
+        { status: 400 }
+      );
+    }
+
+    const userExists = await db.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!userExists) {
+      return NextResponse.json(
+        { error: "Your user account was not found. Please sign out and sign back in." },
+        { status: 401 }
+      );
+    }
+
+    // Duplicate detection: check if user already has a matching athlete
+    const parsedBirthDate = parseDateOnly(birthDate)!;
+    const startOfDay = new Date(parsedBirthDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(parsedBirthDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingAthlete = await db.athlete.findFirst({
+      where: {
+        firstName: { equals: firstName, mode: "insensitive" },
+        lastName: { equals: lastName, mode: "insensitive" },
+        birthDate: { gte: startOfDay, lte: endOfDay },
+        OR: [
+          { guardians: { some: { userId } } },
+          { userId },
+        ],
+      },
+      select: { id: true, firstName: true, lastName: true },
+    });
+
+    if (existingAthlete) {
+      return NextResponse.json(
+        { error: "You already have an athlete with this name and date of birth." },
+        { status: 409 }
+      );
+    }
+
+    if (isSelf) {
+      const existingSelf = await db.athlete.findUnique({ where: { userId } });
+      if (existingSelf) {
+        return NextResponse.json(
+          { error: "You already have a self-athlete profile." },
+          { status: 409 }
+        );
+      }
+    }
+
+    const athlete = await db.athlete.create({
+      data: {
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`,
+        birthDate: parsedBirthDate,
+        gender,
+        userId: isSelf ? userId : undefined,
+        allowGuardianClaims: allowGuardianClaims ?? false,
+        guardians: {
+          create: {
+            userId,
+            relationship: isSelf ? "Self" : "Parent",
+            isPrimary: true,
+          },
+        },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        birthDate: true,
+        gender: true,
+        allowGuardianClaims: true,
+        userId: true,
+      },
+    });
+
+    return NextResponse.json({ athlete }, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/athletes/me error:", error);
+    return NextResponse.json(
+      { error: "Failed to create athlete" },
       { status: 500 }
     );
   }
