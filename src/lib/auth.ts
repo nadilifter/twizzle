@@ -427,6 +427,7 @@ export const authOptions: NextAuthOptions = {
               token.organizationName = authUser.organizationName;
               token.permissions = authUser.permissions;
               token.role = authUser.role;
+              token.avatar = authUser.image || token.avatar || null;
             }
           }
           

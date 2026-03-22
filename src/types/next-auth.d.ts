@@ -34,6 +34,7 @@ declare module "next-auth/jwt" {
     organizationName: string;
     permissions: string[];
     isSuperAdmin: boolean;
+    avatar?: string | null;
     // Impersonation fields (superadmin "view as user" feature)
     viewingAsUserId?: string;
     viewingAsUserName?: string;
