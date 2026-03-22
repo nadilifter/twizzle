@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { isValidPhoneNumber } from "react-phone-number-input"
+import { isValidPhoneNumber } from "libphonenumber-js"
 
 export async function GET() {
   try {

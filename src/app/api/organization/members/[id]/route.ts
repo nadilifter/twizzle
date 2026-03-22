@@ -3,7 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
-import { isValidPhoneNumber } from "react-phone-number-input";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 const phoneOptional = z.string()
   .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")

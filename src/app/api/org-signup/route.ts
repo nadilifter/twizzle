@@ -9,7 +9,7 @@ import { registerAllowedOrigin } from "@/lib/adyen-platform"
 import { createDefaultGLCodes } from "@/lib/gl-code-defaults"
 import { getDefaultTaxRate } from "@/lib/tax-utils"
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
-import { isValidPhoneNumber } from "react-phone-number-input"
+import { isValidPhoneNumber } from "libphonenumber-js"
 
 const MAX_NAME_LENGTH = 255
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/

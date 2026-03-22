@@ -43,10 +43,10 @@ if (form.phone && !isValidPhoneNumber(form.phone)) {
 
 ### Server-side validation (API routes)
 
-Use `isValidPhoneNumber` in Zod schemas. Import from `react-phone-number-input` (re-exports `libphonenumber-js`).
+Use `isValidPhoneNumber` in Zod schemas. Import from `libphonenumber-js` (NOT `react-phone-number-input`, which crashes in RSC/server context).
 
 ```typescript
-import { isValidPhoneNumber } from "react-phone-number-input"
+import { isValidPhoneNumber } from "libphonenumber-js"
 
 // Required phone
 phone: z.string().min(1, "Phone is required").refine(isValidPhoneNumber, "Please enter a valid phone number")
@@ -60,6 +60,8 @@ phone: z.string()
 For routes without Zod schemas, validate imperatively:
 
 ```typescript
+import { isValidPhoneNumber } from "libphonenumber-js"
+
 if (phone && !isValidPhoneNumber(phone)) {
   return NextResponse.json({ error: "Please enter a valid phone number" }, { status: 400 })
 }

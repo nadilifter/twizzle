@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
-import { isValidPhoneNumber } from "react-phone-number-input";
+import { isValidPhoneNumber } from "libphonenumber-js";
 import { db } from "@/lib/db"; // tenant-isolation-ok: User is not a tenant model; reads only own profile
 
 const updateProfileSchema = z.object({

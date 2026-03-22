@@ -8,7 +8,7 @@ import { sendTemplatedEmail } from "@/lib/email";
 import { getAuthSession } from "@/lib/auth";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
-import { isValidPhoneNumber } from "react-phone-number-input";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 const cartItemSchema = z.object({
   referenceId: z.string().min(1),
