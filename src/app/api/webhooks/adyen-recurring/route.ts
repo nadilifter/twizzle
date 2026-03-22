@@ -4,6 +4,7 @@ import {
   verifyWebhookSignature, 
   parseRecurringTokenWebhook 
 } from "@/lib/adyen"
+import { logger } from "@/lib/logger"
 
 /**
  * POST /api/webhooks/adyen-recurring
@@ -47,7 +48,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid webhook payload" }, { status: 400 })
     }
 
-    console.log(`Processing Adyen webhook: ${tokenData.eventCode}`, {
+    logger.info("Adyen recurring webhook received", {
+      eventCode: tokenData.eventCode,
       shopperReference: tokenData.shopperReference,
       storedPaymentMethodId: tokenData.storedPaymentMethodId,
       success: tokenData.success,
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log(`Unhandled event type: ${tokenData.eventCode}`)
+        logger.debug("Unhandled recurring webhook event type", { eventCode: tokenData.eventCode })
     }
 
     return NextResponse.json({ notificationResponse: "[accepted]" })
@@ -107,7 +109,7 @@ async function handleTokenCreated(tokenData: {
   const orgId = await resolveOrgIdFromShopperRef(tokenData.shopperReference)
   
   if (!orgId) {
-    console.log("Could not extract org ID from shopper reference:", tokenData.shopperReference)
+    logger.info("Could not extract org ID from shopper reference", { shopperReference: tokenData.shopperReference })
     return
   }
 
@@ -118,7 +120,7 @@ async function handleTokenCreated(tokenData: {
   })
 
   if (!organization) {
-    console.log("Organization not found:", orgId)
+    logger.info("Organization not found", { orgId })
     return
   }
 
@@ -128,7 +130,7 @@ async function handleTokenCreated(tokenData: {
   })
 
   if (existingMethod) {
-    console.log("Payment method already exists:", tokenData.storedPaymentMethodId)
+    logger.debug("Payment method already exists", { storedPaymentMethodId: tokenData.storedPaymentMethodId })
     return
   }
 
@@ -165,7 +167,7 @@ async function handleTokenCreated(tokenData: {
     })
   }
 
-  console.log("Created payment method for org:", orgId)
+  logger.info("Created payment method for org", { orgId })
 }
 
 /**
@@ -190,7 +192,7 @@ async function handleTokenUpdated(tokenData: {
   })
 
   if (!existingMethod) {
-    console.log("Payment method not found for update:", tokenData.storedPaymentMethodId)
+    logger.info("Payment method not found for update", { storedPaymentMethodId: tokenData.storedPaymentMethodId })
     return
   }
 
@@ -206,7 +208,7 @@ async function handleTokenUpdated(tokenData: {
     },
   })
 
-  console.log("Updated payment method:", tokenData.storedPaymentMethodId)
+  logger.info("Updated payment method", { storedPaymentMethodId: tokenData.storedPaymentMethodId })
 }
 
 /**
@@ -223,7 +225,7 @@ async function handleTokenDisabled(tokenData: {
   })
 
   if (!existingMethod) {
-    console.log("Payment method not found for disable:", tokenData.storedPaymentMethodId)
+    logger.info("Payment method not found for disable", { storedPaymentMethodId: tokenData.storedPaymentMethodId })
     return
   }
 
@@ -270,7 +272,7 @@ async function handleTokenDisabled(tokenData: {
     }
   }
 
-  console.log("Disabled payment method:", tokenData.storedPaymentMethodId)
+  logger.info("Disabled payment method", { storedPaymentMethodId: tokenData.storedPaymentMethodId })
 }
 
 /**
@@ -308,7 +310,7 @@ async function resolveOrgIdFromShopperRef(shopperReference: string): Promise<str
       }
     }
 
-    console.log("Signup reference - org not found yet, token will be claimed after org creation:", shopperReference)
+    logger.info("Signup reference: org not found yet, token will be claimed after org creation", { shopperReference })
     return null
   }
 

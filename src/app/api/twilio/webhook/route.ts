@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateWebhookSignature, getWebhookUrl } from "@/lib/twilio";
 import { handleStatusCallback, handleInboundSms } from "@/lib/sms-service";
+import { logger } from "@/lib/logger";
 
 /**
  * Twilio Webhook Handler
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log("[Twilio Webhook] Received:", {
+    logger.info("Twilio webhook received", {
       contentType,
       keys: Object.keys(params),
       messageSid: params.MessageSid || params.SmsSid,

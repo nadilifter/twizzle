@@ -4,6 +4,7 @@ import { getScopedDb, db } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
 import { parseDateOnly } from "@/lib/date-utils";
 import { checkMemberCertifications } from "@/lib/services/certification-check";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 
 const staffAssignmentSchema = z.object({
@@ -205,7 +206,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    console.log("POST /api/events body:", JSON.stringify(body, null, 2));
+    logger.debug("POST /api/events body", { body });
     
     let validatedData;
     try {
@@ -393,8 +394,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(event);
   } catch (error) {
     console.error("Error creating event:", error);
-    // Log the full error to help debugging
-    console.log(JSON.stringify(error, null, 2));
+    logger.debug("Event creation error details", { error: String(error) });
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

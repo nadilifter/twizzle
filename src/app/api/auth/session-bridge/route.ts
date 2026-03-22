@@ -3,6 +3,7 @@ import { encode } from "next-auth/jwt";
 import { db } from "@/lib/db";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getCurrentEnvironment, getEnvConfig, getSessionCookieName } from "@/lib/env-domains";
+import { logger } from "@/lib/logger";
 
 /**
  * Session Bridge Endpoint
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
   // The session cookie is already set with the correct domain, so no action needed.
   if (!bridgeToken && currentEnv !== 'local') {
     if (process.env.AUTH_DEBUG === 'true') {
-      console.log(`Session bridge: Production passthrough (no token), redirecting to ${callbackUrl}`);
+      logger.debug("Session bridge: production passthrough (no token)", { callbackUrl });
     }
     return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
   }
@@ -193,9 +194,9 @@ export async function GET(req: NextRequest) {
       maxAge: 30 * 24 * 60 * 60, // 30 days
     });
     
-    console.log(`Session bridge: Setting cookie on domain ${cookieDomain}, secure: ${isSecure}`);
+    logger.debug("Session bridge: setting cookie", { cookieDomain, isSecure });
 
-    console.log("Session bridge: Successfully created session for:", email);
+    logger.info("Session bridge: created session", { email });
     return response;
   } catch (error) {
     console.error("Session bridge error:", error);

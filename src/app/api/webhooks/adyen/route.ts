@@ -4,6 +4,7 @@ import { verifyWebhookSignature } from "@/lib/adyen"
 import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice-processing"
 import { sendTemplatedEmail } from "@/lib/email"
 import { getSubdomainUrl } from "@/lib/env-domains"
+import { logger } from "@/lib/logger"
 
 /**
  * POST /api/webhooks/adyen
@@ -54,7 +55,8 @@ export async function POST(request: NextRequest) {
       paymentMethod: paymentMethodType,
     } = notificationItem
 
-    console.log(`Processing Adyen payment webhook: ${eventCode}`, {
+    logger.info("Adyen payment webhook received", {
+      eventCode,
       merchantReference,
       pspReference,
       success,
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (eventCode === "AUTHORISATION" && success !== "true" && success !== true) {
-      console.log(`Payment failed for invoice ${merchantReference}: pspReference=${pspReference}`)
+      logger.info("Adyen webhook: payment authorisation failed", { merchantReference, pspReference })
     }
 
     if (eventCode === "CAPTURE" && (success === "true" || success === true)) {
@@ -108,7 +110,7 @@ async function handleAuthorisation(
     where: { pspReference },
   })
   if (existingTransaction) {
-    console.log(`Transaction ${pspReference} already processed, skipping`)
+    logger.info("Transaction already processed, skipping", { pspReference })
     return
   }
 
@@ -127,7 +129,7 @@ async function handleAuthorisation(
   }
 
   if (invoice.status === "PAID") {
-    console.log(`Invoice ${invoiceId} already paid, skipping`)
+    logger.info("Invoice already paid, skipping", { invoiceId })
     return
   }
 
@@ -228,7 +230,7 @@ async function handleAuthorisation(
     console.error("Error sending receipt email:", err)
   }
 
-  console.log(`Payment processed for invoice ${invoiceId}: pspReference=${pspReference}`)
+  logger.info("Payment processed for invoice", { invoiceId, pspReference })
 }
 
 async function handleCapture(pspReference: string) {
@@ -237,7 +239,7 @@ async function handleCapture(pspReference: string) {
   })
 
   if (!transaction) {
-    console.log(`[CAPTURE] Transaction not found for pspReference=${pspReference}`)
+    logger.info("Capture: transaction not found", { pspReference })
     return
   }
 
@@ -246,7 +248,7 @@ async function handleCapture(pspReference: string) {
       where: { id: transaction.id },
       data: { status: "CAPTURED", settledAt: new Date() },
     })
-    console.log(`[CAPTURE] Transaction ${pspReference} captured`)
+    logger.info("Capture: transaction captured", { pspReference })
   }
 }
 
@@ -273,9 +275,9 @@ async function handleRefund(notificationItem: any) {
         where: { id: existing.id },
         data: { status: "SETTLED", settledAt: new Date() },
       })
-      console.log(`[REFUND] Updated PENDING refund ${pspReference} to SETTLED`)
+      logger.info("Refund: updated pending refund to settled", { pspReference })
     } else {
-      console.log(`[REFUND] Transaction ${pspReference} already processed`)
+      logger.info("Refund: transaction already processed", { pspReference })
     }
     return
   }
@@ -326,7 +328,7 @@ async function handleRefund(notificationItem: any) {
     }
   }
 
-  console.log(`[REFUND] Processed refund ${pspReference} for ${originalReference}`)
+  logger.info("Refund processed", { pspReference, originalReference })
 }
 
 async function handleChargeback(notificationItem: any) {
@@ -342,7 +344,7 @@ async function handleChargeback(notificationItem: any) {
     where: { pspReference },
   })
   if (existing) {
-    console.log(`[CHARGEBACK] Transaction ${pspReference} already processed`)
+    logger.info("Chargeback: transaction already processed", { pspReference })
     return
   }
 
@@ -373,7 +375,7 @@ async function handleChargeback(notificationItem: any) {
     },
   })
 
-  console.log(`[CHARGEBACK] Processed ${pspReference} for ${originalReference}`)
+  logger.info("Chargeback processed", { pspReference, originalReference })
 }
 
 async function handleFailure(eventCode: string, notificationItem: any) {

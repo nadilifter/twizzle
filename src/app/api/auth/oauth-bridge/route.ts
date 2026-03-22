@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import crypto from "crypto";
 import { checkAuthRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getSubdomainUrl, getBaseUrl, getSessionCookieName, getCurrentEnvironment } from "@/lib/env-domains";
+import { logger } from "@/lib/logger";
 
 /**
  * OAuth Bridge Endpoint
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
   // so this bridge is not needed. Just redirect to the callback URL.
   // The session cookie is already set correctly by NextAuth.
   if (currentEnv !== 'local') {
-    console.log(`OAuth bridge: Production passthrough (env: ${currentEnv}), redirecting to ${callbackUrl}`);
+    logger.debug("OAuth bridge: production passthrough", { env: currentEnv, callbackUrl });
     return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));
   }
 
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
     bridgeUrl.searchParams.set("token", bridgeToken);
     bridgeUrl.searchParams.set("callbackUrl", callbackUrl);
 
-    console.log("OAuth bridge: Redirecting to session bridge for:", email);
+    logger.info("OAuth bridge: redirecting to session bridge", { email });
     return NextResponse.redirect(bridgeUrl);
   } catch (error) {
     console.error("OAuth bridge error:", error);

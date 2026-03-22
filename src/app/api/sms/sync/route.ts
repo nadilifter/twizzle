@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { getMessageStatus, mapTwilioStatus, isTwilioConfigured } from "@/lib/twilio";
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/sms/sync
@@ -75,7 +76,7 @@ export async function POST() {
         const twilioMessage = await getMessageStatus(msg.twilioSid);
         
         if (!twilioMessage) {
-          console.log(`No Twilio message found for SID: ${msg.twilioSid}`);
+          logger.info("No Twilio message found for SID", { twilioSid: msg.twilioSid });
           details.push({
             id: msg.id,
             twilioSid: msg.twilioSid,
@@ -87,7 +88,7 @@ export async function POST() {
           continue;
         }
 
-        console.log(`Twilio status for ${msg.twilioSid}: ${twilioMessage.status}`);
+        logger.debug("Twilio message status", { twilioSid: msg.twilioSid, status: twilioMessage.status });
         const newStatus = mapTwilioStatus(twilioMessage.status);
 
         details.push({

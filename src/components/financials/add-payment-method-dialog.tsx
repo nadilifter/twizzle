@@ -33,13 +33,6 @@ export function AddPaymentMethodDialog({ trigger }: { trigger?: React.ReactNode 
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500))
 
-    console.log("Adding Payment Method:", {
-        type: methodType,
-        details: methodType === "card" 
-            ? { cardNumber: cardNumber.slice(-4), expiry, nameOnCard } 
-            : { routingNumber, accountNumber: accountNumber.slice(-4), accountType }
-    })
-
     toast.success(`${methodType === "card" ? "Credit Card" : "Bank Account"} added successfully`)
     setIsLoading(false)
     setOpen(false)

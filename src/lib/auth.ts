@@ -6,6 +6,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "./db";
+import { logger } from "@/lib/logger";
 import { ROLE_PERMISSIONS } from "./permissions";
 import { getEnvConfig, getCurrentEnvironment, getSubdomainUrl } from "./env-domains";
 import { getAuthCookies } from "./auth-cookies";
@@ -230,7 +231,7 @@ export const authOptions: NextAuthOptions = {
 
           const returnedUser = await buildAuthorizedUser(user.id);
           if (!returnedUser) throw new Error("User not found");
-          console.log("Authorize returning user:", returnedUser.email, returnedUser.id);
+          logger.info("Authorize returning user", { email: returnedUser.email, id: returnedUser.id });
           return returnedUser;
         } catch (error) {
           console.error("Authorize error:", error);
@@ -284,7 +285,7 @@ export const authOptions: NextAuthOptions = {
 
           const returnedUser = await buildAuthorizedUser(user.id);
           if (!returnedUser) throw new Error("User not found");
-          console.log("Email-code authorize returning user:", returnedUser.email, returnedUser.id);
+          logger.info("Email-code authorize returning user", { email: returnedUser.email, id: returnedUser.id });
           return returnedUser;
         } catch (error) {
           console.error("Email-code authorize error:", error);
@@ -311,7 +312,7 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!existingUser && isStaffEmail) {
-            console.log(`Creating super admin for Uplifter email: ${email} (via ${provider})`);
+            logger.info("Creating super admin for Uplifter email", { email, provider });
             const displayName = user.name || "Uplifter User";
             existingUser = await db.user.create({
               data: {
@@ -327,7 +328,7 @@ export const authOptions: NextAuthOptions = {
               },
             });
           } else if (!existingUser) {
-            console.log(`Creating new user via OAuth for: ${email} (via ${provider})`);
+            logger.info("Creating new user via OAuth", { email, provider });
             const displayName = user.name || email.split("@")[0];
             existingUser = await db.user.create({
               data: {
@@ -378,7 +379,7 @@ export const authOptions: NextAuthOptions = {
       try {
         // Initial sign in with credentials or email-code provider
         if (user && (account?.provider === "credentials" || account?.provider === "email-code")) {
-          console.log(`JWT callback: ${account.provider} sign in for user:`, user.email, user.id);
+          logger.info("JWT callback: sign in for user", { provider: account.provider, email: user.email, id: user.id });
           token.id = user.id;
           token.role = user.role;
           token.organizationId = user.organizationId;
@@ -390,7 +391,7 @@ export const authOptions: NextAuthOptions = {
         
         // OAuth sign-in - fetch user data from database
         if ((account?.provider === "google" || account?.provider === "azure-ad") && user?.email) {
-          console.log(`JWT callback: ${account.provider} sign in for user:`, user.email);
+          logger.info("JWT callback: OAuth sign in for user", { provider: account.provider, email: user.email });
           
           const dbUser = await db.user.findUnique({
             where: { email: user.email },
@@ -413,7 +414,7 @@ export const authOptions: NextAuthOptions = {
 
         // Handle session updates (e.g., switching organizations or impersonation)
         if (trigger === "update" && session) {
-          console.log("JWT callback: Session update", session);
+          logger.info("JWT callback: Session update", { session });
           
           // Handle organization switching -- re-resolve permissions for the new org
           if (session.organizationId !== undefined) {
@@ -442,7 +443,6 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        // console.log("JWT callback returning token:", JSON.stringify(token, null, 2));
         return token;
       } catch (error) {
         console.error("JWT error:", error);
@@ -452,7 +452,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       try {
         if (token && session.user) {
-          // console.log("Session callback: Token has id:", token.id, "sub:", token.sub);
           session.user.id = (token.id as string) || (token.sub as string);
           session.user.role = token.role as string;
           session.user.organizationId = token.organizationId as string;
@@ -530,14 +529,14 @@ export const authOptions: NextAuthOptions = {
           const callbackPath = callbackUrlObj.pathname;
           if (callbackHost.startsWith("login.") || callbackPath === "/login") {
             finalCallback = getSubdomainUrl("admin") + "/";
-            console.log("Redirect callback: Callback was login page, redirecting to admin instead");
+            logger.info("Redirect callback: Callback was login page, redirecting to admin instead");
           }
         } catch {
           // URL parsing failed, continue with original
         }
         
-        console.log("Redirect callback: Detected cross-domain OAuth, redirecting to bridge");
-        console.log("Redirect callback: baseUrl=", baseUrl, "url=", url, "finalCallback=", finalCallback);
+        logger.info("Redirect callback: Detected cross-domain OAuth, redirecting to bridge");
+        logger.debug("Redirect callback details", { baseUrl, url, finalCallback });
         
         const bridgeUrl = new URL("/api/auth/oauth-bridge", "http://localhost:3000");
         bridgeUrl.searchParams.set("callbackUrl", finalCallback);

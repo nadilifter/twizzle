@@ -40,13 +40,6 @@ export function AchSetupDialog({ trigger }: { trigger?: React.ReactNode }) {
     // Simulate API call to Adyen / Backend
     await new Promise(resolve => setTimeout(resolve, 2000))
 
-    console.log("Submitting ACH Details:", {
-        holderName,
-        routingNumber,
-        accountNumber, // In production, this would be tokenized
-        accountType
-    })
-
     toast.success("Bank account added successfully")
     setIsLoading(false)
     setOpen(false)
