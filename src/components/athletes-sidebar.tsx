@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation"
 import {
   CalendarDays,
   ClipboardList,
-  CreditCard,
   Eye,
   FileText,
   Home,
@@ -71,10 +70,6 @@ const navItems = [
   },
 ]
 
-const comingSoonItems = [
-  { title: "Invoices", icon: CreditCard },
-]
-
 const superadminItems = [
   {
     title: "View as User",
@@ -130,22 +125,6 @@ export function AthletesSidebar({ ...props }: React.ComponentProps<typeof Sideba
                   </SidebarMenuItem>
                 )
               })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Coming Soon</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {comingSoonItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton disabled className="opacity-50 cursor-not-allowed">
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

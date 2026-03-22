@@ -179,7 +179,7 @@ function POSPageContent() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="icon" className="h-10 w-10" disabled title="Barcode scanner (coming soon)">
+          <Button variant="outline" size="icon" className="h-10 w-10" disabled title="Barcode scanner">
             <ScanBarcode className="h-4 w-4" />
           </Button>
         </div>

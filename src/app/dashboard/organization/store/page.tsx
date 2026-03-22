@@ -571,7 +571,7 @@ export default function StorePage() {
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   />
-                  <Button variant="outline" size="icon" disabled title="Upload (coming soon)">
+                  <Button variant="outline" size="icon" disabled title="Upload">
                     <ImagePlus className="h-4 w-4" />
                   </Button>
                 </div>
