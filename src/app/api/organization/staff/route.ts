@@ -3,22 +3,27 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
+import { isValidPhoneNumber } from "react-phone-number-input";
+
+const phoneOptional = z.string()
+  .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
+  .optional().nullable();
 
 const createStaffSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   employmentType: z.enum(["FULL_TIME", "PART_TIME", "CONTRACTOR", "VOLUNTEER"]).optional(),
   title: z.string().optional().nullable(),
   hourlyRate: z.number().optional().nullable(),
-  hireDate: z.string().optional().nullable(), // ISO date string
+  hireDate: z.string().optional().nullable(),
   certifications: z.array(z.object({
     name: z.string(),
     expiresAt: z.string().optional().nullable(),
     verified: z.boolean().optional(),
   })).optional().nullable(),
-  phone: z.string().optional().nullable(),
+  phone: phoneOptional,
   emergencyContact: z.object({
     name: z.string(),
-    phone: z.string(),
+    phone: z.string().refine(isValidPhoneNumber, "Please enter a valid phone number"),
     relationship: z.string().optional(),
   }).optional().nullable(),
 });

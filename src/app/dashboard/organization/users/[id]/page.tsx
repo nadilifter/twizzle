@@ -39,6 +39,8 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
 import { ResponsiveTabsList } from "@/components/ui/responsive-tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { formatPhoneNumberIntl } from "react-phone-number-input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -509,7 +511,7 @@ export default function UserDetailPage() {
               {(member.phone || member.user.phone) && (
                 <span className="flex items-center gap-1">
                   <Phone className="h-3.5 w-3.5" />
-                  {member.phone || member.user.phone}
+                  {formatPhoneNumberIntl(member.phone || member.user.phone || "") || member.phone || member.user.phone}
                 </span>
               )}
             </div>
@@ -741,11 +743,11 @@ export default function UserDetailPage() {
                 </h4>
                 <div className="space-y-2">
                   <Label htmlFor="memberPhone">Work Phone</Label>
-                  <Input
+                  <PhoneInput
                     id="memberPhone"
+                    defaultCountry="US"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Work phone number"
+                    onChange={(value) => setPhone(value || "")}
                   />
                 </div>
               </div>
@@ -767,10 +769,10 @@ export default function UserDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Phone</Label>
-                    <Input
+                    <PhoneInput
+                      defaultCountry="US"
                       value={emergencyContactPhone}
-                      onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                      placeholder="Contact phone"
+                      onChange={(value) => setEmergencyContactPhone(value || "")}
                     />
                   </div>
                   <div className="space-y-2">

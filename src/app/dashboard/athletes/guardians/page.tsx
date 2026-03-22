@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
+import { formatPhoneNumberIntl } from "react-phone-number-input"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -207,7 +208,7 @@ export default function GuardiansPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Phone className="h-3 w-3" /> {guardian.phone || "—"}
+                      <Phone className="h-3 w-3" /> {guardian.phone ? (formatPhoneNumberIntl(guardian.phone) || guardian.phone) : "—"}
                     </div>
                   </TableCell>
                   <TableCell>

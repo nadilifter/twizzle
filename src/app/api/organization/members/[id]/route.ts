@@ -3,6 +3,11 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
+import { isValidPhoneNumber } from "react-phone-number-input";
+
+const phoneOptional = z.string()
+  .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
+  .optional().nullable();
 
 const updateMemberSchema = z.object({
   // Employment fields
@@ -15,10 +20,10 @@ const updateMemberSchema = z.object({
     expiresAt: z.string().optional().nullable(),
     verified: z.boolean().optional(),
   })).optional().nullable(),
-  phone: z.string().optional().nullable(),
+  phone: phoneOptional,
   emergencyContact: z.object({
     name: z.string(),
-    phone: z.string(),
+    phone: z.string().refine(isValidPhoneNumber, "Please enter a valid phone number"),
     relationship: z.string().optional(),
   }).optional().nullable(),
   // Role and permissions

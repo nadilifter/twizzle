@@ -8,6 +8,7 @@ import { sendTemplatedEmail } from "@/lib/email";
 import { getAuthSession } from "@/lib/auth";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 const cartItemSchema = z.object({
   referenceId: z.string().min(1),
@@ -44,7 +45,7 @@ const checkoutBodySchema = z.object({
     firstName: z.string().min(1).max(255),
     lastName: z.string().min(1).max(255),
     email: z.string().email().max(320),
-    phone: z.string().max(30).optional().default(""),
+    phone: z.string().max(30).refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number").optional().default(""),
     address: z.string().max(500).optional().default(""),
     city: z.string().max(255).optional().default(""),
     stateProvince: z.string().max(255).optional().default(""),

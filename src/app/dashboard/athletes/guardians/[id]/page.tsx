@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
+import { formatPhoneNumberIntl } from "react-phone-number-input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -200,7 +201,7 @@ export default function GuardianDetailPage() {
                 <div>
                   <p className="text-sm font-medium">Phone</p>
                   <p className="text-sm text-muted-foreground">
-                    {guardian.phone || "—"}
+                    {guardian.phone ? (formatPhoneNumberIntl(guardian.phone) || guardian.phone) : "—"}
                   </p>
                 </div>
               </div>
@@ -282,7 +283,7 @@ export default function GuardianDetailPage() {
                         Phone
                       </dt>
                       <dd className="text-sm mt-1">
-                        {guardian.phone || "—"}
+                        {guardian.phone ? (formatPhoneNumberIntl(guardian.phone) || guardian.phone) : "—"}
                       </dd>
                     </div>
                     <div>
@@ -453,7 +454,7 @@ export default function GuardianDetailPage() {
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {contact.email || "—"} &middot;{" "}
-                              {contact.phone || "—"}
+                              {contact.phone ? (formatPhoneNumberIntl(contact.phone) || contact.phone) : "—"}
                             </p>
                           </div>
                         </div>

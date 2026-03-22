@@ -9,6 +9,7 @@ import { registerAllowedOrigin } from "@/lib/adyen-platform"
 import { createDefaultGLCodes } from "@/lib/gl-code-defaults"
 import { getDefaultTaxRate } from "@/lib/tax-utils"
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit"
+import { isValidPhoneNumber } from "react-phone-number-input"
 
 const MAX_NAME_LENGTH = 255
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
@@ -35,7 +36,7 @@ const signupSchema = z.object({
   // Organization
   orgName: z.string().min(1, "Organization name is required"),
   orgEmail: z.string().email("Invalid organization email"),
-  phone: z.string().min(1, "Phone is required"),
+  phone: z.string().min(1, "Phone is required").refine(isValidPhoneNumber, "Please enter a valid phone number"),
   street: z.string().min(1, "Street address is required"),
   city: z.string().min(1, "City is required"),
   stateProvince: z.string().min(1, "State / Province is required"),

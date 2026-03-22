@@ -13,6 +13,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { formatPhoneNumberIntl } from "react-phone-number-input"
 import {
   Table,
   TableBody,
@@ -306,11 +308,11 @@ export default function StaffPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="phone">Phone</Label>
-                <Input 
-                  id="phone" 
-                  placeholder="(555) 123-4567" 
+                <PhoneInput
+                  id="phone"
+                  defaultCountry="US"
                   value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
+                  onChange={(value) => setFormPhone(value || "")}
                 />
               </div>
               <div className="grid gap-2">
@@ -439,7 +441,7 @@ export default function StaffPage() {
                         {person.phone && (
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <Phone className="h-3 w-3" />
-                            {person.phone}
+                            {formatPhoneNumberIntl(person.phone) || person.phone}
                           </div>
                         )}
                       </div>

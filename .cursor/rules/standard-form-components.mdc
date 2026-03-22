@@ -12,25 +12,83 @@ This project has purpose-built components and utilities for phone numbers and ad
 
 Use the `PhoneInput` component from `@/components/ui/phone-input` for all phone number fields. It provides a country code selector with flags, E.164 formatting, and international number support.
 
+### Input
+
 ```tsx
 import { PhoneInput } from "@/components/ui/phone-input"
 import { isValidPhoneNumber, formatPhoneNumberIntl } from "react-phone-number-input"
 
-// Input
 <PhoneInput
+  id="phone"
   defaultCountry="US"
   value={form.phone}
-  onChange={(value) => setForm((f) => ({ ...f, phone: value || "" }))}
+  onChange={(value) => {
+    setForm((f) => ({ ...f, phone: value || "" }))
+    if (errors.phone) setErrors((e) => ({ ...e, phone: "" }))
+  }}
+  className={errors.phone ? "[&>input]:border-destructive" : ""}
 />
-
-// Validation
-if (!isValidPhoneNumber(form.phone)) { /* invalid */ }
-
-// Display (on cards, tables, etc.)
-formatPhoneNumberIntl(phone) || phone   // "+1 555 123 4567"
+{errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
 ```
 
-**Never** use `<Input type="tel">` for phone numbers.
+### Client-side validation
+
+Always validate before submit using `isValidPhoneNumber`:
+
+```tsx
+if (form.phone && !isValidPhoneNumber(form.phone)) {
+  // show error — e.g. set errors.phone or toast.error
+}
+```
+
+### Server-side validation (API routes)
+
+Use `isValidPhoneNumber` in Zod schemas. Import from `react-phone-number-input` (re-exports `libphonenumber-js`).
+
+```typescript
+import { isValidPhoneNumber } from "react-phone-number-input"
+
+// Required phone
+phone: z.string().min(1, "Phone is required").refine(isValidPhoneNumber, "Please enter a valid phone number")
+
+// Optional phone
+phone: z.string()
+  .refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number")
+  .optional().nullable()
+```
+
+For routes without Zod schemas, validate imperatively:
+
+```typescript
+if (phone && !isValidPhoneNumber(phone)) {
+  return NextResponse.json({ error: "Please enter a valid phone number" }, { status: 400 })
+}
+```
+
+### Display
+
+Always format stored E.164 values for user-facing display:
+
+```tsx
+import { formatPhoneNumberIntl } from "react-phone-number-input"
+
+// With fallback — shows raw value if formatting fails
+formatPhoneNumberIntl(phone) || phone   // "+1 555 123 4567"
+
+// With dash for empty
+{phone ? (formatPhoneNumberIntl(phone) || phone) : "—"}
+```
+
+### Storage
+
+Phone numbers are stored in **E.164 format** (e.g. `+15551234567`). The `PhoneInput` component produces this format automatically. Never store formatted/display strings.
+
+### Rules
+
+- **Never** use `<Input type="tel">` for phone numbers
+- **Always** use `defaultCountry="US"` on `PhoneInput`
+- **Always** validate with `isValidPhoneNumber` on both client and server
+- **Always** format with `formatPhoneNumberIntl` when displaying
 
 ## Addresses (Country, State/Province, Postal Code)
 

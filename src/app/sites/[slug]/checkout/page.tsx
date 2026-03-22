@@ -6,6 +6,8 @@ import { useCart, CartItem } from "@/components/sites/cart-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { isValidPhoneNumber } from "react-phone-number-input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle, Plus, Pencil, CreditCard, Clock, AlertTriangle } from "lucide-react"
@@ -460,6 +462,10 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const handleProceedToPayment = async () => {
     if (!formData.firstName || !formData.lastName || !formData.email) {
       toast.error("Please fill in all required fields")
+      return
+    }
+    if (formData.phone && !isValidPhoneNumber(formData.phone)) {
+      toast.error("Please enter a valid phone number")
       return
     }
 
@@ -962,14 +968,11 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input 
-                  id="phone" 
-                  name="phone" 
-                  type="tel"
-                  autoComplete="tel"
-                  value={formData.phone} 
-                  onChange={handleInputChange} 
-                  required 
+                <PhoneInput
+                  id="phone"
+                  defaultCountry="US"
+                  value={formData.phone}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, phone: value || "" }))}
                   disabled={checkoutStep !== "details" || (selectedContactId !== "new" && !isEditingContact)}
                 />
               </div>

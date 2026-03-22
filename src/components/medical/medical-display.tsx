@@ -13,6 +13,7 @@ import {
   Shield,
   CheckCircle,
 } from "lucide-react";
+import { formatPhoneNumberIntl } from "react-phone-number-input";
 import type { AthleteMedicalInfoWithResponses, MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical";
 
 interface MedicalDisplayProps {
@@ -86,7 +87,7 @@ export function MedicalDisplay({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Phone className="h-3 w-3" />
             {medicalInfo.emergencyContactName}
-            {medicalInfo.emergencyContactPhone && `: ${medicalInfo.emergencyContactPhone}`}
+            {medicalInfo.emergencyContactPhone && `: ${formatPhoneNumberIntl(medicalInfo.emergencyContactPhone) || medicalInfo.emergencyContactPhone}`}
           </div>
         )}
       </div>
@@ -214,7 +215,7 @@ export function MedicalDisplay({
                   <p><span className="text-muted-foreground">Name:</span> {medicalInfo.emergencyContactName}</p>
                 )}
                 {medicalInfo.emergencyContactPhone && (
-                  <p><span className="text-muted-foreground">Phone:</span> {medicalInfo.emergencyContactPhone}</p>
+                  <p><span className="text-muted-foreground">Phone:</span> {formatPhoneNumberIntl(medicalInfo.emergencyContactPhone) || medicalInfo.emergencyContactPhone}</p>
                 )}
                 {medicalInfo.emergencyContactRelation && (
                   <p><span className="text-muted-foreground">Relationship:</span> {medicalInfo.emergencyContactRelation}</p>

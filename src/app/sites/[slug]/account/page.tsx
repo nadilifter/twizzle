@@ -6,6 +6,8 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { isValidPhoneNumber } from "react-phone-number-input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -135,6 +137,10 @@ export default function AccountPage() {
   const saveContact = async () => {
     if (!contactForm.firstName || !contactForm.lastName || !contactForm.email || !contactForm.phone) {
       toast.error("Please fill in all required fields")
+      return
+    }
+    if (!isValidPhoneNumber(contactForm.phone)) {
+      toast.error("Please enter a valid phone number")
       return
     }
     setIsSavingContact(true)
@@ -352,12 +358,11 @@ export default function AccountPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contact-phone">Phone *</Label>
-                  <Input
+                  <PhoneInput
                     id="contact-phone"
-                    type="tel"
-                    autoComplete="tel"
+                    defaultCountry="US"
                     value={contactForm.phone}
-                    onChange={(e) => setContactForm((f) => ({ ...f, phone: e.target.value }))}
+                    onChange={(value) => setContactForm((f) => ({ ...f, phone: value || "" }))}
                   />
                 </div>
                 <div className="space-y-2">

@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -53,6 +55,10 @@ export default function AccountPage() {
   const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Name is required");
+      return;
+    }
+    if (phone && !isValidPhoneNumber(phone)) {
+      toast.error("Please enter a valid phone number");
       return;
     }
 
@@ -169,12 +175,11 @@ export default function AccountPage() {
               <Phone className="h-3.5 w-3.5" />
               Phone Number
             </Label>
-            <Input
+            <PhoneInput
               id="phone"
-              type="tel"
+              defaultCountry="US"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Your phone number"
+              onChange={(value) => setPhone(value || "")}
             />
           </div>
 

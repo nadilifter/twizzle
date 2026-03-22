@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { isValidPhoneNumber } from "react-phone-number-input"
 
 export async function GET() {
   try {
@@ -95,6 +96,10 @@ export async function PATCH(request: Request) {
 
     const data = await request.json()
     const { name, email, phone, street, city, stateProvince, postalCode, country, taxRate, taxEnabled } = data
+
+    if (phone && !isValidPhoneNumber(phone)) {
+      return NextResponse.json({ error: "Please enter a valid phone number" }, { status: 400 })
+    }
 
     // Validate 2-letter codes for Adyen compliance
     if (stateProvince && stateProvince.length > 2) {

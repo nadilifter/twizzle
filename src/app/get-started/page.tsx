@@ -26,6 +26,8 @@ import { validatePassword, PASSWORD_MESSAGES, PASSWORD_MIN_LENGTH } from "@/lib/
 import { COUNTRIES } from "@/lib/location-data"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { isValidPhoneNumber } from "react-phone-number-input"
 import { Label } from "@/components/ui/label"
 import {
   Card,
@@ -223,6 +225,10 @@ export default function SignupPage() {
       newErrors.orgEmail = "Please enter a valid email"
     }
 
+    if (formData.phone && !isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = "Please enter a valid phone number"
+    }
+
     // Subdomain validation
     if (!formData.subdomain.trim()) {
       newErrors.subdomain = "Subdomain is required"
@@ -400,14 +406,19 @@ export default function SignupPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone (optional)</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  name="phone"
-                  type="tel"
-                  placeholder="+1 (555) 123-4567"
+                  defaultCountry="US"
                   value={formData.phone}
-                  onChange={handleInputChange}
+                  onChange={(value) => {
+                    setFormData(prev => ({ ...prev, phone: value || "" }))
+                    if (errors.phone) {
+                      setErrors(prev => ({ ...prev, phone: "" }))
+                    }
+                  }}
+                  className={errors.phone ? "[&>input]:border-destructive" : ""}
                 />
+                {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="street">Street Address</Label>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 export async function GET() {
   try {
@@ -33,6 +34,10 @@ export async function POST(request: NextRequest) {
 
     if (!firstName || !lastName || !email || !phone) {
       return NextResponse.json({ error: "firstName, lastName, email, and phone are required" }, { status: 400 });
+    }
+
+    if (phone && !isValidPhoneNumber(phone)) {
+      return NextResponse.json({ error: "Please enter a valid phone number" }, { status: 400 });
     }
 
     const existingCount = await db.userContact.count({ where: { userId: session.user.id } });

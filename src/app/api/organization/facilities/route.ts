@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 const createFacilitySchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -10,7 +11,7 @@ const createFacilitySchema = z.object({
   stateProvince: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
+  phone: z.string().refine((val) => !val || isValidPhoneNumber(val), "Please enter a valid phone number").optional().nullable(),
   email: z.string().email().optional().nullable(),
   squareFootage: z.number().optional().nullable(),
   maxCapacity: z.number().optional().nullable(),

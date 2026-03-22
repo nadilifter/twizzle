@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -418,11 +419,11 @@ export function MedicalForm({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="emergencyPhone">Phone</Label>
-                  <Input
+                  <PhoneInput
                     id="emergencyPhone"
+                    defaultCountry="US"
                     value={emergencyContactPhone}
-                    onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                    placeholder="(555) 555-5555"
+                    onChange={(value) => setEmergencyContactPhone(value || "")}
                   />
                 </div>
                 <div className="space-y-2">

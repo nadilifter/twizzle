@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 export async function PATCH(
   request: NextRequest,
@@ -20,6 +21,11 @@ export async function PATCH(
     }
 
     const body = await request.json();
+
+    if (body.phone && !isValidPhoneNumber(body.phone)) {
+      return NextResponse.json({ error: "Please enter a valid phone number" }, { status: 400 });
+    }
+
     const contact = await db.userContact.update({
       where: { id: params.id },
       data: {

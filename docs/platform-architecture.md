@@ -236,11 +236,14 @@ The platform uses a consistent set of form components across all portals (admin,
 | What | Where |
 |------|-------|
 | Input component | `PhoneInput` from `@/components/ui/phone-input` |
-| Validation | `isValidPhoneNumber()` from `react-phone-number-input` |
+| Client validation | `isValidPhoneNumber()` from `react-phone-number-input` |
+| Server validation | `isValidPhoneNumber()` from `react-phone-number-input` in Zod `.refine()` |
 | Display formatting | `formatPhoneNumberIntl()` from `react-phone-number-input` |
 | Default country | `"US"` via `defaultCountry` prop |
+| Storage format | E.164 (e.g. `+15551234567`) |
+| Error styling | `className={errors.phone ? "[&>input]:border-destructive" : ""}` |
 
-The `PhoneInput` wraps `react-phone-number-input` with shadcn/ui styling and a country-flag selector. Values are stored in E.164 format (e.g. `+15551234567`).
+The `PhoneInput` wraps `react-phone-number-input` with shadcn/ui styling and a country-flag selector. Values are stored in E.164 format. Every phone input must validate with `isValidPhoneNumber` on both client and server, and every phone display must use `formatPhoneNumberIntl(phone) || phone` for user-facing output. Never use `<Input type="tel">` for phone fields.
 
 ### Address Fields
 

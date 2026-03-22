@@ -24,6 +24,8 @@ import {
 import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { formatPhoneNumberIntl } from "react-phone-number-input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs"
@@ -147,6 +149,7 @@ export default function FacilitiesPage() {
   // Facility address controlled state (for combobox/select fields)
   const [facilityCountry, setFacilityCountry] = useState("US")
   const [facilityStateProvince, setFacilityStateProvince] = useState("")
+  const [facilityPhone, setFacilityPhone] = useState("")
 
   // Search states
   const [spaceSearch, setSpaceSearch] = useState("")
@@ -244,6 +247,7 @@ export default function FacilitiesPage() {
     setEditingFacility(facility)
     setFacilityCountry(facility?.country || "US")
     setFacilityStateProvince(facility?.stateProvince || "")
+    setFacilityPhone(facility?.phone || "")
     if (facility) {
       loadOperatingHours(facility.id)
     } else {
@@ -265,7 +269,7 @@ export default function FacilitiesPage() {
       stateProvince: facilityStateProvince || null,
       postalCode: formData.get("postalCode") as string || null,
       country: facilityCountry || null,
-      phone: formData.get("phone") as string || null,
+      phone: facilityPhone || null,
       email: formData.get("email") as string || null,
       squareFootage: formData.get("squareFootage") ? Number(formData.get("squareFootage")) : null,
       maxCapacity: formData.get("maxCapacity") ? Number(formData.get("maxCapacity")) : null,
@@ -661,10 +665,11 @@ export default function FacilitiesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <Input 
-                      id="phone" 
-                      name="phone" 
-                      defaultValue={editingFacility?.phone || ""} 
+                    <PhoneInput
+                      id="phone"
+                      defaultCountry="US"
+                      value={facilityPhone}
+                      onChange={(value) => setFacilityPhone(value || "")}
                     />
                   </div>
                   <div className="grid gap-2">
@@ -955,7 +960,7 @@ export default function FacilitiesPage() {
                         {selectedFacility.phone && (
                           <div className="flex items-center gap-2">
                             <Phone className="h-4 w-4 text-muted-foreground" />
-                            <span>{selectedFacility.phone}</span>
+                            <span>{formatPhoneNumberIntl(selectedFacility.phone) || selectedFacility.phone}</span>
                           </div>
                         )}
                         {selectedFacility.email && (
