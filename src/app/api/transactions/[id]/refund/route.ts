@@ -102,8 +102,13 @@ export async function POST(
 
     const isFullRefund = refundAmount >= originalAmount - totalRefunded
 
-    const merchantAccount =
-      process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant"
+    const merchantAccount = process.env.ADYEN_MERCHANT_ACCOUNT
+    if (!merchantAccount) {
+      return NextResponse.json(
+        { error: "Payment provider not configured" },
+        { status: 503 }
+      )
+    }
     const refundRef = `refund-${transaction.pspReference}-${Date.now()}`
 
     const response = await refundPayment(

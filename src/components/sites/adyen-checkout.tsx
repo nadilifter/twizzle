@@ -50,7 +50,10 @@ export function AdyenCheckoutComponent({
 
       try {
         const environment = process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT?.toLowerCase() || "test"
-        const clientKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY || "test_key"
+        const clientKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY
+        if (!clientKey) {
+          throw new Error("NEXT_PUBLIC_ADYEN_CLIENT_KEY is not configured")
+        }
 
         const checkout = await AdyenCheckout({
           environment: environment as CoreConfiguration["environment"],

@@ -326,8 +326,7 @@ export async function refundPayment(
       {
         amount,
         merchantAccount: merchantAccount
-          || process.env.ADYEN_MERCHANT_ACCOUNT
-          || "TestMerchant",
+          || process.env.ADYEN_MERCHANT_ACCOUNT!,
         reference: reference || `refund-${pspReference}-${Date.now()}`,
       }
     );

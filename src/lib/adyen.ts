@@ -125,7 +125,7 @@ export async function createPaymentSession(
       amount: { currency, value: Math.round(amount * 100) }, // Amount in minor units
       reference,
       returnUrl,
-      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
+      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       shopperEmail,
       lineItems,
       channel: "Web" as any,
@@ -150,7 +150,7 @@ export async function createPaymentLink(
       amount: { currency, value: Math.round(amount * 100) }, // Amount in minor units
       reference,
       description: description || `Payment for order ${reference}`,
-      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
+      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       countryCode: "US",
       // Optional: Set expiration (default is usually 24 hours)
       ...(expiresAt && { expiresAt: new Date(expiresAt) }),
@@ -213,7 +213,7 @@ export async function createTokenizationSession(
       },
       reference: `token-${shopperReference}-${Date.now()}`,
       returnUrl,
-      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
+      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       shopperReference,
       shopperEmail,
       channel: "Web" as any,
@@ -244,7 +244,7 @@ export async function getStoredPaymentMethods(
     // Use the Checkout API's paymentMethods endpoint with shopperReference
     // This returns stored payment methods for the shopper
     const response = await checkoutApi.PaymentsApi.paymentMethods({
-      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
+      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       shopperReference,
       channel: "Web" as any,
     });
@@ -287,7 +287,7 @@ export async function disableStoredPaymentMethod(
   try {
     // Use the Recurring API to disable stored payment details
     await checkoutApi.RecurringApi.disable({
-      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
+      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       shopperReference,
       recurringDetailReference: storedPaymentMethodId,
     });
@@ -320,7 +320,7 @@ export async function chargeSubscription(
         value: Math.round(amount * 100)  // Amount in minor units
       },
       reference,
-      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT || "TestMerchant",
+      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       shopperReference,
       paymentMethod: {
         type: "scheme" as any,
