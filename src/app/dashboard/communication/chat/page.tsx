@@ -325,7 +325,7 @@ export default function SmsConversationsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ markRead: true }),
-    }).catch(() => {})
+    }).catch((err) => console.error("Failed to mark conversation as read:", err))
 
     // Poll for new messages
     messagesPollRef.current = setInterval(() => {
@@ -355,7 +355,7 @@ export default function SmsConversationsPage() {
             }))
         )
       )
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load guardians:", err))
   }, [isNewConvOpen, guardianSearch])
 
   // ============================================

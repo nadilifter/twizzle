@@ -364,7 +364,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           }
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load organization settings:", err))
   }, [params.slug])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

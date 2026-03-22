@@ -527,7 +527,7 @@ export function ProgramRegistrationFlow({
             }
           }
         })
-        .catch(() => {})
+        .catch((err) => console.error("Failed to check athlete passes:", err))
         .finally(() => setIsCheckingPass(false))
     }
   }, [needsPass, selectedAthlete, program.organizationId, program.requiredPasses])

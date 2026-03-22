@@ -43,7 +43,7 @@ function PaymentPageContent() {
           setTaxRate(Number(data.taxRate))
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load organization details:", err))
   }, [])
 
   const tax = Math.round(subtotal * taxRate * 100) / 100

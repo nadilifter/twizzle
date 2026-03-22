@@ -75,7 +75,7 @@ function useAvailablePrograms(shouldFetch: boolean) {
     fetch("/api/programs?limit=200")
       .then((r) => r.json())
       .then((data) => setPrograms(data.data || []))
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load programs:", err))
   }, [shouldFetch])
 
   return programs

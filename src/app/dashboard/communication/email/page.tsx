@@ -560,7 +560,7 @@ export default function EmailCampaignsPage() {
     fetch("/api/programs")
       .then((r) => r.json())
       .then((data) => setPrograms((data.data || data.programs || []).map((p: any) => ({ id: p.id, name: p.name }))))
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load programs:", err))
   }, [])
 
   useEffect(() => {
@@ -568,7 +568,7 @@ export default function EmailCampaignsPage() {
     fetch("/api/memberships")
       .then((r) => r.json())
       .then((data) => setMembershipGroups((data.data || data.groups || []).map((g: any) => ({ id: g.id, name: g.name }))))
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load membership groups:", err))
   }, [membershipsEnabled])
 
   useEffect(() => {
@@ -576,7 +576,7 @@ export default function EmailCampaignsPage() {
     fetch(`/api/programs/${targetProgramId}/instances`)
       .then((r) => r.json())
       .then((data) => setProgramInstances(data.data || data.instances || []))
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load program instances:", err))
   }, [targetProgramId])
 
   useEffect(() => {
@@ -587,7 +587,7 @@ export default function EmailCampaignsPage() {
       .then((data) =>
         setGuardians((data.data || data.guardians || []).map((g: any) => ({ id: g.id, name: g.name, email: g.email })))
       )
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load guardians:", err))
   }, [targetType, guardianSearch])
 
   // Fetch recipient count
