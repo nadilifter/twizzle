@@ -22,6 +22,7 @@ import {
   AlignRight,
 } from "lucide-react";
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Message, loggedInUserData } from "./data";
@@ -58,7 +59,6 @@ export default function ChatBottombar({
   sendMessage,
   isMobile,
 }: ChatBottombarProps) {
-  const [file, setFile] = useState<File | null>(null);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
 
@@ -105,9 +105,7 @@ export default function ChatBottombar({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      console.log("File selected:", e.target.files[0]);
-      alert(`File selected: ${e.target.files[0].name}`);
+      toast.info("File attachments are not yet supported in chat.");
       e.target.value = "";
     }
   };
