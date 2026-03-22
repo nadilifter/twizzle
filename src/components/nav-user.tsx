@@ -1,6 +1,7 @@
 "use client"
 
-import { LogOutIcon, MoreVerticalIcon, UserIcon } from "lucide-react"
+import { LogOutIcon, MoreVerticalIcon, ShieldAlertIcon, ShieldIcon, UserIcon } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 import {
   Avatar,
@@ -36,8 +37,11 @@ export function NavUser({
   accountUrl?: string
 }) {
   const { isMobile } = useSidebar()
+  const { data: session } = useSession()
 
-  // Generate initials from name for avatar fallback
+  const isSuperAdmin = session?.user?.isSuperAdmin === true
+  const showAdminLink =
+    isSuperAdmin || session?.user?.permissions?.includes("*") === true
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -99,6 +103,22 @@ export function NavUser({
                 <a href={`${getClientSubdomainUrl("athletes")}/account`}>
                   <UserIcon />
                   Account
+                </a>
+              </DropdownMenuItem>
+            )}
+            {showAdminLink && (
+              <DropdownMenuItem asChild>
+                <a href={getClientSubdomainUrl("admin")}>
+                  <ShieldIcon />
+                  Admin
+                </a>
+              </DropdownMenuItem>
+            )}
+            {isSuperAdmin && (
+              <DropdownMenuItem asChild>
+                <a href={getClientSubdomainUrl("superadmin")}>
+                  <ShieldAlertIcon />
+                  Superadmin
                 </a>
               </DropdownMenuItem>
             )}
