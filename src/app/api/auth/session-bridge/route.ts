@@ -149,6 +149,7 @@ export async function GET(req: NextRequest) {
       email: user.email,
       name: user.name,
       picture: user.avatar,
+      avatar: user.avatar,
       role: membership?.role || user.role,
       organizationId,
       organizationName,
