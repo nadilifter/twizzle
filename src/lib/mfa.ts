@@ -2,13 +2,21 @@ import crypto from "crypto";
 import { db } from "./db";
 import { VerificationCodeType } from "@prisma/client";
 
+function getAuthSecret(): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is not set — cannot sign or verify tokens");
+  }
+  return secret;
+}
+
 // ── Signed proof tokens ─────────────────────────────────────────────────
 // These short-lived HMAC-signed tokens prove that a verification was
 // completed (via magic link click). They are passed back to the login page
 // and accepted by the auth providers as an alternative to a DB code.
 
 export function createVerifiedToken(email: string, type: string): string {
-  const secret = process.env.NEXTAUTH_SECRET || "dev-secret";
+  const secret = getAuthSecret();
   const exp = Date.now() + 5 * 60 * 1000; // 5 minutes
   const signature = crypto
     .createHmac("sha256", secret)
@@ -33,7 +41,7 @@ export function verifyVerifiedToken(
     if (payload.type !== expectedType) return null;
     if (Date.now() > payload.exp) return null;
 
-    const secret = process.env.NEXTAUTH_SECRET || "dev-secret";
+    const secret = getAuthSecret();
     const expected = crypto
       .createHmac("sha256", secret)
       .update(`${payload.email}:${payload.type}:${payload.exp}`)
