@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -305,7 +306,7 @@ export function SurveyBuilder() {
         <Button variant="outline" onClick={() => window.history.back()}>
           Cancel
         </Button>
-        <Button onClick={() => alert("Survey saved! (Mock action)")}>
+        <Button onClick={() => toast.info("Surveys are not yet available — this feature is coming soon.")}>
           Save Survey
         </Button>
       </div>
