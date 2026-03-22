@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -116,7 +117,7 @@ export default function GuardiansPage() {
       setInviteName("")
       fetchGuardians(searchTerm)
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to invite guardian")
+      toast.error(err instanceof Error ? err.message : "Failed to invite guardian")
     } finally {
       setIsInviting(false)
     }

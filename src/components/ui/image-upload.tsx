@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +39,7 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
       onChange(data.url);
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Failed to upload image");
+      toast.error("Failed to upload image. Please try again.");
     } finally {
       setIsUploading(false);
     }
