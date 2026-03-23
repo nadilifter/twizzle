@@ -42,6 +42,7 @@ export async function POST(
         firstName: true,
         lastName: true,
         allowGuardianClaims: true,
+        userId: true,
         guardians: {
           where: { userId: session.user.id },
           select: { id: true },
@@ -53,6 +54,13 @@ export async function POST(
       return NextResponse.json(
         { error: "Athlete not found" },
         { status: 404 }
+      );
+    }
+
+    if (athlete.userId) {
+      return NextResponse.json(
+        { error: "Self-athletes cannot have additional guardians" },
+        { status: 400 }
       );
     }
 

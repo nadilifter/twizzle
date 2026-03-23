@@ -181,11 +181,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userExists = await db.user.findUnique({
+    const currentUser = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: { id: true, email: true, avatar: true },
     });
-    if (!userExists) {
+    if (!currentUser) {
       return NextResponse.json(
         { error: "Your user account was not found. Please sign out and sign back in." },
         { status: 401 }
@@ -237,7 +237,11 @@ export async function POST(request: NextRequest) {
         birthDate: parsedBirthDate,
         gender,
         userId: isSelf ? userId : undefined,
-        allowGuardianClaims: allowGuardianClaims ?? false,
+        ...(isSelf && {
+          email: currentUser.email,
+          avatar: currentUser.avatar,
+        }),
+        allowGuardianClaims: isSelf ? false : (allowGuardianClaims ?? false),
         guardians: {
           create: {
             userId,

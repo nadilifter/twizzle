@@ -68,6 +68,20 @@ export async function PATCH(
       );
     }
 
+    // Self-athletes cannot enable guardian claims
+    if (allowGuardianClaims === true) {
+      const athlete = await db.athlete.findUnique({
+        where: { id: athleteId },
+        select: { userId: true },
+      });
+      if (athlete?.userId) {
+        return NextResponse.json(
+          { error: "Self-athletes cannot have additional guardians" },
+          { status: 400 }
+        );
+      }
+    }
+
     const updates: { shareRegistrations?: boolean; shareFinancials?: boolean } =
       {};
     if (shareRegistrations !== undefined) updates.shareRegistrations = shareRegistrations;

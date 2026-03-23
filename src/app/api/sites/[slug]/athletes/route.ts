@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/date-utils";
+import { syncUserToSelfAthlete } from "@/lib/sync-self-athlete";
 
 /**
  * GET /api/sites/[slug]/athletes
@@ -169,11 +170,11 @@ export async function POST(
     const userEmail = session.user.email;
     const userName = session.user.name || `${firstName} ${lastName}`;
 
-    const userExists = await db.user.findUnique({
+    const currentUser = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: { id: true, email: true, avatar: true },
     });
-    if (!userExists) {
+    if (!currentUser) {
       return NextResponse.json(
         { error: "Your user account was not found. Please sign out and sign back in." },
         { status: 401 }
@@ -219,6 +220,14 @@ export async function POST(
         );
       }
 
+      // Self-athletes cannot have additional guardians
+      if (existingAthlete.userId && !isSelf) {
+        return NextResponse.json(
+          { error: "This athlete is a self-athlete and cannot have additional guardians" },
+          { status: 400 }
+        );
+      }
+
       if (existingAthlete.allowGuardianClaims) {
         if (isSelf) {
           const existingSelf = await db.athlete.findUnique({ where: { userId } });
@@ -245,6 +254,7 @@ export async function POST(
             where: { id: existingAthlete.id },
             data: { userId },
           });
+          await syncUserToSelfAthlete(userId);
         }
 
         // Ensure OrganizationAthlete link exists
@@ -323,7 +333,11 @@ export async function POST(
         birthDate: parsedBirthDate,
         gender,
         userId: isSelf ? userId : undefined,
-        allowGuardianClaims: allowGuardianClaims ?? false,
+        ...(isSelf && {
+          email: currentUser.email,
+          avatar: currentUser.avatar,
+        }),
+        allowGuardianClaims: isSelf ? false : (allowGuardianClaims ?? false),
         guardians: {
           create: {
             userId,

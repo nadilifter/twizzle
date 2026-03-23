@@ -509,6 +509,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
     }
 
+    // Self-athletes cannot have their guardian reassigned
+    if (validatedData.guardianUserId && existing.userId) {
+      return NextResponse.json(
+        { error: "Self-athletes cannot have their guardian reassigned" },
+        { status: 400 }
+      );
+    }
+
     // If changing guardian user, verify the user exists and update/create AthleteGuardian
     if (validatedData.guardianUserId) {
       const guardianUser = await db.user.findUnique({

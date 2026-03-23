@@ -4,6 +4,7 @@ import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { db } from "@/lib/db"; // tenant-isolation-ok: User is not a tenant model; reads only own profile
+import { syncUserToSelfAthlete } from "@/lib/sync-self-athlete";
 
 const updateProfileSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
@@ -70,6 +71,8 @@ export async function PATCH(request: NextRequest) {
         createdAt: true,
       },
     });
+
+    await syncUserToSelfAthlete(session.user.id);
 
     return NextResponse.json(user);
   } catch (error) {

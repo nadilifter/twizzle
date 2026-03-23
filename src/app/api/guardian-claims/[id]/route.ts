@@ -38,6 +38,7 @@ export async function PATCH(
         athlete: {
           select: {
             id: true,
+            userId: true,
             organizationAthletes: {
               select: { organizationId: true },
             },
@@ -91,6 +92,13 @@ export async function PATCH(
       return NextResponse.json(
         { error: "Only the primary guardian or an organization admin can review claims" },
         { status: 403 }
+      );
+    }
+
+    if (action === "approve" && claim.athlete.userId) {
+      return NextResponse.json(
+        { error: "Self-athletes cannot have additional guardians" },
+        { status: 400 }
       );
     }
 

@@ -6,6 +6,7 @@ import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { db } from "@/lib/db"; // tenant-isolation-ok: User is not a tenant model
+import { syncUserToSelfAthlete } from "@/lib/sync-self-athlete";
 
 export async function POST(request: NextRequest) {
   const rateLimitResponse = await checkApiRateLimit(request, "avatar-upload", RATE_LIMITS.sensitive);
@@ -84,6 +85,8 @@ export async function POST(request: NextRequest) {
       data: { avatar: publicUrl },
     });
 
+    await syncUserToSelfAthlete(userId);
+
     return NextResponse.json({ url: publicUrl });
   } catch (error) {
     console.error("Error uploading avatar:", error);
@@ -129,6 +132,8 @@ export async function DELETE(request: NextRequest) {
       where: { id: userId },
       data: { avatar: null },
     });
+
+    await syncUserToSelfAthlete(userId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

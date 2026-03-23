@@ -225,31 +225,33 @@ export default function AthleteDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Guardian claims toggle */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Shield className="w-4 h-4" />
-            Guardian Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="allow-claims" className="text-sm font-medium">Allow other guardians</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                When enabled, other users can find and claim this athlete by matching name and date of birth
-              </p>
+      {/* Guardian claims toggle (hidden for self-athletes) */}
+      {!athlete.isSelf && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Guardian Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="allow-claims" className="text-sm font-medium">Allow other guardians</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  When enabled, other users can find and claim this athlete by matching name and date of birth
+                </p>
+              </div>
+              <Switch
+                id="allow-claims"
+                checked={athlete.allowGuardianClaims}
+                onCheckedChange={handleToggleGuardianClaims}
+                disabled={isSaving}
+              />
             </div>
-            <Switch
-              id="allow-claims"
-              checked={athlete.allowGuardianClaims}
-              onCheckedChange={handleToggleGuardianClaims}
-              disabled={isSaving}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Guardians section */}
       <Card>
