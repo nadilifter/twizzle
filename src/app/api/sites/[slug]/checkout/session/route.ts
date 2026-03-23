@@ -881,6 +881,39 @@ export async function POST(
       }
     }
 
+    // Verify product (store item) prices and inventory
+    const productItemsForPrice = items
+      .map((item: CartItem, index: number) => ({ item, index }))
+      .filter(({ item }) => item.type === "item");
+    if (productItemsForPrice.length > 0) {
+      const allProductIds = [...new Set(
+        productItemsForPrice.map(({ item }) => item.referenceId).filter(Boolean)
+      )] as string[];
+      const productsForPrice = await db.product.findMany({
+        where: { id: { in: allProductIds }, organizationId, isActive: true },
+        select: { id: true, price: true, currentInventory: true, name: true },
+      });
+      const productPriceMap = new Map(productsForPrice.map(p => [p.id, p]));
+
+      for (const { item, index } of productItemsForPrice) {
+        const product = productPriceMap.get(item.referenceId);
+        if (!product) {
+          return NextResponse.json(
+            { error: `Product "${item.name}" is no longer available` },
+            { status: 400 }
+          );
+        }
+        serverPrices.set(index, Number(product.price) * item.quantity);
+
+        if (product.currentInventory !== null && product.currentInventory < item.quantity) {
+          return NextResponse.json(
+            { error: `Insufficient stock for "${product.name}". Only ${product.currentInventory} available.` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Calculate totals using server-verified prices
     const taxRate = config.organization.taxEnabled !== false
       ? Number(config.organization.taxRate ?? 0)
@@ -1222,6 +1255,7 @@ export async function POST(
               membershipInstanceId: item.type === 'membership' ? (item.details?.membershipInstanceId || item.referenceId) : undefined,
               passId: item.type === 'pass' ? (item.details?.passId || item.referenceId) : undefined,
               competitionId: item.type === 'competition' ? (item.details?.competitionId || item.referenceId) : undefined,
+              productId: item.type === 'item' ? item.referenceId : undefined,
               athleteId: item.athleteId || item.details?.athleteId || undefined,
               glCodeId,
             };
@@ -1238,6 +1272,22 @@ export async function POST(
           unitPrice: -discountLineAmount,
           total: -discountLineAmount,
           discountId: discountRecord.id,
+        },
+      });
+    }
+
+    // 7c. Create Order record if cart contains store products
+    const productItems = items.filter((i: CartItem) => i.type === "item");
+    if (productItems.length > 0) {
+      await db.order.create({
+        data: {
+          invoiceId: invoice.id,
+          organizationId,
+          source: "ONLINE",
+          fulfillmentStatus: "PENDING",
+          customerName: `${resolvedContact.firstName} ${resolvedContact.lastName}`.trim() || null,
+          customerEmail: resolvedContact.email || null,
+          customerPhone: resolvedContact.phone || null,
         },
       });
     }
@@ -1277,6 +1327,34 @@ export async function POST(
       });
 
       await processInvoiceRegistrations(invoiceMetadata, items, authUserId, organizationId);
+
+      // Decrement inventory for store products
+      for (const item of productItems) {
+        const product = await db.product.findUnique({
+          where: { id: item.referenceId },
+          select: { id: true, currentInventory: true },
+        });
+        if (product && product.currentInventory !== null) {
+          const previousQty = product.currentInventory;
+          const newQty = previousQty - item.quantity;
+          await db.product.update({
+            where: { id: product.id },
+            data: { currentInventory: newQty },
+          });
+          await db.stockMovement.create({
+            data: {
+              productId: product.id,
+              type: "SALE",
+              quantity: -item.quantity,
+              previousQty,
+              newQty,
+              referenceId: invoice.id,
+              notes: `Online Sale: ${invoice.reference}`,
+              createdBy: authUserId || undefined,
+            },
+          });
+        }
+      }
 
       // Send receipt email (fire-and-forget so it doesn't block the response)
       const protocol = request.headers.get("x-forwarded-proto") || "http";

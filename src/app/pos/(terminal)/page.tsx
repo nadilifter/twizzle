@@ -213,7 +213,7 @@ function POSPageContent() {
                   <p className="text-sm mt-2">
                     Add products in the{" "}
                     <a 
-                      href={`${getClientSubdomainUrl("admin")}/organization/store`} 
+                      href={`${getClientSubdomainUrl("admin")}/store/products`} 
                       className="text-primary underline"
                     >
                       Store settings

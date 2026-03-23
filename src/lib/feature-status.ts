@@ -211,10 +211,15 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "live",
     description: "Staff management uses sample data",
   },
-  "/dashboard/organization/store": {
+  "/dashboard/store/products": {
     status: "live",
     description: "Product catalog and inventory management",
     apiRoutes: ["/api/products"],
+  },
+  "/dashboard/store/orders": {
+    status: "live",
+    description: "Order management and fulfillment tracking",
+    apiRoutes: ["/api/orders"],
   },
   "/dashboard/organization/website": {
     status: "live",

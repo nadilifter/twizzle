@@ -14,7 +14,7 @@ export const FEATURE_KEYS = [
   "customDomains",
   "accountingIntegrations",
   "training",
-  "pointOfSale",
+  "store",
   "memberships",
   "waitlists",
   "passes",
@@ -32,7 +32,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   customDomains: false,
   accountingIntegrations: false,
   training: false,
-  pointOfSale: false,
+  store: false,
   memberships: false,
   waitlists: false,
   passes: false,
@@ -47,7 +47,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   customDomains: "Custom Domains",
   accountingIntegrations: "Accounting Integrations",
   training: "Training",
-  pointOfSale: "Point of Sale",
+  store: "Store",
   memberships: "Memberships",
   waitlists: "Waitlists",
   passes: "Passes",
@@ -62,7 +62,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   customDomains: "Custom domain configuration for your marketing site",
   accountingIntegrations: "Accounting software integrations (QuickBooks Online, Xero)",
   training: "Skills tracking, evaluations, levels, and training programs",
-  pointOfSale: "Point of Sale terminal and checkout via the POS portal",
+  store: "Product catalog, Point of Sale terminal, online storefront, and order management",
   memberships: "Membership management, restrictions, and storefront purchasing",
   waitlists: "Program and session waitlist management with automatic promotion",
   passes: "Allow athletes to purchase passes for program access with session credits",
@@ -128,13 +128,8 @@ export const FEATURE_SIDEBAR_MAP: Record<
   training: {
     sectionTitle: "Training",
   },
-  pointOfSale: {
-    subItems: [
-      {
-        section: "My Organization",
-        items: ["Store"],
-      },
-    ],
+  store: {
+    sectionTitle: "Store",
     accessPoints: ["Point of Sale"],
   },
   memberships: {
@@ -173,7 +168,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
     "/api/evaluation-templates",
     "/api/evaluations",
   ],
-  pointOfSale: ["/api/pos"],
+  store: ["/api/pos", "/api/orders"],
   memberships: ["/api/memberships", "/api/public/memberships"],
   waitlists: [],
   passes: ["/api/passes", "/api/public/passes"],
@@ -187,6 +182,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
 export const LEGACY_KEY_MAP: Record<string, FeatureKey> = {
   advancedRegistrations: "competitions",
   qboIntegration: "accountingIntegrations",
+  pointOfSale: "store",
 };
 
 export function parseFeatureToggles(

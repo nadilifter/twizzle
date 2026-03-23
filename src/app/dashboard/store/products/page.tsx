@@ -475,9 +475,9 @@ export default function StorePage() {
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight">Store Products</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Products</h2>
           <p className="text-sm text-muted-foreground">
-            Manage products available for sale at your point of sale.
+            Manage products available for sale in your store and point of sale.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {

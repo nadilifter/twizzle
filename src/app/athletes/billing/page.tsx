@@ -439,7 +439,7 @@ export default function BillingPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <User className="h-4 w-4" />
-            Contacts
+            Billing Contacts
           </h2>
           <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
             <DialogTrigger asChild>

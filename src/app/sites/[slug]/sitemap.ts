@@ -79,6 +79,16 @@ export default async function sitemap({
     });
   }
 
+  // Add store page if enabled
+  if (config.showStore) {
+    routes.push({ 
+      url: `${baseUrl}/store`, 
+      lastModified: now, 
+      changeFrequency: 'weekly', 
+      priority: 0.8 
+    });
+  }
+
   // Add contact page if enabled
   if (config.showContact) {
     routes.push({ 

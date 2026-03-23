@@ -73,8 +73,9 @@ model Organization {
   // Platform Subscription
   subscription OrganizationSubscription?
 
-  // POS Products
+  // Store
   products Product[]
+  orders   Order[]
 
   // Media
   media             Media[]
@@ -1293,6 +1294,7 @@ model Invoice {
   user         User?        @relation("UserInvoices", fields: [userId], references: [id], onDelete: SetNull)
   lineItems    LineItem[]
   payments     Payment[]
+  order        Order?
 
   @@index([userId])
 }
@@ -1321,6 +1323,7 @@ model LineItem {
   passId                String? // What pass is this for?
   competitionId         String? // What competition is this for?
   competitionCategoryId String? // What competition category?
+  productId             String? // What product is this for?
   glCodeId              String? // GL code at time of sale
   createdAt             DateTime @default(now())
 
@@ -1334,6 +1337,7 @@ model LineItem {
   pass                Pass?                @relation(fields: [passId], references: [id], onDelete: SetNull)
   competition         Competition?         @relation(fields: [competitionId], references: [id], onDelete: SetNull)
   competitionCategory CompetitionCategory? @relation(fields: [competitionCategoryId], references: [id], onDelete: SetNull)
+  product             Product?             @relation(fields: [productId], references: [id], onDelete: SetNull)
   glCode              GLCode?              @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
 
   @@index([glCodeId])
@@ -2471,6 +2475,7 @@ model WebsiteConfig {
   showRegistration Boolean @default(true)
   showContact      Boolean @default(true)
   showCompetitions Boolean @default(false)
+  showStore        Boolean @default(true)
 
   // Competitions marketing content
   competitionsHeading     String?
@@ -2529,6 +2534,7 @@ model Product {
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   glCode         GLCode?         @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   stockMovements StockMovement[]
+  lineItems      LineItem[]
 
   @@unique([organizationId, sku])
   @@index([organizationId])
@@ -2558,6 +2564,39 @@ enum StockMovementType {
   RESTOCK
   ADJUSTMENT
   RETURN
+}
+
+model Order {
+  id                String                 @id @default(cuid())
+  invoiceId         String                 @unique
+  organizationId    String
+  source            OrderSource
+  fulfillmentStatus OrderFulfillmentStatus @default(PENDING)
+  customerName      String?
+  customerEmail     String?
+  customerPhone     String?
+  fulfilledAt       DateTime?
+  fulfilledBy       String?
+  notes             String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  // Relations
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+enum OrderSource {
+  POS
+  ONLINE
+}
+
+enum OrderFulfillmentStatus {
+  PENDING
+  FULFILLED
+  CANCELLED
 }
 
 // ============================================

@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const posBlocked = await checkFeatureGate(session.user.organizationId, "pointOfSale");
-    if (posBlocked) return posBlocked;
+    const storeBlocked = await checkFeatureGate(session.user.organizationId, "store");
+    if (storeBlocked) return storeBlocked;
 
     const body = await request.json();
     const validatedData = createPaymentLinkSchema.parse(body);

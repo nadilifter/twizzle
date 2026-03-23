@@ -11,7 +11,7 @@ const featureTogglesSchema = z.object({
   customDomains: z.boolean(),
   accountingIntegrations: z.boolean(),
   training: z.boolean(),
-  pointOfSale: z.boolean(),
+  store: z.boolean(),
 }).optional()
 
 const updatePlanSchema = z.object({

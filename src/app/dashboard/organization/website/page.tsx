@@ -573,6 +573,18 @@ export default function WebsitePage() {
               </div>
             </>
           )}
+
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Show Store</Label>
+              <p className="text-sm text-muted-foreground">Display the product store for online purchases.</p>
+            </div>
+            <Switch 
+              checked={config.showStore === true} 
+              onCheckedChange={(c) => updateConfig("showStore", c)} 
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -212,6 +212,47 @@ async function handleAuthorisation(
     }
   }
 
+  // Process inventory for store product line items (idempotent via StockMovement check)
+  const productLineItems = invoice.lineItems.filter((li) => li.productId)
+  if (productLineItems.length > 0) {
+    try {
+      const existingMovement = await db.stockMovement.findFirst({
+        where: { referenceId: invoice.id, type: "SALE" },
+        select: { id: true },
+      })
+      if (!existingMovement) {
+        for (const li of productLineItems) {
+          const product = await db.product.findUnique({
+            where: { id: li.productId! },
+            select: { id: true, currentInventory: true },
+          })
+          if (product && product.currentInventory !== null) {
+            const previousQty = product.currentInventory
+            const newQty = previousQty - li.quantity
+            await db.product.update({
+              where: { id: product.id },
+              data: { currentInventory: newQty },
+            })
+            await db.stockMovement.create({
+              data: {
+                productId: product.id,
+                type: "SALE",
+                quantity: -li.quantity,
+                previousQty,
+                newQty,
+                referenceId: invoice.id,
+                notes: `Online Sale: ${invoice.reference}`,
+                createdBy: invoice.userId || undefined,
+              },
+            })
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to process inventory for invoice ${invoice.id}:`, err)
+    }
+  }
+
   await db.invoice.update({
     where: { id: invoice.id },
     data: { registrationsProcessed: true },

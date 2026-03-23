@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
-    const posBlocked = await checkFeatureGate(session.user.organizationId, "pointOfSale");
-    if (posBlocked) return posBlocked;
+    const storeBlocked = await checkFeatureGate(session.user.organizationId, "store");
+    if (storeBlocked) return storeBlocked;
 
     const body = await request.json();
     const validatedData = checkoutSchema.parse(body);
@@ -141,11 +141,24 @@ export async function POST(request: NextRequest) {
               quantity: item.quantity,
               unitPrice: verifiedPrice,
               total: verifiedPrice * item.quantity,
+              productId: product.id,
               glCodeId: product?.glCodeId ?? defaultProductGLCode?.id ?? undefined,
             },
           });
         })
       );
+
+      await tx.order.create({
+        data: {
+          invoiceId: invoice.id,
+          organizationId: session.user.organizationId,
+          source: "POS",
+          fulfillmentStatus: "FULFILLED",
+          fulfilledAt: new Date(),
+          fulfilledBy: session.user.id,
+          customerName: "Walk-in",
+        },
+      });
 
       if (validatedData.paymentMethod === "CASH") {
         await tx.payment.create({
