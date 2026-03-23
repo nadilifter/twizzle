@@ -245,7 +245,6 @@ export default async function SiteLayout({
   // Build portal URLs for the user menu
   const adminUrl = getSubdomainUrl("admin");
   const athleteUrl = getSubdomainUrl("athletes");
-  const accountUrl = `${getSubdomainUrl("athletes")}/account`;
 
   const primaryColor = isValidHexColor(config.primaryColor ?? "") ? config.primaryColor! : "#000000";
   const secondaryColor = isValidHexColor(config.secondaryColor ?? "") ? config.secondaryColor! : "#ffffff";
@@ -346,7 +345,6 @@ export default async function SiteLayout({
                             isAdmin={isAdmin}
                             adminUrl={adminUrl}
                             athleteUrl={athleteUrl}
-                            accountUrl={accountUrl}
                             siteUrl={siteUrl}
                         />
                     ) : (

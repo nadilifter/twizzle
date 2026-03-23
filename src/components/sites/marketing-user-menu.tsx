@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOutIcon, LayoutDashboardIcon, UserIcon, SettingsIcon } from "lucide-react"
+import { LogOutIcon, LayoutDashboardIcon, UserIcon } from "lucide-react"
 
 import {
   Avatar,
@@ -23,7 +23,6 @@ interface MarketingUserMenuProps {
   isAdmin: boolean
   adminUrl: string
   athleteUrl: string
-  accountUrl: string
   siteUrl: string
 }
 
@@ -41,7 +40,6 @@ export function MarketingUserMenu({
   isAdmin,
   adminUrl,
   athleteUrl,
-  accountUrl,
   siteUrl,
 }: MarketingUserMenuProps) {
   const handleLogout = () => {
@@ -88,12 +86,6 @@ export function MarketingUserMenu({
             </a>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem asChild>
-          <a href={accountUrl}>
-            <SettingsIcon />
-            My Account
-          </a>
-        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <a href={athleteUrl}>
             <UserIcon />
