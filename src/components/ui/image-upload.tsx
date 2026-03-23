@@ -10,7 +10,7 @@ interface ImageUploadProps {
   label: string;
   value?: string | null;
   onChange: (url: string | null) => void;
-  type: "logo" | "favicon" | "hero" | "program";
+  type: "logo" | "favicon" | "hero" | "program" | "product";
   required?: boolean;
 }
 
@@ -98,7 +98,7 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
             {isUploading ? "Uploading..." : "Select Image"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Recommended: {type === "favicon" ? "32x32px" : type === "logo" ? "Transparent PNG" : type === "program" ? "Landscape, 800×450px" : "1920x1080px"}
+            Recommended: {type === "favicon" ? "32x32px" : type === "logo" ? "Transparent PNG" : type === "program" ? "Landscape, 800×450px" : type === "product" ? "Square, 800×800px" : "1920x1080px"}
           </p>
         </div>
       </div>

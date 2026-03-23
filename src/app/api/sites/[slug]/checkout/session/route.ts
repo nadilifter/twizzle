@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { createPaymentSession } from "@/lib/adyen";
+import { createPaymentSession, type AdyenLineItem } from "@/lib/adyen";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
 import { subDays } from "date-fns";
 import { processInvoiceRegistrations } from "@/lib/invoice-processing";
@@ -1137,14 +1137,15 @@ export async function POST(
         }
     });
 
-    // 6. Resolve GL codes for line items (all queries run in parallel)
+    // 6. Resolve GL codes and product data for line items (all queries run in parallel)
     const glCodeMap = new Map<string, string | null>();
     const glProgramIds = items.filter((i: CartItem) => i.type === "program" && i.details?.programId).map((i: CartItem) => i.details!.programId!);
     const glPassIds = items.filter((i: CartItem) => i.type === "pass").map((i: CartItem) => i.details?.passId || i.referenceId).filter(Boolean);
     const glCompetitionIds = items.filter((i: CartItem) => i.type === "competition").map((i: CartItem) => i.details?.competitionId || i.referenceId).filter(Boolean);
     const glMembershipInstanceIds = items.filter((i: CartItem) => i.type === "membership").map((i: CartItem) => i.details?.membershipInstanceId || i.referenceId).filter(Boolean);
+    const productItemIds = items.filter((i: CartItem) => i.type === "item").map((i: CartItem) => i.referenceId);
 
-    const [glPrograms, glPasses, glComps, glInstances, defaultCodes] = await Promise.all([
+    const [glPrograms, glPasses, glComps, glInstances, defaultCodes, storeProducts] = await Promise.all([
       glProgramIds.length > 0
         ? db.program.findMany({ where: { id: { in: glProgramIds } }, select: { id: true, glCodeId: true } })
         : [],
@@ -1161,12 +1162,21 @@ export async function POST(
         where: { organizationId, isDefault: true, defaultForType: { not: null } },
         select: { id: true, defaultForType: true },
       }),
+      productItemIds.length > 0
+        ? db.product.findMany({
+            where: { id: { in: productItemIds }, organizationId },
+            select: { id: true, sku: true, imageUrl: true, glCodeId: true },
+          })
+        : [],
     ]);
+
+    const productMap = new Map(storeProducts.map((p) => [p.id, p]));
 
     for (const p of glPrograms) if (p.glCodeId) glCodeMap.set(`program:${p.id}`, p.glCodeId);
     for (const p of glPasses) if (p.glCodeId) glCodeMap.set(`pass:${p.id}`, p.glCodeId);
     for (const c of glComps) if (c.glCodeId) glCodeMap.set(`competition:${c.id}`, c.glCodeId);
     for (const i of glInstances) if (i.group.glCodeId) glCodeMap.set(`membership:${i.id}`, i.group.glCodeId);
+    for (const p of storeProducts) if (p.glCodeId) glCodeMap.set(`item:${p.id}`, p.glCodeId);
 
     const entityTypeToDefault = new Map<string, string>();
     for (const d of defaultCodes) {
@@ -1194,6 +1204,7 @@ export async function POST(
             else if (item.type === "pass") glCodeId = glCodeMap.get(`pass:${item.details?.passId || item.referenceId}`) ?? undefined;
             else if (item.type === "competition") glCodeId = glCodeMap.get(`competition:${item.details?.competitionId || item.referenceId}`) ?? undefined;
             else if (item.type === "membership") glCodeId = glCodeMap.get(`membership:${item.details?.membershipInstanceId || item.referenceId}`) ?? undefined;
+            else if (item.type === "item") glCodeId = glCodeMap.get(`item:${item.referenceId}`) ?? undefined;
 
             // Fallback to org default for this entity type
             if (!glCodeId) {
@@ -1303,7 +1314,7 @@ export async function POST(
     const taxMinor = Math.round(tax * 100);
     const subtotalMinor = totalMinor - taxMinor;
 
-    const adyenLineItems = items.map((item: CartItem, index: number) => {
+    const adyenLineItems: AdyenLineItem[] = items.map((item: CartItem, index: number) => {
       const itemTotal = serverPrices.has(index)
         ? serverPrices.get(index)!
         : Number(item.price) * item.quantity;
@@ -1312,6 +1323,9 @@ export async function POST(
       const itemAfterDiscount = Math.max(itemTotal - itemDiscount, 0);
       const excl = Math.round(itemAfterDiscount * 100);
       const itemTaxMinor = Math.round(itemAfterDiscount * taxRate * 100);
+
+      const product = item.type === "item" ? productMap.get(item.referenceId) : undefined;
+
       return {
         id: item.referenceId,
         description: item.name,
@@ -1320,6 +1334,8 @@ export async function POST(
         taxAmount: itemTaxMinor,
         amountIncludingTax: excl + itemTaxMinor,
         taxPercentage: taxPct,
+        ...(product?.sku && { sku: product.sku }),
+        ...(product?.imageUrl && { imageUrl: product.imageUrl }),
       };
     });
 

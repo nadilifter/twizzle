@@ -64,11 +64,11 @@ import {
   AlertCircle,
   Infinity,
   RefreshCw,
-  ImagePlus,
   Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { GLCodeSelector } from "@/components/gl-code-selector"
+import { ImageUpload } from "@/components/ui/image-upload"
 
 type Product = {
   id: string
@@ -562,20 +562,12 @@ export default function StorePage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="imageUrl"
-                    placeholder="https://..."
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  />
-                  <Button variant="outline" size="icon" disabled title="Upload">
-                    <ImagePlus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <ImageUpload
+                label="Product Image"
+                value={formData.imageUrl || null}
+                onChange={(url) => setFormData({ ...formData, imageUrl: url || "" })}
+                type="product"
+              />
 
               <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
                 <div className="flex items-center justify-between">

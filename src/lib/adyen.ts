@@ -125,6 +125,20 @@ export function getAdyenEnvironmentName(): "TEST" | "LIVE" {
   return "TEST";
 }
 
+export interface AdyenLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  amountExcludingTax: number;
+  taxAmount: number;
+  amountIncludingTax: number;
+  taxPercentage: number;
+  sku?: string;
+  imageUrl?: string;
+  productUrl?: string;
+  itemCategory?: string;
+}
+
 export interface TokenizationOptions {
   shopperReference: string;
   storePaymentMethodMode?: "askForConsent" | "enabled" | "disabled";
@@ -137,7 +151,7 @@ export async function createPaymentSession(
   reference: string,
   returnUrl: string,
   shopperEmail?: string,
-  lineItems?: any[],
+  lineItems?: AdyenLineItem[],
   tokenization?: TokenizationOptions
 ) {
   try {

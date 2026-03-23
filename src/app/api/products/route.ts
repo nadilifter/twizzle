@@ -128,6 +128,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (validatedData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
+      if (!glCode) {
+        return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+      }
+    }
+
     // If maxInventory is set and currentInventory is not, default to maxInventory
     const currentInventory = validatedData.currentInventory ?? validatedData.maxInventory;
 
@@ -143,6 +150,7 @@ export async function POST(request: NextRequest) {
         maxInventory: validatedData.maxInventory,
         currentInventory: currentInventory,
         isActive: validatedData.isActive,
+        glCodeId: validatedData.glCodeId,
       },
     });
 
