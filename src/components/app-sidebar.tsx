@@ -295,7 +295,7 @@ const data = {
           url: "/dashboard/communication/sms",
         },
         {
-          title: "SMS Conversations",
+          title: "SMS Chat",
           url: "/dashboard/communication/chat",
         },
         {
@@ -325,12 +325,22 @@ const data = {
           url: "/dashboard/organization/certifications",
         },
         {
-          title: "Store",
-          url: "/dashboard/organization/store",
-        },
-        {
           title: "Website",
           url: "/dashboard/organization/website",
+        },
+      ],
+    },
+    {
+      title: "Store",
+      url: "/dashboard/store",
+      items: [
+        {
+          title: "Products",
+          url: "/dashboard/store/products",
+        },
+        {
+          title: "Orders",
+          url: "/dashboard/store/orders",
         },
       ],
     },
