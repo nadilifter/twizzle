@@ -74,6 +74,16 @@ export function LoginForm() {
       }
     })
   }, [])
+
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setIsLoading(false)
+      }
+    }
+    window.addEventListener("pageshow", handlePageShow)
+    return () => window.removeEventListener("pageshow", handlePageShow)
+  }, [])
   
   useEffect(() => {
     if (providerParam === "google" && googleCsrfToken && !autoGoogleTriggered && googleFormRef.current) {
