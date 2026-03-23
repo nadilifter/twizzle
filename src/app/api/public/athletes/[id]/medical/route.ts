@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { resolvePublicRequest } from "@/lib/public-api";
+import { getAuthSession } from "@/lib/auth";
+import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const upsertMedicalInfoSchema = z.object({
   allergies: z.array(z.string()).optional(),
@@ -43,19 +45,26 @@ async function verifyGuardian(
 }
 
 // GET /api/public/athletes/[id]/medical?organizationId=xxx&email=xxx
-// Public endpoint - fetch athlete medical info for checkout flow
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const rateLimited = await checkApiRateLimit(request, "medical", RATE_LIMITS.medical);
+    if (rateLimited) return rateLimited;
+
     const { id: athleteId } = await params;
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email");
+    const paramEmail = searchParams.get("email");
 
     const orgResult = await resolvePublicRequest(request, searchParams.get("organizationId"));
     if (orgResult instanceof NextResponse) return orgResult;
     const { organizationId } = orgResult;
+
+    // Prefer session email over client-provided email to prevent
+    // authenticated users from querying other guardians' athletes
+    const session = await getAuthSession();
+    const email = session?.user?.email || paramEmail;
 
     if (!email) {
       return NextResponse.json(
@@ -130,12 +139,23 @@ export async function GET(
 }
 
 // PUT /api/public/athletes/[id]/medical
-// Public endpoint - save/update athlete medical info progressively during checkout
+// Requires authentication - writing PHI must have a verified session
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const rateLimited = await checkApiRateLimit(request, "medical", RATE_LIMITS.medical);
+    if (rateLimited) return rateLimited;
+
+    const session = await getAuthSession();
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const { id: athleteId } = await params;
     const body = await request.json();
     const validatedData = upsertMedicalInfoSchema.parse(body);
@@ -143,9 +163,10 @@ export async function PUT(
     const orgResult = await resolvePublicRequest(request, validatedData.organizationId);
     if (orgResult instanceof NextResponse) return orgResult;
 
-    const { organizationId: _orgId, email, customResponses, ...medicalFields } = validatedData;
+    const { organizationId: _orgId, email: _email, customResponses, ...medicalFields } = validatedData;
 
-    const hasAccess = await verifyGuardian(athleteId, email);
+    // Always use session email for guardian verification on writes
+    const hasAccess = await verifyGuardian(athleteId, session.user.email);
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Access denied" },

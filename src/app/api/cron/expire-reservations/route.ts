@@ -4,14 +4,20 @@ import { db } from "@/lib/db"
 // This endpoint is called by a cron job (e.g., Vercel Cron) every minute
 // to expire old reservations and admit the next users in queue
 
-// Simple secret verification for cron jobs
 const CRON_SECRET = process.env.CRON_SECRET
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret (optional but recommended)
+    if (!CRON_SECRET) {
+      console.error("CRON_SECRET is not configured")
+      return NextResponse.json(
+        { error: "Server misconfiguration" },
+        { status: 500 }
+      )
+    }
+
     const authHeader = request.headers.get("authorization")
-    if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+    if (authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }

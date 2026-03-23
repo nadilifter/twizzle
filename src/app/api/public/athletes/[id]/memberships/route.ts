@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getAuthSession } from "@/lib/auth";
+import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 async function verifyGuardian(
   athleteId: string,
@@ -27,9 +29,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const rateLimited = await checkApiRateLimit(request, "medical", RATE_LIMITS.medical);
+    if (rateLimited) return rateLimited;
+
     const { id: athleteId } = await params;
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email");
+    const paramEmail = searchParams.get("email");
+
+    const session = await getAuthSession();
+    const email = session?.user?.email || paramEmail;
 
     if (!email) {
       return NextResponse.json(

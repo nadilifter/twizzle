@@ -43,6 +43,8 @@ export const RATE_LIMITS = {
   mfaChallenge: { limit: isDev ? 10 : 5, windowSeconds: 300 },
   /** Email login code requests */
   emailLoginSend: { limit: isDev ? 10 : 3, windowSeconds: 300 },
+  /** Medical/PHI endpoints - strict to limit data harvesting */
+  medical: { limit: isDev ? 20 : 5, windowSeconds: 60 },
 } as const;
 
 /**
