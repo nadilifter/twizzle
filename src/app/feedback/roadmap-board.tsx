@@ -21,9 +21,9 @@ export function RoadmapBoard({ features, onSelect }: RoadmapBoardProps) {
       .sort((a, b) => getQuarterSortValue(a.targetDate) - getQuarterSortValue(b.targetDate));
 
   return (
-    <div className="flex h-full gap-6 overflow-x-auto pb-4">
+    <div className="flex h-full gap-4 overflow-x-auto pb-4">
       {COLUMNS.map((status) => (
-        <div key={status} className="flex-1 min-w-[320px] max-w-[400px] flex flex-col h-full rounded-xl bg-muted/40 border">
+        <div key={status} className="flex-1 min-w-[280px] max-w-[320px] flex flex-col h-full rounded-xl bg-muted/40 border">
           {/* Column Header */}
           <div className="p-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
