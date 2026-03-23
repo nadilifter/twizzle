@@ -117,7 +117,8 @@ export async function createVerificationCode(
 /**
  * Validate a verification code or magic link token.
  * Accepts either the 6-char short code or the UUID token.
- * On success, marks the record as used and returns true.
+ * Uses an atomic updateMany with usedAt IS NULL to prevent
+ * concurrent requests from double-consuming the same code.
  */
 export async function validateVerificationCode(
   email: string,
@@ -126,7 +127,7 @@ export async function validateVerificationCode(
 ): Promise<boolean> {
   const isToken = codeOrToken.length > 10;
 
-  const record = await db.emailVerificationCode.findFirst({
+  const result = await db.emailVerificationCode.updateMany({
     where: {
       email,
       type,
@@ -136,21 +137,15 @@ export async function validateVerificationCode(
         ? { token: codeOrToken }
         : { code: codeOrToken.toUpperCase() }),
     },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (!record) return false;
-
-  await db.emailVerificationCode.update({
-    where: { id: record.id },
     data: { usedAt: new Date() },
   });
 
-  return true;
+  return result.count > 0;
 }
 
 /**
  * Validate a magic link token directly (without email).
+ * Uses an atomic update with usedAt IS NULL to prevent double-use.
  * Returns the record if valid, or null.
  */
 export async function validateVerificationToken(
@@ -162,10 +157,15 @@ export async function validateVerificationToken(
 
   if (!record || record.usedAt || record.expiresAt < new Date()) return null;
 
-  await db.emailVerificationCode.update({
-    where: { id: record.id },
+  const result = await db.emailVerificationCode.updateMany({
+    where: {
+      id: record.id,
+      usedAt: null,
+    },
     data: { usedAt: new Date() },
   });
+
+  if (result.count === 0) return null;
 
   return { email: record.email, type: record.type };
 }

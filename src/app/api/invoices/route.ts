@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -22,10 +23,14 @@ const createInvoiceSchema = z.object({
   lineItems: z.array(lineItemSchema).min(1, "At least one line item is required"),
 });
 
-// Generate unique invoice reference
-async function generateReference(organizationId: string): Promise<string> {
+const MAX_REFERENCE_RETRIES = 3;
+
+async function generateReference(
+  tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
+  organizationId: string
+): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await db.invoice.count({
+  const count = await tx.invoice.count({
     where: {
       organizationId,
       createdAt: {
@@ -199,19 +204,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Guardian not found" }, { status: 404 });
     }
 
-    // Generate reference
-    const reference = await generateReference(session.user.organizationId);
-
-    // Calculate totals
     const lineItemsWithTotals = validatedData.lineItems.map((item) => ({
       ...item,
       total: item.quantity * item.unitPrice,
     }));
 
     const subtotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
-    const total = subtotal; // Add tax calculation if needed
+    const total = subtotal;
 
-    // Resolve GL codes from programs and events
     const programIds = lineItemsWithTotals.map((i) => i.programId).filter(Boolean) as string[];
     const eventIds = lineItemsWithTotals.map((i) => i.eventId).filter(Boolean) as string[];
     const entityGlCodes = new Map<string, string>();
@@ -225,66 +225,83 @@ export async function POST(request: NextRequest) {
       for (const e of events) if (e.glCodeId) entityGlCodes.set(`event:${e.id}`, e.glCodeId);
     }
 
-    // Fetch org default GL codes as fallbacks
     const defaultGlCodes = await db.gLCode.findMany({
       where: { organizationId: session.user.organizationId, isDefault: true, defaultForType: { not: null } },
       select: { id: true, defaultForType: true },
     });
     const defaultByType = new Map(defaultGlCodes.map((d) => [d.defaultForType!, d.id]));
 
-    const invoice = await db.invoice.create({
-      data: {
-        reference,
-        userId: validatedData.userId,
-        status: validatedData.status,
-        dueDate: parseDateOnly(validatedData.dueDate)!,
-        subtotal,
-        total,
-        notes: validatedData.notes,
-        organizationId: session.user.organizationId,
-        lineItems: {
-          create: lineItemsWithTotals.map((item) => {
-            let glCodeId: string | undefined =
-              (item.programId ? entityGlCodes.get(`program:${item.programId}`) : undefined)
-              ?? (item.eventId ? entityGlCodes.get(`event:${item.eventId}`) : undefined)
-              ?? undefined;
+    let invoice;
+    for (let attempt = 0; attempt < MAX_REFERENCE_RETRIES; attempt++) {
+      try {
+        invoice = await db.$transaction(async (tx) => {
+          const reference = await generateReference(tx, session.user.organizationId);
 
-            // Fallback to org default for the entity type
-            if (!glCodeId) {
-              if (item.programId) glCodeId = defaultByType.get("PROGRAM");
-              else if (item.eventId) glCodeId = defaultByType.get("EVENT");
-            }
+          const created = await tx.invoice.create({
+            data: {
+              reference,
+              userId: validatedData.userId,
+              status: validatedData.status,
+              dueDate: parseDateOnly(validatedData.dueDate)!,
+              subtotal,
+              total,
+              notes: validatedData.notes,
+              organizationId: session.user.organizationId,
+              lineItems: {
+                create: lineItemsWithTotals.map((item) => {
+                  let glCodeId: string | undefined =
+                    (item.programId ? entityGlCodes.get(`program:${item.programId}`) : undefined)
+                    ?? (item.eventId ? entityGlCodes.get(`event:${item.eventId}`) : undefined)
+                    ?? undefined;
 
-            return {
-              description: item.description,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: item.total,
-              programId: item.programId,
-              eventId: item.eventId,
-              athleteId: item.athleteId,
-              discountId: item.discountId,
-              glCodeId,
-            };
-          }),
-        },
-      },
-      include: {
-        lineItems: {
-          include: {
-            program: true,
-            event: true,
-            athlete: true,
-          },
-        },
-      },
-    });
+                  if (!glCodeId) {
+                    if (item.programId) glCodeId = defaultByType.get("PROGRAM");
+                    else if (item.eventId) glCodeId = defaultByType.get("EVENT");
+                  }
 
-    if (validatedData.status === "SENT") {
-      await db.user.update({
-        where: { id: validatedData.userId },
-        data: { balance: { increment: total } },
-      });
+                  return {
+                    description: item.description,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    total: item.total,
+                    programId: item.programId,
+                    eventId: item.eventId,
+                    athleteId: item.athleteId,
+                    discountId: item.discountId,
+                    glCodeId,
+                  };
+                }),
+              },
+            },
+            include: {
+              lineItems: {
+                include: {
+                  program: true,
+                  event: true,
+                  athlete: true,
+                },
+              },
+            },
+          });
+
+          if (validatedData.status === "SENT") {
+            await tx.user.update({
+              where: { id: validatedData.userId },
+              data: { balance: { increment: total } },
+            });
+          }
+
+          return created;
+        });
+        break;
+      } catch (e) {
+        const isPrismaUniqueViolation =
+          e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+        if (isPrismaUniqueViolation && attempt < MAX_REFERENCE_RETRIES - 1) {
+          continue;
+        }
+        throw e;
+      }
     }
 
     return NextResponse.json(invoice);

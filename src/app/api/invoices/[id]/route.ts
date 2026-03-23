@@ -98,44 +98,52 @@ export async function PATCH(
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // Handle status changes that affect user balance
     const oldStatus = existing.status;
     const newStatus = validatedData.status;
 
-    const scopedDb = getScopedDb(session.user.organizationId);
-    const invoice = await scopedDb.invoice.update({
-      where: { id },
-      data: {
-        ...validatedData,
-        dueDate: validatedData.dueDate ? parseDateOnly(validatedData.dueDate) ?? undefined : undefined,
-      },
-      include: {
-        lineItems: true,
-        payments: true,
-      },
+    const invoice = await db.$transaction(async (tx) => {
+      const verified = await tx.invoice.findFirst({
+        where: { id, organizationId: session.user.organizationId },
+        select: { id: true },
+      });
+      if (!verified) throw new Error("Not found");
+
+      const updated = await tx.invoice.update({
+        where: { id },
+        data: {
+          ...validatedData,
+          dueDate: validatedData.dueDate ? parseDateOnly(validatedData.dueDate) ?? undefined : undefined,
+        },
+        include: {
+          lineItems: true,
+          payments: true,
+        },
+      });
+
+      if (newStatus && oldStatus !== newStatus) {
+        const amount = Number(updated.total);
+
+        if (oldStatus === "DRAFT" && newStatus === "SENT") {
+          if (updated.userId) {
+            await tx.user.update({
+              where: { id: updated.userId },
+              data: { balance: { increment: amount } },
+            });
+          }
+        }
+
+        if ((oldStatus === "SENT" || oldStatus === "OVERDUE") && newStatus === "CANCELLED") {
+          if (updated.userId) {
+            await tx.user.update({
+              where: { id: updated.userId },
+              data: { balance: { decrement: amount } },
+            });
+          }
+        }
+      }
+
+      return updated;
     });
-
-    if (newStatus && oldStatus !== newStatus) {
-      const amount = Number(invoice.total);
-
-      if (oldStatus === "DRAFT" && newStatus === "SENT") {
-        if (invoice.userId) {
-          await db.user.update({
-            where: { id: invoice.userId },
-            data: { balance: { increment: amount } },
-          });
-        }
-      }
-
-      if ((oldStatus === "SENT" || oldStatus === "OVERDUE") && newStatus === "CANCELLED") {
-        if (invoice.userId) {
-          await db.user.update({
-            where: { id: invoice.userId },
-            data: { balance: { decrement: amount } },
-          });
-        }
-      }
-    }
 
     return NextResponse.json(invoice);
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const createRegistrationSchema = z.object({
@@ -97,144 +98,153 @@ export async function POST(
     const { id: programId, instanceId } = await params;
     const body = await request.json();
 
-    // Verify instance exists and belongs to organization
     const instance = await db.programInstance.findFirst({
       where: {
         id: instanceId,
         programId,
         organizationId: session.user.organizationId,
       },
-      include: {
-        _count: { select: { registrations: true } },
-      },
+      select: { id: true, capacity: true },
     });
 
     if (!instance) {
       return NextResponse.json({ error: "Instance not found" }, { status: 404 });
     }
 
-    // Check if bulk or single registration
     if (body.registrations) {
-      // Bulk registration
       const validated = bulkCreateSchema.parse(body);
 
-      // Check for existing registrations
-      const existingAthleteIds = await db.instanceRegistration.findMany({
-        where: {
-          programInstanceId: instanceId,
-          athleteId: { in: validated.registrations.map(r => r.athleteId) },
-        },
-        select: { athleteId: true },
-      });
-
-      const existingSet = new Set(existingAthleteIds.map(e => e.athleteId));
-      const newRegistrations = validated.registrations.filter(
-        r => !existingSet.has(r.athleteId)
-      );
-
-      if (newRegistrations.length === 0) {
-        return NextResponse.json(
-          { error: "All athletes are already registered" },
-          { status: 400 }
+      const result = await db.$transaction(async (tx) => {
+        // Lock the instance row to serialize capacity checks
+        await tx.$queryRaw(
+          Prisma.sql`SELECT id FROM "ProgramInstance" WHERE id = ${instanceId} FOR UPDATE`
         );
-      }
 
-      // Check capacity
-      const currentCount = instance._count.registrations;
-      if (instance.capacity && currentCount + newRegistrations.length > instance.capacity) {
-        // Add excess to waitlist
-        const availableSpots = Math.max(0, instance.capacity - currentCount);
-        const toRegister = newRegistrations.slice(0, availableSpots);
-        const toWaitlist = newRegistrations.slice(availableSpots);
-
-        const sessionUserId = session.user.id;
-        const result = await db.instanceRegistration.createMany({
-          data: [
-            ...toRegister.map(r => ({
-              programInstanceId: instanceId,
-              athleteId: r.athleteId,
-              userId: r.userId ?? sessionUserId,
-              status: "REGISTERED" as const,
-            })),
-            ...toWaitlist.map(r => ({
-              programInstanceId: instanceId,
-              athleteId: r.athleteId,
-              userId: r.userId ?? sessionUserId,
-              status: "WAITLISTED" as const,
-            })),
-          ],
+        const existingAthleteIds = await tx.instanceRegistration.findMany({
+          where: {
+            programInstanceId: instanceId,
+            athleteId: { in: validated.registrations.map(r => r.athleteId) },
+          },
+          select: { athleteId: true },
         });
 
-        return NextResponse.json({
-          message: `Registered ${toRegister.length}, waitlisted ${toWaitlist.length}`,
-          registered: toRegister.length,
-          waitlisted: toWaitlist.length,
-          count: result.count,
-        }, { status: 201 });
-      }
+        const existingSet = new Set(existingAthleteIds.map(e => e.athleteId));
+        const newRegistrations = validated.registrations.filter(
+          r => !existingSet.has(r.athleteId)
+        );
 
-      const sessionUserId = session.user.id;
-      const result = await db.instanceRegistration.createMany({
-        data: newRegistrations.map(r => ({
-          programInstanceId: instanceId,
-          athleteId: r.athleteId,
-          userId: r.userId ?? sessionUserId,
-          status: r.status,
-        })),
+        if (newRegistrations.length === 0) {
+          return { error: "All athletes are already registered" } as const;
+        }
+
+        const currentCount = await tx.instanceRegistration.count({
+          where: { programInstanceId: instanceId, status: "REGISTERED" },
+        });
+
+        if (instance.capacity && currentCount + newRegistrations.length > instance.capacity) {
+          const availableSpots = Math.max(0, instance.capacity - currentCount);
+          const toRegister = newRegistrations.slice(0, availableSpots);
+          const toWaitlist = newRegistrations.slice(availableSpots);
+
+          const sessionUserId = session.user.id;
+          const created = await tx.instanceRegistration.createMany({
+            data: [
+              ...toRegister.map(r => ({
+                programInstanceId: instanceId,
+                athleteId: r.athleteId,
+                userId: r.userId ?? sessionUserId,
+                status: "REGISTERED" as const,
+              })),
+              ...toWaitlist.map(r => ({
+                programInstanceId: instanceId,
+                athleteId: r.athleteId,
+                userId: r.userId ?? sessionUserId,
+                status: "WAITLISTED" as const,
+              })),
+            ],
+          });
+
+          return {
+            message: `Registered ${toRegister.length}, waitlisted ${toWaitlist.length}`,
+            registered: toRegister.length,
+            waitlisted: toWaitlist.length,
+            count: created.count,
+          };
+        }
+
+        const sessionUserId = session.user.id;
+        const created = await tx.instanceRegistration.createMany({
+          data: newRegistrations.map(r => ({
+            programInstanceId: instanceId,
+            athleteId: r.athleteId,
+            userId: r.userId ?? sessionUserId,
+            status: r.status,
+          })),
+        });
+
+        return {
+          message: `Created ${created.count} registrations`,
+          count: created.count,
+        };
       });
 
-      return NextResponse.json({
-        message: `Created ${result.count} registrations`,
-        count: result.count,
-      }, { status: 201 });
+      if ("error" in result) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      return NextResponse.json(result, { status: 201 });
     } else {
-      // Single registration
       const validated = createRegistrationSchema.parse(body);
 
-      // Check if already registered
-      const existing = await db.instanceRegistration.findFirst({
-        where: {
-          programInstanceId: instanceId,
-          athleteId: validated.athleteId,
-        },
-      });
-
-      if (existing) {
-        return NextResponse.json(
-          { error: "Athlete is already registered for this instance" },
-          { status: 400 }
+      const result = await db.$transaction(async (tx) => {
+        await tx.$queryRaw(
+          Prisma.sql`SELECT id FROM "ProgramInstance" WHERE id = ${instanceId} FOR UPDATE`
         );
-      }
 
-      // Determine status based on capacity
-      let status = validated.status;
-      if (instance.capacity) {
-        const currentCount = instance._count.registrations;
-        if (currentCount >= instance.capacity && status === "REGISTERED") {
-          status = "WAITLISTED";
+        const existing = await tx.instanceRegistration.findFirst({
+          where: {
+            programInstanceId: instanceId,
+            athleteId: validated.athleteId,
+          },
+        });
+
+        if (existing) {
+          return { error: "Athlete is already registered for this instance" } as const;
         }
-      }
 
-      const registration = await db.instanceRegistration.create({
-        data: {
-          programInstanceId: instanceId,
-          athleteId: validated.athleteId,
-          userId: validated.userId ?? session.user.id,
-          status,
-        },
-        include: {
-          athlete: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              avatar: true,
+        let status = validated.status;
+        if (instance.capacity) {
+          const currentCount = await tx.instanceRegistration.count({
+            where: { programInstanceId: instanceId, status: "REGISTERED" },
+          });
+          if (currentCount >= instance.capacity && status === "REGISTERED") {
+            status = "WAITLISTED";
+          }
+        }
+
+        return tx.instanceRegistration.create({
+          data: {
+            programInstanceId: instanceId,
+            athleteId: validated.athleteId,
+            userId: validated.userId ?? session.user.id,
+            status,
+          },
+          include: {
+            athlete: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              },
             },
           },
-        },
+        });
       });
 
-      return NextResponse.json(registration, { status: 201 });
+      if ("error" in result) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      return NextResponse.json(result, { status: 201 });
     }
   } catch (error) {
     if (error instanceof z.ZodError) {

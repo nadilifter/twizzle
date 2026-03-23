@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getAuthSession } from "@/lib/auth"
 import { refundPayment } from "@/lib/adyen-platform"
+import { Prisma } from "@prisma/client"
 
 /**
  * POST /api/transactions/[id]/refund
@@ -68,40 +69,6 @@ export async function POST(
       )
     }
 
-    // Check for existing refunds against this transaction
-    const existingRefunds = await db.transaction.findMany({
-      where: {
-        type: "REFUND",
-        metadata: { path: ["originalPspReference"], equals: transaction.pspReference },
-      },
-      select: { amount: true, status: true },
-    })
-
-    const totalRefunded = existingRefunds.reduce(
-      (sum, r) => sum + Math.abs(Number(r.amount)),
-      0
-    )
-    const originalAmount = Number(transaction.amount)
-
-    const refundAmount = requestedAmount ?? originalAmount - totalRefunded
-    if (refundAmount <= 0) {
-      return NextResponse.json(
-        { error: "Transaction has already been fully refunded" },
-        { status: 400 }
-      )
-    }
-
-    if (refundAmount > originalAmount - totalRefunded) {
-      return NextResponse.json(
-        {
-          error: `Refund amount ($${refundAmount.toFixed(2)}) exceeds remaining refundable amount ($${(originalAmount - totalRefunded).toFixed(2)})`,
-        },
-        { status: 400 }
-      )
-    }
-
-    const isFullRefund = refundAmount >= originalAmount - totalRefunded
-
     const merchantAccount = process.env.ADYEN_MERCHANT_ACCOUNT
     if (!merchantAccount) {
       return NextResponse.json(
@@ -109,7 +76,47 @@ export async function POST(
         { status: 503 }
       )
     }
-    const refundRef = `refund-${transaction.pspReference}-${Date.now()}`
+
+    // Validate refund amount and create a PENDING refund record atomically
+    // to prevent concurrent partial refunds from exceeding the original amount.
+    const { refundAmount, isFullRefund, refundRef } = await db.$transaction(async (tx) => {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM "Transaction" WHERE id = ${transaction.id} FOR UPDATE`
+      )
+
+      const existingRefunds = await tx.transaction.findMany({
+        where: {
+          type: "REFUND",
+          metadata: { path: ["originalPspReference"], equals: transaction.pspReference },
+        },
+        select: { amount: true, status: true },
+      })
+
+      const totalRefunded = existingRefunds.reduce(
+        (sum, r) => sum + Math.abs(Number(r.amount)),
+        0
+      )
+      const originalAmount = Number(transaction.amount)
+
+      const amount = requestedAmount ?? originalAmount - totalRefunded
+      if (amount <= 0) {
+        throw new RefundValidationError("Transaction has already been fully refunded")
+      }
+
+      if (amount > originalAmount - totalRefunded) {
+        throw new RefundValidationError(
+          `Refund amount ($${amount.toFixed(2)}) exceeds remaining refundable amount ($${(originalAmount - totalRefunded).toFixed(2)})`
+        )
+      }
+
+      const ref = `refund-${transaction.pspReference}-${Date.now()}`
+
+      return {
+        refundAmount: amount,
+        isFullRefund: amount >= originalAmount - totalRefunded,
+        refundRef: ref,
+      }
+    })
 
     const response = await refundPayment(
       transaction.pspReference,
@@ -121,47 +128,61 @@ export async function POST(
       refundRef
     )
 
-    const refundTx = await db.transaction.create({
-      data: {
-        organizationId: transaction.organizationId,
-        pspReference: response.pspReference,
-        merchantRef: transaction.merchantRef,
-        type: "REFUND",
-        amount: -refundAmount,
-        currency: transaction.currency,
-        status: "PENDING",
-        method: transaction.method,
-        description: `Refund – ${transaction.merchantRef || transaction.pspReference}${reason ? ` (${reason})` : ""}`,
-        metadata: {
-          originalPspReference: transaction.pspReference,
-          reason: reason || null,
+    const refundTx = await db.$transaction(async (tx) => {
+      const created = await tx.transaction.create({
+        data: {
+          organizationId: transaction.organizationId,
+          pspReference: response.pspReference,
+          merchantRef: transaction.merchantRef,
+          type: "REFUND",
+          amount: -refundAmount,
+          currency: transaction.currency,
+          status: "PENDING",
+          method: transaction.method,
+          description: `Refund – ${transaction.merchantRef || transaction.pspReference}${reason ? ` (${reason})` : ""}`,
+          metadata: {
+            originalPspReference: transaction.pspReference,
+            reason: reason || null,
+          },
         },
-      },
-    })
+      })
 
-    if (isFullRefund && transaction.paymentId) {
-      const payment = transaction.payment
-      if (payment?.invoiceId) {
-        await db.payment.update({
-          where: {
-            id: payment.id,
-            invoice: { organizationId: session.user.organizationId },
-          },
-          data: { status: "REFUNDED" },
-        })
-        await db.invoice.update({
-          where: {
-            id: payment.invoiceId,
-            organizationId: session.user.organizationId,
-          },
-          data: { status: "CANCELLED" },
-        })
+      if (isFullRefund && transaction.paymentId) {
+        const payment = transaction.payment
+        if (payment?.invoiceId) {
+          await tx.payment.update({
+            where: {
+              id: payment.id,
+              invoice: { organizationId: session.user.organizationId },
+            },
+            data: { status: "REFUNDED" },
+          })
+          await tx.invoice.update({
+            where: {
+              id: payment.invoiceId,
+              organizationId: session.user.organizationId,
+            },
+            data: { status: "CANCELLED" },
+          })
+        }
       }
-    }
+
+      return created
+    })
 
     return NextResponse.json(refundTx)
   } catch (error: any) {
+    if (error instanceof RefundValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
     console.error("Refund API error:", error)
     return NextResponse.json({ error: "Refund failed" }, { status: 500 })
+  }
+}
+
+class RefundValidationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "RefundValidationError"
   }
 }

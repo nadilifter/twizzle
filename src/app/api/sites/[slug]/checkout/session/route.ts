@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { createPaymentSession } from "@/lib/adyen";
 import { calculateAge, isAgeEligible } from "@/lib/age-utils";
 import { subDays } from "date-fns";
@@ -910,20 +911,35 @@ export async function POST(
         const isValid =
           discount.status !== "DRAFT" &&
           validFrom <= now &&
-          (!validTo || validTo >= now) &&
-          (!discount.usageLimit || discount.usageCount < discount.usageLimit);
+          (!validTo || validTo >= now);
 
         if (isValid) {
-          discountRecord = {
-            id: discount.id,
-            type: discount.type,
-            amount: discount.amount,
-            name: discount.name,
-          };
-          if (discount.type === "PERCENTAGE") {
-            discountLineAmount = Math.round((subtotal * Number(discount.amount)) / 100 * 100) / 100;
+          // Atomically claim a usage slot: increment only if under the limit
+          let usageClaimed = true;
+          if (discount.usageLimit) {
+            const claimed = await db.$executeRaw(
+              Prisma.sql`UPDATE "Discount" SET "usageCount" = "usageCount" + 1 WHERE id = ${discount.id} AND "usageCount" < ${discount.usageLimit}`
+            );
+            usageClaimed = claimed > 0;
           } else {
-            discountLineAmount = Math.round(Math.min(Number(discount.amount), subtotal) * 100) / 100;
+            await db.discount.update({
+              where: { id: discount.id },
+              data: { usageCount: { increment: 1 } },
+            });
+          }
+
+          if (usageClaimed) {
+            discountRecord = {
+              id: discount.id,
+              type: discount.type,
+              amount: discount.amount,
+              name: discount.name,
+            };
+            if (discount.type === "PERCENTAGE") {
+              discountLineAmount = Math.round((subtotal * Number(discount.amount)) / 100 * 100) / 100;
+            } else {
+              discountLineAmount = Math.round(Math.min(Number(discount.amount), subtotal) * 100) / 100;
+            }
           }
         }
       }
@@ -1201,7 +1217,7 @@ export async function POST(
         })
     });
 
-    // 7b. Add discount line item and increment usage count
+    // 7b. Add discount line item (usage already claimed atomically during validation)
     if (discountRecord && discountLineAmount > 0) {
       await db.lineItem.create({
         data: {
@@ -1212,11 +1228,6 @@ export async function POST(
           total: -discountLineAmount,
           discountId: discountRecord.id,
         },
-      });
-
-      await db.discount.update({
-        where: { id: discountRecord.id },
-        data: { usageCount: { increment: 1 } },
       });
     }
 

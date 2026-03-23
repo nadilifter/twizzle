@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb, db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const restockSchema = z.object({
@@ -77,7 +78,11 @@ export async function POST(
     }
 
     const updatedProduct = await db.$transaction(async (tx) => {
-      // Re-read inside transaction for fresh currentInventory
+      // Lock the product row to prevent concurrent inventory modifications
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM "Product" WHERE id = ${id} FOR UPDATE`
+      );
+
       const fresh = await tx.product.findFirst({
         where: { id, organizationId: session.user.organizationId },
       });

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 export interface InvoiceMetadata {
   membershipPurchases: {
@@ -107,6 +108,27 @@ export async function processInvoiceRegistrations(
       if (!athleteId) continue;
 
       if (instanceId) {
+        let regStatus: "REGISTERED" | "WAITLISTED" = isWaitlist ? "WAITLISTED" : "REGISTERED";
+
+        if (!isWaitlist) {
+          // Re-check capacity at registration time to prevent over-enrollment
+          await tx.$queryRaw(
+            Prisma.sql`SELECT id FROM "ProgramInstance" WHERE id = ${instanceId} FOR UPDATE`
+          );
+          const inst = await tx.programInstance.findUnique({
+            where: { id: instanceId },
+            select: { capacity: true },
+          });
+          if (inst?.capacity != null) {
+            const currentCount = await tx.instanceRegistration.count({
+              where: { programInstanceId: instanceId, status: "REGISTERED" },
+            });
+            if (currentCount >= inst.capacity) {
+              regStatus = "WAITLISTED";
+            }
+          }
+        }
+
         await tx.instanceRegistration.upsert({
           where: {
             programInstanceId_athleteId: {
@@ -119,7 +141,7 @@ export async function processInvoiceRegistrations(
             programInstanceId: instanceId,
             athleteId,
             userId: userId || undefined,
-            status: isWaitlist ? "WAITLISTED" : "REGISTERED",
+            status: regStatus,
           },
         });
       } else if (programId) {
@@ -165,7 +187,7 @@ export async function processInvoiceRegistrations(
       }
     }
 
-    // 3. Membership purchases
+    // 3. Membership purchases (with capacity re-check)
     for (const purchase of metadata.membershipPurchases) {
       if (!purchase.membershipInstanceId || !purchase.athleteId) continue;
 
@@ -179,6 +201,26 @@ export async function processInvoiceRegistrations(
       });
 
       if (!existing) {
+        // Re-check capacity before creating membership
+        const instance = await tx.membershipInstance.findUnique({
+          where: { id: purchase.membershipInstanceId },
+          select: {
+            capacity: true,
+            group: { select: { capacity: true, hasCapacityRestriction: true } },
+            _count: { select: { athleteMemberships: { where: { status: "ACTIVE" } } } },
+          },
+        });
+
+        if (instance?.group?.hasCapacityRestriction) {
+          const effectiveCapacity = instance.capacity ?? instance.group.capacity;
+          if (effectiveCapacity != null && instance._count.athleteMemberships >= effectiveCapacity) {
+            console.warn(
+              `Membership instance ${purchase.membershipInstanceId} is at capacity, skipping for athlete ${purchase.athleteId}`
+            );
+            continue;
+          }
+        }
+
         await tx.athleteMembership.create({
           data: {
             athleteId: purchase.athleteId,

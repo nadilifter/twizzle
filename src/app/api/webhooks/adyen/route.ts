@@ -105,69 +105,73 @@ async function handleAuthorisation(
     return
   }
 
-  // Prevent duplicate processing
-  const existingTransaction = await db.transaction.findUnique({
-    where: { pspReference },
+  const invoice = await db.$transaction(async (tx) => {
+    const existingTransaction = await tx.transaction.findUnique({
+      where: { pspReference },
+    })
+    if (existingTransaction) {
+      logger.info("Transaction already processed, skipping", { pspReference })
+      return null
+    }
+
+    const inv = await tx.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        lineItems: true,
+        user: { select: { id: true, email: true, name: true } },
+        organization: { select: { id: true, name: true } },
+      },
+    })
+
+    if (!inv) {
+      console.error(`Invoice not found: ${invoiceId}`)
+      return null
+    }
+
+    if (inv.status === "PAID") {
+      logger.info("Invoice already paid, skipping", { invoiceId })
+      return null
+    }
+
+    const paymentAmount = amount.value / 100
+
+    const payment = await tx.payment.create({
+      data: {
+        invoiceId: inv.id,
+        userId: inv.userId || undefined,
+        amount: paymentAmount,
+        method: "CARD",
+        status: "COMPLETED",
+        processedAt: new Date(),
+      },
+    })
+
+    await tx.transaction.create({
+      data: {
+        organizationId: inv.organizationId,
+        paymentId: payment.id,
+        pspReference,
+        merchantRef: inv.reference,
+        type: "PAYMENT",
+        amount: paymentAmount,
+        currency: amount.currency || "USD",
+        status: "SETTLED",
+        method: paymentMethodType || "card",
+        description: `Online payment – ${inv.reference}`,
+        settledAt: new Date(),
+      },
+    })
+
+    await tx.invoice.update({
+      where: { id: inv.id },
+      data: { status: "PAID" },
+    })
+
+    return inv
   })
-  if (existingTransaction) {
-    logger.info("Transaction already processed, skipping", { pspReference })
-    return
-  }
 
-  const invoice = await db.invoice.findUnique({
-    where: { id: invoiceId },
-    include: {
-      lineItems: true,
-      user: { select: { id: true, email: true, name: true } },
-      organization: { select: { id: true, name: true } },
-    },
-  })
+  if (!invoice) return
 
-  if (!invoice) {
-    console.error(`Invoice not found: ${invoiceId}`)
-    return
-  }
-
-  if (invoice.status === "PAID") {
-    logger.info("Invoice already paid, skipping", { invoiceId })
-    return
-  }
-
-  const paymentAmount = amount.value / 100
-
-  const payment = await db.payment.create({
-    data: {
-      invoiceId: invoice.id,
-      userId: invoice.userId || undefined,
-      amount: paymentAmount,
-      method: "CARD",
-      status: "COMPLETED",
-      processedAt: new Date(),
-    },
-  })
-
-  await db.transaction.create({
-    data: {
-      organizationId: invoice.organizationId,
-      paymentId: payment.id,
-      pspReference,
-      merchantRef: invoice.reference,
-      type: "PAYMENT",
-      amount: paymentAmount,
-      currency: amount.currency || "USD",
-      status: "SETTLED",
-      method: paymentMethodType || "card",
-      description: `Online payment – ${invoice.reference}`,
-      settledAt: new Date(),
-    },
-  })
-
-  await db.invoice.update({
-    where: { id: invoice.id },
-    data: { status: "PAID" },
-  })
-
-  // Process registrations from invoice metadata
   if (invoice.notes) {
     try {
       const metadata: InvoiceMetadata = JSON.parse(invoice.notes)

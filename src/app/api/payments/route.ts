@@ -117,64 +117,67 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const payment = await db.payment.create({
-      data: {
-        invoiceId: validatedData.invoiceId,
-        userId: validatedData.userId,
-        amount: validatedData.amount,
-        method: validatedData.method,
-        status: "COMPLETED",
-        transactionId: validatedData.transactionId,
-        processedAt: new Date(),
-      },
-      include: {
-        invoice: true,
-      },
-    });
-
-    await db.user.update({
-      where: { id: validatedData.userId },
-      data: { balance: { decrement: validatedData.amount } },
-    });
-
-    // Update invoice status if fully paid
-    if (validatedData.invoiceId) {
-      const invoice = await db.invoice.findFirst({
-        where: {
-          id: validatedData.invoiceId,
-          organizationId: session.user.organizationId,
+    const payment = await db.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          invoiceId: validatedData.invoiceId,
+          userId: validatedData.userId,
+          amount: validatedData.amount,
+          method: validatedData.method,
+          status: "COMPLETED",
+          transactionId: validatedData.transactionId,
+          processedAt: new Date(),
         },
         include: {
-          payments: {
-            where: { status: "COMPLETED" },
-          },
+          invoice: true,
         },
       });
 
-      if (invoice) {
-        const totalPaid = invoice.payments.reduce(
-          (sum, p) => sum + Number(p.amount),
-          0
-        );
+      await tx.user.update({
+        where: { id: validatedData.userId },
+        data: { balance: { decrement: validatedData.amount } },
+      });
 
-        let newStatus = invoice.status;
-        if (totalPaid >= Number(invoice.total)) {
-          newStatus = "PAID";
-        } else if (totalPaid > 0) {
-          newStatus = "PARTIAL";
-        }
-
-        if (newStatus !== invoice.status) {
-          await db.invoice.update({
-            where: {
-              id: validatedData.invoiceId,
-              organizationId: session.user.organizationId,
+      if (validatedData.invoiceId) {
+        const invoice = await tx.invoice.findFirst({
+          where: {
+            id: validatedData.invoiceId,
+            organizationId: session.user.organizationId,
+          },
+          include: {
+            payments: {
+              where: { status: "COMPLETED" },
             },
-            data: { status: newStatus },
-          });
+          },
+        });
+
+        if (invoice) {
+          const totalPaid = invoice.payments.reduce(
+            (sum, p) => sum + Number(p.amount),
+            0
+          );
+
+          let newStatus = invoice.status;
+          if (totalPaid >= Number(invoice.total)) {
+            newStatus = "PAID";
+          } else if (totalPaid > 0) {
+            newStatus = "PARTIAL";
+          }
+
+          if (newStatus !== invoice.status) {
+            await tx.invoice.update({
+              where: {
+                id: validatedData.invoiceId,
+                organizationId: session.user.organizationId,
+              },
+              data: { status: newStatus },
+            });
+          }
         }
       }
-    }
+
+      return created;
+    });
 
     return NextResponse.json(payment);
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkFeatureGate } from "@/lib/feature-resolver";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const cartItemSchema = z.object({
@@ -79,7 +80,11 @@ export async function POST(request: NextRequest) {
     const reference = `POS-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
     const result = await db.$transaction(async (tx) => {
-      // Re-read products inside the transaction to get fresh inventory
+      // Lock product rows to prevent concurrent inventory modifications
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(productIds)}) FOR UPDATE`
+      );
+
       const freshProducts = await tx.product.findMany({
         where: {
           id: { in: productIds },

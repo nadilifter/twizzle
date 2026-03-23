@@ -1,12 +1,17 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 /**
  * Promotes the next waitlisted enrollment to ACTIVE for a program.
- * Uses a transaction to prevent double-promotion when concurrent
- * cancellations open spots simultaneously.
+ * Locks the Program row to serialize concurrent promotions and prevent
+ * over-admitting beyond capacity.
  */
 export async function promoteFromWaitlist(programId: string): Promise<{ promoted: boolean; athleteId?: string }> {
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`
+    );
+
     const program = await tx.program.findUnique({
       where: { id: programId },
       select: {
@@ -73,14 +78,20 @@ export async function promoteFromWaitlist(programId: string): Promise<{ promoted
 
 /**
  * Promotes the next waitlisted instance registration to REGISTERED.
- * Uses a transaction to prevent double-promotion under concurrent cancellations.
+ * Locks the ProgramInstance row to serialize concurrent promotions
+ * and prevent exceeding instance capacity.
  */
 export async function promoteFromInstanceWaitlist(instanceId: string): Promise<{ promoted: boolean; athleteId?: string }> {
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT id FROM "ProgramInstance" WHERE id = ${instanceId} FOR UPDATE`
+    );
+
     const instance = await tx.programInstance.findUnique({
       where: { id: instanceId },
       select: {
         id: true,
+        capacity: true,
         programId: true,
         program: {
           select: {
@@ -93,6 +104,15 @@ export async function promoteFromInstanceWaitlist(instanceId: string): Promise<{
 
     if (!instance?.program?.waitlistEnabled || !instance.program.waitlistAutoPromote) {
       return { promoted: false };
+    }
+
+    if (instance.capacity != null) {
+      const registeredCount = await tx.instanceRegistration.count({
+        where: { programInstanceId: instanceId, status: "REGISTERED" },
+      });
+      if (registeredCount >= instance.capacity) {
+        return { promoted: false };
+      }
     }
 
     const nextWaitlisted = await tx.instanceRegistration.findFirst({
