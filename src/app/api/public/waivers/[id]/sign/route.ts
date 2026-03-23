@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { resolvePublicRequest } from "@/lib/public-api";
+import { getAuthSession } from "@/lib/auth";
 
 const publicSignWaiverSchema = z.object({
   organizationId: z.string().min(1),
@@ -16,12 +17,20 @@ const publicSignWaiverSchema = z.object({
 });
 
 // POST /api/public/waivers/[id]/sign
-// Public endpoint - sign waiver pages during checkout
+// Requires authentication — signing legal waivers must have a verified session
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const { id: waiverId } = await params;
     const body = await request.json();
     const validatedData = publicSignWaiverSchema.parse(body);
@@ -50,7 +59,9 @@ export async function POST(
       );
     }
 
-    const userId = validatedData.userId;
+    // Use session user ID instead of client-provided userId to prevent
+    // signing waivers on behalf of other users
+    const userId = session.user.id;
     const ipAddress = request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") || null;
     const userAgent = request.headers.get("user-agent") || null;
@@ -76,13 +87,16 @@ export async function POST(
           },
         });
 
+        const signerEmail = session.user.email || validatedData.email;
+        const signerName = validatedData.name;
+
         if (existing) {
           await tx.waiverSignature.update({
             where: { id: existing.id },
             data: {
               signatureData: sig.signatureData,
-              signedByName: validatedData.name,
-              signedByEmail: validatedData.email,
+              signedByName: signerName,
+              signedByEmail: signerEmail,
               ipAddress,
               userAgent,
               signedAt: new Date(),
@@ -96,8 +110,8 @@ export async function POST(
               userId,
               athleteId,
               signatureData: sig.signatureData,
-              signedByName: validatedData.name,
-              signedByEmail: validatedData.email,
+              signedByName: signerName,
+              signedByEmail: signerEmail,
               ipAddress,
               userAgent,
             },

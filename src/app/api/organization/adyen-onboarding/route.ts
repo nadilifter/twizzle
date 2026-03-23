@@ -221,13 +221,8 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error("Onboarding initiation failed:", error)
-    const adyenMsg = error.responseBody
-      ? typeof error.responseBody === "string"
-        ? error.responseBody
-        : JSON.stringify(error.responseBody)
-      : undefined
     return NextResponse.json(
-      { error: "Onboarding initiation failed", details: adyenMsg },
+      { error: "Onboarding initiation failed" },
       { status: 500 }
     )
   }

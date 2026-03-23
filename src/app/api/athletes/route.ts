@@ -285,10 +285,6 @@ export async function POST(request: NextRequest) {
     }
     // Log detailed error for debugging
     console.error("Error creating athlete:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to create athlete";
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create athlete" }, { status: 500 });
   }
 }

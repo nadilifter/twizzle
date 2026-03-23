@@ -58,13 +58,9 @@ export async function POST() {
     return NextResponse.json({ url: link.url })
   } catch (error: any) {
     console.error("Failed to generate onboarding link:", error)
-    const adyenError = error.apiError?.detail || error.responseBody
-    const message = adyenError
-      ? `Adyen error: ${typeof adyenError === "string" ? adyenError : JSON.stringify(adyenError)}`
-      : "Failed to generate onboarding link"
     return NextResponse.json(
-      { error: message },
-      { status: error.statusCode || 500 }
+      { error: "Failed to generate onboarding link" },
+      { status: 500 }
     )
   }
 }

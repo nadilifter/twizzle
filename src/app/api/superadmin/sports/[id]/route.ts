@@ -109,7 +109,7 @@ export async function PATCH(
     }
     console.error("Error updating sport:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update sport" },
+      { error: "Failed to update sport" },
       { status: 500 }
     )
   }

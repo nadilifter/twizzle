@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating competition category template:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create template" },
+      { error: "Failed to create template" },
       { status: 500 }
     )
   }

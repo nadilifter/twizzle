@@ -85,7 +85,7 @@ export async function POST(
     }
     console.error("Error creating age category:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create age category" },
+      { error: "Failed to create age category" },
       { status: 500 }
     )
   }

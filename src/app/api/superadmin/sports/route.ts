@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating sport:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create sport" },
+      { error: "Failed to create sport" },
       { status: 500 }
     )
   }

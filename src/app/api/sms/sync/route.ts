@@ -146,14 +146,8 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Error syncing SMS statuses:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    const errorStack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
-      { 
-        error: "Failed to sync message statuses",
-        details: errorMessage,
-        stack: process.env.NODE_ENV === "development" ? errorStack : undefined,
-      },
+      { error: "Failed to sync message statuses" },
       { status: 500 }
     );
   }

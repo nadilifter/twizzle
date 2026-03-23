@@ -218,7 +218,7 @@ export async function POST(
     }
     console.error("Error creating entry:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create entry" },
+      { error: "Failed to create entry" },
       { status: 500 }
     )
   }

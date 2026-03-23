@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating membership group:", error);
     return NextResponse.json(
-      { error: `Failed to create membership group: ${(error as Error).message}` },
+      { error: "Failed to create membership group" },
       { status: 500 }
     );
   }

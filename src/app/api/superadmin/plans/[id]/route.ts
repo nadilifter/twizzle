@@ -139,7 +139,7 @@ export async function PATCH(
     }
     console.error("Error updating plan:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update plan" },
+      { error: "Failed to update plan" },
       { status: 500 }
     )
   }

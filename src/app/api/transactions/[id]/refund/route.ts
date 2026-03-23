@@ -162,8 +162,6 @@ export async function POST(
     return NextResponse.json(refundTx)
   } catch (error: any) {
     console.error("Refund API error:", error)
-    const message =
-      error.responseBody?.message || error.message || "Refund failed"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: "Refund failed" }, { status: 500 })
   }
 }

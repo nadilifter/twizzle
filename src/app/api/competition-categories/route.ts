@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating competition category:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create category" },
+      { error: "Failed to create category" },
       { status: 500 }
     )
   }

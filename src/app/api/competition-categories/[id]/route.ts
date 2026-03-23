@@ -285,7 +285,7 @@ export async function PATCH(
     }
     console.error("Error updating template:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update template" },
+      { error: "Failed to update template" },
       { status: 500 }
     )
   }

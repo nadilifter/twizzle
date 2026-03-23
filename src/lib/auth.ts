@@ -131,19 +131,13 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            // SECURITY NOTE: Email account linking
-            // This setting allows linking OAuth accounts to existing accounts with the same email.
-            // While convenient, it can be a security risk if an attacker controls an OAuth account
-            // with the same email as an existing user.
-            // 
-            // Mitigations in place:
-            // 1. signIn callback verifies user exists or auto-creates with minimal (PARENT) role
-            // 2. Uplifter staff domain emails are auto-provisioned as superadmins
-            // 3. New external users start with no organization until assigned
-            //
-            // Set ALLOW_OAUTH_ACCOUNT_LINKING=false to disable this behavior
-            allowDangerousEmailAccountLinking: 
-              process.env.ALLOW_OAUTH_ACCOUNT_LINKING !== "false",
+            // SECURITY: Email account linking is disabled by default.
+            // When enabled, OAuth accounts with the same email as existing users
+            // will be linked automatically — this is convenient but risky if an
+            // attacker controls an OAuth account matching an existing user's email.
+            // Set ALLOW_OAUTH_ACCOUNT_LINKING=true to explicitly opt in.
+            allowDangerousEmailAccountLinking:
+              process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "true",
             authorization: {
               params: {
                 access_type: "offline",
@@ -161,7 +155,7 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
             tenantId: process.env.AZURE_AD_TENANT_ID,
             allowDangerousEmailAccountLinking:
-              process.env.ALLOW_OAUTH_ACCOUNT_LINKING !== "false",
+              process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "true",
             authorization: {
               params: {
                 scope: "openid profile email User.Read",

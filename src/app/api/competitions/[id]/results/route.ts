@@ -178,7 +178,7 @@ export async function POST(
     }
     console.error("Error recording results:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to record results" },
+      { error: "Failed to record results" },
       { status: 500 }
     )
   }

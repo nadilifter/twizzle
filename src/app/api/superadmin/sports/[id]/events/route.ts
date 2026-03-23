@@ -100,7 +100,7 @@ export async function POST(
     }
     console.error("Error creating sport event:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create event" },
+      { error: "Failed to create event" },
       { status: 500 }
     )
   }

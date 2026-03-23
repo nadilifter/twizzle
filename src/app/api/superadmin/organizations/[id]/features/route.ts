@@ -134,7 +134,7 @@ export async function PUT(
   } catch (error: any) {
     console.error("Error updating org features:", error);
     return NextResponse.json(
-      { error: error?.message || "Failed to update features" },
+      { error: "Failed to update features" },
       { status: 500 }
     );
   }

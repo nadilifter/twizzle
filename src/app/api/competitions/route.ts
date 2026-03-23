@@ -344,7 +344,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating competition:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create competition" },
+      { error: "Failed to create competition" },
       { status: 500 }
     )
   }

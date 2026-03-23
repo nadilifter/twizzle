@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating plan:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create plan" },
+      { error: "Failed to create plan" },
       { status: 500 }
     )
   }

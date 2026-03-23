@@ -57,24 +57,28 @@ export async function POST(request: NextRequest) {
       messageStatus: params.MessageStatus,
     });
 
-    // Validate Twilio signature whenever auth token is configured
-    if (process.env.TWILIO_AUTH_TOKEN) {
-      const signature = request.headers.get("x-twilio-signature");
+    // Validate Twilio signature - fail closed when auth token is not configured
+    if (!process.env.TWILIO_AUTH_TOKEN) {
+      console.error("TWILIO_AUTH_TOKEN is not configured — rejecting webhook");
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+    }
 
-      if (!signature) {
-        console.warn("Missing Twilio signature");
-        return NextResponse.json({ error: "Missing signature" }, { status: 401 });
-      }
+    const signature = request.headers.get("x-twilio-signature");
+    if (!signature) {
+      console.warn("Missing Twilio signature");
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
 
-      const webhookUrl = getWebhookUrl();
-      if (webhookUrl) {
-        const isValid = validateWebhookSignature(signature, webhookUrl, params);
+    const webhookUrl = getWebhookUrl();
+    if (!webhookUrl) {
+      console.error("Twilio webhook URL not configured — cannot validate signature");
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+    }
 
-        if (!isValid) {
-          console.warn("Invalid Twilio signature");
-          return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-        }
-      }
+    const isValid = validateWebhookSignature(signature, webhookUrl, params);
+    if (!isValid) {
+      console.warn("Invalid Twilio signature");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     // Determine the type of webhook
@@ -124,10 +128,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/twilio/webhook - Health check
-export async function GET() {
-  return NextResponse.json({
-    status: "ok",
-    message: "Twilio webhook endpoint is active",
-  });
-}
+// No GET handler — avoid confirming endpoint existence to unauthenticated callers

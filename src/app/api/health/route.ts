@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { isRedisAvailable } from "@/lib/redis";
-import { isAdyenConfigured, getAdyenEnvironmentName } from "@/lib/adyen";
-import { isTwilioConfigured, getTwilioEnvironment } from "@/lib/twilio";
+import { isAdyenConfigured } from "@/lib/adyen";
+import { isTwilioConfigured } from "@/lib/twilio";
 
 /**
  * Health Check Endpoint
@@ -18,15 +18,12 @@ import { isTwilioConfigured, getTwilioEnvironment } from "@/lib/twilio";
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   timestamp: string;
-  version: string;
-  environment: string;
   checks: {
     database: CheckResult;
     redis: CheckResult;
     adyen: CheckResult;
     twilio: CheckResult;
   };
-  uptime: number;
 }
 
 interface CheckResult {
@@ -35,12 +32,7 @@ interface CheckResult {
   message?: string;
 }
 
-// Track server start time for uptime calculation
-const serverStartTime = Date.now();
-
 export async function GET(): Promise<NextResponse<HealthStatus>> {
-  const startTime = Date.now();
-  
   // Perform health checks in parallel
   const [dbCheck, redisCheck, adyenCheck, twilioCheck] = await Promise.all([
     checkDatabase(),
@@ -62,15 +54,12 @@ export async function GET(): Promise<NextResponse<HealthStatus>> {
   const healthStatus: HealthStatus = {
     status: overallStatus,
     timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || "unknown",
-    environment: process.env.NODE_ENV || "development",
     checks: {
       database: dbCheck,
       redis: redisCheck,
       adyen: adyenCheck,
       twilio: twilioCheck,
     },
-    uptime: Math.floor((Date.now() - serverStartTime) / 1000),
   };
 
   // Return appropriate status code
@@ -106,7 +95,6 @@ async function checkDatabase(): Promise<CheckResult> {
     return {
       status: "error",
       latency: Date.now() - startTime,
-      message: error instanceof Error ? error.message : "Database connection failed",
     };
   }
 }
@@ -146,7 +134,6 @@ async function checkRedis(): Promise<CheckResult> {
     return {
       status: "error",
       latency: Date.now() - startTime,
-      message: error instanceof Error ? error.message : "Redis connection failed",
     };
   }
 }
@@ -162,11 +149,8 @@ async function checkAdyen(): Promise<CheckResult> {
     };
   }
 
-  // For Adyen, we just verify configuration is present
-  // We don't make an API call to avoid unnecessary costs/rate limits
   return {
     status: "ok",
-    message: `Environment: ${getAdyenEnvironmentName()}`,
   };
 }
 
@@ -181,11 +165,8 @@ async function checkTwilio(): Promise<CheckResult> {
     };
   }
 
-  // For Twilio, we just verify configuration is present
-  // We don't make an API call to avoid unnecessary costs
   return {
     status: "ok",
-    message: `Environment: ${getTwilioEnvironment()}`,
   };
 }
 
