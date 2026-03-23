@@ -3,6 +3,7 @@
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import {
+  Building2,
   CalendarDays,
   ClipboardList,
   Eye,
@@ -37,6 +38,11 @@ const navItems = [
     url: "/athletes",
     icon: Home,
     exact: true,
+  },
+  {
+    title: "My Organizations",
+    url: "/athletes/organizations",
+    icon: Building2,
   },
   {
     title: "Registrations",

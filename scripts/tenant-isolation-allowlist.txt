@@ -85,6 +85,7 @@ src/app/api/athletes/[id]/achievements/route.ts
 src/app/api/athletes/waivers/route.ts
 src/app/api/athletes/me/route.ts
 src/app/api/athletes/me/schedule/route.ts
+src/app/api/athletes/my-organizations/route.ts
 
 # --- Organization sub-routes (manual organizationId) ---
 src/app/api/organization/details/route.ts
