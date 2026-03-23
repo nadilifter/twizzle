@@ -9,6 +9,7 @@ import {
   Eye,
   FileText,
   Home,
+  MessageSquare,
   Shield,
   Stethoscope,
   Users,
@@ -26,11 +27,50 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
+
+let chatUnreadCache: { count: number; fetchedAt: number } | null = null
+const CHAT_UNREAD_CACHE_MS = 60_000
+const CHAT_URL = "/athletes/chat"
+
+function ChatUnreadBadge() {
+  const [count, setCount] = React.useState(() =>
+    chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS
+      ? chatUnreadCache.count
+      : 0
+  )
+
+  React.useEffect(() => {
+    if (chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS) {
+      setCount(chatUnreadCache.count)
+      return
+    }
+
+    let cancelled = false
+    fetch("/api/athletes/chat/unread-count")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (cancelled || !data) return
+        chatUnreadCache = { count: data.unreadCount, fetchedAt: Date.now() }
+        setCount(data.unreadCount)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  if (count <= 0) return null
+
+  return (
+    <SidebarMenuBadge className="bg-destructive text-destructive-foreground rounded-full text-[10px] font-medium">
+      {count}
+    </SidebarMenuBadge>
+  )
+}
 
 const navItems = [
   {
@@ -73,6 +113,11 @@ const navItems = [
     title: "Medical",
     url: "/athletes/medical",
     icon: Stethoscope,
+  },
+  {
+    title: "Chat",
+    url: "/athletes/chat",
+    icon: MessageSquare,
   },
 ]
 
@@ -128,6 +173,7 @@ export function AthletesSidebar({ ...props }: React.ComponentProps<typeof Sideba
                         <span>{item.title}</span>
                       </a>
                     </SidebarMenuButton>
+                    {item.url === CHAT_URL && <ChatUnreadBadge />}
                   </SidebarMenuItem>
                 )
               })}

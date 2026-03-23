@@ -249,3 +249,9 @@ src/app/api/org-signup/check-org-name/route.ts
 
 # --- Analytics (public, derives org from subdomain, no tenant session) ---
 src/app/api/analytics/track/route.ts
+
+# --- Athlete chat routes (user-scoped via session.user.id, not org-scoped) ---
+src/app/api/athletes/chat/conversations/route.ts
+src/app/api/athletes/chat/conversations/[id]/route.ts
+src/app/api/athletes/chat/conversations/[id]/messages/route.ts
+src/app/api/athletes/chat/unread-count/route.ts

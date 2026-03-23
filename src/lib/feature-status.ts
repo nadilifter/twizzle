@@ -368,6 +368,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Athlete skill progress tracking",
     apiRoutes: ["/api/athletes/[id]/skills"],
   },
+  "/athletes/chat": {
+    status: "live",
+    description: "Athlete SMS chat with organizations",
+    apiRoutes: ["/api/athletes/chat"],
+  },
 }
 
 /**

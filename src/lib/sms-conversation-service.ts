@@ -221,6 +221,17 @@ export async function getConversationMessages(
 }
 
 /**
+ * Lightweight ownership check — returns only the fields needed to verify
+ * that a conversation exists and belongs to the given user.
+ */
+export async function getConversationOwnership(conversationId: string) {
+  return db.smsConversation.findUnique({
+    where: { id: conversationId },
+    select: { id: true, userId: true, organizationId: true },
+  });
+}
+
+/**
  * Get a single conversation with user details
  */
 export async function getConversation(conversationId: string) {
@@ -331,6 +342,7 @@ export async function sendConversationMessage(
         lastMessageAt: new Date(),
         lastMessageBody: body,
         status: "OPEN",
+        athleteUnreadCount: { increment: 1 },
       },
     });
 
@@ -352,17 +364,89 @@ export async function sendConversationMessage(
   }
 }
 
+/**
+ * Record a reply from the athlete/guardian portal.
+ * The message is stored directly as INBOUND — no Twilio SMS is sent.
+ * Uses a transaction so the message row and conversation metadata update atomically.
+ */
+export async function sendAthleteReply(
+  conversationId: string,
+  userId: string,
+  body: string
+): Promise<SendConversationMessageResult> {
+  const conversation = await db.smsConversation.findUnique({
+    where: { id: conversationId },
+  });
+
+  if (!conversation || conversation.userId !== userId) {
+    return { success: false, error: "Conversation not found" };
+  }
+
+  const hasOrgMessage = await db.smsMessage.findFirst({
+    where: { conversationId, direction: "OUTBOUND" },
+    select: { id: true },
+  });
+
+  if (!hasOrgMessage) {
+    return { success: false, error: "Cannot reply until the organization has sent a message" };
+  }
+
+  const now = new Date();
+
+  const smsMessage = await db.$transaction(async (tx) => {
+    const msg = await tx.smsMessage.create({
+      data: {
+        organizationId: conversation.organizationId,
+        userId: conversation.userId,
+        conversationId,
+        to: "",
+        from: conversation.phoneNumber,
+        body,
+        segments: 1,
+        direction: "INBOUND",
+        classification: "GENERAL",
+        twilioStatus: "DELIVERED",
+        deliveredAt: now,
+      },
+    });
+
+    await tx.smsConversation.update({
+      where: { id: conversationId },
+      data: {
+        lastMessageAt: now,
+        lastMessageBody: body,
+        unreadCount: { increment: 1 },
+        status: "OPEN",
+      },
+    });
+
+    return msg;
+  });
+
+  return { success: true, messageId: smsMessage.id };
+}
+
 // ============================================
 // Conversation Status
 // ============================================
 
 /**
- * Mark a conversation as read (reset unread count)
+ * Mark a conversation as read (reset org-side unread count)
  */
 export async function markConversationRead(conversationId: string): Promise<void> {
   await db.smsConversation.update({
     where: { id: conversationId },
     data: { unreadCount: 0 },
+  });
+}
+
+/**
+ * Mark a conversation as read from the athlete portal (reset athlete-side unread count)
+ */
+export async function markConversationReadByAthlete(conversationId: string): Promise<void> {
+  await db.smsConversation.update({
+    where: { id: conversationId },
+    data: { athleteUnreadCount: 0 },
   });
 }
 
