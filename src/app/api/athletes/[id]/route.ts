@@ -27,12 +27,17 @@ function getCategoryLabel(category: {
 
 const updateAthleteSchema = z.object({
   name: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
   email: z.string().email().optional().nullable(),
   level: z.string().min(1).optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "GRADUATED"]).optional(),
   birthDate: z.string().optional().nullable(),
+  gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional().nullable(),
   guardianUserId: z.string().optional(),
 });
+
+const STAFF_ONLY_FIELDS = ["level", "status", "guardianUserId"] as const;
 
 // GET /api/athletes/[id]
 export async function GET(
@@ -478,28 +483,57 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Super admins bypass permission checks
     const permissions = session.user.permissions ?? [];
     const isSuperAdmin = session.user.isSuperAdmin === true;
-    if (
-      !isSuperAdmin &&
-      !permissions.includes("*") &&
-      !permissions.includes("athletes.edit")
-    ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const hasStaffAccess =
+      isSuperAdmin ||
+      permissions.includes("*") ||
+      permissions.includes("athletes.edit");
 
     const { id } = await params;
     const body = await request.json();
     const validatedData = updateAthleteSchema.parse(body);
 
+    // Guardian access: if no staff permissions, check AthleteGuardian link
+    let isGuardianAccess = false;
+    if (!hasStaffAccess) {
+      const guardianLink = await db.athleteGuardian.findFirst({
+        where: { athleteId: id, userId: session.user.id },
+      });
+      if (!guardianLink) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      isGuardianAccess = true;
+
+      // Guardians cannot modify staff-only fields
+      for (const field of STAFF_ONLY_FIELDS) {
+        if (validatedData[field] !== undefined) {
+          return NextResponse.json(
+            { error: `You do not have permission to change ${field}` },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
+    // Lookup: staff uses org scope, guardians use guardian/self scope
+    const existingWhere = hasStaffAccess
+      ? {
+          id,
+          organizationAthletes: {
+            some: { organizationId: session.user.organizationId },
+          },
+        }
+      : {
+          id,
+          OR: [
+            { guardians: { some: { userId: session.user.id } } },
+            { userId: session.user.id },
+          ],
+        };
+
     const existing = await db.athlete.findFirst({
-      where: {
-        id,
-        organizationAthletes: {
-          some: { organizationId: session.user.organizationId },
-        },
-      },
+      where: existingWhere,
       include: {
         guardians: true,
       },
@@ -559,24 +593,38 @@ export async function PATCH(
       }
     }
 
-    const { birthDate, guardianUserId, level, status, ...otherData } = validatedData;
+    const { birthDate, guardianUserId, level, status, firstName, lastName, gender, ...otherData } = validatedData;
 
-    // Update org-specific fields on OrganizationAthlete
-    const orgAthleteUpdate: Record<string, unknown> = {};
-    if (level !== undefined) orgAthleteUpdate.level = level;
-    if (status !== undefined) orgAthleteUpdate.status = status;
+    // Auto-compose deprecated `name` field when firstName/lastName are provided
+    const nameUpdate: Record<string, unknown> = {};
+    if (firstName !== undefined) nameUpdate.firstName = firstName;
+    if (lastName !== undefined) nameUpdate.lastName = lastName;
+    if (firstName !== undefined || lastName !== undefined) {
+      const newFirst = firstName ?? existing.firstName;
+      const newLast = lastName ?? existing.lastName;
+      nameUpdate.name = `${newFirst} ${newLast}`.trim();
+    }
+    if (gender !== undefined) nameUpdate.gender = gender;
 
-    if (Object.keys(orgAthleteUpdate).length > 0 && session.user.organizationId) {
-      await db.organizationAthlete.updateMany({
-        where: { athleteId: id, organizationId: session.user.organizationId },
-        data: orgAthleteUpdate,
-      });
+    // Update org-specific fields on OrganizationAthlete (staff only)
+    if (!isGuardianAccess) {
+      const orgAthleteUpdate: Record<string, unknown> = {};
+      if (level !== undefined) orgAthleteUpdate.level = level;
+      if (status !== undefined) orgAthleteUpdate.status = status;
+
+      if (Object.keys(orgAthleteUpdate).length > 0 && session.user.organizationId) {
+        await db.organizationAthlete.updateMany({
+          where: { athleteId: id, organizationId: session.user.organizationId },
+          data: orgAthleteUpdate,
+        });
+      }
     }
 
     const athlete = await db.athlete.update({
       where: { id },
       data: {
         ...otherData,
+        ...nameUpdate,
         ...(birthDate !== undefined && {
           birthDate: birthDate === null ? null : parseDateOnly(birthDate),
         }),

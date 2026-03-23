@@ -7,15 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarUpload } from "@/components/avatar-upload";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Calendar as CalendarWidget } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
   ArrowLeft, User, Users, Shield, Calendar, ChevronRight,
-  Eye, EyeOff, Crown,
+  Eye, EyeOff, Crown, Pencil, Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { RegistrationFilesSection } from "@/components/registration-files-section";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -53,6 +59,14 @@ export default function AthleteDetailPage() {
   const [registrations, setRegistrations] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    birthDate: "",
+    gender: "",
+  });
+  const [isEditSaving, setIsEditSaving] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -130,6 +144,60 @@ export default function AthleteDetailPage() {
       toast.error("Failed to update");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const openEditSheet = () => {
+    if (!athlete) return;
+    setEditForm({
+      firstName: athlete.firstName || "",
+      lastName: athlete.lastName || "",
+      birthDate: athlete.birthDate
+        ? new Date(athlete.birthDate).toISOString().split("T")[0]
+        : "",
+      gender: athlete.gender || "",
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editForm.firstName.trim() || !editForm.lastName.trim()) {
+      toast.error("First name and last name are required");
+      return;
+    }
+
+    setIsEditSaving(true);
+    try {
+      const res = await fetch(`/api/athletes/${athleteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: editForm.firstName.trim(),
+          lastName: editForm.lastName.trim(),
+          birthDate: editForm.birthDate || null,
+          gender: editForm.gender || null,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setAthlete((prev: any) => ({
+          ...prev,
+          firstName: updated.firstName,
+          lastName: updated.lastName,
+          name: updated.name,
+          birthDate: updated.birthDate,
+          gender: updated.gender,
+        }));
+        setIsEditOpen(false);
+        toast.success("Athlete details updated");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to update athlete");
+      }
+    } catch {
+      toast.error("Failed to update athlete");
+    } finally {
+      setIsEditSaving(false);
     }
   };
 
@@ -213,10 +281,18 @@ export default function AthleteDetailPage() {
                 {athlete.isSelf && (
                   <Badge variant="secondary">You</Badge>
                 )}
+                {!athlete.isSelf && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={openEditSheet}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                 {athlete.birthDate && (
                   <span>Born {format(new Date(athlete.birthDate), "MMM d, yyyy")}</span>
+                )}
+                {athlete.gender && (
+                  <span>{athlete.gender.charAt(0) + athlete.gender.slice(1).toLowerCase().replace(/_/g, " ")}</span>
                 )}
                 <Badge variant="outline">{athlete.status}</Badge>
               </div>
@@ -439,6 +515,90 @@ export default function AthleteDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit athlete details sheet */}
+      <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Edit Athlete Details</SheetTitle>
+            <SheetDescription>Update profile information for this athlete.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-6 py-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-firstName">First Name *</Label>
+                <Input
+                  id="edit-firstName"
+                  value={editForm.firstName}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="First name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-lastName">Last Name *</Label>
+                <Input
+                  id="edit-lastName"
+                  value={editForm.lastName}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date of Birth</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal", !editForm.birthDate && "text-muted-foreground")}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {editForm.birthDate ? format(new Date(editForm.birthDate + "T12:00:00Z"), "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarWidget
+                    mode="single"
+                    selected={editForm.birthDate ? new Date(editForm.birthDate + "T12:00:00Z") : undefined}
+                    onSelect={(date) => setEditForm((prev) => ({ ...prev, birthDate: date ? format(date, "yyyy-MM-dd") : "" }))}
+                    captionLayout="dropdown"
+                    fromYear={1940}
+                    toYear={new Date().getFullYear()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-gender">Gender</Label>
+              <Select
+                value={editForm.gender}
+                onValueChange={(value) => setEditForm((prev) => ({ ...prev, gender: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MALE">Male</SelectItem>
+                  <SelectItem value="FEMALE">Female</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
+                  <SelectItem value="PREFER_NOT_TO_SAY">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="pt-4 flex justify-end">
+              <Button onClick={handleEditSave} disabled={isEditSaving}>
+                {isEditSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
