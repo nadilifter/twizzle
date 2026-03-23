@@ -6,8 +6,13 @@ import {
   createBusinessLine,
   createAccountHolder,
   createBalanceAccount,
+  getAccountHolder,
   isPlatformConfigured,
 } from "@/lib/adyen-platform"
+import {
+  deriveOnboardingStatus,
+  summarizeVerification,
+} from "@/lib/adyen-onboarding-status"
 import { getSubdomainUrl } from "@/lib/env-domains"
 
 /**
@@ -21,9 +26,36 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const account = await db.adyenPlatformAccount.findUnique({
+    let account = await db.adyenPlatformAccount.findUnique({
       where: { organizationId: session.user.organizationId },
     })
+
+    // Live-sync: if the account exists and isn't already terminal, reconcile
+    // with Adyen's API so the status is accurate even without webhooks.
+    if (
+      account?.accountHolderId &&
+      account.onboardingStatus !== "VERIFIED" &&
+      isPlatformConfigured()
+    ) {
+      try {
+        const liveHolder = await getAccountHolder(account.accountHolderId)
+        const onboardingStatus = deriveOnboardingStatus(liveHolder)
+        const verificationStatus = summarizeVerification(liveHolder)
+        const capabilities = liveHolder.capabilities || {}
+
+        if (
+          onboardingStatus !== account.onboardingStatus ||
+          JSON.stringify(capabilities) !== JSON.stringify(account.capabilities)
+        ) {
+          account = await db.adyenPlatformAccount.update({
+            where: { id: account.id },
+            data: { onboardingStatus, verificationStatus, capabilities },
+          })
+        }
+      } catch {
+        // Best-effort: if Adyen API is unreachable, fall back to stored status
+      }
+    }
 
     const org = await db.organization.findUnique({
       where: { id: session.user.organizationId },

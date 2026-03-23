@@ -50,11 +50,6 @@ export async function POST() {
       redirectUrl
     )
 
-    await db.adyenPlatformAccount.update({
-      where: { id: account.id },
-      data: { onboardingStatus: "IN_PROGRESS" },
-    })
-
     return NextResponse.json({ url: link.url })
   } catch (error: any) {
     console.error("Failed to generate onboarding link:", error)
