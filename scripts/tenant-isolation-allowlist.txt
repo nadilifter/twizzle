@@ -188,6 +188,8 @@ src/app/api/user/billing-addresses/route.ts
 src/app/api/user/billing-addresses/[id]/route.ts
 src/app/api/user/contacts/route.ts
 src/app/api/user/contacts/[id]/route.ts
+src/app/api/user/payment-methods/route.ts
+src/app/api/user/payment-methods/[id]/route.ts
 src/app/api/payment-methods/route.ts
 src/app/api/payment-methods/session/route.ts
 src/app/api/payment-methods/[id]/route.ts

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { formatPhoneNumberIntl, isValidPhoneNumber } from "react-phone-number-input"
-import { Loader2, Plus, Pencil, Trash2, Star, MapPin, Phone, User } from "lucide-react"
+import { Loader2, Plus, Pencil, Trash2, Star, MapPin, Phone, User, CreditCard } from "lucide-react"
 import { toast } from "sonner"
 
 import { COUNTRIES, getRegionsForCountry, isValidPostalCode } from "@/lib/location-data"
@@ -70,6 +70,15 @@ interface UserBillingAddress {
   isPrimary: boolean
 }
 
+interface SavedPaymentMethod {
+  id: string
+  type: string
+  brand: string | null
+  last4: string
+  expiry: string | null
+  isDefault: boolean
+}
+
 const emptyContact = {
   firstName: "",
   lastName: "",
@@ -87,9 +96,26 @@ const emptyAddress = {
   postalCode: "",
 }
 
+const BRAND_LABELS: Record<string, string> = {
+  visa: "Visa",
+  mc: "Mastercard",
+  amex: "American Express",
+  discover: "Discover",
+  diners: "Diners Club",
+  jcb: "JCB",
+  maestro: "Maestro",
+  cup: "UnionPay",
+}
+
+function formatBrand(brand: string | null): string {
+  if (!brand) return "Card"
+  return BRAND_LABELS[brand.toLowerCase()] || brand.charAt(0).toUpperCase() + brand.slice(1)
+}
+
 export default function BillingPage() {
   const [contacts, setContacts] = useState<UserContact[]>([])
   const [addresses, setAddresses] = useState<UserBillingAddress[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<SavedPaymentMethod[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
@@ -106,9 +132,10 @@ export default function BillingPage() {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [contactsRes, addressesRes] = await Promise.all([
+        const [contactsRes, addressesRes, pmRes] = await Promise.all([
           fetch("/api/user/contacts"),
           fetch("/api/user/billing-addresses"),
+          fetch("/api/user/payment-methods"),
         ])
         if (contactsRes.ok) {
           const data = await contactsRes.json()
@@ -117,6 +144,10 @@ export default function BillingPage() {
         if (addressesRes.ok) {
           const data = await addressesRes.json()
           setAddresses(data.addresses || [])
+        }
+        if (pmRes.ok) {
+          const data = await pmRes.json()
+          setPaymentMethods(data.paymentMethods || [])
         }
       } catch {
         toast.error("Failed to load billing details")
@@ -320,6 +351,41 @@ export default function BillingPage() {
     }
   }
 
+  // ---- Payment Method Actions ----
+
+  const deletePaymentMethod = async (pmId: string) => {
+    try {
+      const res = await fetch(`/api/user/payment-methods/${pmId}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      setPaymentMethods((prev) => {
+        const remaining = prev.filter((pm) => pm.id !== pmId)
+        const deleted = prev.find((pm) => pm.id === pmId)
+        if (deleted?.isDefault && remaining.length > 0) {
+          remaining[0] = { ...remaining[0], isDefault: true }
+        }
+        return remaining
+      })
+      toast.success("Payment method removed")
+    } catch {
+      toast.error("Failed to remove payment method")
+    }
+  }
+
+  const setDefaultPaymentMethod = async (pmId: string) => {
+    try {
+      const res = await fetch(`/api/user/payment-methods/${pmId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDefault: true }),
+      })
+      if (!res.ok) throw new Error("Failed to update")
+      setPaymentMethods((prev) => prev.map((pm) => ({ ...pm, isDefault: pm.id === pmId })))
+      toast.success("Default payment method updated")
+    } catch {
+      toast.error("Failed to set default payment method")
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex flex-1 flex-col space-y-8">
@@ -335,6 +401,14 @@ export default function BillingPage() {
           <div className="grid gap-4 md:grid-cols-2 max-w-4xl">
             <Skeleton className="h-48 w-full rounded-xl" />
             <Skeleton className="h-48 w-full rounded-xl" />
+          </div>
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-6 w-36" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 max-w-4xl">
+            <Skeleton className="h-40 w-full rounded-xl" />
           </div>
         </div>
         <div>
@@ -356,7 +430,7 @@ export default function BillingPage() {
       <div>
         <h1 className="text-2xl font-bold">Billing Details</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage your saved contacts and billing addresses. These are pre-filled during checkout on any site.
+          Manage your saved contacts, payment methods, and billing addresses. These are pre-filled during checkout on any site.
         </p>
       </div>
 
@@ -544,6 +618,95 @@ export default function BillingPage() {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => deleteContact(contact.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Remove
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Payment Methods Section */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Payment Methods
+          </h2>
+        </div>
+
+        {paymentMethods.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center text-muted-foreground">
+              <CreditCard className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="font-medium">No payment methods saved yet</p>
+              <p className="text-sm mt-1">
+                Cards are saved automatically when you opt in during checkout.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {paymentMethods.map((pm) => (
+              <Card key={pm.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 shrink-0" />
+                      {formatBrand(pm.brand)}
+                    </CardTitle>
+                    {pm.isDefault && (
+                      <Badge variant="secondary" className="shrink-0">
+                        <Star className="h-3 w-3 mr-1" />
+                        Default
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-3 text-sm text-muted-foreground space-y-1">
+                  <p className="font-mono">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; {pm.last4}</p>
+                  {pm.expiry && <p>Expires {pm.expiry}</p>}
+                </CardContent>
+                <CardFooter className="gap-2">
+                  {!pm.isDefault && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDefaultPaymentMethod(pm.id)}
+                    >
+                      <Star className="h-3 w-3 mr-1" />
+                      Set Default
+                    </Button>
+                  )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive ml-auto"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Remove
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will remove {formatBrand(pm.brand)} ending in {pm.last4} from
+                          your saved payment methods. This cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deletePaymentMethod(pm.id)}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           Remove

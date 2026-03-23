@@ -62,7 +62,7 @@ const getFormActionCsp = () => {
 };
 
 const getConnectSrcCsp = () => {
-  const base = "'self' https://*.adyen.com https://*.upstash.io wss:";
+  const base = "'self' https://*.adyen.com https://*.upstash.io wss: https://google.com https://pay.google.com";
   
   // Add CDN domain if configured
   const cdnSrc = envConfig.cdnDomain ? ` https://${envConfig.cdnDomain}` : '';

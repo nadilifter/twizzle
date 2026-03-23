@@ -55,27 +55,38 @@ export async function POST(request: NextRequest) {
       success: tokenData.success,
     })
 
+    const isUserToken = tokenData.shopperReference.startsWith("user-")
+
     // Handle different event types
     switch (tokenData.eventCode) {
       case "RECURRING_CONTRACT":
       case "AUTHORISATION":
-        // New token created or payment with token
         if (tokenData.success && tokenData.storedPaymentMethodId) {
-          await handleTokenCreated(tokenData)
+          if (isUserToken) {
+            await handleUserTokenCreated(tokenData)
+          } else {
+            await handleTokenCreated(tokenData)
+          }
         }
         break
 
       case "RECURRING_CONTRACT_UPDATED":
-        // Token updated (e.g., card details changed by issuer)
         if (tokenData.success && tokenData.storedPaymentMethodId) {
-          await handleTokenUpdated(tokenData)
+          if (isUserToken) {
+            await handleUserTokenUpdated(tokenData)
+          } else {
+            await handleTokenUpdated(tokenData)
+          }
         }
         break
 
       case "RECURRING_CONTRACT_DISABLED":
-        // Token disabled/deleted
         if (tokenData.storedPaymentMethodId) {
-          await handleTokenDisabled(tokenData)
+          if (isUserToken) {
+            await handleUserTokenDisabled(tokenData)
+          } else {
+            await handleTokenDisabled(tokenData)
+          }
         }
         break
 
@@ -273,6 +284,143 @@ async function handleTokenDisabled(tokenData: {
   }
 
   logger.info("Disabled payment method", { storedPaymentMethodId: tokenData.storedPaymentMethodId })
+}
+
+// ============================================
+// User-level token handlers (shopperReference: user-{userId})
+// Stores tokens in the PaymentMethod model for guardian/user billing
+// ============================================
+
+async function handleUserTokenCreated(tokenData: {
+  shopperReference: string
+  storedPaymentMethodId?: string
+  paymentMethod?: {
+    type?: string
+    brand?: string
+    lastFour?: string
+    expiryMonth?: string
+    expiryYear?: string
+    holderName?: string
+  }
+}) {
+  const userId = tokenData.shopperReference.replace("user-", "")
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  })
+
+  if (!user) {
+    logger.info("User not found for token creation", { userId })
+    return
+  }
+
+  const existingMethod = await db.paymentMethod.findUnique({
+    where: { adyenTokenId: tokenData.storedPaymentMethodId },
+  })
+
+  if (existingMethod) {
+    logger.debug("User payment method already exists", { adyenTokenId: tokenData.storedPaymentMethodId })
+    return
+  }
+
+  const existingCount = await db.paymentMethod.count({
+    where: { userId },
+  })
+
+  const expiry = tokenData.paymentMethod?.expiryMonth && tokenData.paymentMethod?.expiryYear
+    ? `${tokenData.paymentMethod.expiryMonth}/${tokenData.paymentMethod.expiryYear.slice(-2)}`
+    : null
+
+  await db.paymentMethod.create({
+    data: {
+      userId,
+      type: "CARD",
+      last4: tokenData.paymentMethod?.lastFour || "****",
+      brand: tokenData.paymentMethod?.brand,
+      expiry,
+      isDefault: existingCount === 0,
+      adyenTokenId: tokenData.storedPaymentMethodId!,
+      shopperReference: tokenData.shopperReference,
+    },
+  })
+
+  logger.info("Created payment method for user", { userId })
+}
+
+async function handleUserTokenUpdated(tokenData: {
+  shopperReference: string
+  storedPaymentMethodId?: string
+  paymentMethod?: {
+    type?: string
+    brand?: string
+    lastFour?: string
+    expiryMonth?: string
+    expiryYear?: string
+    holderName?: string
+  }
+}) {
+  if (!tokenData.storedPaymentMethodId) return
+
+  const existing = await db.paymentMethod.findUnique({
+    where: { adyenTokenId: tokenData.storedPaymentMethodId },
+  })
+
+  if (!existing) {
+    logger.info("User payment method not found for update", { adyenTokenId: tokenData.storedPaymentMethodId })
+    return
+  }
+
+  const expiry = tokenData.paymentMethod?.expiryMonth && tokenData.paymentMethod?.expiryYear
+    ? `${tokenData.paymentMethod.expiryMonth}/${tokenData.paymentMethod.expiryYear.slice(-2)}`
+    : undefined
+
+  await db.paymentMethod.update({
+    where: { adyenTokenId: tokenData.storedPaymentMethodId },
+    data: {
+      brand: tokenData.paymentMethod?.brand || existing.brand,
+      last4: tokenData.paymentMethod?.lastFour || existing.last4,
+      ...(expiry && { expiry }),
+    },
+  })
+
+  logger.info("Updated user payment method", { adyenTokenId: tokenData.storedPaymentMethodId })
+}
+
+async function handleUserTokenDisabled(tokenData: {
+  storedPaymentMethodId?: string
+}) {
+  if (!tokenData.storedPaymentMethodId) return
+
+  const existing = await db.paymentMethod.findUnique({
+    where: { adyenTokenId: tokenData.storedPaymentMethodId },
+  })
+
+  if (!existing) {
+    logger.info("User payment method not found for disable", { adyenTokenId: tokenData.storedPaymentMethodId })
+    return
+  }
+
+  await db.paymentMethod.delete({
+    where: { adyenTokenId: tokenData.storedPaymentMethodId },
+  })
+
+  // If this was the default, promote the next one
+  if (existing.isDefault && existing.userId) {
+    const nextMethod = await db.paymentMethod.findFirst({
+      where: { userId: existing.userId },
+      orderBy: { createdAt: "asc" },
+    })
+
+    if (nextMethod) {
+      await db.paymentMethod.update({
+        where: { id: nextMethod.id },
+        data: { isDefault: true },
+      })
+    }
+  }
+
+  logger.info("Deleted user payment method", { adyenTokenId: tokenData.storedPaymentMethodId })
 }
 
 /**

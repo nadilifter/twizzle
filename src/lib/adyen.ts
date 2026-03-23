@@ -8,6 +8,20 @@
  *   - ADYEN_WEBHOOK_HMAC_KEY: HMAC key for webhook signature verification
  */
 
+/**
+ * Extract only safe-to-log fields from an error to prevent leaking
+ * Adyen response bodies (which may contain card data) into logs.
+ */
+function safeErrorDetail(error: unknown): string {
+  if (error instanceof Error) {
+    const statusCode = (error as any).statusCode;
+    return statusCode
+      ? `${error.message} (status ${statusCode})`
+      : error.message;
+  }
+  return String(error);
+}
+
 // Lazy initialization to avoid build-time errors
 // Adyen client types are only available at runtime via require(), so we use any here
 let _checkoutApi: any = null; // CheckoutAPI
@@ -111,29 +125,44 @@ export function getAdyenEnvironmentName(): "TEST" | "LIVE" {
   return "TEST";
 }
 
+export interface TokenizationOptions {
+  shopperReference: string;
+  storePaymentMethodMode?: "askForConsent" | "enabled" | "disabled";
+  recurringProcessingModel?: "CardOnFile" | "Subscription" | "UnscheduledCardOnFile";
+}
+
 export async function createPaymentSession(
   amount: number,
   currency: string = "USD",
   reference: string,
   returnUrl: string,
   shopperEmail?: string,
-  lineItems?: any[]
+  lineItems?: any[],
+  tokenization?: TokenizationOptions
 ) {
   try {
-    // In @adyen/api-library v30+, use PaymentsApi.sessions() instead of checkout.sessions()
-    const response = await checkoutApi.PaymentsApi.sessions({
-      amount: { currency, value: Math.round(amount * 100) }, // Amount in minor units
+    const sessionRequest: Record<string, any> = {
+      amount: { currency, value: Math.round(amount * 100) },
       reference,
       returnUrl,
       merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
       shopperEmail,
       lineItems,
-      channel: "Web" as any,
-      countryCode: "US", // Should be dynamic
-    });
+      channel: "Web",
+      countryCode: "US",
+    };
+
+    if (tokenization) {
+      sessionRequest.shopperReference = tokenization.shopperReference;
+      sessionRequest.storePaymentMethodMode = tokenization.storePaymentMethodMode ?? "askForConsent";
+      sessionRequest.recurringProcessingModel = tokenization.recurringProcessingModel ?? "CardOnFile";
+      sessionRequest.shopperInteraction = "Ecommerce";
+    }
+
+    const response = await checkoutApi.PaymentsApi.sessions(sessionRequest);
     return response;
   } catch (error) {
-    console.error("Error creating Adyen session:", error);
+    console.error("Error creating Adyen session:", safeErrorDetail(error));
     throw error;
   }
 }
@@ -157,7 +186,7 @@ export async function createPaymentLink(
     });
     return response;
   } catch (error) {
-    console.error("Error creating Adyen payment link:", error);
+    console.error("Error creating Adyen payment link:", safeErrorDetail(error));
     throw error;
   }
 }
@@ -167,7 +196,7 @@ export async function getPaymentLink(linkId: string) {
     const response = await checkoutApi.PaymentLinksApi.getPaymentLink(linkId);
     return response;
   } catch (error) {
-    console.error("Error getting Adyen payment link:", error);
+    console.error("Error getting Adyen payment link:", safeErrorDetail(error));
     throw error;
   }
 }
@@ -227,7 +256,7 @@ export async function createTokenizationSession(
     });
     return response;
   } catch (error) {
-    console.error("Error creating Adyen tokenization session:", error);
+    console.error("Error creating Adyen tokenization session:", safeErrorDetail(error));
     throw error;
   }
 }
@@ -269,7 +298,7 @@ export async function getStoredPaymentMethods(
 
     return storedMethods;
   } catch (error) {
-    console.error("Error getting stored payment methods:", error);
+    console.error("Error getting stored payment methods:", safeErrorDetail(error));
     throw error;
   }
 }
@@ -292,7 +321,7 @@ export async function disableStoredPaymentMethod(
       recurringDetailReference: storedPaymentMethodId,
     });
   } catch (error) {
-    console.error("Error disabling stored payment method:", error);
+    console.error("Error disabling stored payment method:", safeErrorDetail(error));
     throw error;
   }
 }
@@ -336,7 +365,7 @@ export async function chargeSubscription(
 
     return response;
   } catch (error) {
-    console.error("Error charging subscription:", error);
+    console.error("Error charging subscription:", safeErrorDetail(error));
     throw error;
   }
 }
@@ -372,7 +401,7 @@ export function verifyWebhookSignature(
 
     return validator.validateHMAC(notificationItem, hmacKey);
   } catch (error) {
-    console.error("Error verifying webhook signature:", error);
+    console.error("Error verifying webhook signature:", safeErrorDetail(error));
     return false;
   }
 }
@@ -440,7 +469,7 @@ export function parseRecurringTokenWebhook(payload: string): TokenWebhookData | 
       success: notificationItem.success === "true" || notificationItem.success === true,
     };
   } catch (error) {
-    console.error("Error parsing recurring token webhook:", error);
+    console.error("Error parsing recurring token webhook:", safeErrorDetail(error));
     return null;
   }
 }

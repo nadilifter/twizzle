@@ -1346,7 +1346,14 @@ export async function POST(
         invoice.id,
         returnUrl,
         resolvedContact.email,
-        adyenLineItems
+        adyenLineItems,
+        authUserId
+          ? {
+              shopperReference: `user-${authUserId}`,
+              storePaymentMethodMode: "askForConsent",
+              recurringProcessingModel: "CardOnFile",
+            }
+          : undefined
     );
 
     return NextResponse.json({
