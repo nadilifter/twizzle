@@ -551,7 +551,7 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                         handleUpdateRestrictions({ allowedGenders: newGenders })
                       }}
                     >
-                      {gender.replace("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                      {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                     </Badge>
                   )
                 })}

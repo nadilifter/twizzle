@@ -803,7 +803,7 @@ export function MembershipStepper() {
                               }))
                             }}
                           >
-                            {gender.replace("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                            {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                           </Badge>
                         )
                       })}
@@ -1150,9 +1150,10 @@ export function MembershipStepper() {
                                 {newInstance.startDate ? format(newInstance.startDate, "PPP") : "Pick a date"}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                               <Calendar
                                 mode="single"
+                                fixedWeeks
                                 selected={newInstance.startDate || undefined}
                                 onSelect={date => {
                                   setNewInstance(prev => ({
@@ -1182,9 +1183,10 @@ export function MembershipStepper() {
                                 {newInstance.endDate ? format(newInstance.endDate, "PPP") : "Pick a date"}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                               <Calendar
                                 mode="single"
+                                fixedWeeks
                                 selected={newInstance.endDate || undefined}
                                 onSelect={date => setNewInstance(prev => ({ ...prev, endDate: date || null }))}
                                 disabled={date => newInstance.startDate ? date < newInstance.startDate : false}
@@ -1229,9 +1231,10 @@ export function MembershipStepper() {
                                 {newInstance.autoRenewDate ? format(newInstance.autoRenewDate, "PPP") : "Optional"}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                               <Calendar
                                 mode="single"
+                                fixedWeeks
                                 selected={newInstance.autoRenewDate || undefined}
                                 onSelect={date => setNewInstance(prev => ({ ...prev, autoRenewDate: date || null }))}
                                 initialFocus
