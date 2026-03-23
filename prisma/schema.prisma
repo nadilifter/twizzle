@@ -1005,6 +1005,7 @@ model AthleteMembership {
   athlete  Athlete            @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   instance MembershipInstance @relation(fields: [membershipInstanceId], references: [id], onDelete: Cascade)
 
+  @@unique([athleteId, membershipInstanceId])
   @@index([athleteId, status])
   @@index([athleteId, status, membershipInstanceId])
 }
@@ -1079,6 +1080,7 @@ model Enrollment {
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
   user    User?   @relation("UserEnrollments", fields: [userId], references: [id], onDelete: SetNull)
 
+  @@unique([programId, athleteId])
   @@index([userId])
   @@index([athleteId])
   @@index([status])
@@ -1280,10 +1282,11 @@ model Invoice {
   subtotal       Decimal       @db.Decimal(10, 2)
   tax            Decimal       @default(0) @db.Decimal(10, 2)
   total          Decimal       @db.Decimal(10, 2)
-  notes          String?
-  organizationId String
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  notes                    String?
+  organizationId           String
+  registrationsProcessed   Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

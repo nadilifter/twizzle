@@ -5,6 +5,11 @@ import { processInvoiceRegistrations, type InvoiceMetadata } from "@/lib/invoice
 import { sendTemplatedEmail } from "@/lib/email"
 import { getSubdomainUrl } from "@/lib/env-domains"
 import { logger } from "@/lib/logger"
+import { Prisma } from "@prisma/client"
+
+function isPrismaUniqueConstraintError(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002"
+}
 
 /**
  * POST /api/webhooks/adyen
@@ -109,10 +114,6 @@ async function handleAuthorisation(
     const existingTransaction = await tx.transaction.findUnique({
       where: { pspReference },
     })
-    if (existingTransaction) {
-      logger.info("Transaction already processed, skipping", { pspReference })
-      return null
-    }
 
     const inv = await tx.invoice.findUnique({
       where: { id: invoiceId },
@@ -125,6 +126,18 @@ async function handleAuthorisation(
 
     if (!inv) {
       console.error(`Invoice not found: ${invoiceId}`)
+      return null
+    }
+
+    if (existingTransaction) {
+      // Payment already recorded. If registrations weren't processed
+      // (e.g. crash on a previous attempt), return the invoice so the
+      // registration step below can retry.
+      if (!inv.registrationsProcessed) {
+        logger.info("Transaction exists but registrations not yet processed, retrying", { pspReference })
+        return inv
+      }
+      logger.info("Transaction already processed, skipping", { pspReference })
       return null
     }
 
@@ -199,6 +212,11 @@ async function handleAuthorisation(
     }
   }
 
+  await db.invoice.update({
+    where: { id: invoice.id },
+    data: { registrationsProcessed: true },
+  })
+
   // Send receipt email
   try {
     const recipientEmail = invoice.user?.email
@@ -238,21 +256,15 @@ async function handleAuthorisation(
 }
 
 async function handleCapture(pspReference: string) {
-  const transaction = await db.transaction.findUnique({
-    where: { pspReference },
+  const result = await db.transaction.updateMany({
+    where: { pspReference, status: "AUTHORISED" },
+    data: { status: "CAPTURED", settledAt: new Date() },
   })
 
-  if (!transaction) {
-    logger.info("Capture: transaction not found", { pspReference })
-    return
-  }
-
-  if (transaction.status === "AUTHORISED") {
-    await db.transaction.update({
-      where: { id: transaction.id },
-      data: { status: "CAPTURED", settledAt: new Date() },
-    })
+  if (result.count > 0) {
     logger.info("Capture: transaction captured", { pspReference })
+  } else {
+    logger.info("Capture: no AUTHORISED transaction found (already captured or missing)", { pspReference })
   }
 }
 
@@ -286,53 +298,57 @@ async function handleRefund(notificationItem: any) {
     return
   }
 
-  // No existing record -- refund was initiated outside our API (e.g. Adyen dashboard)
-  const originalTx = await db.transaction.findUnique({
-    where: { pspReference: originalReference },
-  })
+  // No existing record -- refund was initiated outside our API (e.g. Adyen dashboard).
+  // Wrap in a transaction so the refund record + invoice status update are atomic.
+  try {
+    await db.$transaction(async (tx) => {
+      const originalTx = await tx.transaction.findUnique({
+        where: { pspReference: originalReference },
+        include: { payment: { include: { invoice: true } } },
+      })
 
-  if (!originalTx) {
-    console.error(`[REFUND] Original transaction not found: ${originalReference}`)
-    return
-  }
-
-  const refundAmount = amount?.value ? Number(amount.value) / 100 : 0
-
-  await db.transaction.create({
-    data: {
-      organizationId: originalTx.organizationId,
-      pspReference,
-      merchantRef: merchantReference || originalTx.merchantRef,
-      type: "REFUND",
-      amount: -refundAmount,
-      currency: amount?.currency || "USD",
-      status: "SETTLED",
-      method: originalTx.method,
-      description: `Refund for ${originalTx.merchantRef || originalReference}`,
-      metadata: { originalPspReference: originalReference },
-      settledAt: new Date(),
-    },
-  })
-
-  // Update invoice status if fully refunded
-  if (originalTx.paymentId) {
-    const payment = await db.payment.findUnique({
-      where: { id: originalTx.paymentId },
-      include: { invoice: true },
-    })
-
-    if (payment?.invoiceId) {
-      const invoiceTotal = Number(payment.invoice?.total || 0)
-      if (refundAmount >= invoiceTotal) {
-        await db.invoice.update({
-          where: { id: payment.invoiceId },
-          data: { status: "CANCELLED" },
-        })
+      if (!originalTx) {
+        console.error(`[REFUND] Original transaction not found: ${originalReference}`)
+        return
       }
-    }
-  }
 
-  logger.info("Refund processed", { pspReference, originalReference })
+      const refundAmount = amount?.value ? Number(amount.value) / 100 : 0
+
+      await tx.transaction.create({
+        data: {
+          organizationId: originalTx.organizationId,
+          pspReference,
+          merchantRef: merchantReference || originalTx.merchantRef,
+          type: "REFUND",
+          amount: -refundAmount,
+          currency: amount?.currency || "USD",
+          status: "SETTLED",
+          method: originalTx.method,
+          description: `Refund for ${originalTx.merchantRef || originalReference}`,
+          metadata: { originalPspReference: originalReference },
+          settledAt: new Date(),
+        },
+      })
+
+      if (originalTx.paymentId && originalTx.payment?.invoiceId) {
+        const invoiceTotal = Number(originalTx.payment.invoice?.total || 0)
+        if (refundAmount >= invoiceTotal) {
+          await tx.invoice.update({
+            where: { id: originalTx.payment.invoiceId },
+            data: { status: "CANCELLED" },
+          })
+        }
+      }
+
+      logger.info("Refund processed", { pspReference, originalReference })
+    })
+  } catch (error) {
+    if (isPrismaUniqueConstraintError(error)) {
+      logger.info("Refund: duplicate webhook (pspReference already exists)", { pspReference })
+      return
+    }
+    throw error
+  }
 }
 
 async function handleChargeback(notificationItem: any) {
@@ -343,43 +359,52 @@ async function handleChargeback(notificationItem: any) {
     merchantReference,
   } = notificationItem
 
-  // Prevent duplicate processing
-  const existing = await db.transaction.findUnique({
-    where: { pspReference },
-  })
-  if (existing) {
-    logger.info("Chargeback: transaction already processed", { pspReference })
-    return
+  try {
+    await db.$transaction(async (tx) => {
+      const existing = await tx.transaction.findUnique({
+        where: { pspReference },
+      })
+      if (existing) {
+        logger.info("Chargeback: transaction already processed", { pspReference })
+        return
+      }
+
+      const originalTx = originalReference
+        ? await tx.transaction.findUnique({ where: { pspReference: originalReference } })
+        : null
+
+      const organizationId = originalTx?.organizationId
+      if (!organizationId) {
+        console.error(`[CHARGEBACK] Cannot determine organization for ${pspReference}`)
+        return
+      }
+
+      const chargebackAmount = amount?.value ? Number(amount.value) / 100 : 0
+
+      await tx.transaction.create({
+        data: {
+          organizationId,
+          pspReference,
+          merchantRef: merchantReference || originalTx?.merchantRef,
+          type: "CHARGEBACK",
+          amount: -chargebackAmount,
+          currency: amount?.currency || "USD",
+          status: "SETTLED",
+          method: originalTx?.method,
+          description: `Chargeback for ${originalTx?.merchantRef || originalReference}`,
+          settledAt: new Date(),
+        },
+      })
+
+      logger.info("Chargeback processed", { pspReference, originalReference })
+    })
+  } catch (error) {
+    if (isPrismaUniqueConstraintError(error)) {
+      logger.info("Chargeback: duplicate webhook (pspReference already exists)", { pspReference })
+      return
+    }
+    throw error
   }
-
-  const originalTx = originalReference
-    ? await db.transaction.findUnique({ where: { pspReference: originalReference } })
-    : null
-
-  const organizationId = originalTx?.organizationId
-  if (!organizationId) {
-    console.error(`[CHARGEBACK] Cannot determine organization for ${pspReference}`)
-    return
-  }
-
-  const chargebackAmount = amount?.value ? Number(amount.value) / 100 : 0
-
-  await db.transaction.create({
-    data: {
-      organizationId,
-      pspReference,
-      merchantRef: merchantReference || originalTx?.merchantRef,
-      type: "CHARGEBACK",
-      amount: -chargebackAmount,
-      currency: amount?.currency || "USD",
-      status: "SETTLED",
-      method: originalTx?.method,
-      description: `Chargeback for ${originalTx?.merchantRef || originalReference}`,
-      settledAt: new Date(),
-    },
-  })
-
-  logger.info("Chargeback processed", { pspReference, originalReference })
 }
 
 async function handleFailure(eventCode: string, notificationItem: any) {

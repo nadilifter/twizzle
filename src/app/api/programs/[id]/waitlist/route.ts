@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 // GET /api/programs/[id]/waitlist — list waitlisted enrollments
@@ -95,57 +96,67 @@ export async function POST(
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
     }
 
-    // Find the enrollment to promote
-    const enrollment = enrollmentId
-      ? await db.enrollment.findFirst({
-          where: { id: enrollmentId, programId, status: "WAITLISTED" },
-        })
-      : await db.enrollment.findFirst({
-          where: { programId, status: "WAITLISTED" },
-          orderBy: { createdAt: "asc" },
-        });
+    const result = await db.$transaction(async (tx) => {
+      // Lock the Program row to serialize concurrent promotions
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`
+      );
 
-    if (!enrollment) {
+      const enrollment = enrollmentId
+        ? await tx.enrollment.findFirst({
+            where: { id: enrollmentId, programId, status: "WAITLISTED" },
+          })
+        : await tx.enrollment.findFirst({
+            where: { programId, status: "WAITLISTED" },
+            orderBy: { createdAt: "asc" },
+          });
+
+      if (!enrollment) {
+        return null;
+      }
+
+      await tx.enrollment.update({
+        where: { id: enrollment.id },
+        data: { status: "ACTIVE" },
+      });
+
+      const instances = await tx.programInstance.findMany({
+        where: { programId, status: { not: "CANCELLED" } },
+        select: { id: true },
+      });
+
+      for (const inst of instances) {
+        await tx.instanceRegistration.upsert({
+          where: {
+            programInstanceId_athleteId: {
+              programInstanceId: inst.id,
+              athleteId: enrollment.athleteId,
+            },
+          },
+          update: { status: "REGISTERED" },
+          create: {
+            programInstanceId: inst.id,
+            athleteId: enrollment.athleteId,
+            userId: enrollment.userId || undefined,
+            status: "REGISTERED",
+          },
+        });
+      }
+
+      return { enrollmentId: enrollment.id, athleteId: enrollment.athleteId };
+    });
+
+    if (!result) {
       return NextResponse.json(
         { error: "No waitlisted enrollment found" },
         { status: 404 }
       );
     }
 
-    // Promote the enrollment
-    await db.enrollment.update({
-      where: { id: enrollment.id },
-      data: { status: "ACTIVE" },
-    });
-
-    // Create instance registrations for all non-cancelled instances
-    const instances = await db.programInstance.findMany({
-      where: { programId, status: { not: "CANCELLED" } },
-      select: { id: true },
-    });
-
-    for (const inst of instances) {
-      await db.instanceRegistration.upsert({
-        where: {
-          programInstanceId_athleteId: {
-            programInstanceId: inst.id,
-            athleteId: enrollment.athleteId,
-          },
-        },
-        update: { status: "REGISTERED" },
-        create: {
-          programInstanceId: inst.id,
-          athleteId: enrollment.athleteId,
-          userId: enrollment.userId || undefined,
-          status: "REGISTERED",
-        },
-      });
-    }
-
     return NextResponse.json({
       success: true,
-      enrollmentId: enrollment.id,
-      athleteId: enrollment.athleteId,
+      enrollmentId: result.enrollmentId,
+      athleteId: result.athleteId,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

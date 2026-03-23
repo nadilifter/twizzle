@@ -17,32 +17,34 @@ export async function enqueueSync(
     return;
   }
 
-  const existing = await db.accountingSyncQueue.findFirst({
-    where: {
-      connectionId: connection.id,
-      entityType,
-      uplifterEntityId,
-      status: "PENDING",
-    },
-    select: { id: true },
-  });
-
-  if (existing) {
-    await db.accountingSyncQueue.update({
-      where: { id: existing.id },
-      data: { action, createdAt: new Date() },
-    });
-  } else {
-    await db.accountingSyncQueue.create({
-      data: {
+  await db.$transaction(async (tx) => {
+    const existing = await tx.accountingSyncQueue.findFirst({
+      where: {
         connectionId: connection.id,
         entityType,
         uplifterEntityId,
-        action,
-        priority: getEntityPriority(entityType),
+        status: "PENDING",
       },
+      select: { id: true },
     });
-  }
+
+    if (existing) {
+      await tx.accountingSyncQueue.update({
+        where: { id: existing.id },
+        data: { action, createdAt: new Date() },
+      });
+    } else {
+      await tx.accountingSyncQueue.create({
+        data: {
+          connectionId: connection.id,
+          entityType,
+          uplifterEntityId,
+          action,
+          priority: getEntityPriority(entityType),
+        },
+      });
+    }
+  });
 }
 
 export async function enqueueFullSync(

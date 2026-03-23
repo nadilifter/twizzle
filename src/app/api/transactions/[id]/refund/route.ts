@@ -78,8 +78,10 @@ export async function POST(
     }
 
     // Validate refund amount and create a PENDING refund record atomically
-    // to prevent concurrent partial refunds from exceeding the original amount.
-    const { refundAmount, isFullRefund, refundRef } = await db.$transaction(async (tx) => {
+    // inside the same FOR UPDATE transaction. This prevents concurrent partial
+    // refunds from exceeding the original amount — the second request will see
+    // the PENDING record created by the first and adjust/reject accordingly.
+    const { refundAmount, isFullRefund, refundRef, pendingRefundId } = await db.$transaction(async (tx) => {
       await tx.$queryRaw(
         Prisma.sql`SELECT id FROM "Transaction" WHERE id = ${transaction.id} FOR UPDATE`
       )
@@ -111,31 +113,13 @@ export async function POST(
 
       const ref = `refund-${transaction.pspReference}-${Date.now()}`
 
-      return {
-        refundAmount: amount,
-        isFullRefund: amount >= originalAmount - totalRefunded,
-        refundRef: ref,
-      }
-    })
-
-    const response = await refundPayment(
-      transaction.pspReference,
-      {
-        value: Math.round(refundAmount * 100),
-        currency: transaction.currency,
-      },
-      merchantAccount,
-      refundRef
-    )
-
-    const refundTx = await db.$transaction(async (tx) => {
-      const created = await tx.transaction.create({
+      const pending = await tx.transaction.create({
         data: {
           organizationId: transaction.organizationId,
-          pspReference: response.pspReference,
+          pspReference: ref,
           merchantRef: transaction.merchantRef,
           type: "REFUND",
-          amount: -refundAmount,
+          amount: -amount,
           currency: transaction.currency,
           status: "PENDING",
           method: transaction.method,
@@ -147,9 +131,40 @@ export async function POST(
         },
       })
 
-      if (isFullRefund && transaction.paymentId) {
-        const payment = transaction.payment
-        if (payment?.invoiceId) {
+      return {
+        refundAmount: amount,
+        isFullRefund: amount >= originalAmount - totalRefunded,
+        refundRef: ref,
+        pendingRefundId: pending.id,
+      }
+    })
+
+    let response
+    try {
+      response = await refundPayment(
+        transaction.pspReference,
+        {
+          value: Math.round(refundAmount * 100),
+          currency: transaction.currency,
+        },
+        merchantAccount,
+        refundRef
+      )
+    } catch (adyenError) {
+      await db.transaction.delete({ where: { id: pendingRefundId } })
+      throw adyenError
+    }
+
+    const refundTx = await db.transaction.update({
+      where: { id: pendingRefundId },
+      data: { pspReference: response.pspReference },
+    })
+
+    if (isFullRefund && transaction.paymentId) {
+      const payment = transaction.payment
+      const invoiceId = payment?.invoiceId
+      if (payment && invoiceId) {
+        await db.$transaction(async (tx) => {
           await tx.payment.update({
             where: {
               id: payment.id,
@@ -159,16 +174,14 @@ export async function POST(
           })
           await tx.invoice.update({
             where: {
-              id: payment.invoiceId,
+              id: invoiceId,
               organizationId: session.user.organizationId,
             },
             data: { status: "CANCELLED" },
           })
-        }
+        })
       }
-
-      return created
-    })
+    }
 
     return NextResponse.json(refundTx)
   } catch (error: any) {

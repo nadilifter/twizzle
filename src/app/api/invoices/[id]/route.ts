@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const updateInvoiceSchema = z.object({
@@ -87,26 +88,22 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateInvoiceSchema.parse(body);
 
-    const existing = await db.invoice.findFirst({
-      where: {
-        id,
-        organizationId: session.user.organizationId,
-      },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
-    }
-
-    const oldStatus = existing.status;
     const newStatus = validatedData.status;
 
     const invoice = await db.$transaction(async (tx) => {
-      const verified = await tx.invoice.findFirst({
+      // Lock the invoice row and read its current status inside the
+      // transaction so balance adjustments use a consistent oldStatus.
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM "Invoice" WHERE id = ${id} AND "organizationId" = ${session.user.organizationId} FOR UPDATE`
+      );
+
+      const existing = await tx.invoice.findFirst({
         where: { id, organizationId: session.user.organizationId },
-        select: { id: true },
+        select: { id: true, status: true },
       });
-      if (!verified) throw new Error("Not found");
+      if (!existing) throw new Error("Not found");
+
+      const oldStatus = existing.status;
 
       const updated = await tx.invoice.update({
         where: { id },
@@ -146,12 +143,15 @@ export async function PATCH(
     });
 
     return NextResponse.json(invoice);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },
         { status: 400 }
       );
+    }
+    if (error?.message === "Not found") {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
     console.error("Error updating invoice:", error);
     return NextResponse.json(

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getXeroClient, type XeroApiClient } from "@/lib/xero";
+import { Prisma } from "@prisma/client";
 import type {
   AccountingConnection,
   AccountingAccountMapping,
@@ -18,22 +19,26 @@ export async function processXeroSyncQueue(): Promise<{
   succeeded: number;
   failed: number;
 }> {
-  const staleThreshold = new Date(Date.now() - STALE_PROCESSING_MINUTES * 60 * 1000);
-  await db.accountingSyncQueue.updateMany({
-    where: {
-      status: "PROCESSING",
-      OR: [
-        { lastAttemptAt: { lt: staleThreshold } },
-        { lastAttemptAt: null, createdAt: { lt: staleThreshold } },
-      ],
-    },
-    data: { status: "PENDING" },
-  });
-
   const connections = await db.accountingConnection.findMany({
     where: { provider: "XERO", isActive: true, setupComplete: true },
     include: { accountMappings: true },
   });
+
+  if (connections.length > 0) {
+    const connectionIds = connections.map((c) => c.id);
+    const staleThreshold = new Date(Date.now() - STALE_PROCESSING_MINUTES * 60 * 1000);
+    await db.accountingSyncQueue.updateMany({
+      where: {
+        connectionId: { in: connectionIds },
+        status: "PROCESSING",
+        OR: [
+          { lastAttemptAt: { lt: staleThreshold } },
+          { lastAttemptAt: null, createdAt: { lt: staleThreshold } },
+        ],
+      },
+      data: { status: "PENDING" },
+    });
+  }
 
   let processed = 0;
   let succeeded = 0;
@@ -63,15 +68,22 @@ async function processConnectionQueue(
     return { processed: 0, succeeded: 0, failed: 0 };
   }
 
-  const pendingItems = await db.accountingSyncQueue.findMany({
-    where: {
-      connectionId: connection.id,
-      status: "PENDING",
-      attempts: { lt: MAX_ATTEMPTS },
-    },
-    orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-    take: BATCH_SIZE,
-  });
+  // Atomically claim a batch of PENDING items using FOR UPDATE SKIP LOCKED
+  // so concurrent cron invocations never process the same item.
+  const pendingItems = await db.$queryRaw<AccountingSyncQueue[]>(Prisma.sql`
+    UPDATE "AccountingSyncQueue"
+    SET status = 'PROCESSING', "lastAttemptAt" = NOW()
+    WHERE id IN (
+      SELECT id FROM "AccountingSyncQueue"
+      WHERE "connectionId" = ${connection.id}
+        AND status = 'PENDING'
+        AND attempts < ${MAX_ATTEMPTS}
+      ORDER BY priority ASC, "createdAt" ASC
+      LIMIT ${BATCH_SIZE}
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING *
+  `);
 
   let succeeded = 0;
   let failed = 0;
@@ -79,11 +91,6 @@ async function processConnectionQueue(
   for (const item of pendingItems) {
     const startTime = Date.now();
     try {
-      await db.accountingSyncQueue.update({
-        where: { id: item.id },
-        data: { status: "PROCESSING", lastAttemptAt: new Date() },
-      });
-
       const externalEntityId = await syncEntity(client, connection, item);
 
       await db.accountingSyncQueue.update({

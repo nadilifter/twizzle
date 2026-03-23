@@ -187,20 +187,26 @@ export async function processOrganizationNotifications(
 
       // Process each entity
       for (const entity of entities) {
-        // Check deduplication
-        const alreadySent = await hasAlreadySentNotification(
+        if (!entity.userId) {
+          result.notificationsSkipped++;
+          continue;
+        }
+
+        // Atomically claim the dedup slot BEFORE sending. If another
+        // concurrent cron run already inserted this row, the INSERT
+        // returns 0 rows and we skip — no duplicate notification.
+        const claimed = await claimNotificationSlot(
           rule.id,
           entity.entityType,
           entity.entityId,
           entity.userId
         );
 
-        if (alreadySent) {
+        if (!claimed) {
           result.notificationsSkipped++;
           continue;
         }
 
-        // Execute the notification
         try {
           const execResult = await executeNotification({
             ruleId: rule.id,
@@ -216,14 +222,6 @@ export async function processOrganizationNotifications(
             result.notificationsSent += execResult.sentCount;
             result.notificationsSkipped += execResult.skippedCount;
             result.notificationsFailed += execResult.failedCount;
-
-            // Record deduplication
-            await recordNotificationSent(
-              rule.id,
-              entity.entityType,
-              entity.entityId,
-              entity.userId
-            );
           } else {
             result.notificationsFailed++;
             result.errors.push(...execResult.errors);
@@ -778,60 +776,22 @@ async function findRecentSkillAchievements(
 // ============================================
 
 /**
- * Check if we've already sent this notification using userId for dedup key.
+ * Atomically claim a dedup slot via createMany + skipDuplicates.
+ * Returns true if the insert succeeded (we own this notification),
+ * false if the row already existed (another process already sent it).
  */
-async function hasAlreadySentNotification(
+async function claimNotificationSlot(
   ruleId: string,
   entityType: string,
   entityId: string,
-  userId?: string
+  userId: string
 ): Promise<boolean> {
-  if (!userId) return false;
-
-  const existing = await db.notificationDeduplication.findUnique({
-    where: {
-      ruleId_entityType_entityId_userId: {
-        ruleId,
-        entityType,
-        entityId,
-        userId,
-      },
-    },
+  const result = await db.notificationDeduplication.createMany({
+    data: [{ ruleId, entityType, entityId, userId }],
+    skipDuplicates: true,
   });
 
-  return !!existing;
-}
-
-/**
- * Record that we've sent a notification using userId for dedup key.
- */
-async function recordNotificationSent(
-  ruleId: string,
-  entityType: string,
-  entityId: string,
-  userId?: string
-): Promise<void> {
-  if (!userId) return;
-
-  await db.notificationDeduplication.upsert({
-    where: {
-      ruleId_entityType_entityId_userId: {
-        ruleId,
-        entityType,
-        entityId,
-        userId,
-      },
-    },
-    update: {
-      sentAt: new Date(),
-    },
-    create: {
-      ruleId,
-      entityType,
-      entityId,
-      userId,
-    },
-  });
+  return result.count > 0;
 }
 
 /**

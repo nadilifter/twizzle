@@ -145,21 +145,17 @@ export async function processInvoiceRegistrations(
           },
         });
       } else if (programId) {
-        const existing = await tx.enrollment.findFirst({
-          where: { programId, athleteId, status: { in: ["ACTIVE", "WAITLISTED", "PAUSED"] } },
-          select: { id: true },
+        await tx.enrollment.upsert({
+          where: { programId_athleteId: { programId, athleteId } },
+          update: {},
+          create: {
+            programId,
+            athleteId,
+            userId: userId || undefined,
+            startDate: new Date(),
+            status: isWaitlist ? "WAITLISTED" : "ACTIVE",
+          },
         });
-        if (!existing) {
-          await tx.enrollment.create({
-            data: {
-              programId,
-              athleteId,
-              userId: userId || undefined,
-              startDate: new Date(),
-              status: isWaitlist ? "WAITLISTED" : "ACTIVE",
-            },
-          });
-        }
 
         if (!isWaitlist) {
           const instances = await tx.programInstance.findMany({
@@ -191,17 +187,23 @@ export async function processInvoiceRegistrations(
     for (const purchase of metadata.membershipPurchases) {
       if (!purchase.membershipInstanceId || !purchase.athleteId) continue;
 
-      const existing = await tx.athleteMembership.findFirst({
+      const existing = await tx.athleteMembership.findUnique({
         where: {
-          athleteId: purchase.athleteId,
-          membershipInstanceId: purchase.membershipInstanceId,
-          status: "ACTIVE",
+          athleteId_membershipInstanceId: {
+            athleteId: purchase.athleteId,
+            membershipInstanceId: purchase.membershipInstanceId,
+          },
         },
         select: { id: true },
       });
 
       if (!existing) {
-        // Re-check capacity before creating membership
+        // Lock the MembershipInstance row before checking capacity to
+        // prevent concurrent transactions from exceeding the limit.
+        await tx.$queryRaw(
+          Prisma.sql`SELECT id FROM "MembershipInstance" WHERE id = ${purchase.membershipInstanceId} FOR UPDATE`
+        );
+
         const instance = await tx.membershipInstance.findUnique({
           where: { id: purchase.membershipInstanceId },
           select: {
