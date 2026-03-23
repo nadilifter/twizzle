@@ -159,6 +159,9 @@ export interface CreateMembershipGroupPayload {
   allowedGenders?: GenderDeclaration[];
   minAge?: number | null;
   maxAge?: number | null;
+
+  // GL Code
+  glCodeId?: string | null;
 }
 
 export interface UpdateMembershipGroupPayload extends Partial<CreateMembershipGroupPayload> {}

@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Settings, Eye, RefreshCw, Shield, Users, Clock, Calendar as CalendarIcon } from "lucide-react"
+import Link from "next/link"
+import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Settings, Eye, Shield, Clock, Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -16,14 +17,6 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Sheet,
   SheetContent,
@@ -41,7 +34,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -57,43 +49,14 @@ import { useMembershipGroup } from "@/hooks/use-membership-group"
 import { useFeatures } from "@/components/feature-context"
 import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import { toast } from "sonner"
-import { GLCodeSelector } from "@/components/gl-code-selector"
-import type { MembershipGroup, MembershipInstance, BillingInterval, MembershipInstanceStatus } from "@/types/memberships"
+import type { BillingInterval, MembershipInstanceStatus } from "@/types/memberships"
 
 export default function MembershipsPage() {
-  const { memberships, isLoading, error, createMembershipGroup, deleteMembershipGroup } = useMemberships()
+  const { memberships, isLoading, error, deleteMembershipGroup } = useMemberships()
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
   
-  const [isCreateGroupOpen, setIsCreateGroupOpen] = React.useState(false)
   const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null)
-
-  // Create group form state
-  const [newGroupRecurring, setNewGroupRecurring] = React.useState(false)
-  const [newGroupGlCodeId, setNewGroupGlCodeId] = React.useState<string | null>(null)
-
-  const handleCreateGroup = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    
-    const result = await createMembershipGroup({
-      name: formData.get("name") as string,
-      description: formData.get("description") as string || undefined,
-      isRecurring: newGroupRecurring,
-      allowAutoRenew: formData.get("allowAutoRenew") === "on",
-      defaultPrice: formData.get("defaultPrice") ? parseFloat(formData.get("defaultPrice") as string) : undefined,
-      defaultBillingInterval: (formData.get("defaultBillingInterval") as BillingInterval) || (newGroupRecurring ? "YEARLY" : "ONE_TIME"),
-      programTypes: (formData.get("programTypes") as string || "").split(",").map(s => s.trim()).filter(Boolean),
-      glCodeId: newGroupGlCodeId,
-    } as any)
-
-    if (result) {
-      toast.success("Membership Group created")
-      setIsCreateGroupOpen(false)
-      setNewGroupRecurring(false)
-      setNewGroupGlCodeId(null)
-    }
-  }
 
   const handleDeleteGroup = async (id: string) => {
     if (confirm("Are you sure? This will delete all instances within this group.")) {
@@ -110,9 +73,11 @@ export default function MembershipsPage() {
         title="Memberships"
         description="Manage membership groups, instances, and restrictions."
         actions={
-          <Button onClick={() => setIsCreateGroupOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Membership Group
+          <Button asChild>
+            <Link href="/dashboard/athletes/memberships/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Membership Group
+            </Link>
           </Button>
         }
       />
@@ -209,71 +174,6 @@ export default function MembershipsPage() {
           )}
         </div>
       )}
-
-      {/* Create Group Dialog */}
-      <Dialog open={isCreateGroupOpen} onOpenChange={(open) => { setIsCreateGroupOpen(open); if (!open) setNewGroupRecurring(false); }}>
-        <DialogContent className="sm:max-w-[480px]">
-          <form onSubmit={handleCreateGroup}>
-            <DialogHeader>
-              <DialogTitle>Create Membership Group</DialogTitle>
-              <DialogDescription>
-                Define a membership type. Restrictions can be configured after creation.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Group Name</Label>
-                <Input id="name" name="name" placeholder="e.g. Annual Membership" required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" placeholder="Description of this membership type..." />
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="isRecurring" checked={newGroupRecurring} onCheckedChange={setNewGroupRecurring} />
-                <Label htmlFor="isRecurring">Recurring membership (generates periodic instances)</Label>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="defaultPrice">Default Price ($)</Label>
-                  <Input id="defaultPrice" name="defaultPrice" type="number" min="0" step="0.01" placeholder="0.00" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="defaultBillingInterval">Billing Interval</Label>
-                  <Select name="defaultBillingInterval" defaultValue={newGroupRecurring ? "YEARLY" : "ONE_TIME"}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {!newGroupRecurring && <SelectItem value="ONE_TIME">One-time</SelectItem>}
-                      <SelectItem value="YEARLY">Yearly</SelectItem>
-                      <SelectItem value="MONTHLY">Monthly</SelectItem>
-                      <SelectItem value="SESSION">Per Session</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="programTypes">Program Types (comma separated)</Label>
-                <Input id="programTypes" name="programTypes" placeholder="e.g. Recreational, Competitive" />
-              </div>
-              {newGroupRecurring && (
-                <div className="flex items-center gap-2">
-                  <Switch id="allowAutoRenew" name="allowAutoRenew" />
-                  <Label htmlFor="allowAutoRenew">Allow Auto-Renewal</Label>
-                </div>
-              )}
-              <GLCodeSelector
-                value={newGroupGlCodeId}
-                onChange={setNewGroupGlCodeId}
-                entityType="MEMBERSHIP"
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateGroupOpen(false)}>Cancel</Button>
-              <Button type="submit">Create Group</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Manage Group Sheet */}
       <Sheet open={!!selectedGroupId} onOpenChange={(open) => !open && setSelectedGroupId(null)}>

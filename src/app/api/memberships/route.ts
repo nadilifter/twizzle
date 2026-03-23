@@ -150,6 +150,13 @@ export async function POST(request: NextRequest) {
     const validatedData = createMembershipGroupSchema.parse(body);
     const scopedDb = getScopedDb(session.user.organizationId);
 
+    if (validatedData.glCodeId) {
+      const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
+      if (!glCode) {
+        return NextResponse.json({ error: "GL code not found" }, { status: 404 });
+      }
+    }
+
     // Check membership types limit
     const organization = await db.organization.findUnique({
       where: { id: session.user.organizationId! },
@@ -196,6 +203,7 @@ export async function POST(request: NextRequest) {
           allowedGenders: validatedData.allowedGenders,
           minAge: validatedData.minAge ?? null,
           maxAge: validatedData.maxAge ?? null,
+          glCodeId: validatedData.glCodeId ?? null,
         },
       });
 
