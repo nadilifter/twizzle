@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import Link from "next/link"
-import { CheckCircle2, ExternalLink, ArrowRight, Settings, Users, Calendar, Globe } from "lucide-react"
+import { CheckCircle2, ExternalLink, ArrowRight, ChevronRight, Settings, Users, Calendar, Globe, CreditCard } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -30,21 +30,31 @@ function SuccessContent() {
       icon: Settings,
       title: "Configure your organization",
       description: "Add your logo, set up programs, and customize your settings",
+      url: `${adminUrl}/organization/overview`,
     },
     {
       icon: Users,
       title: "Invite team members",
       description: "Add coaches, staff, and other administrators",
+      url: `${adminUrl}/organization/users`,
     },
     {
       icon: Calendar,
       title: "Create events and programs",
       description: "Set up your schedule and registration options",
+      url: `${adminUrl}/events`,
     },
     {
       icon: Globe,
       title: "Customize your website",
       description: "Update your public site with content and branding",
+      url: `${adminUrl}/organization/website`,
+    },
+    {
+      icon: CreditCard,
+      title: "Set up payments",
+      description: "Complete Adyen verification to accept payments and receive payouts",
+      url: `${adminUrl}/financials/onboarding`,
     },
   ]
 
@@ -108,16 +118,22 @@ function SuccessContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-4">
+          <ul className="space-y-2">
             {nextSteps.map((step, index) => (
-              <li key={index} className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <step.icon className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">{step.title}</p>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
-                </div>
+              <li key={index}>
+                <a
+                  href={step.url}
+                  className="flex items-center gap-3 rounded-lg p-3 -mx-3 transition-colors hover:bg-muted/50 group"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <step.icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium group-hover:underline">{step.title}</p>
+                    <p className="text-sm text-muted-foreground">{step.description}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+                </a>
               </li>
             ))}
           </ul>

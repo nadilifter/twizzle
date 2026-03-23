@@ -49,6 +49,45 @@ type NavSecondaryItem = { title: string; url: string; icon: LucideIcon; external
 
 // Module-level cache survives component remounts during client-side navigation
 let navSecondaryCache: { key: string; items: NavSecondaryItem[] } | null = null
+let actionItemsCache: { count: number; fetchedAt: number } | null = null
+
+const ACTION_ITEMS_URL = "/dashboard/action-items"
+const ACTION_ITEMS_CACHE_MS = 60_000
+
+function ActionItemsBadge() {
+  const [incompleteCount, setIncompleteCount] = React.useState(() =>
+    actionItemsCache && Date.now() - actionItemsCache.fetchedAt < ACTION_ITEMS_CACHE_MS
+      ? actionItemsCache.count
+      : 0
+  )
+
+  React.useEffect(() => {
+    if (actionItemsCache && Date.now() - actionItemsCache.fetchedAt < ACTION_ITEMS_CACHE_MS) {
+      setIncompleteCount(actionItemsCache.count)
+      return
+    }
+
+    let cancelled = false
+    fetch("/api/onboarding/action-items")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (cancelled || !data) return
+        const count = data.totalCount - data.completedCount
+        actionItemsCache = { count, fetchedAt: Date.now() }
+        setIncompleteCount(count)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  if (incompleteCount <= 0) return null
+
+  return (
+    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-destructive-foreground">
+      {incompleteCount}
+    </span>
+  )
+}
 
 // Helper to construct subdomain URLs for the access point system
 function getAccessPointUrl(subdomain: string, organizationId?: string): string {
@@ -127,6 +166,10 @@ const data = {
       title: "Dashboard",
       url: "/dashboard",
       items: [
+        {
+          title: "Action Items",
+          url: "/dashboard/action-items",
+        },
         {
           title: "Dashboard",
           url: "/dashboard",
@@ -625,7 +668,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                               <Link href={subItem.url} className="flex items-center justify-between w-full">
                                 <span>{subItem.title}</span>
-                                <FeatureStatusIndicator url={subItem.url} />
+                                {subItem.url === ACTION_ITEMS_URL ? (
+                                  <ActionItemsBadge />
+                                ) : (
+                                  <FeatureStatusIndicator url={subItem.url} />
+                                )}
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
