@@ -2557,6 +2557,7 @@ model StockMovement {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([referenceId, type])
 }
 
 enum StockMovementType {
@@ -2586,6 +2587,8 @@ model Order {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
+  @@index([organizationId, fulfillmentStatus, createdAt])
+  @@index([organizationId, source])
 }
 
 enum OrderSource {

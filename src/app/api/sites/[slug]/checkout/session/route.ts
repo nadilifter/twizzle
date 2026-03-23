@@ -1328,32 +1328,40 @@ export async function POST(
 
       await processInvoiceRegistrations(invoiceMetadata, items, authUserId, organizationId);
 
-      // Decrement inventory for store products
-      for (const item of productItems) {
-        const product = await db.product.findUnique({
-          where: { id: item.referenceId },
-          select: { id: true, currentInventory: true },
+      // Decrement inventory for store products (atomic with row-level locking)
+      if (productItems.length > 0) {
+        const productIds = productItems.map((i: CartItem) => i.referenceId);
+        await db.$transaction(async (tx) => {
+          await tx.$queryRaw(
+            Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(productIds)}) FOR UPDATE`
+          );
+          for (const item of productItems) {
+            const product = await tx.product.findUnique({
+              where: { id: item.referenceId },
+              select: { id: true, currentInventory: true },
+            });
+            if (product && product.currentInventory !== null) {
+              const previousQty = product.currentInventory;
+              const newQty = Math.max(previousQty - item.quantity, 0);
+              await tx.product.update({
+                where: { id: product.id },
+                data: { currentInventory: newQty },
+              });
+              await tx.stockMovement.create({
+                data: {
+                  productId: product.id,
+                  type: "SALE",
+                  quantity: -item.quantity,
+                  previousQty,
+                  newQty,
+                  referenceId: invoice.id,
+                  notes: `Online Sale: ${invoice.reference}`,
+                  createdBy: authUserId || undefined,
+                },
+              });
+            }
+          }
         });
-        if (product && product.currentInventory !== null) {
-          const previousQty = product.currentInventory;
-          const newQty = previousQty - item.quantity;
-          await db.product.update({
-            where: { id: product.id },
-            data: { currentInventory: newQty },
-          });
-          await db.stockMovement.create({
-            data: {
-              productId: product.id,
-              type: "SALE",
-              quantity: -item.quantity,
-              previousQty,
-              newQty,
-              referenceId: invoice.id,
-              notes: `Online Sale: ${invoice.reference}`,
-              createdBy: authUserId || undefined,
-            },
-          });
-        }
       }
 
       // Send receipt email (fire-and-forget so it doesn't block the response)

@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
 
     if (eventCode === "AUTHORISATION" && success !== "true" && success !== true) {
       logger.info("Adyen webhook: payment authorisation failed", { merchantReference, pspReference })
+      await handleFailedAuthorisation(merchantReference)
     }
 
     if (eventCode === "CAPTURE" && (success === "true" || success === true)) {
@@ -212,28 +213,34 @@ async function handleAuthorisation(
     }
   }
 
-  // Process inventory for store product line items (idempotent via StockMovement check)
+  // Process inventory for store product line items (atomic with row-level locking)
   const productLineItems = invoice.lineItems.filter((li) => li.productId)
   if (productLineItems.length > 0) {
     try {
-      const existingMovement = await db.stockMovement.findFirst({
-        where: { referenceId: invoice.id, type: "SALE" },
-        select: { id: true },
-      })
-      if (!existingMovement) {
+      const productIds = productLineItems.map((li) => li.productId!)
+      await db.$transaction(async (tx) => {
+        const existingMovement = await tx.stockMovement.findFirst({
+          where: { referenceId: invoice.id, type: "SALE" },
+          select: { id: true },
+        })
+        if (existingMovement) return
+
+        await tx.$queryRaw(
+          Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(productIds)}) FOR UPDATE`
+        )
         for (const li of productLineItems) {
-          const product = await db.product.findUnique({
+          const product = await tx.product.findUnique({
             where: { id: li.productId! },
             select: { id: true, currentInventory: true },
           })
           if (product && product.currentInventory !== null) {
             const previousQty = product.currentInventory
-            const newQty = previousQty - li.quantity
-            await db.product.update({
+            const newQty = Math.max(previousQty - li.quantity, 0)
+            await tx.product.update({
               where: { id: product.id },
               data: { currentInventory: newQty },
             })
-            await db.stockMovement.create({
+            await tx.stockMovement.create({
               data: {
                 productId: product.id,
                 type: "SALE",
@@ -247,7 +254,7 @@ async function handleAuthorisation(
             })
           }
         }
-      }
+      })
     } catch (err) {
       console.error(`Failed to process inventory for invoice ${invoice.id}:`, err)
     }
@@ -294,6 +301,32 @@ async function handleAuthorisation(
   }
 
   logger.info("Payment processed for invoice", { invoiceId, pspReference })
+}
+
+async function handleFailedAuthorisation(invoiceId: string) {
+  if (!invoiceId) return
+
+  try {
+    await db.$transaction(async (tx) => {
+      const inv = await tx.invoice.findUnique({
+        where: { id: invoiceId },
+        select: { id: true, status: true },
+      })
+      if (!inv || inv.status !== "DRAFT") return
+
+      await tx.invoice.update({
+        where: { id: inv.id },
+        data: { status: "CANCELLED" },
+      })
+      await tx.order.updateMany({
+        where: { invoiceId: inv.id, fulfillmentStatus: "PENDING" },
+        data: { fulfillmentStatus: "CANCELLED" },
+      })
+    })
+    logger.info("Cancelled DRAFT invoice and PENDING order after failed auth", { invoiceId })
+  } catch (err) {
+    console.error(`Failed to cancel invoice/order after failed auth: ${invoiceId}`, err)
+  }
 }
 
 async function handleCapture(pspReference: string) {
