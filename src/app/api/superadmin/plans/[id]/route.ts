@@ -12,6 +12,7 @@ const featureTogglesSchema = z.object({
   accountingIntegrations: z.boolean(),
   training: z.boolean(),
   store: z.boolean(),
+  liveSupport: z.boolean(),
 }).optional()
 
 const updatePlanSchema = z.object({

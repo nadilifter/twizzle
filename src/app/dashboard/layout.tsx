@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { DemoDataBanner } from "@/components/demo-data-banner"
 import { FeatureProvider } from "@/components/feature-context"
+import { ZendeskWidget } from "@/components/zendesk-widget"
 import { BreadcrumbOverrideProvider } from "@/components/breadcrumb-context"
 import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
@@ -45,6 +46,7 @@ export default async function DashboardLayout({
             <DemoDataBanner />
           </SidebarInset>
         </SidebarProvider>
+        <ZendeskWidget />
       </BreadcrumbOverrideProvider>
     </FeatureProvider>
   )

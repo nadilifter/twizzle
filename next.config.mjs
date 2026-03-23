@@ -62,7 +62,7 @@ const getFormActionCsp = () => {
 };
 
 const getConnectSrcCsp = () => {
-  const base = "'self' https://*.adyen.com https://*.upstash.io wss: https://google.com https://pay.google.com";
+  const base = "'self' https://*.adyen.com https://*.upstash.io wss: https://google.com https://pay.google.com https://*.zendesk.com https://*.zopim.com";
   
   // Add CDN domain if configured
   const cdnSrc = envConfig.cdnDomain ? ` https://${envConfig.cdnDomain}` : '';
@@ -212,12 +212,12 @@ const nextConfig = {
         key: "Content-Security-Policy",
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pay.google.com https://*.adyen.com",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pay.google.com https://*.adyen.com https://static.zdassets.com https://*.zendesk.com https://*.zopim.com",
           "style-src 'self' 'unsafe-inline'",
           getImgSrcCsp(),
           "font-src 'self' data:",
           getConnectSrcCsp(),
-          "frame-src 'self' https://*.adyen.com https://pay.google.com",
+          "frame-src 'self' https://*.adyen.com https://pay.google.com https://*.zendesk.com",
           "frame-ancestors 'none'",
           getFormActionCsp(),
           "base-uri 'self'",

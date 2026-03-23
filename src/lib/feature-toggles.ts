@@ -18,6 +18,7 @@ export const FEATURE_KEYS = [
   "memberships",
   "waitlists",
   "passes",
+  "liveSupport",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -36,6 +37,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   memberships: false,
   waitlists: false,
   passes: false,
+  liveSupport: false,
 };
 
 /** Human-readable labels for each feature */
@@ -51,6 +53,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   memberships: "Memberships",
   waitlists: "Waitlists",
   passes: "Passes",
+  liveSupport: "Live Support",
 };
 
 /** Descriptions shown to admins */
@@ -66,6 +69,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   memberships: "Membership management, restrictions, and storefront purchasing",
   waitlists: "Program and session waitlist management with automatic promotion",
   passes: "Allow athletes to purchase passes for program access with session credits",
+  liveSupport: "Live chat support from Uplifter via Zendesk",
 };
 
 /**
@@ -149,6 +153,7 @@ export const FEATURE_SIDEBAR_MAP: Record<
       },
     ],
   },
+  liveSupport: {},
 };
 
 /**
@@ -172,6 +177,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   memberships: ["/api/memberships", "/api/public/memberships"],
   waitlists: [],
   passes: ["/api/passes", "/api/public/passes"],
+  liveSupport: [],
 };
 
 /**
