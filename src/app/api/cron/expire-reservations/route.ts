@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-
-// This endpoint is called by a cron job (e.g., Vercel Cron) every minute
-// to expire old reservations and admit the next users in queue
+import { admitNextInQueue } from "@/lib/queue-utils"
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -28,7 +26,7 @@ export async function GET(request: NextRequest) {
     let expiredCount = 0
     let admittedCount = 0
 
-    // Find all expired reservations
+    // Batch-fetch all expired reservations with their config
     const expiredReservations = await db.queueReservation.findMany({
       where: {
         status: "ACTIVE",
@@ -36,98 +34,52 @@ export async function GET(request: NextRequest) {
       },
       include: {
         queueEntry: {
-          include: {
-            queueConfig: true,
-          },
+          select: { id: true, queueConfigId: true },
         },
       },
     })
 
-    // Process each expired reservation
-    for (const reservation of expiredReservations) {
+    // Group by queueConfigId to minimize lock contention
+    const byConfig = new Map<string, typeof expiredReservations>()
+    for (const res of expiredReservations) {
+      const configId = res.queueEntry.queueConfigId
+      if (!byConfig.has(configId)) byConfig.set(configId, [])
+      byConfig.get(configId)!.push(res)
+    }
+
+    for (const [queueConfigId, reservations] of byConfig) {
       await db.$transaction(async (tx) => {
-        // Mark reservation as expired
-        await tx.queueReservation.update({
-          where: { id: reservation.id },
+        // Expire all reservations for this config in one batch
+        const reservationIds = reservations.map((r) => r.id)
+        const entryIds = reservations.map((r) => r.queueEntryId)
+
+        await tx.queueReservation.updateMany({
+          where: { id: { in: reservationIds } },
           data: { status: "EXPIRED" },
         })
 
-        // Update queue entry status
-        await tx.queueEntry.update({
-          where: { id: reservation.queueEntryId },
+        await tx.queueEntry.updateMany({
+          where: { id: { in: entryIds } },
           data: {
             status: "EXPIRED",
             exitedAt: now,
           },
         })
 
-        expiredCount++
+        expiredCount += reservations.length
 
-        // Admit the next person in queue
-        const queueConfigId = reservation.queueEntry.queueConfigId
-        const config = reservation.queueEntry.queueConfig
-
-        if (config) {
-          // Count current active reservations for this config
-          const activeCount = await tx.queueReservation.count({
-            where: {
-              status: "ACTIVE",
-              expiresAt: { gt: now },
-              queueEntry: {
-                queueConfigId: queueConfigId,
-              },
-            },
-          })
-
-          // If there's room, admit the next waiting user
-          if (activeCount < config.maxConcurrent) {
-            const nextEntry = await tx.queueEntry.findFirst({
-              where: {
-                queueConfigId: queueConfigId,
-                status: "WAITING",
-              },
-              orderBy: { enteredAt: "asc" },
-            })
-
-            if (nextEntry) {
-              await tx.queueEntry.update({
-                where: { id: nextEntry.id },
-                data: {
-                  status: "ADMITTED",
-                  admittedAt: now,
-                },
-              })
-
-              await tx.queueReservation.create({
-                data: {
-                  queueEntryId: nextEntry.id,
-                  programId: config.programId || "",
-                  expiresAt: new Date(now.getTime() + config.reservationMinutes * 60 * 1000),
-                },
-              })
-
-              // Update positions for remaining waiting entries
-              await tx.queueEntry.updateMany({
-                where: {
-                  queueConfigId: queueConfigId,
-                  status: "WAITING",
-                  enteredAt: { gt: nextEntry.enteredAt },
-                },
-                data: {
-                  position: { decrement: 1 },
-                },
-              })
-
-              admittedCount++
-            }
-          }
+        // Admit waiting users to fill all freed slots
+        for (let i = 0; i < reservations.length; i++) {
+          const admitted = await admitNextInQueue(tx, queueConfigId)
+          if (!admitted) break
+          admittedCount++
         }
       })
     }
 
-    // Also clean up old abandoned/completed entries (older than 24 hours)
+    // Clean up old terminal entries (older than 24 hours)
     const cleanupThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-    
+
     const cleanedUp = await db.queueEntry.deleteMany({
       where: {
         status: { in: ["COMPLETED", "EXPIRED", "ABANDONED"] },
@@ -151,7 +103,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Also support POST for flexibility
 export async function POST(request: NextRequest) {
   return GET(request)
 }

@@ -131,11 +131,12 @@ export async function POST(
 
     const organizationId = config.organizationId;
 
+    // Resolve auth session once (avoids repeated DB lookups across validation steps)
+    const authUserId = (await getAuthSession())?.user?.id || null;
+
     // 2. Server-side waiver verification (per-athlete)
-    // Each athlete in the cart needs waivers signed specifically for them
     const programItems = items.filter((item: CartItem) => item.type === "program");
     if (programItems.length > 0) {
-      // Build a map of programId -> required waiver IDs
       const programIds = programItems
         .map((item: CartItem) => item.details?.programId || item.referenceId)
         .filter(Boolean);
@@ -148,7 +149,6 @@ export async function POST(
         select: { waiverId: true, programId: true },
       });
 
-      // Map each program to its required waiver IDs
       const programWaiverMap: Record<string, string[]> = {};
       waiverRequirements.forEach((r) => {
         if (!programWaiverMap[r.programId]) programWaiverMap[r.programId] = [];
@@ -157,62 +157,86 @@ export async function POST(
         }
       });
 
-      const authSession = await getAuthSession();
-      const checkUserId = authSession?.user?.id || null;
+      // Batch waiver acceptance check: single query instead of one per cart item
+      const allRequiredWaiverIds = [...new Set(
+        programItems.flatMap((item: CartItem) => {
+          const pId = item.details?.programId || item.referenceId;
+          return programWaiverMap[pId] || [];
+        })
+      )];
 
-      for (const item of programItems) {
-        const pId = item.details?.programId || item.referenceId;
-        const athleteId = item.athleteId || item.details?.athleteId;
-        const requiredWaiverIds = programWaiverMap[pId] || [];
-
-        if (requiredWaiverIds.length === 0) continue;
-
-        if (!checkUserId) {
+      if (allRequiredWaiverIds.length > 0) {
+        if (!authUserId) {
+          const firstItem = programItems.find((item: CartItem) => {
+            const pId = item.details?.programId || item.referenceId;
+            return (programWaiverMap[pId] || []).length > 0;
+          });
           return NextResponse.json(
-            { error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.` },
+            { error: `Required waivers have not been signed for athlete ${firstItem?.athleteName || firstItem?.athleteId || firstItem?.details?.athleteId}. Please sign all waivers before proceeding to payment.` },
             { status: 400 }
           );
         }
 
-        const acceptances = await db.waiverAcceptance.findMany({
+        const allProgramAcceptances = await db.waiverAcceptance.findMany({
           where: {
-            userId: checkUserId,
-            waiverId: { in: requiredWaiverIds },
-            athleteId: athleteId || null,
+            userId: authUserId,
+            waiverId: { in: allRequiredWaiverIds },
           },
-          select: { waiverId: true },
+          select: { waiverId: true, athleteId: true },
         });
 
-        const signedIds = new Set(acceptances.map((a) => a.waiverId));
-        const unsignedWaivers = requiredWaiverIds.filter((id) => !signedIds.has(id));
+        // Index acceptances by athleteId for O(1) per-item lookup
+        const acceptanceIndex = new Map<string, Set<string>>();
+        for (const a of allProgramAcceptances) {
+          const key = a.athleteId ?? "__null__";
+          if (!acceptanceIndex.has(key)) acceptanceIndex.set(key, new Set());
+          acceptanceIndex.get(key)!.add(a.waiverId);
+        }
 
-        if (unsignedWaivers.length > 0) {
-          return NextResponse.json(
-            { error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.` },
-            { status: 400 }
-          );
+        for (const item of programItems) {
+          const pId = item.details?.programId || item.referenceId;
+          const athleteId = item.athleteId || item.details?.athleteId;
+          const requiredWaiverIds = programWaiverMap[pId] || [];
+          if (requiredWaiverIds.length === 0) continue;
+
+          const key = athleteId ?? "__null__";
+          const signedIds = acceptanceIndex.get(key) || new Set();
+          const unsignedWaivers = requiredWaiverIds.filter((id: string) => !signedIds.has(id));
+
+          if (unsignedWaivers.length > 0) {
+            return NextResponse.json(
+              { error: `Required waivers have not been signed for athlete ${item.athleteName || athleteId}. Please sign all waivers before proceeding to payment.` },
+              { status: 400 }
+            );
+          }
         }
       }
     }
 
-    // 2b. Server-side medical info verification
-    // Check that all athletes in programs requiring medical info have completed it
+    // 2b. Server-side program requirement checks (medical, files, memberships)
+    // Runs all three program requirement queries in parallel to minimize latency.
     if (programItems.length > 0) {
       const programIds = programItems
         .map((item: CartItem) => item.details?.programId || item.referenceId)
         .filter(Boolean);
 
-      const programsWithMedical = await db.program.findMany({
-        where: {
-          id: { in: programIds },
-          organizationId,
-          hasMedicalRequirement: true,
-        },
-        select: { id: true },
-      });
+      const [programsWithMedical, programsWithFiles, programsWithMembership] = await Promise.all([
+        db.program.findMany({
+          where: { id: { in: programIds }, organizationId, hasMedicalRequirement: true },
+          select: { id: true },
+        }),
+        db.program.findMany({
+          where: { id: { in: programIds }, organizationId, hasFileRequirement: true },
+          select: { id: true },
+        }),
+        db.program.findMany({
+          where: { id: { in: programIds }, organizationId, hasMembershipRestriction: true },
+          select: { id: true, name: true, requiredMemberships: { select: { id: true } } },
+        }),
+      ]);
 
+      // Medical info check (already batched)
       if (programsWithMedical.length > 0) {
-        // Collect unique athlete IDs from program items whose programs require medical
         const medicalProgramIds = new Set(programsWithMedical.map((p) => p.id));
         const athleteIds = [...new Set(
           programItems
@@ -225,11 +249,8 @@ export async function POST(
         )];
 
         if (athleteIds.length > 0) {
-          // Check that each athlete has medical info
           const medicalInfoRecords = await db.athleteMedicalInfo.findMany({
-            where: {
-              athleteId: { in: athleteIds },
-            },
+            where: { athleteId: { in: athleteIds } },
             select: { athleteId: true },
           });
 
@@ -245,29 +266,34 @@ export async function POST(
         }
       }
 
-      // File requirement validation for programs
-      const programsWithFiles = await db.program.findMany({
-        where: {
-          id: { in: programIds },
-          organizationId,
-          hasFileRequirement: true,
-        },
-        select: { id: true },
-      });
-
+      // File requirement check — single batch query instead of per-item
       if (programsWithFiles.length > 0) {
         const fileProgramIds = new Set(programsWithFiles.map((p) => p.id));
-        for (const item of programItems) {
-          const pid = item.details?.programId || item.referenceId;
-          const athleteId = item.athleteId || item.details?.athleteId;
-          if (pid && fileProgramIds.has(pid) && athleteId) {
-            const regFile = await db.registrationFile.findFirst({
-              where: { athleteId, programId: pid },
-              select: { id: true },
-            });
-            if (!regFile) {
+        const fileCheckPairs = programItems
+          .map((item: CartItem) => ({
+            programId: item.details?.programId || item.referenceId,
+            athleteId: item.athleteId || item.details?.athleteId,
+            athleteName: item.athleteName,
+          }))
+          .filter((p) => !!(p.programId && fileProgramIds.has(p.programId) && p.athleteId)) as
+          { programId: string; athleteId: string; athleteName: string | undefined }[];
+
+        if (fileCheckPairs.length > 0) {
+          const allFiles = await db.registrationFile.findMany({
+            where: {
+              OR: fileCheckPairs.map((p) => ({
+                athleteId: p.athleteId,
+                programId: p.programId,
+              })),
+            },
+            select: { athleteId: true, programId: true },
+          });
+
+          const fileSet = new Set(allFiles.map((f) => `${f.athleteId}:${f.programId}`));
+          for (const pair of fileCheckPairs) {
+            if (!fileSet.has(`${pair.athleteId}:${pair.programId}`)) {
               return NextResponse.json(
-                { error: `A required file upload is missing for ${item.athleteName || "an athlete"}. Please complete the file upload step before proceeding.` },
+                { error: `A required file upload is missing for ${pair.athleteName || "an athlete"}. Please complete the file upload step before proceeding.` },
                 { status: 400 }
               );
             }
@@ -275,56 +301,63 @@ export async function POST(
         }
       }
 
-      // Program membership requirement validation
-      const programsWithMembership = await db.program.findMany({
-        where: {
-          id: { in: programIds },
-          organizationId,
-          hasMembershipRestriction: true,
-        },
-        select: {
-          id: true,
-          name: true,
-          requiredMemberships: { select: { id: true } },
-        },
-      });
-
+      // Membership requirement check — single batch query instead of per-item
       if (programsWithMembership.length > 0) {
         const membershipProgramMap = new Map(
           programsWithMembership.map((p) => [p.id, p])
         );
 
+        // Collect all unique athlete IDs and required membership instance IDs
+        const membershipCheckPairs: { item: CartItem; programId: string; athleteId: string }[] = [];
+        const allRequiredMembershipIds = new Set<string>();
+        const allMembershipAthleteIds = new Set<string>();
+
         for (const item of programItems) {
           const pid = item.details?.programId || item.referenceId;
           const athleteId = item.athleteId || item.details?.athleteId;
-          const athleteLabel = item.athleteName || athleteId || "unknown";
           const prog = pid ? membershipProgramMap.get(pid) : undefined;
           if (!prog || prog.requiredMemberships.length === 0 || !athleteId) continue;
+          membershipCheckPairs.push({ item, programId: pid, athleteId });
+          allMembershipAthleteIds.add(athleteId);
+          for (const m of prog.requiredMemberships) allRequiredMembershipIds.add(m.id);
+        }
 
-          const requiredIds = prog.requiredMemberships.map((m) => m.id);
-
-          const activeMembership = await db.athleteMembership.findFirst({
+        if (membershipCheckPairs.length > 0) {
+          const activeMemberships = await db.athleteMembership.findMany({
             where: {
-              athleteId,
+              athleteId: { in: [...allMembershipAthleteIds] },
               status: "ACTIVE",
-              membershipInstanceId: { in: requiredIds },
+              membershipInstanceId: { in: [...allRequiredMembershipIds] },
             },
-            select: { id: true },
+            select: { athleteId: true, membershipInstanceId: true },
           });
 
-          if (!activeMembership) {
-            const membershipInCart = items.some((i: CartItem) => {
-              if (i.type !== "membership") return false;
-              const mInstanceId = i.details?.membershipInstanceId || i.referenceId;
-              const mAthleteId = i.athleteId || i.details?.athleteId;
-              return requiredIds.includes(mInstanceId) && mAthleteId === athleteId;
-            });
+          const membershipSet = new Set(
+            activeMemberships.map((m) => `${m.athleteId}:${m.membershipInstanceId}`)
+          );
 
-            if (!membershipInCart) {
-              return NextResponse.json(
-                { error: `Athlete "${athleteLabel}" does not have the required membership for "${prog.name}". Please add the membership to your cart or contact the organization.` },
-                { status: 400 }
-              );
+          for (const { item, programId, athleteId } of membershipCheckPairs) {
+            const prog = membershipProgramMap.get(programId)!;
+            const requiredIds = prog.requiredMemberships.map((m) => m.id);
+            const athleteLabel = item.athleteName || athleteId || "unknown";
+            const hasActiveMembership = requiredIds.some(
+              (rid) => membershipSet.has(`${athleteId}:${rid}`)
+            );
+
+            if (!hasActiveMembership) {
+              const membershipInCart = items.some((i: CartItem) => {
+                if (i.type !== "membership") return false;
+                const mInstanceId = i.details?.membershipInstanceId || i.referenceId;
+                const mAthleteId = i.athleteId || i.details?.athleteId;
+                return requiredIds.includes(mInstanceId) && mAthleteId === athleteId;
+              });
+
+              if (!membershipInCart) {
+                return NextResponse.json(
+                  { error: `Athlete "${athleteLabel}" does not have the required membership for "${prog.name}". Please add the membership to your cart or contact the organization.` },
+                  { status: 400 }
+                );
+              }
             }
           }
         }
@@ -475,14 +508,11 @@ export async function POST(
 
           // Waiver requirement check
           if (instance.group.hasWaiverRestriction && instance.group.waiverRequirements.length > 0) {
-            const mAuthSession = await getAuthSession();
-            const mCheckUserId = mAuthSession?.user?.id || null;
-
-            if (mCheckUserId) {
+            if (authUserId) {
               const requiredWaiverIds = instance.group.waiverRequirements.map((wr) => wr.waiverId);
               const acceptances = await db.waiverAcceptance.findMany({
                 where: {
-                  userId: mCheckUserId,
+                  userId: authUserId,
                   waiverId: { in: requiredWaiverIds },
                   athleteId: athleteId || null,
                 },
@@ -646,10 +676,7 @@ export async function POST(
 
         // Waiver verification for competition
         if (competition.hasWaiverRestriction && competition.waiverRequirementIds.length > 0) {
-          const cAuthSession = await getAuthSession();
-          const cCheckUserId = cAuthSession?.user?.id || null;
-
-          if (!cCheckUserId) {
+          if (!authUserId) {
             return NextResponse.json(
               { error: `Required waivers have not been signed for athlete ${athleteLabel} for "${competition.name}". Please sign all waivers before proceeding.` },
               { status: 400 }
@@ -658,7 +685,7 @@ export async function POST(
 
           const acceptances = await db.waiverAcceptance.findMany({
             where: {
-              userId: cCheckUserId,
+              userId: authUserId,
               waiverId: { in: competition.waiverRequirementIds },
               athleteId: athleteId || null,
             },
@@ -906,10 +933,6 @@ export async function POST(
     const tax = Math.round(discountedSubtotal * taxRate * 100) / 100;
     const total = Math.round((discountedSubtotal + tax) * 100) / 100;
 
-    // Resolve the authenticated user early so we can verify ownership below
-    const checkoutAuthSession = await getAuthSession();
-    const checkoutUserId = checkoutAuthSession?.user?.id || null;
-
     // 4. Resolve User Contact and Billing Address
     // Use saved contact if contactId provided, else use form data
     let resolvedContact = {
@@ -921,11 +944,11 @@ export async function POST(
 
     if (contactId) {
       if (editingContact) {
-        if (!checkoutUserId) {
+        if (!authUserId) {
           return NextResponse.json({ error: "Authentication required to update contact" }, { status: 401 });
         }
         const ownedContact = await db.userContact.findFirst({
-          where: { id: contactId, userId: checkoutUserId },
+          where: { id: contactId, userId: authUserId },
           select: { id: true },
         });
         if (!ownedContact) {
@@ -969,11 +992,11 @@ export async function POST(
 
     if (billingAddressId) {
       if (editingAddress) {
-        if (!checkoutUserId) {
+        if (!authUserId) {
           return NextResponse.json({ error: "Authentication required to update address" }, { status: 401 });
         }
         const ownedAddress = await db.userBillingAddress.findFirst({
-          where: { id: billingAddressId, userId: checkoutUserId },
+          where: { id: billingAddressId, userId: authUserId },
           select: { id: true },
         });
         if (!ownedAddress) {
@@ -1008,16 +1031,16 @@ export async function POST(
     }
 
     // Save contacts and addresses to the User profile
-    if (checkoutUserId) {
+    if (authUserId) {
       if (!contactId && resolvedContact.firstName && resolvedContact.email) {
         const existingUserContact = await db.userContact.findFirst({
-          where: { userId: checkoutUserId, email: resolvedContact.email },
+          where: { userId: authUserId, email: resolvedContact.email },
         });
         if (!existingUserContact) {
-          const hasAnyUserContacts = await db.userContact.count({ where: { userId: checkoutUserId } });
+          const hasAnyUserContacts = await db.userContact.count({ where: { userId: authUserId } });
           await db.userContact.create({
             data: {
-              userId: checkoutUserId,
+              userId: authUserId,
               firstName: resolvedContact.firstName,
               lastName: resolvedContact.lastName,
               email: resolvedContact.email,
@@ -1032,17 +1055,17 @@ export async function POST(
       if (!billingAddressId && resolvedAddress.street) {
         const existingUserAddress = await db.userBillingAddress.findFirst({
           where: {
-            userId: checkoutUserId,
+            userId: authUserId,
             street: resolvedAddress.street,
             city: resolvedAddress.city,
             postalCode: resolvedAddress.postalCode,
           },
         });
         if (!existingUserAddress) {
-          const hasAnyUserAddresses = await db.userBillingAddress.count({ where: { userId: checkoutUserId } });
+          const hasAnyUserAddresses = await db.userBillingAddress.count({ where: { userId: authUserId } });
           await db.userBillingAddress.create({
             data: {
-              userId: checkoutUserId,
+              userId: authUserId,
               label: "Home",
               street: resolvedAddress.street,
               city: resolvedAddress.city,
@@ -1087,7 +1110,7 @@ export async function POST(
     const invoice = await db.invoice.create({
         data: {
             reference: `INV-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
-            userId: checkoutUserId,
+            userId: authUserId,
             organizationId,
             subtotal: discountedSubtotal,
             tax,
@@ -1098,36 +1121,38 @@ export async function POST(
         }
     });
 
-    // 6. Resolve GL codes for line items
+    // 6. Resolve GL codes for line items (all queries run in parallel)
     const glCodeMap = new Map<string, string | null>();
-    const programIds = items.filter((i: CartItem) => i.type === "program" && i.details?.programId).map((i: CartItem) => i.details!.programId!);
-    const passIds = items.filter((i: CartItem) => i.type === "pass").map((i: CartItem) => i.details?.passId || i.referenceId).filter(Boolean);
-    const competitionIds = items.filter((i: CartItem) => i.type === "competition").map((i: CartItem) => i.details?.competitionId || i.referenceId).filter(Boolean);
-    const membershipInstanceIds = items.filter((i: CartItem) => i.type === "membership").map((i: CartItem) => i.details?.membershipInstanceId || i.referenceId).filter(Boolean);
+    const glProgramIds = items.filter((i: CartItem) => i.type === "program" && i.details?.programId).map((i: CartItem) => i.details!.programId!);
+    const glPassIds = items.filter((i: CartItem) => i.type === "pass").map((i: CartItem) => i.details?.passId || i.referenceId).filter(Boolean);
+    const glCompetitionIds = items.filter((i: CartItem) => i.type === "competition").map((i: CartItem) => i.details?.competitionId || i.referenceId).filter(Boolean);
+    const glMembershipInstanceIds = items.filter((i: CartItem) => i.type === "membership").map((i: CartItem) => i.details?.membershipInstanceId || i.referenceId).filter(Boolean);
 
-    if (programIds.length > 0) {
-      const programs = await db.program.findMany({ where: { id: { in: programIds } }, select: { id: true, glCodeId: true } });
-      for (const p of programs) if (p.glCodeId) glCodeMap.set(`program:${p.id}`, p.glCodeId);
-    }
-    if (passIds.length > 0) {
-      const passes = await db.pass.findMany({ where: { id: { in: passIds as string[] } }, select: { id: true, glCodeId: true } });
-      for (const p of passes) if (p.glCodeId) glCodeMap.set(`pass:${p.id}`, p.glCodeId);
-    }
-    if (competitionIds.length > 0) {
-      const comps = await db.competition.findMany({ where: { id: { in: competitionIds as string[] } }, select: { id: true, glCodeId: true } });
-      for (const c of comps) if (c.glCodeId) glCodeMap.set(`competition:${c.id}`, c.glCodeId);
-    }
-    if (membershipInstanceIds.length > 0) {
-      const instances = await db.membershipInstance.findMany({ where: { id: { in: membershipInstanceIds as string[] } }, select: { id: true, group: { select: { glCodeId: true } } } });
-      for (const i of instances) if (i.group.glCodeId) glCodeMap.set(`membership:${i.id}`, i.group.glCodeId);
-    }
+    const [glPrograms, glPasses, glComps, glInstances, defaultCodes] = await Promise.all([
+      glProgramIds.length > 0
+        ? db.program.findMany({ where: { id: { in: glProgramIds } }, select: { id: true, glCodeId: true } })
+        : [],
+      glPassIds.length > 0
+        ? db.pass.findMany({ where: { id: { in: glPassIds as string[] } }, select: { id: true, glCodeId: true } })
+        : [],
+      glCompetitionIds.length > 0
+        ? db.competition.findMany({ where: { id: { in: glCompetitionIds as string[] } }, select: { id: true, glCodeId: true } })
+        : [],
+      glMembershipInstanceIds.length > 0
+        ? db.membershipInstance.findMany({ where: { id: { in: glMembershipInstanceIds as string[] } }, select: { id: true, group: { select: { glCodeId: true } } } })
+        : [],
+      db.gLCode.findMany({
+        where: { organizationId, isDefault: true, defaultForType: { not: null } },
+        select: { id: true, defaultForType: true },
+      }),
+    ]);
 
-    // Fetch org default GL codes as fallbacks
+    for (const p of glPrograms) if (p.glCodeId) glCodeMap.set(`program:${p.id}`, p.glCodeId);
+    for (const p of glPasses) if (p.glCodeId) glCodeMap.set(`pass:${p.id}`, p.glCodeId);
+    for (const c of glComps) if (c.glCodeId) glCodeMap.set(`competition:${c.id}`, c.glCodeId);
+    for (const i of glInstances) if (i.group.glCodeId) glCodeMap.set(`membership:${i.id}`, i.group.glCodeId);
+
     const entityTypeToDefault = new Map<string, string>();
-    const defaultCodes = await db.gLCode.findMany({
-      where: { organizationId, isDefault: true, defaultForType: { not: null } },
-      select: { id: true, defaultForType: true },
-    });
     for (const d of defaultCodes) {
       if (d.defaultForType) entityTypeToDefault.set(d.defaultForType, d.id);
     }
@@ -1200,7 +1225,7 @@ export async function POST(
       const payment = await db.payment.create({
         data: {
           invoiceId: invoice.id,
-          userId: checkoutUserId || undefined,
+          userId: authUserId || undefined,
           amount: 0,
           method: "CASH",
           status: "COMPLETED",
@@ -1229,7 +1254,7 @@ export async function POST(
         data: { status: "PAID" },
       });
 
-      await processInvoiceRegistrations(invoiceMetadata, items, checkoutUserId, organizationId);
+      await processInvoiceRegistrations(invoiceMetadata, items, authUserId, organizationId);
 
       // Send receipt email (fire-and-forget so it doesn't block the response)
       const protocol = request.headers.get("x-forwarded-proto") || "http";

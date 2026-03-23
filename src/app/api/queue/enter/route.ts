@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { admitNextInQueue, lockQueueConfig } from "@/lib/queue-utils"
 import { v4 as uuidv4 } from "uuid"
 
-// POST /api/queue/enter - Enter the queue for a program
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find the organization by slug
     const organization = await db.organization.findUnique({
       where: { slug: organizationSlug },
+      select: { id: true },
     })
 
     if (!organization) {
@@ -27,21 +27,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find the queue config (program-specific or global)
-    let queueConfig = null
-    
-    if (programId) {
-      // First try program-specific
-      queueConfig = await db.registrationQueueConfig.findFirst({
-        where: {
-          organizationId: organization.id,
-          programId: programId,
-          isEnabled: true,
-        },
-      })
-    }
-    
-    // If no program-specific config, try global
+    // Find the queue config (program-specific first, then global fallback)
+    let queueConfig = programId
+      ? await db.registrationQueueConfig.findFirst({
+          where: {
+            organizationId: organization.id,
+            programId,
+            isEnabled: true,
+          },
+        })
+      : null
+
     if (!queueConfig) {
       queueConfig = await db.registrationQueueConfig.findFirst({
         where: {
@@ -52,7 +48,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // If no queue config is enabled, user can proceed directly
     if (!queueConfig) {
       return NextResponse.json({
         queued: false,
@@ -61,9 +56,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check if queue is actually active based on activation type
-    const isQueueActive = checkQueueActive(queueConfig)
-    if (!isQueueActive) {
+    if (!checkQueueActive(queueConfig)) {
       return NextResponse.json({
         queued: false,
         canProceed: true,
@@ -71,7 +64,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check if user already has an entry with this session token
+    // Check for an existing session
     if (existingToken) {
       const existingEntry = await db.queueEntry.findUnique({
         where: { sessionToken: existingToken },
@@ -79,9 +72,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (existingEntry) {
-        // User already in queue or has reservation
         if (existingEntry.status === "ADMITTED" && existingEntry.reservation) {
-          // Check if reservation is still valid
           if (new Date(existingEntry.reservation.expiresAt) > new Date()) {
             return NextResponse.json({
               queued: false,
@@ -92,12 +83,11 @@ export async function POST(request: NextRequest) {
             })
           }
         }
-        
+
         if (existingEntry.status === "WAITING") {
-          // Return current position
-          const position = await getQueuePosition(existingEntry.id, queueConfig.id)
+          const position = await getQueuePosition(existingEntry)
           const estimatedWait = calculateEstimatedWait(position, queueConfig)
-          
+
           return NextResponse.json({
             queued: true,
             canProceed: false,
@@ -110,28 +100,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check current active reservations
-    const activeReservations = await db.queueReservation.count({
-      where: {
-        status: "ACTIVE",
-        expiresAt: { gt: new Date() },
-        queueEntry: {
-          queueConfigId: queueConfig.id,
-        },
-      },
-    })
+    const sessionToken = existingToken || uuidv4()
 
-    // If there's room, admit immediately
-    if (activeReservations < queueConfig.maxConcurrent) {
-      const sessionToken = existingToken || uuidv4()
-      
-      // Create entry and reservation in one transaction
-      const result = await db.$transaction(async (tx) => {
+    // Use a serialized transaction with a row-level lock on the queue config
+    // to prevent concurrent requests from exceeding maxConcurrent.
+    const result = await db.$transaction(async (tx) => {
+      await lockQueueConfig(tx, queueConfig.id)
+
+      const activeReservations = await tx.queueReservation.count({
+        where: {
+          status: "ACTIVE",
+          expiresAt: { gt: new Date() },
+          queueEntry: {
+            queueConfigId: queueConfig.id,
+          },
+        },
+      })
+
+      if (activeReservations < queueConfig.maxConcurrent) {
         const entry = await tx.queueEntry.create({
           data: {
             queueConfigId: queueConfig.id,
             sessionToken,
-            position: 0, // Immediate admission
+            position: 0,
             status: "ADMITTED",
             admittedAt: new Date(),
           },
@@ -141,13 +132,40 @@ export async function POST(request: NextRequest) {
           data: {
             queueEntryId: entry.id,
             programId: programId || queueConfig.programId || "",
-            expiresAt: new Date(Date.now() + queueConfig.reservationMinutes * 60 * 1000),
+            expiresAt: new Date(
+              Date.now() + queueConfig.reservationMinutes * 60 * 1000
+            ),
           },
         })
 
-        return { entry, reservation }
+        return { admitted: true as const, entry, reservation }
+      }
+
+      // Queue is full — add to waiting list
+      const lastEntry = await tx.queueEntry.findFirst({
+        where: {
+          queueConfigId: queueConfig.id,
+          status: "WAITING",
+        },
+        orderBy: { position: "desc" },
+        select: { position: true },
       })
 
+      const nextPosition = (lastEntry?.position || 0) + 1
+
+      const entry = await tx.queueEntry.create({
+        data: {
+          queueConfigId: queueConfig.id,
+          sessionToken,
+          position: nextPosition,
+          status: "WAITING",
+        },
+      })
+
+      return { admitted: false as const, entry, position: nextPosition }
+    })
+
+    if (result.admitted) {
       return NextResponse.json({
         queued: false,
         canProceed: true,
@@ -158,39 +176,16 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Otherwise, add to queue
-    const sessionToken = existingToken || uuidv4()
-    
-    // Get the next position
-    const lastEntry = await db.queueEntry.findFirst({
-      where: {
-        queueConfigId: queueConfig.id,
-        status: "WAITING",
-      },
-      orderBy: { position: "desc" },
-    })
-    
-    const nextPosition = (lastEntry?.position || 0) + 1
-
-    const entry = await db.queueEntry.create({
-      data: {
-        queueConfigId: queueConfig.id,
-        sessionToken,
-        position: nextPosition,
-        status: "WAITING",
-      },
-    })
-
-    const estimatedWait = calculateEstimatedWait(nextPosition, queueConfig)
+    const estimatedWait = calculateEstimatedWait(result.position, queueConfig)
 
     return NextResponse.json({
       queued: true,
       canProceed: false,
-      entry,
+      entry: result.entry,
       sessionToken,
-      position: nextPosition,
+      position: result.position,
       estimatedWaitMinutes: estimatedWait,
-      message: `You are #${nextPosition} in line`,
+      message: `You are #${result.position} in line`,
     })
   } catch (error) {
     console.error("Error entering queue:", error)
@@ -203,40 +198,38 @@ export async function POST(request: NextRequest) {
 
 function checkQueueActive(config: any): boolean {
   if (!config.isEnabled) return false
-  
+
   switch (config.activationType) {
     case "ALWAYS":
       return true
-    case "SCHEDULED":
+    case "SCHEDULED": {
       const now = new Date()
       if (config.scheduledStart && new Date(config.scheduledStart) > now) return false
       if (config.scheduledEnd && new Date(config.scheduledEnd) < now) return false
       return true
+    }
     case "THRESHOLD":
-      // Threshold is checked elsewhere based on concurrent users
       return true
     default:
       return true
   }
 }
 
-async function getQueuePosition(entryId: string, configId: string): Promise<number> {
+async function getQueuePosition(
+  entry: { queueConfigId: string; enteredAt: Date }
+): Promise<number> {
   const waitingAhead = await db.queueEntry.count({
     where: {
-      queueConfigId: configId,
+      queueConfigId: entry.queueConfigId,
       status: "WAITING",
-      enteredAt: {
-        lt: (await db.queueEntry.findUnique({ where: { id: entryId } }))?.enteredAt,
-      },
+      enteredAt: { lt: entry.enteredAt },
     },
   })
   return waitingAhead + 1
 }
 
 function calculateEstimatedWait(position: number, config: any): number {
-  // Average time per registration (assume 5 minutes if no data)
   const avgTime = 5
-  // Factor in concurrent slots
   const slotsPerCycle = config.maxConcurrent
   const cyclesNeeded = Math.ceil(position / slotsPerCycle)
   return cyclesNeeded * avgTime

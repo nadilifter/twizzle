@@ -1004,6 +1004,9 @@ model AthleteMembership {
   // Relations
   athlete  Athlete            @relation(fields: [athleteId], references: [id], onDelete: Cascade)
   instance MembershipInstance @relation(fields: [membershipInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([athleteId, status])
+  @@index([athleteId, status, membershipInstanceId])
 }
 
 // Membership Group Level Requirements - many-to-many for level restrictions
@@ -1082,6 +1085,8 @@ model Enrollment {
   @@index([createdAt])
   @@index([athleteId, status])
   @@index([athleteId, createdAt])
+  @@index([programId, athleteId, status])
+  @@index([programId, status])
 }
 
 enum EnrollmentStatus {
@@ -1155,6 +1160,7 @@ model InstanceRegistration {
   @@index([userId])
   @@index([passId])
   @@index([status])
+  @@index([programInstanceId, status])
 }
 
 enum RegistrationStatus {
@@ -3287,6 +3293,7 @@ model QueueEntry {
   reservation QueueReservation?
 
   @@index([queueConfigId, status])
+  @@index([queueConfigId, status, enteredAt])
   @@index([sessionToken])
   @@index([status])
 }
@@ -3323,6 +3330,7 @@ model QueueReservation {
   @@index([programId, status])
   @@index([expiresAt])
   @@index([status])
+  @@index([status, expiresAt])
 }
 
 enum ReservationStatus {
@@ -3684,6 +3692,7 @@ model WaiverAcceptance {
   @@index([waiverId])
   @@index([userId])
   @@index([athleteId])
+  @@index([userId, waiverId])
 }
 
 // ============================================
