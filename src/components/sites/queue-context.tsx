@@ -25,6 +25,14 @@ interface QueueContextValue {
   hasReservation: boolean
   reservation: QueueReservation | null
   remainingSeconds: number
+  position: number | null
+  totalWaiting: number | null
+  estimatedWaitMinutes: number | null
+  queueStatus: string | null
+  canProceed: boolean
+  isEntering: boolean
+  error: string | null
+  enterQueue: (programId?: string | null) => Promise<void>
   checkQueueStatus: () => Promise<void>
   completeRegistration: () => Promise<void>
   abandonQueue: () => Promise<void>
@@ -53,8 +61,14 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
   const [reservation, setReservation] = useState<QueueReservation | null>(null)
   const [remainingSeconds, setRemainingSeconds] = useState(0)
   const [showBlockingModal, setShowBlockingModal] = useState(false)
+  const [position, setPosition] = useState<number | null>(null)
+  const [totalWaiting, setTotalWaiting] = useState<number | null>(null)
+  const [estimatedWaitMinutes, setEstimatedWaitMinutes] = useState<number | null>(null)
+  const [queueStatus, setQueueStatus] = useState<string | null>(null)
+  const [canProceed, setCanProceed] = useState(false)
+  const [isEntering, setIsEntering] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Load session token from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(`queue_session_${organizationSlug}`)
     if (stored) {
@@ -62,7 +76,6 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
     }
   }, [organizationSlug])
 
-  // Check queue status
   const checkQueueStatus = useCallback(async () => {
     if (!sessionToken) return
 
@@ -71,7 +84,12 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
       const data = await response.json()
 
       setIsInQueue(data.inQueue)
-      
+      setCanProceed(!!data.canProceed)
+      setPosition(data.position ?? null)
+      setTotalWaiting(data.totalWaiting ?? null)
+      setEstimatedWaitMinutes(data.estimatedWaitMinutes ?? null)
+      setQueueStatus(data.status ?? null)
+
       if (data.reservation) {
         setReservation(data.reservation)
         setRemainingSeconds(data.reservation.remainingSeconds)
@@ -79,7 +97,6 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
         setReservation(null)
       }
 
-      // If in queue (waiting) and not on queue page, show blocking modal
       if (data.inQueue && !data.canProceed && !pathname.includes("/queue")) {
         setShowBlockingModal(true)
       }
@@ -88,23 +105,20 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
     }
   }, [sessionToken, pathname])
 
-  // Poll for status updates
   useEffect(() => {
     if (sessionToken) {
       checkQueueStatus()
-      const interval = setInterval(checkQueueStatus, 10000)
+      const interval = setInterval(checkQueueStatus, 5000)
       return () => clearInterval(interval)
     }
   }, [sessionToken, checkQueueStatus])
 
-  // Countdown timer for reservation
   useEffect(() => {
     if (!reservation || remainingSeconds <= 0) return
 
     const timer = setInterval(() => {
       setRemainingSeconds(prev => {
         if (prev <= 1) {
-          // Reservation expired
           setReservation(null)
           clearInterval(timer)
           return 0
@@ -116,7 +130,53 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
     return () => clearInterval(timer)
   }, [reservation])
 
-  // Complete registration
+  const enterQueue = useCallback(async (programId?: string | null) => {
+    setIsEntering(true)
+    setError(null)
+    try {
+      const stored = localStorage.getItem(`queue_session_${organizationSlug}`)
+      const response = await fetch("/api/queue/enter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationSlug,
+          programId,
+          sessionToken: stored,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to enter queue")
+      }
+
+      if (data.sessionToken) {
+        localStorage.setItem(`queue_session_${organizationSlug}`, data.sessionToken)
+        setSessionToken(data.sessionToken)
+      }
+
+      setCanProceed(!!data.canProceed)
+
+      if (data.canProceed) {
+        if (data.reservation) {
+          setReservation(data.reservation)
+          setRemainingSeconds(data.reservation.remainingSeconds)
+        }
+        return
+      }
+
+      setIsInQueue(true)
+      setPosition(data.position ?? null)
+      setEstimatedWaitMinutes(data.estimatedWaitMinutes ?? null)
+      setQueueStatus(data.entry?.status || "WAITING")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    } finally {
+      setIsEntering(false)
+    }
+  }, [organizationSlug])
+
   const completeRegistration = useCallback(async () => {
     if (!sessionToken) return
 
@@ -135,7 +195,6 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
     }
   }, [sessionToken, organizationSlug])
 
-  // Abandon queue
   const abandonQueue = useCallback(async () => {
     if (!sessionToken) return
 
@@ -149,6 +208,11 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
       setSessionToken(null)
       setReservation(null)
       setIsInQueue(false)
+      setCanProceed(false)
+      setPosition(null)
+      setTotalWaiting(null)
+      setEstimatedWaitMinutes(null)
+      setQueueStatus(null)
       setShowBlockingModal(false)
     } catch (err) {
       console.error("Error abandoning queue:", err)
@@ -168,6 +232,14 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
         hasReservation: !!reservation,
         reservation,
         remainingSeconds,
+        position,
+        totalWaiting,
+        estimatedWaitMinutes,
+        queueStatus,
+        canProceed,
+        isEntering,
+        error,
+        enterQueue,
         checkQueueStatus,
         completeRegistration,
         abandonQueue,
@@ -175,7 +247,6 @@ export function QueueProvider({ children, organizationSlug }: QueueProviderProps
     >
       {children}
 
-      {/* Blocking Modal - shown when user tries to navigate away from queue */}
       <Dialog open={showBlockingModal} onOpenChange={setShowBlockingModal}>
         <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>

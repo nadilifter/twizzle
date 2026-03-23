@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import dynamic from "next/dynamic"
 import { sanitizeHtml } from "@/lib/sanitize"
 import { useCart, CartItem } from "@/components/sites/cart-context"
 import { Button } from "@/components/ui/button"
@@ -12,8 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Loader2, Trash2, FileText, Check, ChevronRight, ChevronLeft, User, Heart, AlertCircle, Plus, Pencil, CreditCard, Clock, AlertTriangle } from "lucide-react"
 import Link from "next/link"
-import { SignaturePad, SignaturePadRef } from "@/components/ui/signature-pad"
-import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
+import type { SignaturePadRef } from "@/components/ui/signature-pad"
 import { toast } from "sonner"
 import { useRouter, useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -23,8 +23,22 @@ import { RemoveItemDialog } from "@/components/sites/remove-item-dialog"
 import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data"
 import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AdyenCheckoutComponent } from "@/components/sites/adyen-checkout"
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
+
+const SignaturePad = dynamic(
+  () => import("@/components/ui/signature-pad").then(m => m.SignaturePad),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted rounded-lg" /> }
+)
+
+const CheckoutMedicalForm = dynamic(
+  () => import("@/components/sites/checkout-medical-form").then(m => m.CheckoutMedicalForm),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted rounded-lg" /> }
+)
+
+const AdyenCheckoutComponent = dynamic(
+  () => import("@/components/sites/adyen-checkout").then(m => m.AdyenCheckoutComponent),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted rounded-lg" /> }
+)
 
 interface SavedContact {
   id: string

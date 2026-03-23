@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
@@ -18,6 +19,90 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProgramRegistrationFlow } from "@/components/sites/program-registration-flow";
 import type { FileRequirementConfig } from "@/types/file-requirements";
 
+const getCachedProgramConfig = unstable_cache(
+    async (subdomain: string) => {
+        return db.websiteConfig.findUnique({
+            where: { subdomain },
+            select: { organizationId: true, primaryColor: true }
+        });
+    },
+    ["site-config-program"],
+    { revalidate: 30 }
+);
+
+const getCachedProgramDetail = unstable_cache(
+    async (programId: string, organizationId: string) => {
+        const program = await db.program.findFirst({
+            where: { id: programId, organizationId, status: "ACTIVE" },
+            include: {
+                facility: {
+                    select: { id: true, name: true, city: true, stateProvince: true }
+                },
+                bulkDiscounts: true,
+                levelRequirements: {
+                    include: {
+                        level: { select: { id: true, name: true, color: true } },
+                    },
+                },
+                staffAssignments: {
+                    where: { role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] } },
+                    include: {
+                        member: {
+                            include: {
+                                user: { select: { id: true, name: true, avatar: true } },
+                            },
+                        },
+                    },
+                    orderBy: [{ isPrimary: "desc" }, { role: "asc" }],
+                    take: 5,
+                },
+                requiredMemberships: {
+                    include: {
+                        group: { select: { id: true, name: true } },
+                    },
+                },
+                requiredPasses: {
+                    where: { status: "ACTIVE" },
+                    select: {
+                        id: true, name: true, price: true,
+                        billingInterval: true, sessionLimit: true, limitPeriod: true,
+                    },
+                },
+                waiverRequirements: {
+                    select: { id: true, waiverId: true },
+                },
+                instances: {
+                    where: { date: { gte: new Date() }, status: "SCHEDULED" },
+                    include: {
+                        facility: { select: { id: true, name: true, city: true } },
+                        _count: { select: { registrations: true } }
+                    },
+                    orderBy: { date: "asc" },
+                    take: 50
+                },
+                _count: {
+                    select: {
+                        instances: true,
+                        enrollments: { where: { status: { not: "WAITLISTED" } } },
+                    }
+                }
+            }
+        });
+
+        if (!program) return null;
+
+        const waitlistedCount = program.waitlistEnabled
+            ? await db.enrollment.count({
+                where: { programId: program.id, status: "WAITLISTED" },
+            })
+            : 0;
+
+        return { program, waitlistedCount };
+    },
+    ["site-program-detail"],
+    { revalidate: 30 }
+);
+
 export default async function ProgramDetailPage({ 
     params,
 }: { 
@@ -26,107 +111,15 @@ export default async function ProgramDetailPage({
     const subdomain = params.slug;
     const programId = params.programId;
 
-    const config = await db.websiteConfig.findUnique({
-        where: { subdomain },
-        select: { organizationId: true, primaryColor: true }
-    });
+    const config = await getCachedProgramConfig(subdomain);
 
     if (!config) return notFound();
 
-    const program = await db.program.findFirst({
-        where: {
-            id: programId,
-            organizationId: config.organizationId,
-            status: "ACTIVE",
-        },
-        include: {
-            facility: {
-                select: { id: true, name: true, city: true, stateProvince: true }
-            },
-            bulkDiscounts: true,
-            levelRequirements: {
-                include: {
-                    level: {
-                        select: { id: true, name: true, color: true },
-                    },
-                },
-            },
-            staffAssignments: {
-                where: {
-                    role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
-                },
-                include: {
-                    member: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    avatar: true,
-                                },
-                            },
-                        },
-                    },
-                },
-                orderBy: [
-                    { isPrimary: "desc" },
-                    { role: "asc" },
-                ],
-                take: 5,
-            },
-            requiredMemberships: {
-                include: {
-                    group: {
-                        select: {
-                            id: true,
-                            name: true,
-                        },
-                    },
-                },
-            },
-            requiredPasses: {
-                where: { status: "ACTIVE" },
-                select: {
-                    id: true,
-                    name: true,
-                    price: true,
-                    billingInterval: true,
-                    sessionLimit: true,
-                    limitPeriod: true,
-                },
-            },
-            waiverRequirements: {
-                select: { id: true, waiverId: true },
-            },
-            instances: {
-                where: {
-                    date: { gte: new Date() },
-                    status: "SCHEDULED"
-                },
-                include: {
-                    facility: { select: { id: true, name: true, city: true } },
-                    _count: { select: { registrations: true } }
-                },
-                orderBy: { date: "asc" },
-                take: 50
-            },
-            _count: {
-                select: {
-                    instances: true,
-                    enrollments: { where: { status: { not: "WAITLISTED" } } },
-                }
-            }
-        }
-    });
+    const result = await getCachedProgramDetail(programId, config.organizationId);
 
-    if (!program) return notFound();
+    if (!result) return notFound();
 
-    // Fetch waitlisted enrollment count if waitlist is enabled
-    const waitlistedCount = program.waitlistEnabled
-        ? await db.enrollment.count({
-            where: { programId: program.id, status: "WAITLISTED" },
-        })
-        : 0;
+    const { program, waitlistedCount } = result;
 
     const isPerInstance = program.registrationType === "PER_INSTANCE";
     const primaryColor = config.primaryColor || "#000000";
@@ -201,7 +194,7 @@ export default async function ProgramDetailPage({
 
     const serializedInstances = program.instances.map(i => ({
         id: i.id,
-        date: i.date.toISOString(),
+        date: new Date(i.date).toISOString(),
         startTime: i.startTime,
         endTime: i.endTime,
         capacity: i.capacity || program.capacity || undefined,
@@ -247,8 +240,8 @@ export default async function ProgramDetailPage({
                                 <Calendar className="h-4 w-4" />
                                 <span>
                                     {program.endDate
-                                        ? `${format(program.startDate, "MMM d")} – ${format(program.endDate, "MMM d, yyyy")}`
-                                        : format(program.startDate, "EEEE, MMMM d, yyyy")}
+                                        ? `${format(new Date(program.startDate), "MMM d")} – ${format(new Date(program.endDate), "MMM d, yyyy")}`
+                                        : format(new Date(program.startDate), "EEEE, MMMM d, yyyy")}
                                 </span>
                             </div>
                         )}

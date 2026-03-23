@@ -1,97 +1,93 @@
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { QueueGateWrapper } from "@/components/sites/queue-gate-wrapper";
 import { FilterableProgramList } from "@/components/sites/filterable-program-list";
 
-export default async function RegisterPage({ params }: { params: { slug: string } }) {
-    const subdomain = params.slug;
+const getCachedRegisterConfig = unstable_cache(
+    async (subdomain: string) => {
+        return db.websiteConfig.findUnique({
+            where: { subdomain },
+            select: { organizationId: true, primaryColor: true }
+        });
+    },
+    ["site-config-register"],
+    { revalidate: 30 }
+);
 
-    const config = await db.websiteConfig.findUnique({
-        where: { subdomain },
-        select: { organizationId: true, primaryColor: true }
-    });
-
-    if (!config) return notFound();
-
-    // Fetch active programs and levels in parallel
-    const [programs, levels] = await Promise.all([
-        db.program.findMany({
-            where: {
-                organizationId: config.organizationId,
-                status: "ACTIVE"
-            },
-            include: {
-                facility: {
-                    select: { id: true, name: true, city: true, stateProvince: true }
-                },
-                bulkDiscounts: true,
-                levelRequirements: {
-                    include: {
-                        level: {
-                            select: { id: true, name: true, color: true },
+const getCachedRegisterPrograms = unstable_cache(
+    async (organizationId: string) => {
+        const [programs, levels] = await Promise.all([
+            db.program.findMany({
+                where: { organizationId, status: "ACTIVE" },
+                include: {
+                    facility: {
+                        select: { id: true, name: true, city: true, stateProvince: true }
+                    },
+                    bulkDiscounts: true,
+                    levelRequirements: {
+                        include: {
+                            level: { select: { id: true, name: true, color: true } },
                         },
                     },
-                },
-                _count: {
-                    select: {
-                        instances: true,
-                        enrollments: { where: { status: { not: "WAITLISTED" } } },
+                    _count: {
+                        select: {
+                            instances: true,
+                            enrollments: { where: { status: { not: "WAITLISTED" } } },
+                        },
                     },
-                },
-                staffAssignments: {
-                    where: {
-                        role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
-                    },
-                    include: {
-                        member: {
-                            include: {
-                                user: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        avatar: true,
-                                    },
+                    staffAssignments: {
+                        where: { role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] } },
+                        include: {
+                            member: {
+                                include: {
+                                    user: { select: { id: true, name: true, avatar: true } },
                                 },
                             },
                         },
+                        orderBy: [{ isPrimary: "desc" }, { role: "asc" }],
+                        take: 3,
                     },
-                    orderBy: [
-                        { isPrimary: "desc" },
-                        { role: "asc" },
-                    ],
-                    take: 3,
-                },
-                requiredMemberships: {
-                    include: {
-                        group: {
-                            select: {
-                                id: true,
-                                name: true,
-                            },
+                    requiredMemberships: {
+                        include: {
+                            group: { select: { id: true, name: true } },
                         },
                     },
-                },
-            }
-        }),
-        db.level.findMany({
-            where: { organizationId: config.organizationId },
-            select: { id: true, name: true, color: true },
-            orderBy: { order: "asc" },
-        }),
-    ]);
+                }
+            }),
+            db.level.findMany({
+                where: { organizationId },
+                select: { id: true, name: true, color: true },
+                orderBy: { order: "asc" },
+            }),
+        ]);
 
-    // Fetch waitlisted enrollment counts for programs with waitlists enabled
-    const waitlistPrograms = programs.filter(p => p.waitlistEnabled);
-    const waitlistedCounts = waitlistPrograms.length > 0
-        ? await db.enrollment.groupBy({
-            by: ["programId"],
-            where: {
-                programId: { in: waitlistPrograms.map(p => p.id) },
-                status: "WAITLISTED",
-            },
-            _count: true,
-        })
-        : [];
+        const waitlistPrograms = programs.filter(p => p.waitlistEnabled);
+        const waitlistedCounts = waitlistPrograms.length > 0
+            ? await db.enrollment.groupBy({
+                by: ["programId"],
+                where: {
+                    programId: { in: waitlistPrograms.map(p => p.id) },
+                    status: "WAITLISTED",
+                },
+                _count: true,
+            })
+            : [];
+
+        return { programs, levels, waitlistedCounts };
+    },
+    ["site-programs-register"],
+    { revalidate: 30 }
+);
+
+export default async function RegisterPage({ params }: { params: { slug: string } }) {
+    const subdomain = params.slug;
+
+    const config = await getCachedRegisterConfig(subdomain);
+
+    if (!config) return notFound();
+
+    const { programs, levels, waitlistedCounts } = await getCachedRegisterPrograms(config.organizationId);
     const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
 
     const serializedPrograms = programs.map(program => ({

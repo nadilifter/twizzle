@@ -1,4 +1,5 @@
 import React from "react";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Image from "next/image";
@@ -9,114 +10,103 @@ import { Users, Calendar, MapPin, Trophy } from "lucide-react";
 import { FilterableProgramList } from "@/components/sites/filterable-program-list";
 import { InfoSection } from "@/components/sites/info-section";
 
-// Helper to check if HTML content has actual text (not just empty tags)
 function hasContent(html: string | null | undefined): boolean {
   if (!html) return false;
-  // Strip HTML tags and check if there's any text content
   const textContent = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
   return textContent.length > 0;
 }
 
+const getCachedSiteConfig = unstable_cache(
+  async (slug: string) => {
+    return db.websiteConfig.findUnique({
+      where: { subdomain: slug },
+      include: { organization: true },
+    });
+  },
+  ["site-config"],
+  { revalidate: 30 }
+);
+
+const getCachedHomePrograms = unstable_cache(
+  async (organizationId: string) => {
+    const [programs, levels] = await Promise.all([
+      db.program.findMany({
+        where: { organizationId, status: "ACTIVE" },
+        include: {
+          facility: {
+            select: { id: true, name: true, city: true, stateProvince: true }
+          },
+          bulkDiscounts: true,
+          levelRequirements: {
+            include: {
+              level: { select: { id: true, name: true, color: true } },
+            },
+          },
+          _count: {
+            select: {
+              instances: true,
+              enrollments: { where: { status: { not: "WAITLISTED" } } },
+            },
+          },
+          staffAssignments: {
+            where: { role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] } },
+            include: {
+              member: {
+                include: {
+                  user: { select: { id: true, name: true, avatar: true } },
+                },
+              },
+            },
+            orderBy: [{ isPrimary: "desc" }, { role: "asc" }],
+            take: 3,
+          },
+          requiredMemberships: {
+            include: {
+              group: { select: { id: true, name: true } },
+            },
+          },
+          requiredPasses: {
+            where: { status: "ACTIVE" },
+            select: {
+              id: true, name: true, price: true,
+              billingInterval: true, sessionLimit: true, limitPeriod: true,
+            },
+          },
+        },
+      }),
+      db.level.findMany({
+        where: { organizationId },
+        select: { id: true, name: true, color: true },
+        orderBy: { order: "asc" },
+      }),
+    ]);
+
+    const waitlistPrograms = programs.filter(p => p.waitlistEnabled);
+    const waitlistedCounts = waitlistPrograms.length > 0
+      ? await db.enrollment.groupBy({
+          by: ["programId"],
+          where: {
+            programId: { in: waitlistPrograms.map(p => p.id) },
+            status: "WAITLISTED",
+          },
+          _count: true,
+        })
+      : [];
+
+    return { programs, levels, waitlistedCounts };
+  },
+  ["site-programs-home"],
+  { revalidate: 30 }
+);
+
 export default async function SitePage({ params }: { params: { slug: string } }) {
-  const config = await db.websiteConfig.findUnique({
-    where: { subdomain: params.slug },
-    include: { organization: true },
-  });
+  const config = await getCachedSiteConfig(params.slug);
 
   if (!config) return notFound();
 
   const primaryColor = config.primaryColor || "#000000";
 
-  // Fetch active programs and levels for this organization
-  const [programs, levels] = await Promise.all([
-    db.program.findMany({
-      where: {
-        organizationId: config.organizationId,
-        status: "ACTIVE",
-      },
-      include: {
-        facility: {
-          select: { id: true, name: true, city: true, stateProvince: true }
-        },
-        bulkDiscounts: true,
-        levelRequirements: {
-          include: {
-            level: {
-              select: { id: true, name: true, color: true },
-            },
-          },
-        },
-        _count: {
-          select: {
-            instances: true,
-            enrollments: { where: { status: { not: "WAITLISTED" } } },
-          },
-        },
-        staffAssignments: {
-          where: {
-            role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
-          },
-          include: {
-            member: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    avatar: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: [
-            { isPrimary: "desc" },
-            { role: "asc" },
-          ],
-          take: 3,
-        },
-        requiredMemberships: {
-          include: {
-            group: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-        requiredPasses: {
-          where: { status: "ACTIVE" },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            billingInterval: true,
-            sessionLimit: true,
-            limitPeriod: true,
-          },
-        },
-      },
-    }),
-    db.level.findMany({
-      where: { organizationId: config.organizationId },
-      select: { id: true, name: true, color: true },
-      orderBy: { order: "asc" },
-    }),
-  ]);
-
-  // Fetch waitlisted enrollment counts for programs with waitlists enabled
-  const waitlistPrograms = programs.filter(p => p.waitlistEnabled);
-  const waitlistedCounts = waitlistPrograms.length > 0
-    ? await db.enrollment.groupBy({
-        by: ["programId"],
-        where: {
-          programId: { in: waitlistPrograms.map(p => p.id) },
-          status: "WAITLISTED",
-        },
-        _count: true,
-      })
-    : [];
+  const { programs, levels, waitlistedCounts } = await getCachedHomePrograms(config.organizationId);
   const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
 
   const enrichedPrograms = programs.map(p => ({

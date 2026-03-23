@@ -1,14 +1,70 @@
 import React from "react"
+import { unstable_cache } from "next/cache"
 import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { Trophy } from "lucide-react"
 import { CompetitionCard } from "@/components/sites/competition-card"
 
+const getCachedSiteConfig = unstable_cache(
+  async (slug: string) => {
+    return db.websiteConfig.findUnique({
+      where: { subdomain: slug },
+      include: { organization: true },
+    })
+  },
+  ["site-config"],
+  { revalidate: 30 }
+)
+
+const getCachedCompetitions = unstable_cache(
+  async (organizationId: string) => {
+    const competitions = await db.competition.findMany({
+      where: { organizationId, publishStatus: "LIVE" },
+      include: {
+        facility: {
+          select: { id: true, name: true, city: true, stateProvince: true },
+        },
+        pricingTiers: { orderBy: { displayOrder: "asc" } },
+        _count: { select: { categories: true, entries: true } },
+      },
+      orderBy: { startDate: "asc" },
+    })
+
+    return competitions.map((c) => ({
+      id: c.id,
+      name: c.name,
+      competitionType: c.competitionType,
+      startDate: c.startDate.toISOString(),
+      endDate: c.endDate.toISOString(),
+      startTime: c.startTime,
+      endTime: c.endTime,
+      city: c.city,
+      stateProvince: c.stateProvince,
+      facility: c.facility,
+      pricingMode: c.pricingMode,
+      entryFee: c.entryFee ? Number(c.entryFee) : null,
+      hasAgeRestriction: c.hasAgeRestriction,
+      minAge: c.minAge,
+      maxAge: c.maxAge,
+      hasLevelRestriction: c.hasLevelRestriction,
+      hasCapacityRestriction: c.hasCapacityRestriction,
+      capacity: c.capacity,
+      hasMembershipRestriction: c.hasMembershipRestriction,
+      _count: c._count,
+      pricingTiers: c.pricingTiers.map((t) => ({
+        id: t.id,
+        minEvents: t.minEvents,
+        maxEvents: t.maxEvents,
+        pricePerEvent: Number(t.pricePerEvent),
+      })),
+    }))
+  },
+  ["site-competitions"],
+  { revalidate: 30 }
+)
+
 export default async function CompetitionsPage({ params }: { params: { slug: string } }) {
-  const config = await db.websiteConfig.findUnique({
-    where: { subdomain: params.slug },
-    include: { organization: true },
-  })
+  const config = await getCachedSiteConfig(params.slug)
 
   if (!config || !config.showCompetitions) return notFound()
 
@@ -16,53 +72,7 @@ export default async function CompetitionsPage({ params }: { params: { slug: str
   const description = config.competitionsDescription || "Browse our upcoming competitions and register today."
   const primaryColor = config.primaryColor || "#000000"
 
-  const competitions = await db.competition.findMany({
-    where: {
-      organizationId: config.organizationId,
-      publishStatus: "LIVE",
-    },
-    include: {
-      facility: {
-        select: { id: true, name: true, city: true, stateProvince: true },
-      },
-      pricingTiers: {
-        orderBy: { displayOrder: "asc" },
-      },
-      _count: {
-        select: { categories: true, entries: true },
-      },
-    },
-    orderBy: { startDate: "asc" },
-  })
-
-  const serialized = competitions.map((c) => ({
-    id: c.id,
-    name: c.name,
-    competitionType: c.competitionType,
-    startDate: c.startDate.toISOString(),
-    endDate: c.endDate.toISOString(),
-    startTime: c.startTime,
-    endTime: c.endTime,
-    city: c.city,
-    stateProvince: c.stateProvince,
-    facility: c.facility,
-    pricingMode: c.pricingMode,
-    entryFee: c.entryFee ? Number(c.entryFee) : null,
-    hasAgeRestriction: c.hasAgeRestriction,
-    minAge: c.minAge,
-    maxAge: c.maxAge,
-    hasLevelRestriction: c.hasLevelRestriction,
-    hasCapacityRestriction: c.hasCapacityRestriction,
-    capacity: c.capacity,
-    hasMembershipRestriction: c.hasMembershipRestriction,
-    _count: c._count,
-    pricingTiers: c.pricingTiers.map((t) => ({
-      id: t.id,
-      minEvents: t.minEvents,
-      maxEvents: t.maxEvents,
-      pricePerEvent: Number(t.pricePerEvent),
-    })),
-  }))
+  const serialized = await getCachedCompetitions(config.organizationId)
 
   return (
     <div className="min-h-screen">

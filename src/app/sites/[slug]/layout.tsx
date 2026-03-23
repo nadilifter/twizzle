@@ -1,8 +1,8 @@
 import React from "react";
 import { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,17 @@ import { MarketingUserMenu } from "@/components/sites/marketing-user-menu";
 import { SiteUnavailablePage } from "@/components/sites/site-unavailable";
 
 export const dynamic = "force-dynamic";
+
+const getCachedSiteConfig = unstable_cache(
+  async (subdomain: string) => {
+    return db.websiteConfig.findUnique({
+      where: { subdomain },
+      include: { organization: true },
+    });
+  },
+  ["site-config"],
+  { revalidate: 30 }
+);
 
 /**
  * Get the login URL for tenant sites.
@@ -86,10 +97,7 @@ function hexToHSL(hex: string): string {
  * from indexing regardless of the site's published status.
  */
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const config = await db.websiteConfig.findUnique({
-    where: { subdomain: params.slug },
-    include: { organization: true },
-  });
+  const config = await getCachedSiteConfig(params.slug);
   if (!config) return {};
 
   const org = config.organization;
@@ -199,10 +207,7 @@ export default async function SiteLayout({
 
   if (!subdomain) return notFound();
 
-  const config = await db.websiteConfig.findUnique({
-    where: { subdomain: subdomain },
-    include: { organization: true },
-  });
+  const config = await getCachedSiteConfig(subdomain);
 
   if (!config || !config.isPublished) {
     return notFound();

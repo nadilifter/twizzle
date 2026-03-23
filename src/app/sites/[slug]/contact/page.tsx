@@ -1,14 +1,23 @@
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Mail, Phone, MapPin } from "lucide-react";
 
+const getCachedContactConfig = unstable_cache(
+    async (subdomain: string) => {
+        return db.websiteConfig.findUnique({
+            where: { subdomain },
+            include: { organization: true }
+        });
+    },
+    ["site-config-contact"],
+    { revalidate: 30 }
+);
+
 export default async function ContactPage({ params }: { params: { slug: string } }) {
     const subdomain = params.slug;
 
-    const config = await db.websiteConfig.findUnique({
-        where: { subdomain },
-        include: { organization: true }
-    });
+    const config = await getCachedContactConfig(subdomain);
 
     if (!config) return notFound();
 
