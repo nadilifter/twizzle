@@ -36,7 +36,12 @@ function getLoginUrl(subdomain: string): string {
   return getEnvLoginUrl(callbackUrl);
 }
 
-// Helper to convert hex to HSL
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+function isValidHexColor(color: string): boolean {
+  return HEX_COLOR_RE.test(color);
+}
+
 function hexToHSL(hex: string): string {
   // Remove # if present
   hex = hex.replace(/^#/, '');
@@ -237,8 +242,8 @@ export default async function SiteLayout({
   const athleteUrl = getSubdomainUrl("athletes");
   const accountUrl = `${getSubdomainUrl("athletes")}/account`;
 
-  const primaryColor = config.primaryColor || "#000000";
-  const secondaryColor = config.secondaryColor || "#ffffff";
+  const primaryColor = isValidHexColor(config.primaryColor ?? "") ? config.primaryColor! : "#000000";
+  const secondaryColor = isValidHexColor(config.secondaryColor ?? "") ? config.secondaryColor! : "#ffffff";
   
   // Convert to HSL for Tailwind CSS variables
   const primaryHSL = hexToHSL(primaryColor);

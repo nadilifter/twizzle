@@ -5,6 +5,10 @@
  * better understand gymnastics organization websites.
  */
 
+function safeJsonLd(data: Record<string, unknown>): string {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
+}
+
 interface OrganizationSchemaProps {
   organization: {
     name: string;
@@ -58,7 +62,7 @@ export function OrganizationStructuredData({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
     />
   );
 }
@@ -105,7 +109,7 @@ export function LocalBusinessStructuredData({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
     />
   );
 }
@@ -129,7 +133,7 @@ export function WebSiteStructuredData({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
     />
   );
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import MessageValidator from "sns-validator";
 import {
   handleEmailDelivery,
   handleEmailBounce,
@@ -17,25 +18,26 @@ import {
  * - Open tracking
  * - Click tracking
  *
+ * All incoming messages are verified using the `sns-validator` library,
+ * which checks the SNS message signature against Amazon's signing certificate.
+ *
  * Setup in AWS:
  * 1. Create SNS topic for SES notifications
  * 2. Subscribe this endpoint to the SNS topic
  * 3. Configure SES to publish events to the SNS topic
+ * 4. Set SNS_TOPIC_ARN env var to restrict accepted topics (optional but recommended)
  */
 
-interface SNSMessage {
-  Type: "SubscriptionConfirmation" | "Notification" | "UnsubscribeConfirmation";
-  MessageId: string;
-  TopicArn: string;
-  Subject?: string;
-  Message: string;
-  Timestamp: string;
-  SignatureVersion: string;
-  Signature: string;
-  SigningCertURL: string;
-  SubscribeURL?: string; // For SubscriptionConfirmation
-  UnsubscribeURL?: string;
-  Token?: string;
+const snsValidator = new MessageValidator();
+
+function validateSnsMessage(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    snsValidator.validate(body, (err, message) => {
+      if (err) reject(err);
+      else if (message) resolve(message);
+      else reject(new Error("SNS validation returned no message"));
+    });
+  });
 }
 
 interface SESNotification {
@@ -92,48 +94,61 @@ interface SESNotification {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    let snsMessage: SNSMessage;
+    let parsed: Record<string, unknown>;
 
     try {
-      snsMessage = JSON.parse(body);
+      parsed = JSON.parse(body);
     } catch {
-      console.error("Failed to parse SNS message:", body);
+      console.error("Failed to parse SNS message");
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    // Handle SNS subscription confirmation
-    if (snsMessage.Type === "SubscriptionConfirmation") {
-      // In production, you should verify the signature and confirm the subscription
-      // For now, log the confirmation URL
-      console.log("SNS Subscription Confirmation URL:", snsMessage.SubscribeURL);
-      
-      // Auto-confirm by fetching the SubscribeURL
-      if (snsMessage.SubscribeURL) {
+    // Verify the SNS message signature before processing anything
+    let snsMessage: Record<string, unknown>;
+    try {
+      snsMessage = await validateSnsMessage(parsed);
+    } catch (error) {
+      console.error("SNS signature verification failed:", error instanceof Error ? error.message : error);
+      return NextResponse.json({ error: "Invalid SNS signature" }, { status: 403 });
+    }
+
+    // Optional TopicArn allowlist — restrict to known SES notification topics
+    const allowedTopicArn = process.env.SNS_TOPIC_ARN;
+    if (allowedTopicArn && snsMessage.TopicArn !== allowedTopicArn) {
+      console.error("SNS TopicArn mismatch:", snsMessage.TopicArn);
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const messageType = snsMessage.Type as string;
+
+    // Handle SNS subscription confirmation (signature already verified above)
+    if (messageType === "SubscriptionConfirmation") {
+      const subscribeUrl = snsMessage.SubscribeURL as string | undefined;
+      if (subscribeUrl) {
         try {
-          await fetch(snsMessage.SubscribeURL);
-          console.log("SNS subscription confirmed");
+          await fetch(subscribeUrl);
+          console.log("SNS subscription confirmed for topic:", snsMessage.TopicArn);
         } catch (error) {
           console.error("Failed to confirm SNS subscription:", error);
         }
       }
-      
       return NextResponse.json({ message: "Subscription confirmation received" });
     }
 
     // Handle unsubscribe confirmation
-    if (snsMessage.Type === "UnsubscribeConfirmation") {
+    if (messageType === "UnsubscribeConfirmation") {
       console.log("SNS Unsubscribe Confirmation received");
       return NextResponse.json({ message: "Unsubscribe confirmation received" });
     }
 
     // Handle actual notifications
-    if (snsMessage.Type === "Notification") {
+    if (messageType === "Notification") {
       let notification: SESNotification;
 
       try {
-        notification = JSON.parse(snsMessage.Message);
+        notification = JSON.parse(snsMessage.Message as string);
       } catch {
-        console.error("Failed to parse SES notification:", snsMessage.Message);
+        console.error("Failed to parse SES notification payload");
         return NextResponse.json({ error: "Invalid notification format" }, { status: 400 });
       }
 
@@ -176,7 +191,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Message type not handled" });
   } catch (error) {
     console.error("Error processing SES webhook:", error);
-    // Return 200 to prevent SNS from retrying
     return NextResponse.json({ error: "Internal error" }, { status: 200 });
   }
 }

@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -37,7 +37,9 @@ export function verifySignedState(state: string): { organizationId: string } {
     .update(parsed.data)
     .digest("base64url");
 
-  if (expectedSig !== parsed.signature) {
+  const expectedBuf = Buffer.from(expectedSig);
+  const actualBuf = Buffer.from(parsed.signature);
+  if (expectedBuf.length !== actualBuf.length || !timingSafeEqual(expectedBuf, actualBuf)) {
     throw new Error("Invalid state signature");
   }
 

@@ -47,7 +47,11 @@ export function verifyVerifiedToken(
       .update(`${payload.email}:${payload.type}:${payload.exp}`)
       .digest("base64url");
 
-    if (expected !== payload.signature) return null;
+    const expectedBuf = Buffer.from(expected);
+    const actualBuf = Buffer.from(payload.signature);
+    if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
+      return null;
+    }
 
     return { email: payload.email };
   } catch {

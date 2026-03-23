@@ -91,7 +91,9 @@ export async function middleware(req: NextRequest) {
 
   // Debug: log token retrieval for auth troubleshooting (only when AUTH_DEBUG is enabled)
   const sessionCookie = req.cookies.get(cookieName);
-  if (process.env.AUTH_DEBUG === 'true') {
+  if (process.env.AUTH_DEBUG === 'true' && process.env.NODE_ENV === 'production') {
+    console.warn('AUTH_DEBUG is enabled in production — ignoring to prevent sensitive data leakage');
+  } else if (process.env.AUTH_DEBUG === 'true') {
     const allCookieNames = req.cookies.getAll().map(c => c.name);
     if (currentHost === "admin" || currentHost === "superadmin" || currentHost === "pos" || currentHost === "login" || path.startsWith("/api/auth")) {
       console.log(`Middleware: method=${req.method}, host=${currentHost}, path=${path}, env=${currentEnv}`);
