@@ -344,6 +344,11 @@ async function syncInvoice(
     ...(invoice.notes && {
       CustomerMemo: { value: invoice.notes },
     }),
+    ...(Number(invoice.tax) > 0 && {
+      TxnTaxDetail: {
+        TotalTax: Number(invoice.tax),
+      },
+    }),
   };
 
   const result = await client.post("invoice", invoiceData);

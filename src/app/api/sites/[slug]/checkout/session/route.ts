@@ -1286,8 +1286,56 @@ export async function POST(
       });
     }
 
+    // Build Adyen line items with per-item tax breakdown (all amounts in minor units / cents)
+    const taxPct = Math.round(taxRate * 10000); // Adyen wants percentage × 100 (e.g. 6.25% = 625)
+    const totalMinor = Math.round(total * 100);
+    const taxMinor = Math.round(tax * 100);
+    const subtotalMinor = totalMinor - taxMinor;
+
+    const adyenLineItems = items.map((item: CartItem, index: number) => {
+      const itemTotal = serverPrices.has(index)
+        ? serverPrices.get(index)!
+        : Number(item.price) * item.quantity;
+      const itemShare = subtotal > 0 ? itemTotal / subtotal : 0;
+      const itemDiscount = Math.round(discountLineAmount * itemShare * 100) / 100;
+      const itemAfterDiscount = Math.max(itemTotal - itemDiscount, 0);
+      const excl = Math.round(itemAfterDiscount * 100);
+      const itemTaxMinor = Math.round(itemAfterDiscount * taxRate * 100);
+      return {
+        id: item.referenceId,
+        description: item.name,
+        quantity: item.quantity,
+        amountExcludingTax: excl,
+        taxAmount: itemTaxMinor,
+        amountIncludingTax: excl + itemTaxMinor,
+        taxPercentage: taxPct,
+      };
+    });
+
+    // Correct rounding residuals so line item sums exactly equal the session amount
+    // (required by payment methods like Klarna/AfterPay)
+    if (adyenLineItems.length > 0) {
+      const sumExcl = adyenLineItems.reduce((s, li) => s + li.amountExcludingTax, 0);
+      const sumTax = adyenLineItems.reduce((s, li) => s + li.taxAmount, 0);
+      const last = adyenLineItems[adyenLineItems.length - 1];
+      last.amountExcludingTax += subtotalMinor - sumExcl;
+      last.taxAmount += taxMinor - sumTax;
+      last.amountIncludingTax = last.amountExcludingTax + last.taxAmount;
+    }
+
+    if (discountRecord && discountLineAmount > 0) {
+      adyenLineItems.push({
+        id: `discount-${discountRecord.id}`,
+        description: `Discount: ${discountRecord.name}`,
+        quantity: 1,
+        amountExcludingTax: 0,
+        taxAmount: 0,
+        amountIncludingTax: 0,
+        taxPercentage: 0,
+      });
+    }
+
     // Create Adyen Session for non-zero orders
-    // We'll use the invoice ID as reference so we can update it later
     const protocol = request.headers.get("x-forwarded-proto") || "http";
     const host = request.headers.get("host");
     const returnUrl = `${protocol}://${host}/receipt/${invoice.id}`;
@@ -1295,9 +1343,10 @@ export async function POST(
     const session = await createPaymentSession(
         total,
         "USD",
-        invoice.id, // Using invoice ID as reference for webhook matching
+        invoice.id,
         returnUrl,
-        resolvedContact.email
+        resolvedContact.email,
+        adyenLineItems
     );
 
     return NextResponse.json({
