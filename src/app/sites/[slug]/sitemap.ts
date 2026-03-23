@@ -79,14 +79,19 @@ export default async function sitemap({
     });
   }
 
-  // Add store page if enabled
+  // Add store page if enabled and has active products
   if (config.showStore) {
-    routes.push({ 
-      url: `${baseUrl}/store`, 
-      lastModified: now, 
-      changeFrequency: 'weekly', 
-      priority: 0.8 
+    const productCount = await db.product.count({
+      where: { organizationId: config.organizationId, isActive: true },
     });
+    if (productCount > 0) {
+      routes.push({ 
+        url: `${baseUrl}/store`, 
+        lastModified: now, 
+        changeFrequency: 'weekly', 
+        priority: 0.8 
+      });
+    }
   }
 
   // Add contact page if enabled

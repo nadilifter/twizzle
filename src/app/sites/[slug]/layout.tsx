@@ -35,6 +35,17 @@ const getCachedSiteConfig = unstable_cache(
   { revalidate: 30 }
 );
 
+const getCachedHasActiveProducts = unstable_cache(
+  async (organizationId: string) => {
+    const count = await db.product.count({
+      where: { organizationId, isActive: true },
+    });
+    return count > 0;
+  },
+  ["site-has-active-products"],
+  { revalidate: 30 }
+);
+
 /**
  * Get the login URL for tenant sites.
  * Redirects to the centralized login portal with callback to return to the tenant site.
@@ -246,6 +257,10 @@ export default async function SiteLayout({
   const adminUrl = getSubdomainUrl("admin");
   const athleteUrl = getSubdomainUrl("athletes");
 
+  const hasProducts = config.showStore
+    ? await getCachedHasActiveProducts(config.organizationId)
+    : false;
+
   const primaryColor = isValidHexColor(config.primaryColor ?? "") ? config.primaryColor! : "#000000";
   const secondaryColor = isValidHexColor(config.secondaryColor ?? "") ? config.secondaryColor! : "#ffffff";
   
@@ -329,7 +344,7 @@ export default async function SiteLayout({
                     {config.showRegistration && <Link href="/register" className="text-foreground/80 hover:text-primary transition-colors">Programs</Link>}
                     {config.showCalendar && <Link href="/calendar" className="text-foreground/80 hover:text-primary transition-colors">Calendar</Link>}
                     {config.showCompetitions && <Link href="/competitions" className="text-foreground/80 hover:text-primary transition-colors">Competitions</Link>}
-                    {config.showStore && <Link href="/store" className="text-foreground/80 hover:text-primary transition-colors">Store</Link>}
+                    {config.showStore && hasProducts && <Link href="/store" className="text-foreground/80 hover:text-primary transition-colors">Store</Link>}
                     {config.showContact && <Link href="/contact" className="text-foreground/80 hover:text-primary transition-colors">Contact</Link>}
                 </nav>
                 <div className="flex items-center gap-3 text-sm">
@@ -396,7 +411,7 @@ export default async function SiteLayout({
                             Competitions
                         </Link>
                     )}
-                    {config.showStore && (
+                    {config.showStore && hasProducts && (
                         <Link 
                             href="/store" 
                             className="text-sm text-muted-foreground transition-colors hover:text-primary"

@@ -14,11 +14,25 @@ const getCachedSiteConfig = unstable_cache(
   { revalidate: 30 }
 )
 
+const getCachedHasActiveProducts = unstable_cache(
+  async (organizationId: string) => {
+    const count = await db.product.count({
+      where: { organizationId, isActive: true },
+    })
+    return count > 0
+  },
+  ["site-has-active-products"],
+  { revalidate: 30 }
+)
+
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const config = await getCachedSiteConfig(slug)
 
   if (!config || !config.showStore) return notFound()
+
+  const hasProducts = await getCachedHasActiveProducts(config.organizationId)
+  if (!hasProducts) return notFound()
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
