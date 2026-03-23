@@ -40,8 +40,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = checkoutSchema.parse(body);
 
-    // Validate products and check inventory
     const productIds = validatedData.items.map((item) => item.referenceId);
+
+    // Pre-flight check: verify products exist and are active (fast feedback)
     const products = await db.product.findMany({
       where: {
         id: { in: productIds },
@@ -51,7 +52,6 @@ export async function POST(request: NextRequest) {
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 
-    // Check all products exist and have sufficient inventory
     for (const item of validatedData.items) {
       const product = productMap.get(item.referenceId);
       if (!product) {
@@ -66,18 +66,8 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      // Check inventory if not unlimited
-      if (product.currentInventory !== null) {
-        if (product.currentInventory < item.quantity) {
-          return NextResponse.json(
-            { error: `Insufficient inventory for ${item.name}. Only ${product.currentInventory} available.` },
-            { status: 400 }
-          );
-        }
-      }
     }
 
-    // Recalculate totals server-side using verified DB prices
     const org = await db.organization.findUnique({
       where: { id: session.user.organizationId },
       select: { taxRate: true, taxEnabled: true },
@@ -86,16 +76,36 @@ export async function POST(request: NextRequest) {
       ? Number(org?.taxRate ?? 0)
       : 0;
 
-    const subtotal = validatedData.items.reduce((sum, item) => {
-      const product = productMap.get(item.referenceId)!;
-      return sum + Number(product.price) * item.quantity;
-    }, 0);
-    const tax = Math.round(subtotal * taxRate * 100) / 100;
-    const total = Math.round((subtotal + tax) * 100) / 100;
-
     const reference = `POS-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
     const result = await db.$transaction(async (tx) => {
+      // Re-read products inside the transaction to get fresh inventory
+      const freshProducts = await tx.product.findMany({
+        where: {
+          id: { in: productIds },
+          organizationId: session.user.organizationId,
+        },
+      });
+      const freshMap = new Map(freshProducts.map((p) => [p.id, p]));
+
+      // Validate inventory with fresh data
+      for (const item of validatedData.items) {
+        const product = freshMap.get(item.referenceId);
+        if (!product || !product.isActive) {
+          throw new Error(`Product no longer available: ${item.name}`);
+        }
+        if (product.currentInventory !== null && product.currentInventory < item.quantity) {
+          throw new Error(`Insufficient inventory for ${item.name}. Only ${product.currentInventory} available.`);
+        }
+      }
+
+      const subtotal = validatedData.items.reduce((sum, item) => {
+        const product = freshMap.get(item.referenceId)!;
+        return sum + Number(product.price) * item.quantity;
+      }, 0);
+      const tax = Math.round(subtotal * taxRate * 100) / 100;
+      const total = Math.round((subtotal + tax) * 100) / 100;
+
       const invoice = await tx.invoice.create({
         data: {
           reference,
@@ -117,7 +127,7 @@ export async function POST(request: NextRequest) {
 
       const lineItems = await Promise.all(
         validatedData.items.map((item) => {
-          const product = productMap.get(item.referenceId)!;
+          const product = freshMap.get(item.referenceId)!;
           const verifiedPrice = Number(product.price);
           return tx.lineItem.create({
             data: {
@@ -145,23 +155,18 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Decrement inventory and create stock movements
       for (const item of validatedData.items) {
-        const product = productMap.get(item.referenceId)!;
-        
-        // Skip if unlimited inventory
+        const product = freshMap.get(item.referenceId)!;
         if (product.currentInventory === null) continue;
 
         const previousQty = product.currentInventory;
         const newQty = previousQty - item.quantity;
 
-        // Update product inventory
         await tx.product.update({
           where: { id: product.id },
           data: { currentInventory: newQty },
         });
 
-        // Create stock movement record
         await tx.stockMovement.create({
           data: {
             productId: product.id,
@@ -176,7 +181,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      return { invoice, lineItems };
+      return { invoice, lineItems, total };
     });
 
     return NextResponse.json({
@@ -190,6 +195,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: error.issues[0].message },
         { status: 400 }
+      );
+    }
+    if (error instanceof Error && (error.message.startsWith("Insufficient inventory") || error.message.startsWith("Product no longer"))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 409 }
       );
     }
     console.error("Error processing checkout:", error);

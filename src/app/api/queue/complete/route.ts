@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { admitNextInQueue } from "@/lib/queue-utils"
+import { admitNextInQueue, lockQueueConfig } from "@/lib/queue-utils"
 
 // POST /api/queue/complete - Mark registration as complete
 export async function POST(request: NextRequest) {
@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
     }
 
     await db.$transaction(async (tx) => {
+      await lockQueueConfig(tx, entry.queueConfigId)
+
       await tx.queueEntry.update({
         where: { id: entry.id },
         data: {

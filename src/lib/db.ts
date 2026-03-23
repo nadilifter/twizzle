@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { AsyncLocalStorage } from "async_hooks";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -12,9 +13,13 @@ if (process.env.NODE_ENV !== "production") {
   globalThis.prismaClient = _rawDb;
 }
 
-// Track whether the current query is running through getScopedDb to avoid
-// false warnings from the dev-mode tenant isolation checker.
-let _insideScopedQuery = false;
+// Per-request tracking of scoped query context. AsyncLocalStorage ensures
+// concurrent requests don't interfere with each other's scoped-query flag.
+const _scopedQueryStorage = new AsyncLocalStorage<{ active: boolean }>();
+
+function _isInsideScopedQuery(): boolean {
+  return _scopedQueryStorage.getStore()?.active === true;
+}
 
 // In development, wrap the base client with a monitoring extension that warns
 // when tenant-model queries are executed without organizationId. In production,
@@ -27,7 +32,7 @@ function _createDevWarningDb(client: PrismaClient) {
 
   function warnIfUnscoped(model: string, action: string, args: any) {
     if (
-      !_insideScopedQuery &&
+      !_isInsideScopedQuery() &&
       WATCHED_ACTIONS.has(action) &&
       typeof _TENANT_SET !== "undefined" &&
       _TENANT_SET.has(model)
@@ -159,13 +164,8 @@ export function getScopedDb(organizationId: string) {
     throw new Error("getScopedDb requires a valid organizationId");
   }
 
-  const scopedQuery = async <T>(fn: () => Promise<T>): Promise<T> => {
-    _insideScopedQuery = true;
-    try {
-      return await fn();
-    } finally {
-      _insideScopedQuery = false;
-    }
+  const scopedQuery = <T>(fn: () => Promise<T>): Promise<T> => {
+    return _scopedQueryStorage.run({ active: true }, fn);
   };
 
   return _rawDb.$extends({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { admitNextInQueue } from "@/lib/queue-utils"
+import { admitNextInQueue, lockQueueConfig } from "@/lib/queue-utils"
 
 // POST /api/queue/abandon - User leaves the queue
 export async function POST(request: NextRequest) {
@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
     const queueConfigId = entry.queueConfigId
 
     await db.$transaction(async (tx) => {
+      await lockQueueConfig(tx, queueConfigId)
+
       await tx.queueEntry.update({
         where: { id: entry.id },
         data: {

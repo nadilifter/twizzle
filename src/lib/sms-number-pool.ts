@@ -86,7 +86,6 @@ export async function getPoolNumberForSend(
         `Reusing first pool number. Consider adding more numbers.`
     );
     chosen = pool[0];
-    // Upsert so we don't violate the unique constraint
     await db.smsNumberAssignment.upsert({
       where: { phone_twilioNumber: { phone: normalized, twilioNumber: chosen } },
       update: { organizationId, updatedAt: new Date() },
@@ -95,9 +94,20 @@ export async function getPoolNumberForSend(
     return chosen;
   }
 
-  await db.smsNumberAssignment.create({
-    data: { phone: normalized, twilioNumber: chosen, organizationId },
-  });
+  try {
+    await db.smsNumberAssignment.create({
+      data: { phone: normalized, twilioNumber: chosen, organizationId },
+    });
+  } catch (err: any) {
+    // Concurrent request already created this assignment — read it back
+    if (err?.code === "P2002") {
+      const raced = await db.smsNumberAssignment.findUnique({
+        where: { phone_organizationId: { phone: normalized, organizationId } },
+      });
+      if (raced) return raced.twilioNumber;
+    }
+    throw err;
+  }
 
   return chosen;
 }

@@ -10,12 +10,26 @@ import { createHash } from "crypto";
 
 const MAX_ATTEMPTS = 5;
 const BATCH_SIZE = 50;
+const STALE_PROCESSING_MINUTES = 10;
 
 export async function processQboSyncQueue(): Promise<{
   processed: number;
   succeeded: number;
   failed: number;
 }> {
+  // Recover items stuck in PROCESSING from a previous crashed/timed-out run
+  const staleThreshold = new Date(Date.now() - STALE_PROCESSING_MINUTES * 60 * 1000);
+  await db.accountingSyncQueue.updateMany({
+    where: {
+      status: "PROCESSING",
+      OR: [
+        { lastAttemptAt: { lt: staleThreshold } },
+        { lastAttemptAt: null, createdAt: { lt: staleThreshold } },
+      ],
+    },
+    data: { status: "PENDING" },
+  });
+
   const connections = await db.accountingConnection.findMany({
     where: { provider: "QBO", isActive: true, setupComplete: true },
     include: { accountMappings: true },
@@ -67,7 +81,7 @@ async function processConnectionQueue(
     try {
       await db.accountingSyncQueue.update({
         where: { id: item.id },
-        data: { status: "PROCESSING" },
+        data: { status: "PROCESSING", lastAttemptAt: new Date() },
       });
 
       const externalEntityId = await syncEntity(

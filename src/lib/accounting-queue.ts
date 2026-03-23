@@ -142,6 +142,11 @@ export async function enqueueFullSync(
   }
 
   if (items.length > 0) {
+    // Clear any existing PENDING items for this connection to avoid duplicates
+    // from repeated full-sync triggers (e.g. double-click).
+    await db.accountingSyncQueue.deleteMany({
+      where: { connectionId: connection.id, status: "PENDING" },
+    });
     await db.accountingSyncQueue.createMany({ data: items });
   }
 

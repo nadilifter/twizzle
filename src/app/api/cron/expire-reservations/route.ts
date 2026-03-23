@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { admitNextInQueue } from "@/lib/queue-utils"
+import { admitNextInQueue, lockQueueConfig } from "@/lib/queue-utils"
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
 
     for (const [queueConfigId, reservations] of byConfig) {
       await db.$transaction(async (tx) => {
-        // Expire all reservations for this config in one batch
+        await lockQueueConfig(tx, queueConfigId)
+
         const reservationIds = reservations.map((r) => r.id)
         const entryIds = reservations.map((r) => r.queueEntryId)
 

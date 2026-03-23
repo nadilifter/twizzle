@@ -57,79 +57,63 @@ export async function POST(
     const body = await request.json();
     const validatedData = restockSchema.parse(body);
 
-    const previousQty = product.currentInventory ?? 0;
-    let newQty: number;
-    let quantityChange: number;
-
-    switch (validatedData.type) {
-      case "add":
-        if (validatedData.quantity === undefined) {
-          return NextResponse.json(
-            { error: "Quantity is required for add operation" },
-            { status: 400 }
-          );
-        }
-        newQty = previousQty + validatedData.quantity;
-        quantityChange = validatedData.quantity;
-        break;
-
-      case "set":
-        if (validatedData.quantity === undefined) {
-          return NextResponse.json(
-            { error: "Quantity is required for set operation" },
-            { status: 400 }
-          );
-        }
-        newQty = validatedData.quantity;
-        quantityChange = newQty - previousQty;
-        break;
-
-      case "max":
-        if (product.maxInventory === null) {
-          return NextResponse.json(
-            { error: "Product has no maximum inventory set" },
-            { status: 400 }
-          );
-        }
-        newQty = product.maxInventory;
-        quantityChange = newQty - previousQty;
-        break;
-
-      default:
-        return NextResponse.json(
-          { error: "Invalid operation type" },
-          { status: 400 }
-        );
-    }
-
-    // Don't allow negative inventory
-    if (newQty < 0) {
+    if (validatedData.type === "add" && validatedData.quantity === undefined) {
       return NextResponse.json(
-        { error: "Inventory cannot be negative" },
+        { error: "Quantity is required for add operation" },
         { status: 400 }
       );
     }
-
-    // Don't exceed max inventory if set
-    if (product.maxInventory !== null && newQty > product.maxInventory) {
+    if (validatedData.type === "set" && validatedData.quantity === undefined) {
       return NextResponse.json(
-        { error: `Inventory cannot exceed maximum of ${product.maxInventory}` },
+        { error: "Quantity is required for set operation" },
         { status: 400 }
       );
     }
-
-    // Skip if no change
-    if (quantityChange === 0) {
-      return NextResponse.json(product);
+    if (validatedData.type === "max" && product.maxInventory === null) {
+      return NextResponse.json(
+        { error: "Product has no maximum inventory set" },
+        { status: 400 }
+      );
     }
 
     const updatedProduct = await db.$transaction(async (tx) => {
-      const verified = await tx.product.findFirst({
+      // Re-read inside transaction for fresh currentInventory
+      const fresh = await tx.product.findFirst({
         where: { id, organizationId: session.user.organizationId },
-        select: { id: true },
       });
-      if (!verified) {
+      if (!fresh) {
         throw new Error("Product not found or access denied");
+      }
+
+      const previousQty = fresh.currentInventory ?? 0;
+      let newQty: number;
+      let quantityChange: number;
+
+      switch (validatedData.type) {
+        case "add":
+          newQty = previousQty + validatedData.quantity!;
+          quantityChange = validatedData.quantity!;
+          break;
+        case "set":
+          newQty = validatedData.quantity!;
+          quantityChange = newQty - previousQty;
+          break;
+        case "max":
+          newQty = fresh.maxInventory!;
+          quantityChange = newQty - previousQty;
+          break;
+        default:
+          throw new Error("Invalid operation type");
+      }
+
+      if (newQty < 0) {
+        throw new Error("Inventory cannot be negative");
+      }
+      if (fresh.maxInventory !== null && newQty > fresh.maxInventory) {
+        throw new Error(`Inventory cannot exceed maximum of ${fresh.maxInventory}`);
+      }
+      if (quantityChange === 0) {
+        return fresh;
       }
 
       await tx.stockMovement.create({
@@ -144,7 +128,6 @@ export async function POST(
         },
       });
 
-      // Update product inventory
       return tx.product.update({
         where: { id },
         data: { currentInventory: newQty },
@@ -158,6 +141,10 @@ export async function POST(
         { error: error.issues[0].message },
         { status: 400 }
       );
+    }
+    const msg = error instanceof Error ? error.message : "";
+    if (msg.startsWith("Inventory cannot") || msg.startsWith("Product not found")) {
+      return NextResponse.json({ error: msg }, { status: 409 });
     }
     console.error("Error updating inventory:", error);
     return NextResponse.json(
