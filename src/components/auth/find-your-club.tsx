@@ -129,7 +129,7 @@ export function FindYourClub({
                   <a
                     key={org.id}
                     href={href}
-                    className="group block"
+                    className="group block text-left"
                   >
                     <Card className="h-full transition-colors hover:bg-accent/50 hover:border-primary/30">
                       <div className="p-4 flex flex-col gap-3">
