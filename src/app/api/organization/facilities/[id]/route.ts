@@ -64,6 +64,9 @@ export async function GET(
             },
           },
         },
+        operatingHours: {
+          orderBy: [{ dayOfWeek: "asc" }, { openTime: "asc" }],
+        },
         _count: {
           select: {
             spaces: true,

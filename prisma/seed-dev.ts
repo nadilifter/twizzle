@@ -682,6 +682,29 @@ async function main() {
   console.log(`  ✓ Created ${operatingHoursData.length} facility operating hours entries`);
 
   // ============================================
+  // FACILITY NOTES
+  // ============================================
+  console.log("\n📝 Creating facility notes...");
+  const facilityNoteData = [
+    { id: `${ORG1_ID}-fnote-1`, facilityId: org1Facility1.id, authorId: org1Admin.id, content: "Annual fire inspection passed. Next inspection due March 2027.", createdAt: daysAgo(14) },
+    { id: `${ORG1_ID}-fnote-2`, facilityId: org1Facility1.id, authorId: org1Coach1.id, content: "Foam pit needs refilling — ordered new foam blocks, expected delivery next week.", createdAt: daysAgo(7) },
+    { id: `${ORG1_ID}-fnote-3`, facilityId: org1Facility1.id, authorId: org1Admin.id, content: "HVAC serviced — new filters installed, AC running much cooler now.", createdAt: daysAgo(3) },
+    { id: `${ORG1_ID}-fnote-4`, facilityId: org1Facility2.id, authorId: org1Coach1.id, content: "Preschool area mats replaced with new anti-slip versions.", createdAt: daysAgo(21) },
+    { id: `${ORG1_ID}-fnote-5`, facilityId: org1Facility2.id, authorId: org1Admin.id, content: "Parking lot repaving scheduled for the first weekend of next month. Classes will need to use the rear entrance.", createdAt: daysAgo(5) },
+    { id: `${ORG2_ID}-fnote-1`, facilityId: org2Facility.id, authorId: org2Admin.id, content: "Pool chemical balance checked and adjusted. Chlorine levels back to normal.", createdAt: daysAgo(10) },
+    { id: `${ORG2_ID}-fnote-2`, facilityId: org2Facility.id, authorId: org2Coach.id, content: "Basketball Court A floor refinished. Looks great — no slipping issues reported since.", createdAt: daysAgo(4) },
+    { id: `${ORG2_ID}-fnote-3`, facilityId: org2Facility.id, authorId: org2Admin.id, content: "Emergency exit signs replaced with LED versions across the entire facility.", createdAt: daysAgo(1) },
+  ];
+  await Promise.all(facilityNoteData.map((n) =>
+    prisma.facilityNote.upsert({
+      where: { id: n.id },
+      update: {},
+      create: n,
+    })
+  ));
+  console.log(`  ✓ Created ${facilityNoteData.length} facility notes`);
+
+  // ============================================
   // GUARDIAN / PARENT USERS
   // ============================================
   console.log("\n👨‍👩‍👧‍👦 Creating guardian users...");

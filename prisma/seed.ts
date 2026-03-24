@@ -952,6 +952,56 @@ async function main() {
   console.log(`  ✓ Created ${facilityAssignmentData.length} facility assignments`);
 
   // ============================================
+  // FACILITY OPERATING HOURS
+  // ============================================
+  console.log("\n🕐 Creating facility operating hours...");
+  const operatingHoursData = [
+    // Org1 Main Gym: Mon-Fri 6:00-21:00, Sat 8:00-18:00, Sun closed
+    ...[1, 2, 3, 4, 5].map((day, i) => ({ id: `${ORG1_ID}-hours-main-${i}`, facilityId: org1Facility1.id, dayOfWeek: day, openTime: "06:00", closeTime: "21:00" })),
+    { id: `${ORG1_ID}-hours-main-sat`, facilityId: org1Facility1.id, dayOfWeek: 6, openTime: "08:00", closeTime: "18:00" },
+    // Org1 Satellite: Mon-Fri 9:00-12:00 and 14:00-20:00 (closed for lunch), Sat 9:00-14:00
+    ...[1, 2, 3, 4, 5].flatMap((day) => [
+      { id: `${ORG1_ID}-hours-sat-${day}a`, facilityId: org1Facility2.id, dayOfWeek: day, openTime: "09:00", closeTime: "12:00" },
+      { id: `${ORG1_ID}-hours-sat-${day}b`, facilityId: org1Facility2.id, dayOfWeek: day, openTime: "14:00", closeTime: "20:00" },
+    ]),
+    { id: `${ORG1_ID}-hours-sat-sat`, facilityId: org1Facility2.id, dayOfWeek: 6, openTime: "09:00", closeTime: "14:00" },
+    // Org2 Main: Mon-Sat 7:00-22:00, Sun 10:00-18:00
+    ...[1, 2, 3, 4, 5, 6].map((day, i) => ({ id: `${ORG2_ID}-hours-main-${i}`, facilityId: org2Facility.id, dayOfWeek: day, openTime: "07:00", closeTime: "22:00" })),
+    { id: `${ORG2_ID}-hours-main-sun`, facilityId: org2Facility.id, dayOfWeek: 0, openTime: "10:00", closeTime: "18:00" },
+  ];
+  await Promise.all(operatingHoursData.map((h) =>
+    prisma.facilityOperatingHours.upsert({
+      where: { id: h.id },
+      update: {},
+      create: h,
+    })
+  ));
+  console.log(`  ✓ Created ${operatingHoursData.length} facility operating hours entries`);
+
+  // ============================================
+  // FACILITY NOTES
+  // ============================================
+  console.log("\n📝 Creating facility notes...");
+  const facilityNoteData = [
+    { id: `${ORG1_ID}-fnote-1`, facilityId: org1Facility1.id, authorId: org1Admin.id, content: "Annual fire inspection passed. Next inspection due March 2027.", createdAt: daysAgo(14) },
+    { id: `${ORG1_ID}-fnote-2`, facilityId: org1Facility1.id, authorId: org1Coach1.id, content: "Foam pit needs refilling — ordered new foam blocks, expected delivery next week.", createdAt: daysAgo(7) },
+    { id: `${ORG1_ID}-fnote-3`, facilityId: org1Facility1.id, authorId: org1Admin.id, content: "HVAC serviced — new filters installed, AC running much cooler now.", createdAt: daysAgo(3) },
+    { id: `${ORG1_ID}-fnote-4`, facilityId: org1Facility2.id, authorId: org1Coach1.id, content: "Preschool area mats replaced with new anti-slip versions.", createdAt: daysAgo(21) },
+    { id: `${ORG1_ID}-fnote-5`, facilityId: org1Facility2.id, authorId: org1Admin.id, content: "Parking lot repaving scheduled for the first weekend of next month. Classes will need to use the rear entrance.", createdAt: daysAgo(5) },
+    { id: `${ORG2_ID}-fnote-1`, facilityId: org2Facility.id, authorId: org2Admin.id, content: "Pool chemical balance checked and adjusted. Chlorine levels back to normal.", createdAt: daysAgo(10) },
+    { id: `${ORG2_ID}-fnote-2`, facilityId: org2Facility.id, authorId: org2Coach.id, content: "Basketball Court A floor refinished. Looks great — no slipping issues reported since.", createdAt: daysAgo(4) },
+    { id: `${ORG2_ID}-fnote-3`, facilityId: org2Facility.id, authorId: org2Admin.id, content: "Emergency exit signs replaced with LED versions across the entire facility.", createdAt: daysAgo(1) },
+  ];
+  await Promise.all(facilityNoteData.map((n) =>
+    prisma.facilityNote.upsert({
+      where: { id: n.id },
+      update: {},
+      create: n,
+    })
+  ));
+  console.log(`  ✓ Created ${facilityNoteData.length} facility notes`);
+
+  // ============================================
   // GUARDIAN / PARENT USERS
   // ============================================
   console.log("\n👨‍👩‍👧‍👦 Creating guardian users...");
