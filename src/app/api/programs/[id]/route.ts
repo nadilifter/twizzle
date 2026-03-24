@@ -368,8 +368,15 @@ export async function PATCH(
         data: updateData,
       });
 
-      // Regenerate instances if requested or if schedule changed
-      if (validatedData.regenerateInstances) {
+      // Regenerate instances if explicitly requested or if schedule fields changed
+      const scheduleChanged =
+        (validatedData.startDate !== undefined && parseDateOnly(validatedData.startDate)?.getTime() !== existing.startDate?.getTime()) ||
+        (validatedData.endDate !== undefined && parseDateOnly(validatedData.endDate)?.getTime() !== existing.endDate?.getTime()) ||
+        (validatedData.startTime !== undefined && validatedData.startTime !== (existing as any).startTime) ||
+        (validatedData.duration !== undefined && validatedData.duration !== (existing as any).duration) ||
+        (validatedData.rrule !== undefined && validatedData.rrule !== (existing as any).rrule);
+
+      if (validatedData.regenerateInstances || scheduleChanged) {
         // Delete existing future instances (preserve past ones with registrations)
         await tx.programInstance.deleteMany({
           where: {
@@ -413,6 +420,30 @@ export async function PATCH(
                 organizationId: session.user.organizationId!,
               })),
             });
+
+            // Carry forward program-level space assignments to new instances
+            // (skip if spaceIds is in the payload — the space-sync block below handles that)
+            if (validatedData.spaceIds === undefined) {
+              const programSpaces = await tx.programSpace.findMany({
+                where: { programId: id },
+                select: { spaceId: true },
+              });
+              if (programSpaces.length > 0) {
+                const newInstances = await tx.programInstance.findMany({
+                  where: { programId: id, date: { gte: new Date() } },
+                  select: { id: true },
+                });
+                const instanceSpaceData = newInstances.flatMap(inst =>
+                  programSpaces.map(ps => ({
+                    programInstanceId: inst.id,
+                    spaceId: ps.spaceId,
+                  }))
+                );
+                await tx.programInstanceSpace.createMany({
+                  data: instanceSpaceData,
+                });
+              }
+            }
           }
         }
       }
