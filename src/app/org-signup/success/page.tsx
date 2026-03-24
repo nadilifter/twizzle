@@ -20,6 +20,8 @@ function SuccessContent() {
   const searchParams = useSearchParams()
   const subdomain = searchParams.get("subdomain") || "your-site"
   const orgName = searchParams.get("orgName") || "Your Organization"
+  const planPrice = searchParams.get("planPrice")
+  const isFreePlan = planPrice !== null && Number(planPrice) === 0
 
   const { baseDomain, protocol } = getBaseDomainFromHostname()
   const siteUrl = `${protocol}://${subdomain}.${baseDomain}`
@@ -78,7 +80,7 @@ function SuccessContent() {
         <CardHeader>
           <CardTitle className="text-lg">Your Sites</CardTitle>
           <CardDescription>
-            Your 30-day free trial has started
+            {isFreePlan ? "Your free plan is active" : "Your 30-day free trial has started"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

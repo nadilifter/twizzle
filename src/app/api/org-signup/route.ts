@@ -186,8 +186,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const isFreePlan = plan.monthlyPrice.toNumber() === 0
+
+    if (!isFreePlan && !validatedData.adyenShopperReference) {
+      return NextResponse.json(
+        { error: "Payment method required for paid plans" },
+        { status: 400 }
+      )
+    }
+
     const now = new Date()
-    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const trialEndsAt = isFreePlan ? null : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
     const result = await db.$transaction(async (tx) => {
       // 1. Create the organization
@@ -249,7 +258,7 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // 5. Create the subscription (trial)
+      // 5. Create the subscription
       const adyenShopperRef = validatedData.adyenShopperReference 
         ? `org-${organization.id}`
         : null
@@ -258,10 +267,10 @@ export async function POST(request: NextRequest) {
         data: {
           organizationId: organization.id,
           planId: plan.id,
-          status: "TRIALING",
+          status: isFreePlan ? "ACTIVE" : "TRIALING",
           billingCycle: "MONTHLY",
           currentPeriodStart: now,
-          currentPeriodEnd: trialEndsAt,
+          currentPeriodEnd: trialEndsAt ?? now,
           trialEndsAt: trialEndsAt,
           adyenShopperReference: adyenShopperRef,
         },

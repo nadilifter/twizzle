@@ -584,7 +584,12 @@ export default function SignupPage() {
       }
 
       toast.success("Organization created successfully!")
-      router.push(`/org-signup/success?subdomain=${formData.subdomain}&orgName=${encodeURIComponent(formData.orgName)}`)
+      const successParams = new URLSearchParams({
+        subdomain: formData.subdomain,
+        orgName: formData.orgName,
+        ...(selectedPlan ? { planPrice: String(selectedPlan.monthlyPrice) } : {}),
+      })
+      router.push(`/org-signup/success?${successParams.toString()}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong")
       setIsLoading(false)
@@ -616,7 +621,7 @@ export default function SignupPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Create Your Organization</h1>
           <p className="text-muted-foreground">
-            Get started with Uplifter in just a few minutes. All plans include a 30-day free trial.
+            Get started with Uplifter in just a few minutes.
           </p>
         </div>
 
@@ -1298,7 +1303,9 @@ export default function SignupPage() {
                   <CardTitle>Choose Your Plan</CardTitle>
                 </div>
                 <CardDescription>
-                  All plans include a 30-day free trial. {plans.find(p => p.id === formData.planId && Number(p.monthlyPrice) > 0) ? "Credit card required for paid plans." : "No credit card required for free plans."}
+                  {plans.find(p => p.id === formData.planId && Number(p.monthlyPrice) > 0)
+                    ? "All paid plans include a 30-day free trial. Credit card required."
+                    : "No credit card required. Get started instantly."}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1349,16 +1356,18 @@ export default function SignupPage() {
                               </span>
                               <span className="text-muted-foreground text-sm">/mo</span>
                             </div>
-                            {plan.yearlyPrice && (
+                            {plan.yearlyPrice && Number(plan.yearlyPrice) > 0 && (
                               <p className="text-sm text-muted-foreground">
                                 or {formatCurrency(plan.yearlyPrice)}/year
                               </p>
                             )}
                           </div>
 
-                          <Badge variant="secondary" className="mb-3">
-                            Free for 30 days
-                          </Badge>
+                          {Number(plan.monthlyPrice) > 0 && (
+                            <Badge variant="secondary" className="mb-3">
+                              Free for 30 days
+                            </Badge>
+                          )}
 
                           <div className="grid grid-cols-4 gap-1 text-center text-xs mb-3 py-2 border-y">
                             <div>
