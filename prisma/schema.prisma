@@ -2480,6 +2480,7 @@ model WebsiteConfig {
   showContact      Boolean @default(true)
   showCompetitions Boolean @default(false)
   showStore        Boolean @default(true)
+  showLocations    Boolean @default(false)
 
   // Competitions marketing content
   competitionsHeading     String?

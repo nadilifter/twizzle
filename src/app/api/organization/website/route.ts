@@ -20,6 +20,7 @@ const websiteConfigSchema = z.object({
   showContact: z.boolean().optional(),
   showCompetitions: z.boolean().optional(),
   showStore: z.boolean().optional(),
+  showLocations: z.boolean().optional(),
   competitionsHeading: z.string().optional().nullable(),
   competitionsDescription: z.string().optional().nullable(),
   competitionsCtaText: z.string().optional().nullable(),

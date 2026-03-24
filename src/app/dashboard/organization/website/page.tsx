@@ -558,6 +558,18 @@ export default function WebsitePage() {
             />
           </div>
           
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Show Locations</Label>
+              <p className="text-sm text-muted-foreground">Display your facility locations with maps and hours.</p>
+            </div>
+            <Switch 
+              checked={config.showLocations === true} 
+              onCheckedChange={(c) => updateConfig("showLocations", c)} 
+            />
+          </div>
+
           {competitionsEnabled && (
             <>
               <Separator />
