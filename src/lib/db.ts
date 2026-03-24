@@ -169,7 +169,7 @@ export function getScopedDb(organizationId: string) {
     return _scopedQueryStorage.run({ active: true }, fn);
   };
 
-  return db.$extends({
+  return _rawDb.$extends({
     query: {
       $allModels: {
         async findMany({ model, args, query }) {
