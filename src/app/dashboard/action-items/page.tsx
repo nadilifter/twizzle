@@ -5,6 +5,7 @@ import {
   Calendar,
   Globe,
   CreditCard,
+  Settings,
   CheckCircle2,
   Circle,
   ArrowRight,
