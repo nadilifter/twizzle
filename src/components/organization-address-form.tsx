@@ -112,7 +112,7 @@ export function OrganizationAddressForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="stateProvince">
-            {formData.country === "CA" ? "Province" : "State / Province"}
+            {formData.country === "CA" ? "Province" : formData.country === "US" ? "State" : "State / Province"}
           </Label>
           <StateProvinceCombobox
             country={formData.country}

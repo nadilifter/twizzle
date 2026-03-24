@@ -299,7 +299,7 @@ export default function FacilitiesPage() {
                   <Input id="city" name="city" />
                 </div>
                 <div className="grid gap-2">
-                  <Label>{country === "CA" ? "Province" : "State / Province"}</Label>
+                  <Label>{country === "CA" ? "Province" : country === "US" ? "State" : "State / Province"}</Label>
                   <StateProvinceCombobox country={country} value={stateProvince} onChange={setStateProvince} />
                 </div>
               </div>

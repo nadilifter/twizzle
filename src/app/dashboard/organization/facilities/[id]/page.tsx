@@ -1798,7 +1798,7 @@ function EditFacilitySheet({
                 <Input id="city" name="city" defaultValue={facility.city || ""} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="stateProvince">{country === "CA" ? "Province" : "State / Province"}</Label>
+                <Label htmlFor="stateProvince">{country === "CA" ? "Province" : country === "US" ? "State" : "State / Province"}</Label>
                 <StateProvinceCombobox country={country} value={stateProvince} onChange={setStateProvince} />
               </div>
             </div>
