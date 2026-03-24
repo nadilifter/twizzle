@@ -46,7 +46,9 @@ function generateInstanceDates(
   try {
     const rruleWithDtstart = `DTSTART:${format(startDate, "yyyyMMdd'T'HHmmss'Z'")}\nRRULE:${rruleString}`;
     const rule = RRule.fromString(rruleWithDtstart);
-    return rule.between(startDate, endDate, true);
+    const endOfDay = new Date(endDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+    return rule.between(startDate, endOfDay, true);
   } catch (error) {
     console.error("Error parsing RRULE:", error);
     return [];

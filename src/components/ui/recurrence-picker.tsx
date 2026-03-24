@@ -63,10 +63,9 @@ export function configToRRule(config: RecurrenceConfig): string {
     rruleOptions.byweekday = weekdays
   }
 
-  // Add end condition
-  if (config.endDate) {
-    rruleOptions.until = config.endDate
-  } else if (config.count) {
+  // Only add count; date range is handled by between() at the call site,
+  // so UNTIL is omitted to avoid time-component mismatches at boundaries.
+  if (config.count) {
     rruleOptions.count = config.count
   }
 
@@ -175,6 +174,8 @@ export function RecurrencePicker({
   )
 
   const [previewDates, setPreviewDates] = React.useState<Date[]>([])
+  const onRRuleChangeRef = React.useRef(onRRuleChange)
+  React.useEffect(() => { onRRuleChangeRef.current = onRRuleChange })
 
   // Update config when value prop changes
   React.useEffect(() => {
@@ -183,10 +184,11 @@ export function RecurrencePicker({
     }
   }, [value])
 
-  // Generate preview dates whenever config changes
+  // Generate preview dates and emit RRULE whenever config or date range changes
   React.useEffect(() => {
-    const dates = getPreviewDates({ ...config, startDate, endDate })
-    setPreviewDates(dates)
+    const currentConfig = { ...config, startDate, endDate }
+    setPreviewDates(getPreviewDates(currentConfig))
+    onRRuleChangeRef.current?.(configToRRule(currentConfig))
   }, [config, startDate, endDate])
 
   const updateConfig = React.useCallback((updates: Partial<RecurrenceConfig>) => {
