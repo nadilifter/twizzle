@@ -76,7 +76,7 @@ export interface FacilityNote {
   };
 }
 
-export type FacilityActivityType = "event" | "program" | "competition" | "shift";
+export type FacilityActivityType = "event" | "program" | "program_instance" | "competition";
 
 export interface FacilityActivityItem {
   id: string;
@@ -86,6 +86,7 @@ export interface FacilityActivityItem {
   endDate: string | null;
   status: string;
   detail: string | null;
+  href: string;
 }
 
 export type FacilityActivitySort =

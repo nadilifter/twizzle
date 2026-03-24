@@ -12,7 +12,7 @@ const ACTIVITY_SORTS: FacilityActivitySort[] = [
   "type_desc",
 ];
 
-const ACTIVITY_TYPES: FacilityActivityType[] = ["event", "program", "competition", "shift"];
+const ACTIVITY_TYPES: FacilityActivityType[] = ["event", "program", "program_instance", "competition"];
 
 const RAW_FETCH_LIMIT = 300;
 
@@ -97,7 +97,7 @@ export async function GET(
 
     const now = new Date();
 
-    const [events, programs, programInstances, competitions, shifts] = await Promise.all([
+    const [events, programs, programInstances, competitions] = await Promise.all([
       scopedDb.event.findMany({
         where: {
           facilityId: id,
@@ -141,7 +141,7 @@ export async function GET(
           startTime: true,
           endTime: true,
           status: true,
-          program: { select: { name: true } },
+          program: { select: { id: true, name: true } },
         },
         orderBy: { date: "asc" },
         take: RAW_FETCH_LIMIT,
@@ -161,22 +161,6 @@ export async function GET(
         orderBy: { startDate: "asc" },
         take: RAW_FETCH_LIMIT,
       }),
-      scopedDb.shift.findMany({
-        where: {
-          facilityId: id,
-          date: { gte: now },
-        },
-        select: {
-          id: true,
-          shiftType: true,
-          date: true,
-          startTime: true,
-          endTime: true,
-          status: true,
-        },
-        orderBy: { date: "asc" },
-        take: RAW_FETCH_LIMIT,
-      }),
     ]);
 
     const items: FacilityActivityItem[] = [];
@@ -190,6 +174,7 @@ export async function GET(
         endDate: null,
         status: e.type,
         detail: e.startTime && e.endTime ? `${e.startTime} - ${e.endTime}` : null,
+        href: `/dashboard/events/${e.id}`,
       });
     }
 
@@ -202,18 +187,20 @@ export async function GET(
         endDate: p.endDate?.toISOString() ?? null,
         status: p.status,
         detail: null,
+        href: `/dashboard/registrations/programs/${p.id}`,
       });
     }
 
     for (const pi of programInstances) {
       items.push({
         id: pi.id,
-        type: "program",
+        type: "program_instance",
         name: `${pi.program.name} (Session)`,
         date: pi.date.toISOString(),
         endDate: null,
         status: pi.status,
         detail: `${pi.startTime} - ${pi.endTime}`,
+        href: `/dashboard/calendar/instance/${pi.id}`,
       });
     }
 
@@ -226,18 +213,7 @@ export async function GET(
         endDate: c.endDate?.toISOString() ?? null,
         status: c.status,
         detail: null,
-      });
-    }
-
-    for (const s of shifts) {
-      items.push({
-        id: s.id,
-        type: "shift",
-        name: s.shiftType,
-        date: s.date.toISOString(),
-        endDate: null,
-        status: s.status,
-        detail: `${s.startTime} - ${s.endTime}`,
+        href: `/dashboard/competitions/${c.id}`,
       });
     }
 

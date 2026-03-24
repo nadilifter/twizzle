@@ -123,8 +123,8 @@ function getConditionIcon(condition: string) {
 const ACTIVITY_TYPE_CONFIG: Record<string, { label: string; className: string }> = {
   event: { label: "Event", className: "bg-blue-50 text-blue-700 border-blue-200" },
   program: { label: "Program", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  program_instance: { label: "Session", className: "bg-teal-50 text-teal-700 border-teal-200" },
   competition: { label: "Competition", className: "bg-purple-50 text-purple-700 border-purple-200" },
-  shift: { label: "Shift", className: "bg-amber-50 text-amber-700 border-amber-200" },
 }
 
 type FacilityTimeBlock = { openTime: string; closeTime: string }
@@ -467,7 +467,11 @@ function ActivityRow({ item }: { item: FacilityActivityItem }) {
       <TableCell>
         <Badge variant="outline" className={config?.className}>{config?.label ?? item.type}</Badge>
       </TableCell>
-      <TableCell className="font-medium">{item.name}</TableCell>
+      <TableCell className="font-medium">
+        <Link href={item.href} className="hover:underline">
+          {item.name}
+        </Link>
+      </TableCell>
       <TableCell className="whitespace-nowrap">{format(new Date(item.date), "MMM d, yyyy")}</TableCell>
       <TableCell className="text-muted-foreground">{item.detail ?? "—"}</TableCell>
       <TableCell>
@@ -560,8 +564,8 @@ function ActivityTab({ facilityId }: { facilityId: string }) {
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="event">Events</SelectItem>
               <SelectItem value="program">Programs</SelectItem>
+              <SelectItem value="program_instance">Sessions</SelectItem>
               <SelectItem value="competition">Competitions</SelectItem>
-              <SelectItem value="shift">Shifts</SelectItem>
             </SelectContent>
           </Select>
         </div>
