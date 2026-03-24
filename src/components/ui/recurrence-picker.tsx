@@ -184,11 +184,14 @@ export function RecurrencePicker({
   const [previewDates, setPreviewDates] = React.useState<Date[]>([])
   const onRRuleChangeRef = React.useRef(onRRuleChange)
   React.useEffect(() => { onRRuleChangeRef.current = onRRuleChange })
+  const lastEmittedRRule = React.useRef("")
 
-  // Update config when value prop changes
+  // Update config when value prop changes (bail out if rrule string is unchanged)
   React.useEffect(() => {
     if (value) {
-      setConfig(value)
+      setConfig(prev =>
+        configToRRule(value) === configToRRule(prev) ? prev : value
+      )
     }
   }, [value])
 
@@ -196,7 +199,11 @@ export function RecurrencePicker({
   React.useEffect(() => {
     const currentConfig = { ...config, startDate, endDate }
     setPreviewDates(getPreviewDates(currentConfig))
-    onRRuleChangeRef.current?.(configToRRule(currentConfig))
+    const rrule = configToRRule(currentConfig)
+    if (rrule !== lastEmittedRRule.current) {
+      lastEmittedRRule.current = rrule
+      onRRuleChangeRef.current?.(rrule)
+    }
   }, [config, startDate, endDate])
 
   const updateConfig = React.useCallback((updates: Partial<RecurrenceConfig>) => {
