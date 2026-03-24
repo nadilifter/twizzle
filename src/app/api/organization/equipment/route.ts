@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -29,19 +29,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "No organization selected" }, { status: 400 });
     }
 
+    const scopedDb = getScopedDb(organizationId);
+
     const { searchParams } = new URL(request.url);
     const facilityId = searchParams.get("facilityId");
     const orgLevelOnly = searchParams.get("orgLevelOnly") === "true";
 
-    const where: { organizationId: string; facilityId?: string | null } = { organizationId };
-    
+    const where: { facilityId?: string | null } = {};
+
     if (facilityId) {
       where.facilityId = facilityId;
     } else if (orgLevelOnly) {
       where.facilityId = null;
     }
 
-    const equipment = await db.equipment.findMany({
+    const equipment = await scopedDb.equipment.findMany({
       where,
       include: {
         facility: {
@@ -77,19 +79,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createEquipmentSchema.parse(body);
 
-    // Verify facility belongs to org if provided
+    const scopedDb = getScopedDb(organizationId);
+
     if (validatedData.facilityId) {
-      const facility = await db.facility.findFirst({
-        where: { id: validatedData.facilityId, organizationId },
+      const facility = await scopedDb.facility.findFirst({
+        where: { id: validatedData.facilityId },
       });
       if (!facility) {
         return NextResponse.json({ error: "Facility not found" }, { status: 404 });
       }
     }
 
-    // Verify space belongs to the facility if both are provided
     if (validatedData.spaceId && validatedData.facilityId) {
-      const space = await db.space.findFirst({
+      const space = await scopedDb.space.findFirst({
         where: { id: validatedData.spaceId, facilityId: validatedData.facilityId },
       });
       if (!space) {
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const equipment = await db.equipment.create({
+    const equipment = await scopedDb.equipment.create({
       data: {
         organizationId,
         name: validatedData.name,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -33,9 +33,10 @@ export async function GET(
     }
 
     const { id } = await params;
+    const scopedDb = getScopedDb(organizationId);
 
-    const equipment = await db.equipment.findFirst({
-      where: { id, organizationId },
+    const equipment = await scopedDb.equipment.findFirst({
+      where: { id },
       include: {
         facility: {
           select: { id: true, name: true },
@@ -74,10 +75,10 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    const scopedDb = getScopedDb(organizationId);
 
-    // Verify equipment belongs to organization
-    const existingEquipment = await db.equipment.findFirst({
-      where: { id, organizationId },
+    const existingEquipment = await scopedDb.equipment.findFirst({
+      where: { id },
     });
 
     if (!existingEquipment) {
@@ -87,19 +88,17 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateEquipmentSchema.parse(body);
 
-    // Verify facility belongs to org if provided
     if (validatedData.facilityId) {
-      const facility = await db.facility.findFirst({
-        where: { id: validatedData.facilityId, organizationId },
+      const facility = await scopedDb.facility.findFirst({
+        where: { id: validatedData.facilityId },
       });
       if (!facility) {
         return NextResponse.json({ error: "Facility not found" }, { status: 404 });
       }
     }
 
-    // Build update data
     const updateData: Record<string, unknown> = { ...validatedData };
-    
+
     if (validatedData.purchaseDate !== undefined) {
       updateData.purchaseDate = validatedData.purchaseDate ? parseDateOnly(validatedData.purchaseDate) : null;
     }
@@ -107,13 +106,12 @@ export async function PATCH(
       updateData.lastInspectionDate = validatedData.lastInspectionDate ? parseDateOnly(validatedData.lastInspectionDate) : null;
     }
 
-    // If facility is being cleared, also clear space
     if (validatedData.facilityId === null) {
       updateData.spaceId = null;
     }
 
-    const equipment = await db.equipment.update({
-      where: { id, organizationId },
+    const equipment = await scopedDb.equipment.update({
+      where: { id },
       data: updateData,
       include: {
         facility: {
@@ -152,18 +150,18 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const scopedDb = getScopedDb(organizationId);
 
-    // Verify equipment belongs to organization
-    const existingEquipment = await db.equipment.findFirst({
-      where: { id, organizationId },
+    const existingEquipment = await scopedDb.equipment.findFirst({
+      where: { id },
     });
 
     if (!existingEquipment) {
       return NextResponse.json({ error: "Equipment not found" }, { status: 404 });
     }
 
-    await db.equipment.delete({
-      where: { id, organizationId },
+    await scopedDb.equipment.delete({
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

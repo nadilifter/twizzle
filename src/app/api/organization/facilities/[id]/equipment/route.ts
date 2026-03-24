@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { z } from "zod";
 
@@ -32,17 +32,17 @@ export async function GET(
     }
 
     const { id: facilityId } = await params;
+    const scopedDb = getScopedDb(organizationId);
 
-    // Verify facility belongs to organization
-    const facility = await db.facility.findFirst({
-      where: { id: facilityId, organizationId },
+    const facility = await scopedDb.facility.findFirst({
+      where: { id: facilityId },
     });
 
     if (!facility) {
       return NextResponse.json({ error: "Facility not found" }, { status: 404 });
     }
 
-    const equipment = await db.equipment.findMany({
+    const equipment = await scopedDb.equipment.findMany({
       where: { facilityId },
       include: {
         space: {
@@ -76,10 +76,10 @@ export async function POST(
     }
 
     const { id: facilityId } = await params;
+    const scopedDb = getScopedDb(organizationId);
 
-    // Verify facility belongs to organization
-    const facility = await db.facility.findFirst({
-      where: { id: facilityId, organizationId },
+    const facility = await scopedDb.facility.findFirst({
+      where: { id: facilityId },
     });
 
     if (!facility) {
@@ -89,9 +89,8 @@ export async function POST(
     const body = await request.json();
     const validatedData = createEquipmentSchema.parse(body);
 
-    // Verify space belongs to this facility if provided
     if (validatedData.spaceId) {
-      const space = await db.space.findFirst({
+      const space = await scopedDb.space.findFirst({
         where: { id: validatedData.spaceId, facilityId },
       });
       if (!space) {
@@ -99,7 +98,7 @@ export async function POST(
       }
     }
 
-    const equipment = await db.equipment.create({
+    const equipment = await scopedDb.equipment.create({
       data: {
         organizationId,
         facilityId,
