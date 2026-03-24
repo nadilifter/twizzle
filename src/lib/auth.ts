@@ -1,4 +1,5 @@
 import { NextAuthOptions, getServerSession } from "next-auth";
+import type { Adapter, AdapterUser } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
@@ -25,6 +26,115 @@ function createBridgeToken(email: string, secret: string): string {
 
   const tokenData = { email, exp, signature };
   return Buffer.from(JSON.stringify(tokenData)).toString("base64url");
+}
+
+const UPLIFTER_STAFF_DOMAINS = [
+  "@uplifterinc.com",
+  "@upliftergymnastics.com",
+  "@uplifter.app",
+  "@uplifterincca.onmicrosoft.com",
+];
+
+export function isUplifterEmail(email: string): boolean {
+  const lower = email.toLowerCase();
+  return UPLIFTER_STAFF_DOMAINS.some((domain) => lower.endsWith(domain));
+}
+
+/**
+ * Custom adapter wrapping PrismaAdapter to handle two schema differences:
+ *   1. Our User model uses `avatar` instead of NextAuth's expected `image`
+ *   2. We have no `emailVerified` column (always null)
+ *
+ * Also injects custom fields (role, isSuperAdmin) for Uplifter staff on creation,
+ * and defaults non-staff OAuth users to role PARENT rather than the schema default COACH.
+ *
+ * By letting the adapter own user creation, the Account link is always created
+ * in the same flow, preventing the OAuthAccountNotLinked bug that occurred when
+ * the signIn callback raced with the adapter.
+ */
+function createUplifterAdapter(prisma: typeof db): Adapter {
+  const base = PrismaAdapter(prisma) as Adapter;
+
+  function toAdapterUser(user: {
+    id: string;
+    email: string;
+    name: string | null;
+    avatar: string | null;
+    role?: string;
+    isSuperAdmin?: boolean;
+  }): AdapterUser {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.avatar,
+      emailVerified: null,
+      role: user.role ?? "",
+      organizationId: "",
+      organizationName: "",
+      permissions: [],
+      isSuperAdmin: user.isSuperAdmin ?? false,
+    };
+  }
+
+  return {
+    ...base,
+    createUser: async (data: Omit<AdapterUser, "id">) => {
+      const email = data.email!;
+      const isStaff = isUplifterEmail(email);
+
+      const user = await prisma.user.create({
+        data: {
+          email,
+          name: data.name || email.split("@")[0],
+          avatar: data.image || null,
+          role: isStaff ? "ADMIN" : "PARENT",
+          isSuperAdmin: isStaff,
+          lastActiveAt: new Date(),
+        },
+      });
+
+      if (isStaff) {
+        logger.info("Adapter: created super admin for Uplifter staff email", { email });
+      } else {
+        logger.info("Adapter: created OAuth user", { email });
+      }
+
+      return toAdapterUser(user);
+    },
+
+    getUser: async (id: string) => {
+      const user = await prisma.user.findUnique({ where: { id } });
+      return user ? toAdapterUser(user) : null;
+    },
+
+    getUserByEmail: async (email: string) => {
+      const user = await prisma.user.findUnique({ where: { email } });
+      return user ? toAdapterUser(user) : null;
+    },
+
+    getUserByAccount: async ({ providerAccountId, provider }: { providerAccountId: string; provider: string }) => {
+      const account = await prisma.account.findUnique({
+        where: { provider_providerAccountId: { provider, providerAccountId } },
+        include: { user: true },
+      });
+      return account?.user ? toAdapterUser(account.user) : null;
+    },
+
+    updateUser: async ({ id, ...data }: Partial<AdapterUser> & Pick<AdapterUser, "id">) => {
+      const updateData: Record<string, unknown> = {};
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.email !== undefined) updateData.email = data.email;
+      if (data.image !== undefined) updateData.avatar = data.image;
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: updateData,
+      });
+
+      return toAdapterUser(user);
+    },
+  } as Adapter;
 }
 
 /**
@@ -110,7 +220,7 @@ async function buildAuthorizedUser(userId: string, targetOrgId?: string | null) 
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db) as NextAuthOptions["adapter"],
+  adapter: createUplifterAdapter(db) as NextAuthOptions["adapter"],
   debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "jwt",
@@ -296,71 +406,35 @@ export const authOptions: NextAuthOptions = {
 
         if (isOAuthProvider) {
           const email = user.email!;
-          const isStaffEmail = isUplifterEmail(email);
-          
-          let existingUser = await db.user.findUnique({
+
+          // Check if user already exists — if not, the adapter's createUser
+          // will handle creation with proper role/isSuperAdmin fields AND
+          // create the Account link in the same flow.
+          const existingUser = await db.user.findUnique({
             where: { email },
-            include: {
-              accounts: true,
-            },
+            include: { accounts: true },
           });
 
-          if (!existingUser && isStaffEmail) {
-            logger.info("Creating super admin for Uplifter email", { email, provider });
-            const displayName = user.name || "Uplifter User";
-            existingUser = await db.user.create({
-              data: {
-                email,
-                name: displayName,
-                avatar: user.image,
-                role: "ADMIN",
-                status: "ACTIVE",
-                isSuperAdmin: true,
-              },
-              include: {
-                accounts: true,
-              },
-            });
-          } else if (!existingUser) {
-            logger.info("Creating new user via OAuth", { email, provider });
-            const displayName = user.name || email.split("@")[0];
-            existingUser = await db.user.create({
-              data: {
-                email,
-                name: displayName,
-                avatar: user.image,
-                role: "PARENT",
-                status: "ACTIVE",
-              },
-              include: {
-                accounts: true,
-              },
-            });
-          } else {
+          if (existingUser) {
             const hasPassword = !!existingUser.passwordHash;
             const hasProviderLink = existingUser.accounts.some(
               (acc) => acc.provider === provider
             );
-            
+
             if (hasPassword && !hasProviderLink && process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "false") {
               console.warn(
                 `OAuth linking blocked for ${email}: User has password but no ${provider} link`
               );
               return "/login?error=AccountNotLinked";
             }
-            
-            if (isStaffEmail && !existingUser.isSuperAdmin) {
-              await db.user.update({
-                where: { id: existingUser.id },
-                data: { isSuperAdmin: true },
-              });
-            }
-          }
 
-          await db.user.update({
-            where: { id: existingUser.id },
-            data: { lastActiveAt: new Date() },
-          });
+            const updates: Record<string, unknown> = { lastActiveAt: new Date() };
+            if (isUplifterEmail(email) && !existingUser.isSuperAdmin) {
+              updates.isSuperAdmin = true;
+            }
+            await db.user.update({ where: { id: existingUser.id }, data: updates });
+          }
+          // New users: return true and let the adapter handle creation
         }
 
         return true;
@@ -581,15 +655,3 @@ export async function verifyPassword(
   return bcrypt.compare(password, hashedPassword);
 }
 
-const UPLIFTER_STAFF_DOMAINS = [
-  "@uplifterinc.com",
-  "@upliftergymnastics.com",
-  "@uplifter.app",
-  "@uplifterincca.onmicrosoft.com",
-];
-
-// Helper to check if email is an Uplifter staff email (super admin eligible)
-export function isUplifterEmail(email: string): boolean {
-  const lower = email.toLowerCase();
-  return UPLIFTER_STAFF_DOMAINS.some((domain) => lower.endsWith(domain));
-}
