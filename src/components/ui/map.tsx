@@ -509,6 +509,7 @@ function MapMarker({
     return (
         <LeafletMarker
             icon={L.divIcon({
+                className: "",
                 html: renderToString(icon),
                 iconAnchor,
                 ...(bgPos ? { bgPos } : {}),
