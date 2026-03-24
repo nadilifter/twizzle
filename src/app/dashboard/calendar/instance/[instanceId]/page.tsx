@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   format,
   parseISO,
@@ -187,7 +187,9 @@ interface Attendance {
 export default function InstanceDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const instanceId = params.instanceId as string;
+  const from = searchParams.get("from");
   const { isFeatureEnabled } = useFeatures();
   const trainingEnabled = isFeatureEnabled("training");
 
@@ -596,7 +598,7 @@ export default function InstanceDetailPage() {
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")}>
+        <Button variant="ghost" size="icon" onClick={() => router.push(from === "programs" ? "/dashboard/registrations/programs" : "/dashboard")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">

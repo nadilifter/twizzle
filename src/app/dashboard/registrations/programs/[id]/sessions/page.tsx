@@ -65,7 +65,7 @@ export default function ProgramSessionsPage() {
         // If there's exactly 1 instance, redirect directly
         if (instanceList.length === 1) {
           router.replace(
-            `/dashboard/calendar/instance/${instanceList[0].id}`
+            `/dashboard/calendar/instance/${instanceList[0].id}?from=programs`
           )
           return
         }
@@ -161,7 +161,7 @@ export default function ProgramSessionsPage() {
           {instances.map((instance) => (
             <Link
               key={instance.id}
-              href={`/dashboard/calendar/instance/${instance.id}`}
+              href={`/dashboard/calendar/instance/${instance.id}?from=programs`}
               className="block"
             >
               <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
