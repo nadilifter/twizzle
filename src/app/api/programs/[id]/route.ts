@@ -67,6 +67,13 @@ const updateProgramSchema = z.object({
 /**
  * Generate program instances from an RRULE and date range
  */
+function formatDtstartUTC(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}${m}${d}T120000Z`;
+}
+
 function generateInstanceDates(
   startDate: Date,
   endDate: Date,
@@ -77,11 +84,11 @@ function generateInstanceDates(
   }
   
   try {
-    const rruleWithDtstart = `DTSTART:${format(startDate, "yyyyMMdd'T'HHmmss'Z'")}\nRRULE:${rruleString}`;
+    const rruleWithDtstart = `DTSTART:${formatDtstartUTC(startDate)}\nRRULE:${rruleString}`;
     const rule = RRule.fromString(rruleWithDtstart);
-    const endOfDay = new Date(endDate);
-    endOfDay.setUTCHours(23, 59, 59, 999);
-    return rule.between(startDate, endOfDay, true);
+    const startBound = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0, 0, 0));
+    const endBound = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999));
+    return rule.between(startBound, endBound, true);
   } catch (error) {
     console.error("Error parsing RRULE:", error);
     return [startDate];

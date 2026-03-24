@@ -23,14 +23,13 @@ export function parseDateOnly(dateString: string | null | undefined): Date | nul
   // Match YYYY-MM-DD format
   const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) {
-    // If it's already an ISO datetime, parse it directly
+    // Full ISO string or other format — extract the UTC date and normalize to noon
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return null;
-    return date;
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 12, 0, 0, 0));
   }
   
   const [, year, month, day] = match;
-  // Create date at noon UTC to avoid timezone date shifts
   return new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0, 0));
 }
 

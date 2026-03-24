@@ -40,9 +40,14 @@ function resolveRruleDates(
     if (effectiveStart >= effectiveEnd) return [];
 
     const cleanRrule = rruleString.startsWith("RRULE:") ? rruleString.slice(6) : rruleString;
-    const rruleWithDtstart = `DTSTART:${format(programStartDate, "yyyyMMdd'T'HHmmss'Z'")}\nRRULE:${cleanRrule}`;
+    const y = programStartDate.getUTCFullYear();
+    const m = String(programStartDate.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(programStartDate.getUTCDate()).padStart(2, "0");
+    const rruleWithDtstart = `DTSTART:${y}${m}${d}T120000Z\nRRULE:${cleanRrule}`;
     const rule = RRule.fromString(rruleWithDtstart);
-    return rule.between(effectiveStart, effectiveEnd, true);
+    const startBound = new Date(Date.UTC(effectiveStart.getUTCFullYear(), effectiveStart.getUTCMonth(), effectiveStart.getUTCDate(), 0, 0, 0));
+    const endBound = new Date(Date.UTC(effectiveEnd.getUTCFullYear(), effectiveEnd.getUTCMonth(), effectiveEnd.getUTCDate(), 23, 59, 59, 999));
+    return rule.between(startBound, endBound, true);
   } catch (error) {
     console.error("Error parsing RRULE:", error);
     return [];

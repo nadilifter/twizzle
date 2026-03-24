@@ -126,9 +126,17 @@ export function getPreviewDates(config: RecurrenceConfig, maxDates = 10): Date[]
   const rruleString = configToRRule(config)
   
   try {
-    const rule = RRule.fromString(`DTSTART:${format(config.startDate, "yyyyMMdd'T'HHmmss'Z'")}\nRRULE:${rruleString}`)
+    const y = config.startDate.getFullYear()
+    const m = String(config.startDate.getMonth() + 1).padStart(2, "0")
+    const d = String(config.startDate.getDate()).padStart(2, "0")
+    const rule = RRule.fromString(`DTSTART:${y}${m}${d}T120000Z\nRRULE:${rruleString}`)
     const endDate = config.endDate || addDays(config.startDate, 365)
-    return rule.between(config.startDate, endDate, true).slice(0, maxDates)
+    const ey = endDate.getFullYear()
+    const em = String(endDate.getMonth() + 1).padStart(2, "0")
+    const ed = String(endDate.getDate()).padStart(2, "0")
+    const startBound = new Date(`${y}-${m}-${d}T00:00:00Z`)
+    const endBound = new Date(`${ey}-${em}-${ed}T23:59:59.999Z`)
+    return rule.between(startBound, endBound, true).slice(0, maxDates)
   } catch {
     return []
   }
