@@ -10,8 +10,6 @@ import {
   Loader2,
   MoreHorizontal,
   Trash2,
-  Clock,
-  X,
 } from "lucide-react"
 import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data"
 import { DashboardPageHeader } from "@/components/dashboard-page-header"
@@ -58,8 +56,6 @@ import { toast } from "sonner"
 import { MultiLocationMap } from "@/components/location-map"
 import type { FacilityListItem } from "@/types/facilities"
 
-const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
 function getStatusBadgeVariant(status: string) {
   switch (status) {
     case "ACTIVE":
@@ -83,10 +79,8 @@ export default function FacilitiesPage() {
   const [country, setCountry] = useState("US")
   const [stateProvince, setStateProvince] = useState("")
   const [phone, setPhone] = useState("")
-
-  type TimeBlock = { openTime: string; closeTime: string }
-  const emptyHours = (): Record<number, TimeBlock[]> => ({ 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] })
-  const [operatingHours, setOperatingHours] = useState<Record<number, TimeBlock[]>>(emptyHours())
+  const [status, setStatus] = useState("ACTIVE")
+  const [isDefault, setIsDefault] = useState(false)
 
   const fetchFacilities = useCallback(async () => {
     try {
@@ -108,7 +102,8 @@ export default function FacilitiesPage() {
     setCountry("US")
     setStateProvince("")
     setPhone("")
-    setOperatingHours(emptyHours())
+    setStatus("ACTIVE")
+    setIsDefault(false)
     setFormOpen(true)
   }
 
@@ -129,6 +124,8 @@ export default function FacilitiesPage() {
       squareFootage: formData.get("squareFootage") ? Number(formData.get("squareFootage")) : null,
       maxCapacity: formData.get("maxCapacity") ? Number(formData.get("maxCapacity")) : null,
       description: (formData.get("description") as string) || null,
+      status,
+      isDefault,
     }
 
     try {
@@ -140,18 +137,6 @@ export default function FacilitiesPage() {
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || "Failed to create facility")
-      }
-      const saved = await res.json()
-
-      const slots = Object.entries(operatingHours).flatMap(([day, blocks]) =>
-        blocks.map((b) => ({ dayOfWeek: parseInt(day), openTime: b.openTime, closeTime: b.closeTime }))
-      )
-      if (slots.length > 0) {
-        await fetch(`/api/organization/facilities/${saved.id}/operating-hours`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slots }),
-        })
       }
 
       toast.success("Facility created")
@@ -361,99 +346,25 @@ export default function FacilitiesPage() {
                 <Textarea id="description" name="description" rows={3} />
               </div>
               <Separator />
-              <div className="grid gap-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-base font-semibold">Operating Hours</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Status</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">Active</SelectItem>
+                      <SelectItem value="INACTIVE">Inactive</SelectItem>
+                      <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <p className="text-sm text-muted-foreground -mt-1">Set when this facility is open each day.</p>
-                {DAY_LABELS.map((label, dayIndex) => {
-                  const blocks = operatingHours[dayIndex] ?? []
-                  const isOpen = blocks.length > 0
-                  return (
-                    <div key={dayIndex} className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 flex items-center gap-2">
-                          <Switch
-                            checked={isOpen}
-                            onCheckedChange={(checked) => {
-                              setOperatingHours((prev) => ({
-                                ...prev,
-                                [dayIndex]: checked ? [{ openTime: "09:00", closeTime: "17:00" }] : [],
-                              }))
-                            }}
-                          />
-                          <span className="text-sm font-medium">{label.slice(0, 3)}</span>
-                        </div>
-                        {isOpen ? (
-                          <div className="flex-1 space-y-2">
-                            {blocks.map((block, blockIdx) => (
-                              <div key={blockIdx} className="flex items-center gap-2">
-                                <Input
-                                  type="time"
-                                  value={block.openTime}
-                                  onChange={(e) => {
-                                    setOperatingHours((prev) => {
-                                      const updated = [...prev[dayIndex]]
-                                      updated[blockIdx] = { ...updated[blockIdx], openTime: e.target.value }
-                                      return { ...prev, [dayIndex]: updated }
-                                    })
-                                  }}
-                                  className="w-[120px]"
-                                />
-                                <span className="text-muted-foreground text-sm">to</span>
-                                <Input
-                                  type="time"
-                                  value={block.closeTime}
-                                  onChange={(e) => {
-                                    setOperatingHours((prev) => {
-                                      const updated = [...prev[dayIndex]]
-                                      updated[blockIdx] = { ...updated[blockIdx], closeTime: e.target.value }
-                                      return { ...prev, [dayIndex]: updated }
-                                    })
-                                  }}
-                                  className="w-[120px]"
-                                />
-                                {blocks.length > 1 && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => {
-                                      setOperatingHours((prev) => ({
-                                        ...prev,
-                                        [dayIndex]: prev[dayIndex].filter((_, i) => i !== blockIdx),
-                                      }))
-                                    }}
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs h-7"
-                              onClick={() => {
-                                setOperatingHours((prev) => ({
-                                  ...prev,
-                                  [dayIndex]: [...prev[dayIndex], { openTime: "09:00", closeTime: "17:00" }],
-                                }))
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-1" /> Add block
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Closed</span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+                <div className="grid gap-2">
+                  <Label>Default Facility</Label>
+                  <div className="flex items-center gap-2 h-9">
+                    <Switch checked={isDefault} onCheckedChange={setIsDefault} />
+                    <span className="text-sm text-muted-foreground">{isDefault ? "Yes" : "No"}</span>
+                  </div>
+                </div>
               </div>
             </div>
             <SheetFooter>
