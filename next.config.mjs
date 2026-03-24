@@ -135,6 +135,9 @@ const getImageRemotePatterns = () => {
 
 const nextConfig = {
   output: "standalone",
+  allowedDevOrigins: isLocal
+    ? [`http://*.${envConfig.baseDomain}`]
+    : [],
   typescript: {
     ignoreBuildErrors: false,
   },
