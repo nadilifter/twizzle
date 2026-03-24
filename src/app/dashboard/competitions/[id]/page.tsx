@@ -38,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
+import { LocationMap } from "@/components/location-map"
 // Timeline is rendered inline in the Overview tab
 import { CompetitionConfiguration } from "../competition-configuration"
 import {
@@ -113,7 +114,9 @@ interface CompetitionDetail {
   pricingMode: string
   entryFee: number | string | null
   createdAt: string
-  facility: { id: string; name: string; street: string | null; city: string | null; stateProvince: string | null; postalCode: string | null; country: string | null } | null
+  latitude: number | null
+  longitude: number | null
+  facility: { id: string; name: string; street: string | null; city: string | null; stateProvince: string | null; postalCode: string | null; country: string | null; latitude: number | null; longitude: number | null } | null
   categories: CompetitionCategory[]
   entries: {
     id: string
@@ -573,6 +576,22 @@ export default function CompetitionProfilePage() {
                         <span>No location set</span>
                       )}
                     </div>
+                    {(() => {
+                      const lat = competition.facility?.latitude ?? competition.latitude
+                      const lng = competition.facility?.longitude ?? competition.longitude
+                      if (lat == null || lng == null) return null
+                      return (
+                        <div className="col-span-2 mt-2 rounded-md overflow-hidden border border-border">
+                          <LocationMap
+                            latitude={lat}
+                            longitude={lng}
+                            label={facilityName ?? "Venue"}
+                            sublabel={locationAddress || undefined}
+                            className="h-40 min-h-0"
+                          />
+                        </div>
+                      )
+                    })()}
                   </div>
                 </CardContent>
               </Card>

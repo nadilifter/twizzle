@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Facility" ADD COLUMN "latitude" DOUBLE PRECISION,
+ADD COLUMN "longitude" DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "Competition" ADD COLUMN "latitude" DOUBLE PRECISION,
+ADD COLUMN "longitude" DOUBLE PRECISION;

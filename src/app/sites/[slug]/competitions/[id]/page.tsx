@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { format } from "date-fns"
 import { Trophy, CalendarDays, MapPin, Clock } from "lucide-react"
 import { CompetitionRegistrationFlow } from "@/components/sites/competition-registration-flow"
+import { LocationMap } from "@/components/location-map"
 import type { FileRequirementConfig } from "@/types/file-requirements"
 
 export default async function CompetitionDetailPage({
@@ -22,7 +23,7 @@ export default async function CompetitionDetailPage({
     where: { id: params.id },
     include: {
       facility: {
-        select: { id: true, name: true, city: true, stateProvince: true },
+        select: { id: true, name: true, city: true, stateProvince: true, latitude: true, longitude: true },
       },
       categories: {
         where: { isActive: true },
@@ -173,6 +174,27 @@ export default async function CompetitionDetailPage({
           </div>
         </div>
       </section>
+
+      {/* Venue Map */}
+      {(() => {
+        const lat = competition.facility?.latitude ?? competition.latitude
+        const lng = competition.facility?.longitude ?? competition.longitude
+        if (lat == null || lng == null) return null
+        return (
+          <section className="mx-auto w-full max-w-4xl px-4 pt-8 md:px-8">
+            <h2 className="text-xl font-semibold mb-3">Venue</h2>
+            <div className="rounded-lg overflow-hidden border border-border">
+              <LocationMap
+                latitude={lat}
+                longitude={lng}
+                label={locationLabel ?? "Venue"}
+                zoom={14}
+                className="h-56 min-h-0"
+              />
+            </div>
+          </section>
+        )
+      })()}
 
       {/* Registration Flow */}
       <section className="mx-auto w-full max-w-4xl px-4 py-12 md:px-8">

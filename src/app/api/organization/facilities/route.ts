@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
+import { geocodeAddress } from "@/lib/geocode";
 
 const createFacilitySchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -81,6 +82,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const coords = await geocodeAddress({
+      street: validatedData.street,
+      city: validatedData.city,
+      stateProvince: validatedData.stateProvince,
+      postalCode: validatedData.postalCode,
+      country: validatedData.country,
+    });
+
     const facility = await db.facility.create({
       data: {
         organizationId,
@@ -90,6 +99,8 @@ export async function POST(request: NextRequest) {
         stateProvince: validatedData.stateProvince ?? null,
         postalCode: validatedData.postalCode ?? null,
         country: validatedData.country ?? null,
+        latitude: coords?.latitude ?? null,
+        longitude: coords?.longitude ?? null,
         phone: validatedData.phone ?? null,
         email: validatedData.email ?? null,
         squareFootage: validatedData.squareFootage ?? null,

@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
+import { geocodeAddress, hasAddressChanged } from "@/lib/geocode";
 
 const updateFacilitySchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
@@ -122,10 +123,27 @@ export async function PATCH(
       });
     }
 
+    let geoUpdate: { latitude: number | null; longitude: number | null } | undefined;
+    if (
+      hasAddressChanged(validatedData, existingFacility)
+    ) {
+      const coords = await geocodeAddress({
+        street: validatedData.street ?? existingFacility.street,
+        city: validatedData.city ?? existingFacility.city,
+        stateProvince: validatedData.stateProvince ?? existingFacility.stateProvince,
+        postalCode: validatedData.postalCode ?? existingFacility.postalCode,
+        country: validatedData.country ?? existingFacility.country,
+      });
+      geoUpdate = {
+        latitude: coords?.latitude ?? null,
+        longitude: coords?.longitude ?? null,
+      };
+    }
+
     const scopedDb = getScopedDb(organizationId);
     const facility = await scopedDb.facility.update({
       where: { id },
-      data: validatedData,
+      data: { ...validatedData, ...geoUpdate },
       include: {
         _count: {
           select: {

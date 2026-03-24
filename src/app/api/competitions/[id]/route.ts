@@ -3,10 +3,11 @@ import { getAuthSession } from "@/lib/auth"
 import { checkFeatureGate } from "@/lib/feature-resolver"
 import { db, getScopedDb } from "@/lib/db"
 import { parseDateOnly } from "@/lib/date-utils"
+import { geocodeAddress, hasAddressChanged } from "@/lib/geocode"
 import { z } from "zod"
 
 const competitionInclude = {
-  facility: { select: { id: true, name: true, street: true, city: true, stateProvince: true, postalCode: true, country: true } },
+  facility: { select: { id: true, name: true, street: true, city: true, stateProvince: true, postalCode: true, country: true, latitude: true, longitude: true } },
   categories: {
     include: {
       combinationEntry: {
@@ -297,6 +298,34 @@ export async function PATCH(
     }
     if (data.scheduledGoLiveDate !== undefined) updateData.scheduledGoLiveDate = data.scheduledGoLiveDate ? parseDateOnly(String(data.scheduledGoLiveDate)) : null
     if (data.scheduledGoLiveTime !== undefined) updateData.scheduledGoLiveTime = data.scheduledGoLiveTime
+
+    const addressChanged = !data.facilityId && hasAddressChanged(
+      {
+        street: data.streetAddress,
+        city: data.city,
+        stateProvince: data.stateProvince,
+        postalCode: data.postalCode,
+        country: data.country,
+      },
+      {
+        street: existing.streetAddress,
+        city: existing.city,
+        stateProvince: existing.stateProvince,
+        postalCode: existing.postalCode,
+        country: existing.country,
+      }
+    )
+    if (addressChanged) {
+      const coords = await geocodeAddress({
+        street: data.streetAddress ?? existing.streetAddress,
+        city: data.city ?? existing.city,
+        stateProvince: data.stateProvince ?? existing.stateProvince,
+        postalCode: data.postalCode ?? existing.postalCode,
+        country: data.country ?? existing.country,
+      })
+      updateData.latitude = coords?.latitude ?? null
+      updateData.longitude = coords?.longitude ?? null
+    }
 
     const competition = await scopedDb.competition.update({
       where: { id },

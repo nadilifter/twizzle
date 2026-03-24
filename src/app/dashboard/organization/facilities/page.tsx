@@ -83,6 +83,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { LocationMap, MultiLocationMap } from "@/components/location-map"
 
 interface Facility {
   id: string
@@ -92,6 +93,8 @@ interface Facility {
   stateProvince: string | null
   postalCode: string | null
   country: string | null
+  latitude: number | null
+  longitude: number | null
   phone: string | null
   email: string | null
   status: "ACTIVE" | "INACTIVE" | "MAINTENANCE"
@@ -825,6 +828,27 @@ export default function FacilitiesPage() {
         </Sheet>
       </div>
 
+      {/* All Facilities Map */}
+      {(() => {
+        const mappable = facilities.filter((f) => f.latitude != null && f.longitude != null)
+        if (mappable.length === 0) return null
+        return (
+          <Card>
+            <CardContent className="p-0 overflow-hidden rounded-lg">
+              <MultiLocationMap
+                className="h-64 min-h-0 rounded-lg"
+                locations={mappable.map((f) => ({
+                  latitude: f.latitude!,
+                  longitude: f.longitude!,
+                  label: f.name,
+                  sublabel: [f.city, f.stateProvince].filter(Boolean).join(", "),
+                }))}
+              />
+            </CardContent>
+          </Card>
+        )
+      })()}
+
       {/* Facility List */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {facilities.map((facility) => (
@@ -1026,6 +1050,18 @@ export default function FacilitiesPage() {
                           <span className="text-xs text-muted-foreground">Equipment Items</span>
                         </div>
                       </div>
+                      {selectedFacility.latitude != null && selectedFacility.longitude != null && (
+                        <>
+                          <Separator />
+                          <LocationMap
+                            latitude={selectedFacility.latitude}
+                            longitude={selectedFacility.longitude}
+                            label={selectedFacility.name}
+                            sublabel={[selectedFacility.street, selectedFacility.city, selectedFacility.stateProvince].filter(Boolean).join(", ")}
+                            className="h-48 min-h-0 rounded-md"
+                          />
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

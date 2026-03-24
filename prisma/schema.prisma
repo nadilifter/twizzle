@@ -2721,6 +2721,8 @@ model Facility {
   stateProvince String?
   postalCode    String?
   country       String?
+  latitude      Float?
+  longitude     Float?
 
   // Contact
   phone String?
@@ -4052,6 +4054,8 @@ model Competition {
   city          String?
   streetAddress String?
   postalCode    String?
+  latitude      Float?
+  longitude     Float?
 
   // Dates & Times
   startDate DateTime

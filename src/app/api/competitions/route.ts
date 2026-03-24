@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth"
 import { checkFeatureGate } from "@/lib/feature-resolver"
 import { db } from "@/lib/db"
 import { parseDateOnly } from "@/lib/date-utils"
+import { geocodeAddress } from "@/lib/geocode"
 import { z } from "zod"
 
 const competitionInclude = {
@@ -221,6 +222,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const coords = data.facilityId
+      ? null
+      : await geocodeAddress({
+          street: data.streetAddress,
+          city: data.city,
+          stateProvince: data.stateProvince,
+          postalCode: data.postalCode,
+          country: data.country,
+        })
+
     const competition = await db.competition.create({
       data: {
         organizationId,
@@ -236,6 +247,8 @@ export async function POST(request: NextRequest) {
         city: data.city,
         streetAddress: data.streetAddress,
         postalCode: data.postalCode,
+        latitude: coords?.latitude ?? null,
+        longitude: coords?.longitude ?? null,
 
         // Dates
         startDate: parseDateOnly(String(data.startDate))!,
