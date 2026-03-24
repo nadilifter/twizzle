@@ -5,17 +5,12 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
   const scopedDb = getScopedDb(organizationId)
 
   const [
-    organization,
     programCount,
     memberCount,
     eventCount,
     websiteConfig,
     adyenAccount,
   ] = await Promise.all([
-    db.organization.findUnique({
-      where: { id: organizationId },
-      select: { logo: true },
-    }),
     scopedDb.program.count(),
     scopedDb.organizationMember.count(),
     scopedDb.event.count(),
@@ -30,14 +25,6 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
   ])
 
   const items: ActionItem[] = [
-    {
-      id: "configure-org",
-      title: "Configure your organization",
-      description: "Add your logo, set up programs, and customize your settings",
-      url: "/dashboard/organization/overview",
-      isComplete: !!organization?.logo && programCount > 0,
-      icon: "Settings",
-    },
     {
       id: "invite-team",
       title: "Invite team members",
