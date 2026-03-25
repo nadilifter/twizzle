@@ -145,6 +145,27 @@ export async function processInvoiceRegistrations(
           },
         });
       } else if (programId) {
+        let enrollStatus: "ACTIVE" | "WAITLISTED" = isWaitlist ? "WAITLISTED" : "ACTIVE";
+
+        if (!isWaitlist) {
+          // Re-check program-level capacity to prevent over-enrollment
+          await tx.$queryRaw(
+            Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`
+          );
+          const prog = await tx.program.findUnique({
+            where: { id: programId },
+            select: { capacity: true, hasCapacityRestriction: true, waitlistEnabled: true },
+          });
+          if (prog?.hasCapacityRestriction && prog.capacity != null) {
+            const currentEnrolled = await tx.enrollment.count({
+              where: { programId, status: { not: "WAITLISTED" } },
+            });
+            if (currentEnrolled >= prog.capacity) {
+              enrollStatus = "WAITLISTED";
+            }
+          }
+        }
+
         await tx.enrollment.upsert({
           where: { programId_athleteId: { programId, athleteId } },
           update: {},
@@ -153,11 +174,11 @@ export async function processInvoiceRegistrations(
             athleteId,
             userId: userId || undefined,
             startDate: new Date(),
-            status: isWaitlist ? "WAITLISTED" : "ACTIVE",
+            status: enrollStatus,
           },
         });
 
-        if (!isWaitlist) {
+        if (enrollStatus === "ACTIVE") {
           const instances = await tx.programInstance.findMany({
             where: { programId, status: { not: "CANCELLED" } },
             select: { id: true },

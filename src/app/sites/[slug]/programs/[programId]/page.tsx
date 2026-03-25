@@ -292,7 +292,9 @@ export default async function ProgramDetailPage({
                                         ? `${spotsAvailable} of ${totalCapacity} spots`
                                         : canJoinWaitlist
                                         ? "Full — Waitlist available"
-                                        : "Currently full"}
+                                        : isPerInstance
+                                        ? "Program full — drop-in sessions may be available"
+                                        : "Sold out"}
                                 </span>
                             </div>
                         )}

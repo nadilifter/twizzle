@@ -91,8 +91,10 @@ interface Program {
   maxAge?: number | null;
   hasLevelRestriction?: boolean;
   hasMembershipRestriction?: boolean;
+  waitlistEnabled?: boolean;
+  waitlistCapacity?: number | null;
   allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
-  _count?: { instances?: number; enrollments?: number };
+  _count?: { instances?: number; enrollments?: number; waitlistedEnrollments?: number };
 }
 
 interface FilterableProgramListProps {

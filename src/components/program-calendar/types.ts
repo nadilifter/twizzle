@@ -17,6 +17,8 @@ export interface CalendarEvent {
   color: string; // Hex color from program level
   levelName: string | null;
   registrationType: string | null;
+  isSoldOut: boolean;
+  isWaitlistAvailable: boolean;
 }
 
 export type ViewMode = "month" | "week" | "day";

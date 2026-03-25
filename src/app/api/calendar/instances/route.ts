@@ -89,6 +89,8 @@ export async function GET(request: NextRequest) {
       color: instance.program.color,
       levelName: null,
       registrationType: instance.program.registrationType,
+      isSoldOut: false,
+      isWaitlistAvailable: false,
     }));
 
     return NextResponse.json({ events });

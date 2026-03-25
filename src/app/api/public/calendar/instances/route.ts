@@ -50,7 +50,6 @@ export async function GET(request: NextRequest) {
           gte: start,
           lte: end,
         },
-        // Public view only shows scheduled instances for active programs
         status: "SCHEDULED",
         program: {
           status: "ACTIVE",
@@ -63,34 +62,101 @@ export async function GET(request: NextRequest) {
             name: true,
             color: true,
             registrationType: true,
+            capacity: true,
+            hasCapacityRestriction: true,
+            waitlistEnabled: true,
+            waitlistCapacity: true,
           },
         },
         facility: {
           select: { id: true, name: true, city: true },
         },
+        _count: {
+          select: { registrations: { where: { status: "REGISTERED" } } },
+        },
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     });
 
-    // Transform to calendar event format - no sensitive data
-    const events = instances.map((instance) => ({
-      id: instance.id,
-      title: instance.program.name,
-      start: instance.date,
-      startTime: instance.startTime,
-      endTime: instance.endTime,
-      status: instance.status,
-      programId: instance.programId,
-      programName: instance.program.name,
-      facilityId: instance.facilityId,
-      facilityName: instance.facility?.name || null,
-      capacity: null,
-      registrationCount: 0,
-      attendanceCount: 0,
-      color: instance.program.color,
-      levelName: null,
-      registrationType: instance.program.registrationType,
-    }));
+    // Collect unique program IDs for batch enrollment lookups
+    const programIds = [...new Set(instances.map((i) => i.programId))];
+
+    // Batch-fetch program-level enrollment counts (non-waitlisted) for ALL_INSTANCES programs
+    const enrollmentCounts = programIds.length > 0
+      ? await db.enrollment.groupBy({
+          by: ["programId"],
+          where: {
+            programId: { in: programIds },
+            status: { not: "WAITLISTED" },
+          },
+          _count: true,
+        })
+      : [];
+    const enrollmentMap = new Map(enrollmentCounts.map((e) => [e.programId, e._count]));
+
+    // Batch-fetch waitlisted enrollment counts
+    const waitlistCounts = programIds.length > 0
+      ? await db.enrollment.groupBy({
+          by: ["programId"],
+          where: {
+            programId: { in: programIds },
+            status: "WAITLISTED",
+          },
+          _count: true,
+        })
+      : [];
+    const waitlistMap = new Map(waitlistCounts.map((w) => [w.programId, w._count]));
+
+    const events = instances.map((instance) => {
+      const prog = instance.program;
+      const isDropIn = prog.registrationType === "PER_INSTANCE";
+
+      let isSoldOut = false;
+      let isWaitlistAvailable = false;
+
+      if (prog.hasCapacityRestriction && prog.capacity != null && prog.capacity > 0) {
+        if (isDropIn) {
+          const instCap = instance.capacity ?? prog.capacity;
+          const instFull = instance._count.registrations >= instCap;
+          if (instFull && prog.waitlistEnabled) {
+            const wlCount = waitlistMap.get(instance.programId) || 0;
+            isWaitlistAvailable = prog.waitlistCapacity == null || wlCount < prog.waitlistCapacity;
+          }
+        } else {
+          // ALL_INSTANCES: use program-level enrollment
+          const enrolled = enrollmentMap.get(instance.programId) || 0;
+          const progFull = enrolled >= prog.capacity;
+          if (progFull) {
+            if (prog.waitlistEnabled) {
+              const wlCount = waitlistMap.get(instance.programId) || 0;
+              isWaitlistAvailable = prog.waitlistCapacity == null || wlCount < prog.waitlistCapacity;
+            }
+            isSoldOut = !isWaitlistAvailable;
+          }
+        }
+      }
+
+      return {
+        id: instance.id,
+        title: prog.name,
+        start: instance.date,
+        startTime: instance.startTime,
+        endTime: instance.endTime,
+        status: instance.status,
+        programId: instance.programId,
+        programName: prog.name,
+        facilityId: instance.facilityId,
+        facilityName: instance.facility?.name || null,
+        capacity: null,
+        registrationCount: 0,
+        attendanceCount: 0,
+        color: prog.color,
+        levelName: null,
+        registrationType: prog.registrationType,
+        isSoldOut,
+        isWaitlistAvailable,
+      };
+    });
 
     return NextResponse.json({ events });
   } catch (error) {

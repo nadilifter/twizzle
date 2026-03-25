@@ -59,6 +59,7 @@ interface Program {
   pricingModel?: string;
   basePrice?: number | string | null;
   perSessionPrice?: number | string | null;
+  registrationType?: "ALL_INSTANCES" | "PER_INSTANCE" | null;
   capacity?: number | null;
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
@@ -66,9 +67,12 @@ interface Program {
   maxAge?: number | null;
   hasLevelRestriction?: boolean;
   hasMembershipRestriction?: boolean;
+  waitlistEnabled?: boolean;
+  waitlistCapacity?: number | null;
   _count?: {
     instances?: number;
     enrollments?: number;
+    waitlistedEnrollments?: number;
   };
 }
 
