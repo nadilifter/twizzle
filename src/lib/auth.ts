@@ -275,11 +275,17 @@ export const authOptions: NextAuthOptions = {
               // Multi-tenant Azure AD may omit the `email` claim for personal
               // Microsoft accounts and some external org users. Fall back to
               // `preferred_username` which Microsoft always provides.
+              // Stub fields are overwritten by the JWT/session callbacks.
               return {
                 id: profile.sub,
                 name: profile.name,
                 email: profile.email || profile.preferred_username,
                 image: profile.picture ?? null,
+                role: "",
+                organizationId: "",
+                organizationName: "",
+                permissions: [],
+                isSuperAdmin: false,
               };
             },
           }),
