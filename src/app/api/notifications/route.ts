@@ -86,24 +86,22 @@ export async function GET(request: NextRequest) {
         isGuardian = athleteIds.length > 0
 
         if (athleteIds.length > 0 && needsProgramCheck) {
-          // Get programs these athletes are enrolled in
-          const enrollments = await db.enrollment.findMany({
-            where: { athleteId: { in: athleteIds } },
-            select: { programId: true },
-          })
+          const [enrollments, registrations, eventAttendances] = await Promise.all([
+            db.enrollment.findMany({
+              where: { athleteId: { in: athleteIds } },
+              select: { programId: true },
+            }),
+            db.instanceRegistration.findMany({
+              where: { athleteId: { in: athleteIds }, status: "REGISTERED" },
+              select: { programInstance: { select: { programId: true } } },
+            }),
+            db.attendance.findMany({
+              where: { athleteId: { in: athleteIds } },
+              select: { eventId: true },
+            }),
+          ])
           userProgramIds = new Set(enrollments.map((e) => e.programId))
-
-          // Also check instance registrations for broader coverage
-          const registrations = await db.instanceRegistration.findMany({
-            where: { athleteId: { in: athleteIds }, status: "REGISTERED" },
-            include: { programInstance: { select: { programId: true } } },
-          })
           registrations.forEach((r) => userProgramIds.add(r.programInstance.programId))
-
-          const eventAttendances = await db.attendance.findMany({
-            where: { athleteId: { in: athleteIds } },
-            select: { eventId: true },
-          })
           userEventIds = new Set(eventAttendances.map((a) => a.eventId))
         }
       }
