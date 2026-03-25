@@ -150,11 +150,11 @@ export async function executeRecurringCharge(
  * - No product link (admin-created charge): no-op
  */
 export async function extendEntitlement(
-  charge: Pick<RecurringChargeWithRelations, "id" | "frequency" | "athletePassId" | "athleteMembershipId" | "enrollmentId">
+  charge: Pick<RecurringChargeWithRelations, "id" | "organizationId" | "frequency" | "athletePassId" | "athleteMembershipId" | "enrollmentId">
 ): Promise<void> {
   if (charge.athletePassId) {
-    const athletePass = await db.athletePass.findUnique({
-      where: { id: charge.athletePassId },
+    const athletePass = await db.athletePass.findFirst({
+      where: { id: charge.athletePassId, pass: { organizationId: charge.organizationId } },
       select: { id: true, endDate: true, status: true },
     })
     if (athletePass?.endDate) {
@@ -164,13 +164,13 @@ export async function extendEntitlement(
           : addMonths(athletePass.endDate, 1)
       )!
       await db.athletePass.update({
-        where: { id: charge.athletePassId },
+        where: { id: athletePass.id },
         data: { endDate: newEnd, status: "ACTIVE" },
       })
     }
   } else if (charge.athleteMembershipId) {
-    const membership = await db.athleteMembership.findUnique({
-      where: { id: charge.athleteMembershipId },
+    const membership = await db.athleteMembership.findFirst({
+      where: { id: charge.athleteMembershipId, instance: { group: { organizationId: charge.organizationId } } },
       select: { id: true, endDate: true, status: true },
     })
     if (membership?.endDate) {
@@ -180,12 +180,11 @@ export async function extendEntitlement(
           : addMonths(membership.endDate, 1)
       )!
       await db.athleteMembership.update({
-        where: { id: charge.athleteMembershipId },
+        where: { id: membership.id },
         data: { endDate: newEnd, status: "ACTIVE" },
       })
     }
   }
-  // Enrollment-linked and admin-created charges: no entitlement date changes needed
 }
 
 /**
@@ -194,23 +193,41 @@ export async function extendEntitlement(
  * extendEntitlement will reactivate the entitlement.
  */
 export async function suspendEntitlement(
-  charge: Pick<RecurringChargeWithRelations, "id" | "athletePassId" | "athleteMembershipId" | "enrollmentId">
+  charge: Pick<RecurringChargeWithRelations, "id" | "organizationId" | "athletePassId" | "athleteMembershipId" | "enrollmentId">
 ): Promise<void> {
   if (charge.athletePassId) {
-    await db.athletePass.update({
-      where: { id: charge.athletePassId },
-      data: { status: "EXPIRED" },
+    const verified = await db.athletePass.findFirst({
+      where: { id: charge.athletePassId, pass: { organizationId: charge.organizationId } },
+      select: { id: true },
     })
+    if (verified) {
+      await db.athletePass.update({
+        where: { id: verified.id },
+        data: { status: "EXPIRED" },
+      })
+    }
   } else if (charge.athleteMembershipId) {
-    await db.athleteMembership.update({
-      where: { id: charge.athleteMembershipId },
-      data: { status: "EXPIRED" },
+    const verified = await db.athleteMembership.findFirst({
+      where: { id: charge.athleteMembershipId, instance: { group: { organizationId: charge.organizationId } } },
+      select: { id: true },
     })
+    if (verified) {
+      await db.athleteMembership.update({
+        where: { id: verified.id },
+        data: { status: "EXPIRED" },
+      })
+    }
   } else if (charge.enrollmentId) {
-    await db.enrollment.update({
-      where: { id: charge.enrollmentId },
-      data: { status: "PAUSED" },
+    const verified = await db.enrollment.findFirst({
+      where: { id: charge.enrollmentId, program: { organizationId: charge.organizationId } },
+      select: { id: true },
     })
+    if (verified) {
+      await db.enrollment.update({
+        where: { id: verified.id },
+        data: { status: "PAUSED" },
+      })
+    }
   }
 }
 
@@ -219,11 +236,11 @@ export async function suspendEntitlement(
  * Returns true if the linked entity has been cancelled, completed, or deleted.
  */
 export async function shouldTerminateCharge(
-  charge: Pick<RecurringChargeWithRelations, "enrollmentId" | "athletePassId" | "athleteMembershipId">
+  charge: Pick<RecurringChargeWithRelations, "organizationId" | "enrollmentId" | "athletePassId" | "athleteMembershipId">
 ): Promise<boolean> {
   if (charge.enrollmentId) {
-    const enrollment = await db.enrollment.findUnique({
-      where: { id: charge.enrollmentId },
+    const enrollment = await db.enrollment.findFirst({
+      where: { id: charge.enrollmentId, program: { organizationId: charge.organizationId } },
       select: { status: true, endDate: true },
     })
     if (!enrollment) return true
@@ -231,16 +248,16 @@ export async function shouldTerminateCharge(
     if (enrollment.endDate && enrollment.endDate < new Date()) return true
   }
   if (charge.athletePassId) {
-    const pass = await db.athletePass.findUnique({
-      where: { id: charge.athletePassId },
+    const pass = await db.athletePass.findFirst({
+      where: { id: charge.athletePassId, pass: { organizationId: charge.organizationId } },
       select: { status: true },
     })
     if (!pass) return true
     if (pass.status === "CANCELLED" || pass.status === "ARCHIVED") return true
   }
   if (charge.athleteMembershipId) {
-    const membership = await db.athleteMembership.findUnique({
-      where: { id: charge.athleteMembershipId },
+    const membership = await db.athleteMembership.findFirst({
+      where: { id: charge.athleteMembershipId, instance: { group: { organizationId: charge.organizationId } } },
       select: { status: true },
     })
     if (!membership) return true
