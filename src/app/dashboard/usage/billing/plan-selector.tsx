@@ -84,6 +84,8 @@ export function PlanSelector({
   const [sessionId, setSessionId] = React.useState<string | null>(null)
   const [sessionData, setSessionData] = React.useState<string | null>(null)
   const [paymentMethodJustAdded, setPaymentMethodJustAdded] = React.useState(false)
+  const [cancelStep, setCancelStep] = React.useState<0 | 1 | 2>(0)
+  const [isCancelling, setIsCancelling] = React.useState(false)
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId)
   
@@ -168,6 +170,29 @@ export function PlanSelector({
     setShowPaymentForm(false)
     setSessionId(null)
     setSessionData(null)
+    setCancelStep(0)
+  }
+
+  const handleCancelPlan = async () => {
+    setIsCancelling(true)
+    try {
+      const response = await fetch("/api/organization/subscription/cancel", {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to cancel plan")
+      }
+
+      toast.success("Your plan has been cancelled.")
+      setIsDialogOpen(false)
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to cancel plan")
+    } finally {
+      setIsCancelling(false)
+    }
   }
 
   const handleSave = async () => {
@@ -249,7 +274,62 @@ export function PlanSelector({
         if (!open) resetPaymentForm()
       }}>
         <DialogContent className="max-w-lg">
-          {showPaymentForm ? (
+          {cancelStep === 1 ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Cancel Plan
+                </DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to cancel your plan? This will immediately:
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                  <li>Deactivate your organization</li>
+                  <li>Stop all recurring billing</li>
+                  <li>Block admin users from accessing the dashboard</li>
+                  <li>Take down your marketing site</li>
+                  <li>Halt all automated notifications and campaigns</li>
+                </ul>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCancelStep(0)}>
+                  Back
+                </Button>
+                <Button variant="destructive" onClick={() => setCancelStep(2)}>
+                  Continue
+                </Button>
+              </DialogFooter>
+            </>
+          ) : cancelStep === 2 ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Confirm Cancellation
+                </DialogTitle>
+                <DialogDescription>
+                  This action takes effect immediately. You can reactivate your organization later from the deactivation page.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                  Your organization will be deactivated and your subscription will be cancelled. Any pending invoices will be voided.
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCancelStep(1)} disabled={isCancelling}>
+                  Back
+                </Button>
+                <Button variant="destructive" onClick={handleCancelPlan} disabled={isCancelling}>
+                  {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Yes, Cancel My Plan
+                </Button>
+              </DialogFooter>
+            </>
+          ) : showPaymentForm ? (
             <>
               <DialogHeader>
                 <DialogTitle>Payment Method Required</DialogTitle>
@@ -434,9 +514,18 @@ export function PlanSelector({
                 )}
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                {currentPlanId && (
+                  <Button
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 sm:mr-auto"
+                    onClick={() => setCancelStep(1)}
+                  >
+                    Cancel Plan
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
+                  Close
                 </Button>
                 <Button 
                   onClick={handleSave} 

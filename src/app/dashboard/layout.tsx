@@ -30,6 +30,7 @@ export default async function DashboardLayout({
       const params = new URLSearchParams({
         reason: org.deactivationReason || "Unknown",
         org: org.name,
+        orgId: session.user.organizationId,
       })
       const loginBase = getSubdomainUrl("login")
       redirect(`${loginBase}/organization-deactivated?${params.toString()}`)

@@ -4,15 +4,17 @@ import * as React from "react"
 import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { AlertTriangle, Mail, LogOut, CreditCard, Loader2 } from "lucide-react"
+import { AlertTriangle, Mail, LogOut, CreditCard, RotateCcw, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import { logout } from "@/lib/logout"
+import { getSubdomainUrl } from "@/lib/env-domains"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { UplifterLogo } from "@/components/uplifter-logo"
 
-const SELF_SERVICE_REASONS = ["Non-payment"]
+const SELF_SERVICE_REASONS = ["Non-payment", "Requested by customer"]
 
 const SUPPORT_EMAIL = "support@uplifterinc.com"
 
@@ -27,13 +29,39 @@ export default function OrganizationDeactivatedPage() {
 function OrganizationDeactivatedContent() {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
+  const [isReactivating, setIsReactivating] = React.useState(false)
 
   const reason = searchParams.get("reason") || "Unknown"
   const orgName = searchParams.get("org") || "Your organization"
+  const orgId = searchParams.get("orgId")
   const canSelfService = SELF_SERVICE_REASONS.includes(reason)
+  const canReactivateOnline = reason === "Requested by customer" && !!orgId
 
   const handleSignOut = () => {
     logout("/login")
+  }
+
+  const handleReactivate = async () => {
+    if (!orgId) return
+    setIsReactivating(true)
+    try {
+      const response = await fetch("/api/organization/reactivate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ organizationId: orgId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to reactivate organization")
+      }
+
+      toast.success("Organization reactivated!")
+      window.location.href = getSubdomainUrl("admin")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to reactivate")
+      setIsReactivating(false)
+    }
   }
 
   return (
@@ -61,7 +89,22 @@ function OrganizationDeactivatedContent() {
           </p>
         </div>
 
-        {canSelfService ? (
+        {canReactivateOnline ? (
+          <div className="space-y-3">
+            <p className="text-sm text-center text-muted-foreground">
+              You cancelled your plan. You can reactivate your organization
+              to restore access to the dashboard and all services.
+            </p>
+            <Button className="w-full" onClick={handleReactivate} disabled={isReactivating}>
+              {isReactivating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-2 h-4 w-4" />
+              )}
+              Reactivate My Organization
+            </Button>
+          </div>
+        ) : canSelfService ? (
           <div className="space-y-3">
             <p className="text-sm text-center text-muted-foreground">
               You may be able to restore your organization by updating your
