@@ -375,11 +375,8 @@ export async function PATCH(request: NextRequest) {
     if (body.id) {
       const validatedData = updateRecurringChargeSchema.parse(body);
 
-      const charge = await db.recurringCharge.update({
-        where: {
-          id: body.id,
-          organizationId: session.user.organizationId,
-        },
+      const charge = await scopedDb.recurringCharge.update({
+        where: { id: body.id },
         data: {
           ...(validatedData.description && { description: validatedData.description }),
           ...(validatedData.amount && { amount: validatedData.amount }),
