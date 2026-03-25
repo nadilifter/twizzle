@@ -84,6 +84,9 @@ set -a
 source ~/.env.uplifter
 set +a
 
+log_info "Stopping app container to free memory for build..."
+sudo docker compose -f docker-compose.staging.yml stop app 2>/dev/null || true
+
 log_info "Building Docker image..."
 sudo DOCKER_BUILDKIT=1 docker build \
     --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
