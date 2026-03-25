@@ -13,9 +13,6 @@ COPY prisma ./prisma
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
-# Install Prisma CLI once in deps so the runner can copy it instead of re-downloading
-RUN npm install -g prisma@6
-
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -47,10 +44,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 
-# Copy Prisma CLI + engines from deps instead of re-installing (~16s saved)
-COPY --from=deps /usr/local/lib/node_modules/prisma /usr/local/lib/node_modules/prisma
-COPY --from=deps /usr/local/lib/node_modules/@prisma /usr/local/lib/node_modules/@prisma
-COPY --from=deps /usr/local/bin/prisma /usr/local/bin/prisma
+# Prisma CLI for running migrations at deploy time
+RUN npm install -g prisma@6
 
 RUN mkdir .next && chown nextjs:nodejs .next
 
