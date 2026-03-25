@@ -134,11 +134,13 @@ export function ProgramCard({ program }: ProgramCardProps) {
   const spotsAvailable = program.hasCapacityRestriction && totalCapacity > 0 ? Math.max(0, totalCapacity - enrolled) : null;
 
   const isFull = spotsAvailable === 0;
+  const isDropIn = program.registrationType === "PER_INSTANCE";
   const waitlistedCount = program._count?.waitlistedEnrollments || 0;
   const waitlistHasRoom = program.waitlistEnabled && (
     program.waitlistCapacity == null || waitlistedCount < program.waitlistCapacity
   );
   const canJoinWaitlist = isFull && waitlistHasRoom;
+  const isSoldOut = isFull && !canJoinWaitlist && !isDropIn;
 
   const daysLabel = program.rrule ? formatRRuleDays(program.rrule) : null;
 
@@ -166,7 +168,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
       )}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
+          <h3 className="font-semibold leading-tight text-foreground">
             {program.name}
           </h3>
           <div className="flex items-center gap-1">
@@ -180,7 +182,12 @@ export function ProgramCard({ program }: ProgramCardProps) {
                 Waitlist Available
               </Badge>
             )}
-            {isFull && !canJoinWaitlist && (
+            {isSoldOut && (
+              <Badge variant="destructive" className="shrink-0 text-[10px] px-1.5 py-0">
+                Sold Out
+              </Badge>
+            )}
+            {isFull && !canJoinWaitlist && isDropIn && (
               <Badge variant="destructive" className="shrink-0 text-[10px] px-1.5 py-0">
                 Full
               </Badge>
@@ -356,14 +363,14 @@ export function ProgramCard({ program }: ProgramCardProps) {
 
         <Button
           onClick={() => router.push(`/programs/${program.id}`)}
-          disabled={isFull && !canJoinWaitlist}
+          disabled={isSoldOut}
           className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
         >
           <ClipboardList className="h-4 w-4" />
           {isFull && canJoinWaitlist
             ? "Join Waitlist"
-            : isFull
-            ? "Currently Full"
+            : isSoldOut
+            ? "Sold Out"
             : "Register"}
         </Button>
       </CardFooter>
