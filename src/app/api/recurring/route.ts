@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
-import { parseDateOnly } from "@/lib/date-utils";
+import { parseDateOnly, normalizeToNoonUTC } from "@/lib/date-utils";
 import { executeRecurringCharge } from "@/lib/recurring-billing-service";
+import { addMonths, addYears } from "date-fns";
 import { z } from "zod";
 
 const createRecurringChargeSchema = z.object({
@@ -330,12 +331,9 @@ export async function PATCH(request: NextRequest) {
           const result = await executeRecurringCharge(charge, charge.organizationId);
 
           if (result.success) {
-            const nextDate = new Date(charge.nextChargeDate);
-            if (charge.frequency === "MONTHLY") {
-              nextDate.setMonth(nextDate.getMonth() + 1);
-            } else if (charge.frequency === "YEARLY") {
-              nextDate.setFullYear(nextDate.getFullYear() + 1);
-            }
+            const nextDate = charge.frequency === "YEARLY"
+              ? normalizeToNoonUTC(addYears(charge.nextChargeDate, 1))!
+              : normalizeToNoonUTC(addMonths(charge.nextChargeDate, 1))!;
 
             await scopedDb.recurringCharge.update({
               where: { id: charge.id },
