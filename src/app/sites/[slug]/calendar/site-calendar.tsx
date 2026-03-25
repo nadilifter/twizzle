@@ -7,6 +7,7 @@ import { Filter, X, Palette, Layers } from "lucide-react";
 
 import { ProgramCalendar } from "@/components/program-calendar";
 import type { CalendarEvent } from "@/components/program-calendar";
+import { getEventColorClasses } from "@/components/program-calendar/color-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,6 +29,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ProgramFiltersContent,
@@ -92,13 +94,15 @@ export function SiteCalendar({
     return map;
   }, [levels]);
 
+  const NO_LEVEL_COLOR = "#94a3b8";
+
   const eventTransform = useMemo(() => {
     if (colorBy !== "level") return undefined;
     return (event: CalendarEvent) => {
       const firstLevelId = event.levelIds?.[0];
-      if (!firstLevelId) return event;
+      if (!firstLevelId) return { ...event, color: NO_LEVEL_COLOR };
       const levelColor = levelColorMap.get(firstLevelId);
-      if (!levelColor) return event;
+      if (!levelColor) return { ...event, color: NO_LEVEL_COLOR };
       return { ...event, color: levelColor };
     };
   }, [colorBy, levelColorMap]);
@@ -266,6 +270,29 @@ export function SiteCalendar({
           </Sheet>
         )}
       </div>
+
+      {colorBy === "level" && levels.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+          {levels.map((level) => {
+            const color = level.color ? getEventColorClasses(level.color) : null;
+            return (
+              <span key={level.id} className="flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "inline-block h-2.5 w-2.5 rounded-full shrink-0",
+                    color ? color.bgSolid : "bg-muted-foreground/40"
+                  )}
+                />
+                {level.name}
+              </span>
+            );
+          })}
+          <span className="flex items-center gap-1.5">
+            <span className={cn("inline-block h-2.5 w-2.5 rounded-full shrink-0", getEventColorClasses(NO_LEVEL_COLOR).bgSolid)} />
+            No Level
+          </span>
+        </div>
+      )}
 
       <ProgramCalendar
         slug={slug}
