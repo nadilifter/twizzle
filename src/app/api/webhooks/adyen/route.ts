@@ -192,17 +192,19 @@ async function handleAuthorisation(
     try {
       const metadata: InvoiceMetadata = JSON.parse(invoice.notes)
 
-      const cartItems = invoice.lineItems.map((li) => ({
-        referenceId: li.programId || li.membershipInstanceId || li.passId || li.competitionId || li.id,
-        type: li.competitionId ? "competition" : li.membershipInstanceId ? "membership" : li.passId ? "pass" : "program",
-        athleteId: li.athleteId || undefined,
-        details: {
-          programId: li.programId || undefined,
-          membershipInstanceId: li.membershipInstanceId || undefined,
-          passId: li.passId || undefined,
-          competitionId: li.competitionId || undefined,
-        },
-      }))
+      const cartItems = invoice.lineItems
+        .filter((li) => !li.productId && !li.discountId)
+        .map((li) => ({
+          referenceId: li.programId || li.membershipInstanceId || li.passId || li.competitionId || li.id,
+          type: li.competitionId ? "competition" as const : li.membershipInstanceId ? "membership" as const : li.passId ? "pass" as const : "program" as const,
+          athleteId: li.athleteId || undefined,
+          details: {
+            programId: li.programId || undefined,
+            membershipInstanceId: li.membershipInstanceId || undefined,
+            passId: li.passId || undefined,
+            competitionId: li.competitionId || undefined,
+          },
+        }))
 
       await processInvoiceRegistrations(
         metadata,

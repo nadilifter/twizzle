@@ -800,6 +800,15 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       clearCart()
       await completeRegistration()
       if (checkoutInvoiceId) {
+        try {
+          await fetch(`/api/sites/${params.slug}/checkout/finalize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ invoiceId: checkoutInvoiceId }),
+          })
+        } catch {
+          // Adyen webhook will handle it if reachable
+        }
         router.push(`/receipt/${checkoutInvoiceId}`)
       }
     } else {

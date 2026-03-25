@@ -175,6 +175,7 @@ src/app/api/org-signup/verify-email/route.ts
 src/app/api/org-signup/verify-email/confirm/route.ts
 src/app/api/sites/[slug]/signup/route.ts
 src/app/api/sites/[slug]/checkout/session/route.ts
+src/app/api/sites/[slug]/checkout/finalize/route.ts
 src/app/api/sites/[slug]/athletes/route.ts
 src/app/api/sites/[slug]/athletes/[id]/claim/route.ts
 src/app/api/sites/[slug]/competitions/[id]/eligibility/route.ts
