@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ThemeProvider } from "@/components/theme-provider";
+import { isLightColor } from "@/lib/color-utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MarketingAnnouncementBell } from "@/components/marketing-announcement-bell";
 import { CartProvider } from "@/components/sites/cart-context";
@@ -266,6 +267,7 @@ export default async function SiteLayout({
   
   // Convert to HSL for Tailwind CSS variables
   const primaryHSL = hexToHSL(primaryColor);
+  const primaryForegroundHSL = isLightColor(primaryColor) ? "0 0% 9%" : "0 0% 100%";
 
   // Construct the canonical site URL for structured data
   const siteUrl = config.domain 
@@ -290,14 +292,14 @@ export default async function SiteLayout({
                 --site-primary: ${primaryColor};
                 --site-secondary: ${secondaryColor};
                 --primary: ${primaryHSL};
-                --primary-foreground: 0 0% 100%;
+                --primary-foreground: ${primaryForegroundHSL};
                 --ring: ${primaryHSL};
             }
             .dark {
                 --site-primary: ${primaryColor};
                 --site-secondary: ${secondaryColor};
                 --primary: ${primaryHSL};
-                --primary-foreground: 0 0% 100%;
+                --primary-foreground: ${primaryForegroundHSL};
                 --ring: ${primaryHSL};
             }
         `}} />
