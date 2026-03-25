@@ -133,10 +133,13 @@ const getImageRemotePatterns = () => {
   return patterns;
 };
 
+// Extract just the hostname for allowedDevOrigins (strip port if present)
+const localHostname = isLocal ? envConfig.baseDomain.split(':')[0] : null;
+
 const nextConfig = {
   output: "standalone",
   allowedDevOrigins: isLocal
-    ? [`http://*.${envConfig.baseDomain}`]
+    ? [`*.${localHostname}`]
     : [],
   typescript: {
     ignoreBuildErrors: false,
