@@ -132,14 +132,22 @@ export async function middleware(req: NextRequest) {
   // The login form handles this by posting OAuth to localhost:3000, then session-bridge
   // transfers the session back to the local subdomains
   if (currentHost === "login") {
-    // If user is already authenticated and visiting root or login page, redirect to admin dashboard
-    // This prevents users from seeing the login form when they are already logged in.
-    // The "/login" check is needed because other domains (e.g. localhost:3000) redirect
-    // unauthenticated users to login.{baseDomain}/login — the session cookie lives on
-    // .uplifterinc.localhost so it's invisible on bare localhost but visible here.
+    // If user is already authenticated and visiting root or login page, redirect to the
+    // appropriate portal based on their permissions:
+    //   - Users with any admin/dashboard permissions → admin portal
+    //   - Users with no permissions (e.g. PARENT role) → athletes portal
     if (token && (path === "/" || path === "/login")) {
-       const adminHost = getSubdomainHost("admin");
-       return NextResponse.redirect(`${protocol}//${adminHost}/`);
+       const permissions = token.permissions as string[] | undefined;
+       const hasAdminAccess = token.isSuperAdmin || 
+         (Array.isArray(permissions) && permissions.length > 0);
+       
+       if (hasAdminAccess) {
+         const adminHost = getSubdomainHost("admin");
+         return NextResponse.redirect(`${protocol}//${adminHost}/`);
+       } else {
+         const athletesHost = getSubdomainHost("athletes");
+         return NextResponse.redirect(`${protocol}//${athletesHost}/`);
+       }
     }
 
     let newPath = path;
@@ -173,6 +181,16 @@ export async function middleware(req: NextRequest) {
       const externalCallbackUrl = `${protocol}//${adminHost}${path}${url.search}`;
       loginUrl.searchParams.set("callbackUrl", externalCallbackUrl);
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Permission Check: users without admin permissions belong on the athletes portal
+    if (token && !token.isSuperAdmin) {
+      const permissions = token.permissions as string[] | undefined;
+      const hasAdminAccess = Array.isArray(permissions) && permissions.length > 0;
+      if (!hasAdminAccess && !path.startsWith("/switch-organization")) {
+        const athletesHost = getSubdomainHost("athletes");
+        return NextResponse.redirect(`${protocol}//${athletesHost}/`);
+      }
     }
 
     // Organization Check - redirect to org selection if no org is set

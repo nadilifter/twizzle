@@ -271,6 +271,17 @@ export const authOptions: NextAuthOptions = {
                 scope: "openid profile email User.Read",
               },
             },
+            profile(profile) {
+              // Multi-tenant Azure AD may omit the `email` claim for personal
+              // Microsoft accounts and some external org users. Fall back to
+              // `preferred_username` which Microsoft always provides.
+              return {
+                id: profile.sub,
+                name: profile.name,
+                email: profile.email || profile.preferred_username,
+                image: profile.picture ?? null,
+              };
+            },
           }),
         ]
       : []),
@@ -548,23 +559,35 @@ export const authOptions: NextAuthOptions = {
       // Cookies are properly shared across subdomains via domain attribute,
       // so no bridge is needed - NextAuth handles everything correctly
       if (currentEnv !== 'local') {
+        let finalUrl = url;
+        
         // Allows relative callback URLs
-        if (url.startsWith("/")) {
-          return `${baseUrl}${url}`;
+        if (finalUrl.startsWith("/")) {
+          finalUrl = `${baseUrl}${finalUrl}`;
         }
-        // Allows callback URLs on the same origin
+        // Allows callback URLs on the same origin or environment domain
+        else {
+          try {
+            if (new URL(finalUrl).origin !== baseUrl && !finalUrl.includes(baseDomain)) {
+              finalUrl = baseUrl;
+            }
+          } catch {
+            finalUrl = baseUrl;
+          }
+        }
+        
+        // Prevent redirect loop: if the resolved URL points to the login portal,
+        // redirect to admin instead (middleware will route to the correct portal)
         try {
-          if (new URL(url).origin === baseUrl) {
-            return url;
+          const resolvedUrl = new URL(finalUrl);
+          if (resolvedUrl.hostname.startsWith("login.") || resolvedUrl.pathname === "/login") {
+            return getSubdomainUrl("admin") + "/";
           }
         } catch {
-          // URL parsing failed, continue to next check
+          // URL parsing failed, continue with finalUrl
         }
-        // Allow callback URLs to the current environment's domain (trusted)
-        if (url.includes(baseDomain)) {
-          return url;
-        }
-        return baseUrl;
+        
+        return finalUrl;
       }
       
       // LOCAL DEVELOPMENT: Handle cross-domain OAuth redirect

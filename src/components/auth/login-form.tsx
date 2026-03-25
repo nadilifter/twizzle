@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ShineBorder } from "@/components/ui/shine-border"
 import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { signIn, getCsrfToken } from "next-auth/react"
+import { signIn, getCsrfToken, useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { UplifterLogo } from "@/components/uplifter-logo"
 import { getClientSubdomainUrl } from "@/lib/client-domains"
@@ -26,6 +26,14 @@ function isLocalSubdomain(): boolean {
  * STATUS: Not fully working in local development. Works in production.
  * See git history for full context on this limitation.
  */
+
+function getPortalUrlForPermissions(permissions?: string[]): string {
+  if (typeof window === "undefined") return "/";
+  const hasAdminAccess = permissions && permissions.length > 0;
+  return hasAdminAccess
+    ? `${getClientSubdomainUrl('admin')}/`
+    : `${getClientSubdomainUrl('athletes')}/`;
+}
 
 function getDefaultCallbackUrl(): string {
   if (typeof window === "undefined") return "/";
@@ -64,6 +72,17 @@ export function LoginForm() {
   const [emailCodeSent, setEmailCodeSent] = useState(false)
   // Stores the signed proof token from a magic link click (for MFA bypass)
   const [mfaVerifiedToken, setMfaVerifiedToken] = useState<string | null>(null)
+
+  // Detect post-OAuth authenticated state and redirect immediately.
+  // After Microsoft/Google OAuth completes, the user may land back on the login
+  // page before the middleware redirect fires. This effect acts as a client-side
+  // fallback that detects the session and navigates to the correct portal.
+  const { data: session, status: sessionStatus } = useSession()
+  useEffect(() => {
+    if (sessionStatus !== "authenticated" || !session?.user) return;
+    const destination = urlCallbackParam || getPortalUrlForPermissions(session.user.permissions);
+    window.location.href = destination;
+  }, [sessionStatus, session, urlCallbackParam])
 
   useEffect(() => {
     getCsrfToken().then((token) => {
