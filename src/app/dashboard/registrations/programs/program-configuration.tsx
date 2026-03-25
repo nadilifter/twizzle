@@ -493,7 +493,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         pricingModel: isFlatRate ? ("FLAT_RATE" as any) : ("PER_SESSION" as any),
         basePrice: isFlatRate ? priceValue : null,
         perSessionPrice: !isFlatRate ? priceValue : null,
-        billingInterval: formData.billingInterval as any,
+        billingInterval: formData.billingInterval,
         recurringPrice: formData.billingInterval !== "ONE_TIME" ? recurringPriceValue : null,
         startDate: formData.startDate || null,
         endDate: formData.endDate || null,

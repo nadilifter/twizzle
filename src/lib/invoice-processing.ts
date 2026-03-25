@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { Prisma, type BillingInterval } from "@prisma/client";
 import { addMonths, addYears } from "date-fns";
 import { getTodayNoonUTC, normalizeToNoonUTC } from "@/lib/date-utils";
 
@@ -384,7 +384,7 @@ export async function processInvoiceRegistrations(
                 athleteId: purchase.athleteId,
                 description: `${pass.name} – auto-renewal`,
                 amount: pass.price,
-                frequency: interval as any,
+                frequency: interval as BillingInterval,
                 nextChargeDate: endDate,
                 paymentMethodId: defaultPaymentMethod?.id,
                 status: "ACTIVE",

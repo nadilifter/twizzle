@@ -265,8 +265,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       const val = isFlat ? p.basePrice : p.perSessionPrice
       return val != null ? Number(val) : null
     })(),
-    billingInterval: ((program as any)?.billingInterval || "ONE_TIME") as "ONE_TIME" | "MONTHLY" | "YEARLY",
-    recurringPrice: (program as any)?.recurringPrice != null ? Number((program as any).recurringPrice) : null,
+    billingInterval: (program?.billingInterval || "ONE_TIME") as "ONE_TIME" | "MONTHLY" | "YEARLY",
+    recurringPrice: program?.recurringPrice != null ? Number(program.recurringPrice) : null,
     
     // Step 2: Date & Location
     startDate: program?.startDate ? new Date(program.startDate) : null,
