@@ -107,8 +107,8 @@ export async function PUT(request: NextRequest) {
           },
           update: {
             displayOrder: h.displayOrder,
-            overrideImage: h.overrideImage ?? undefined,
-            bio: h.bio ?? undefined,
+            ...(h.overrideImage !== undefined && { overrideImage: h.overrideImage }),
+            ...(h.bio !== undefined && { bio: h.bio }),
             isVisible: h.isVisible ?? true,
           },
           create: {
