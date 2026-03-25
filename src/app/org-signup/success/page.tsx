@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import Link from "next/link"
-import { CheckCircle2, ExternalLink, ArrowRight, ChevronRight, Settings, Users, Calendar, Globe, CreditCard } from "lucide-react"
+import { CheckCircle2, ExternalLink, ArrowRight, ChevronRight, Users, Calendar, Globe, CreditCard } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -28,12 +28,6 @@ function SuccessContent() {
   const adminUrl = `${protocol}://admin.${baseDomain}`
 
   const nextSteps = [
-    {
-      icon: Settings,
-      title: "Configure your organization",
-      description: "Add your logo, set up programs, and customize your settings",
-      url: `${adminUrl}/organization/overview`,
-    },
     {
       icon: Users,
       title: "Invite team members",
