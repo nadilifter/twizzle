@@ -137,12 +137,38 @@ export default function SignupPage() {
   const [sportsLoading, setSportsLoading] = React.useState(true)
 
   const useExistingAccount = signupMode === "existingAccount"
+  const restoredFromSession = React.useRef(false)
 
   // Email verification state
   const [emailVerification, setEmailVerification] = React.useState<EmailVerificationState>("idle")
   const [verificationCode, setVerificationCode] = React.useState("")
 
+  // Restore form data when returning from the payment page
   React.useEffect(() => {
+    const raw = sessionStorage.getItem("org-signup-data")
+    if (!raw) return
+
+    try {
+      const data = JSON.parse(raw)
+      const { planName, planPrice, useExistingAccount: wasExisting, ...formFields } = data
+      setFormData(prev => ({ ...prev, ...formFields }))
+
+      if (wasExisting) {
+        setSignupMode("existingAccount")
+      } else {
+        setSignupMode("newAccount")
+        setEmailVerification("verified")
+      }
+
+      stepper.navigation.goTo("plan")
+      restoredFromSession.current = true
+    } catch {
+      // Invalid saved data — ignore and start fresh
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  React.useEffect(() => {
+    if (restoredFromSession.current) return
     if (sessionStatus === "loading") return
     if (sessionStatus === "authenticated") {
       setSignupMode("choosing")
@@ -214,12 +240,15 @@ export default function SignupPage() {
         if (!response.ok) throw new Error("Failed to fetch plans")
         const data = await response.json()
         setPlans(data)
-        const popularPlan = data.find((p: SubscriptionPlan) => p.isPopular)
-        if (popularPlan) {
-          setFormData(prev => ({ ...prev, planId: popularPlan.id }))
-        } else if (data.length > 0) {
-          setFormData(prev => ({ ...prev, planId: data[0].id }))
-        }
+        setFormData(prev => {
+          if (prev.planId && data.some((p: SubscriptionPlan) => p.id === prev.planId)) {
+            return prev
+          }
+          const popularPlan = data.find((p: SubscriptionPlan) => p.isPopular)
+          if (popularPlan) return { ...prev, planId: popularPlan.id }
+          if (data.length > 0) return { ...prev, planId: data[0].id }
+          return prev
+        })
       } catch (error) {
         toast.error("Failed to load subscription plans")
       } finally {
@@ -541,6 +570,11 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (stepper.state.current.data.id !== "plan") {
+      handleNext()
+      return
+    }
     
     if (!validatePlanStep()) {
       toast.error("Please fix the errors in the form")
@@ -1324,7 +1358,10 @@ export default function SignupPage() {
                       {plans.map((plan) => (
                         <div
                           key={plan.id}
-                          onClick={() => setFormData(prev => ({ ...prev, planId: plan.id }))}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, planId: plan.id }))
+                            if (errors.planId) setErrors(prev => ({ ...prev, planId: "" }))
+                          }}
                           className={cn(
                             "relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50",
                             formData.planId === plan.id
@@ -1441,9 +1478,10 @@ export default function SignupPage() {
                       <PlansComparisonDialog
                         plans={plans}
                         selectedPlanId={formData.planId}
-                        onSelectPlan={(planId) =>
+                        onSelectPlan={(planId) => {
                           setFormData((prev) => ({ ...prev, planId }))
-                        }
+                          if (errors.planId) setErrors(prev => ({ ...prev, planId: "" }))
+                        }}
                       >
                         <Button
                           type="button"

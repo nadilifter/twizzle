@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
 import Link from "next/link"
 import { CheckCircle2, ExternalLink, ArrowRight, ChevronRight, Users, Calendar, Globe, CreditCard } from "lucide-react"
 
@@ -18,6 +18,11 @@ import { MARKETING_DOCS_URL, MARKETING_CONTACT_URL } from "@/lib/env-domains"
 
 function SuccessContent() {
   const searchParams = useSearchParams()
+
+  useEffect(() => {
+    sessionStorage.removeItem("org-signup-data")
+  }, [])
+
   const subdomain = searchParams.get("subdomain") || "your-site"
   const orgName = searchParams.get("orgName") || "Your Organization"
   const planPrice = searchParams.get("planPrice")
