@@ -15,6 +15,8 @@ const updateProgramSchema = z.object({
   pricingModel: z.enum(["FLAT_RATE", "PER_SESSION"]).optional(),
   basePrice: z.number().min(0).optional().nullable(),
   perSessionPrice: z.number().min(0).optional().nullable(),
+  billingInterval: z.enum(["ONE_TIME", "MONTHLY", "YEARLY", "SESSION"]).optional(),
+  recurringPrice: z.number().min(0).optional().nullable(),
   registrationType: z.enum(["ALL_INSTANCES", "PER_INSTANCE"]).optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
@@ -350,6 +352,8 @@ export async function PATCH(
       if (validatedData.pricingModel !== undefined) updateData.pricingModel = validatedData.pricingModel;
       if (validatedData.basePrice !== undefined) updateData.basePrice = validatedData.basePrice;
       if (validatedData.perSessionPrice !== undefined) updateData.perSessionPrice = validatedData.perSessionPrice;
+      if (validatedData.billingInterval !== undefined) updateData.billingInterval = validatedData.billingInterval;
+      if (validatedData.recurringPrice !== undefined) updateData.recurringPrice = validatedData.recurringPrice;
       if (validatedData.registrationType !== undefined) updateData.registrationType = validatedData.registrationType;
       if (validatedData.startDate !== undefined) updateData.startDate = validatedData.startDate ? parseDateOnly(validatedData.startDate) : null;
       if (validatedData.endDate !== undefined) updateData.endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate) : null;

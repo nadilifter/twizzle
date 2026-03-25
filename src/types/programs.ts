@@ -18,6 +18,7 @@ export interface ProgramRequiredMembership {
 }
 
 export type PricingModel = "FLAT_RATE" | "PER_SESSION";
+export type BillingInterval = "ONE_TIME" | "MONTHLY" | "YEARLY" | "SESSION";
 
 // Calendar-based scheduling types
 export type RegistrationType = "ALL_INSTANCES" | "PER_INSTANCE";
@@ -62,6 +63,8 @@ export interface Program {
   pricingModel: PricingModel;
   basePrice: number | null;
   perSessionPrice: number | null;
+  billingInterval: BillingInterval;
+  recurringPrice: number | null;
   
   // Registration style
   registrationType: RegistrationType;
@@ -237,6 +240,8 @@ export interface CreateProgramPayload {
   pricingModel?: PricingModel;
   basePrice?: number | null;
   perSessionPrice?: number | null;
+  billingInterval?: BillingInterval;
+  recurringPrice?: number | null;
   registrationType?: RegistrationType;
   startDate?: string | null;
   endDate?: string | null;
@@ -283,6 +288,8 @@ export interface UpdateProgramPayload {
   pricingModel?: PricingModel;
   basePrice?: number | null;
   perSessionPrice?: number | null;
+  billingInterval?: BillingInterval;
+  recurringPrice?: number | null;
   registrationType?: RegistrationType;
   startDate?: string | null;
   endDate?: string | null;

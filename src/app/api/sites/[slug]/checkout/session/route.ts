@@ -816,22 +816,29 @@ export async function POST(
     const programItemsForPrice = items
       .map((item: CartItem, index: number) => ({ item, index }))
       .filter(({ item }) => item.type === "program");
+    const programPriceMap = new Map<string, { id: string; basePrice: any; perSessionPrice: any; pricingModel: string; billingInterval: string; recurringPrice: any }>();
     if (programItemsForPrice.length > 0) {
       const allProgramIds = [...new Set(
         programItemsForPrice.map(({ item }) => item.details?.programId || item.referenceId).filter(Boolean)
       )] as string[];
       const programsForPrice = await db.program.findMany({
         where: { id: { in: allProgramIds }, organizationId },
-        select: { id: true, basePrice: true, perSessionPrice: true, pricingModel: true },
+        select: { id: true, basePrice: true, perSessionPrice: true, pricingModel: true, billingInterval: true, recurringPrice: true },
       });
-      const programPriceMap = new Map(programsForPrice.map(p => [p.id, p]));
+      for (const p of programsForPrice) { programPriceMap.set(p.id, p); }
       for (const { item, index } of programItemsForPrice) {
         const programId = item.details?.programId || item.referenceId;
         const prog = programPriceMap.get(programId);
         if (prog) {
-          const price = prog.pricingModel === "PER_SESSION"
-            ? Number(prog.perSessionPrice ?? 0)
-            : Number(prog.basePrice ?? 0);
+          let price: number;
+          if (prog.billingInterval !== "ONE_TIME" && prog.recurringPrice) {
+            // Recurring program: charge only the first period at checkout
+            price = Number(prog.recurringPrice);
+          } else if (prog.pricingModel === "PER_SESSION") {
+            price = Number(prog.perSessionPrice ?? 0);
+          } else {
+            price = Number(prog.basePrice ?? 0);
+          }
           serverPrices.set(index, price * item.quantity);
         }
       }
@@ -1453,6 +1460,20 @@ export async function POST(
     const host = request.headers.get("host");
     const returnUrl = `${protocol}://${host}/receipt/${invoice.id}`;
 
+    // Force tokenization when cart contains any recurring items
+    const hasRecurringProgram = programItemsForPrice.some(({ item }) => {
+      const programId = item.details?.programId || item.referenceId;
+      const prog = programPriceMap.get(programId);
+      return prog && prog.billingInterval !== "ONE_TIME" && prog.recurringPrice;
+    });
+    const hasRecurringPass = passInvoiceItems.some(
+      (item: CartItem) => item.details?.billingInterval && item.details.billingInterval !== "ONE_TIME" && item.details.billingInterval !== "SESSION"
+    );
+    const hasRecurringMembership = membershipInvoiceItems.some(
+      (item: CartItem) => item.details?.billingInterval && item.details.billingInterval !== "ONE_TIME" && item.details.billingInterval !== "SESSION"
+    );
+    const hasRecurringItems = hasRecurringProgram || hasRecurringPass || hasRecurringMembership;
+
     const session = await createPaymentSession(
         total,
         "USD",
@@ -1463,8 +1484,8 @@ export async function POST(
         authUserId
           ? {
               shopperReference: `user-${authUserId}`,
-              storePaymentMethodMode: "askForConsent",
-              recurringProcessingModel: "CardOnFile",
+              storePaymentMethodMode: hasRecurringItems ? "enabled" : "askForConsent",
+              recurringProcessingModel: hasRecurringItems ? "Subscription" : "CardOnFile",
             }
           : undefined
     );

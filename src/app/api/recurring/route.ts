@@ -69,6 +69,9 @@ export async function GET(request: NextRequest) {
       db.recurringCharge.findMany({
         where,
         include: {
+          user: {
+            select: { id: true, name: true, email: true },
+          },
           athlete: {
             select: {
               id: true,
@@ -82,6 +85,18 @@ export async function GET(request: NextRequest) {
               last4: true,
               brand: true,
             },
+          },
+          athletePass: {
+            select: { id: true, pass: { select: { name: true } } },
+          },
+          athleteMembership: {
+            select: {
+              id: true,
+              instance: { select: { group: { select: { name: true } } } },
+            },
+          },
+          enrollment: {
+            select: { id: true, program: { select: { name: true } } },
           },
         },
         orderBy: { nextChargeDate: "asc" },
@@ -97,39 +112,41 @@ export async function GET(request: NextRequest) {
     const endOfDay = new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const [dueToday, activeStats, failedStats] = await Promise.all([
-      // Charges due today
+    const weekFromNow = new Date(today);
+    weekFromNow.setDate(weekFromNow.getDate() + 7);
+
+    const [dueToday, activeStats, failedStats, upcomingWeek] = await Promise.all([
       db.recurringCharge.aggregate({
         where: {
           organizationId: session.user.organizationId,
           status: "ACTIVE",
-          nextChargeDate: {
-            gte: today,
-            lte: endOfDay,
-          },
+          nextChargeDate: { gte: today, lte: endOfDay },
         },
-        _sum: {
-          amount: true,
-        },
+        _sum: { amount: true },
         _count: true,
       }),
-      // All active charges
       db.recurringCharge.aggregate({
         where: {
           organizationId: session.user.organizationId,
           status: "ACTIVE",
         },
-        _sum: {
-          amount: true,
-        },
+        _sum: { amount: true },
         _count: true,
       }),
-      // Failed charges
       db.recurringCharge.count({
         where: {
           organizationId: session.user.organizationId,
           status: "FAILED",
         },
+      }),
+      db.recurringCharge.aggregate({
+        where: {
+          organizationId: session.user.organizationId,
+          status: "ACTIVE",
+          nextChargeDate: { gte: today, lte: weekFromNow },
+        },
+        _sum: { amount: true },
+        _count: true,
       }),
     ]);
 
@@ -144,6 +161,8 @@ export async function GET(request: NextRequest) {
         activeAmount: activeStats._sum.amount || 0,
         activeCount: activeStats._count || 0,
         failedCount: failedStats,
+        upcomingWeekAmount: upcomingWeek._sum.amount || 0,
+        upcomingWeekCount: upcomingWeek._count || 0,
       },
     });
   } catch (error) {

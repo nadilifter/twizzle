@@ -107,8 +107,16 @@ export async function PATCH(
       },
     });
 
-    // Auto-promote from waitlist if an active enrollment was cancelled
+    // Cancel linked recurring charges and auto-promote from waitlist
     if (wasCancellingActive) {
+      await db.recurringCharge.updateMany({
+        where: {
+          enrollmentId: id,
+          status: { in: ["ACTIVE", "PAUSED", "FAILED"] },
+        },
+        data: { status: "CANCELLED" },
+      });
+
       promoteFromWaitlist(existing.programId).catch((err) =>
         console.error("Waitlist promotion failed:", err)
       );
@@ -159,6 +167,16 @@ export async function DELETE(
     }
 
     const wasActive = existing.status === "ACTIVE";
+
+    // Cancel linked recurring charges before deletion (SetNull would orphan them)
+    await db.recurringCharge.updateMany({
+      where: {
+        enrollmentId: id,
+        status: { in: ["ACTIVE", "PAUSED", "FAILED"] },
+      },
+      data: { status: "CANCELLED" },
+    });
+
     await db.enrollment.delete({
       where: { id, program: { organizationId: session.user.organizationId } },
     });

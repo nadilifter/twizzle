@@ -779,6 +779,10 @@ model Program {
   basePrice       Decimal?     @db.Decimal(10, 2) // For flat-rate pricing
   perSessionPrice Decimal?     @db.Decimal(10, 2) // For per-session pricing
 
+  // Recurring billing (alternative to flat-rate one-time charge)
+  billingInterval BillingInterval @default(ONE_TIME)
+  recurringPrice  Decimal?        @db.Decimal(10, 2) // Per-period price when billingInterval != ONE_TIME
+
   // Schedule Configuration
   startDate DateTime?
   endDate   DateTime?
@@ -1019,8 +1023,9 @@ model AthleteMembership {
   updatedAt DateTime @updatedAt
 
   // Relations
-  athlete  Athlete            @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  instance MembershipInstance @relation(fields: [membershipInstanceId], references: [id], onDelete: Cascade)
+  athlete          Athlete            @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  instance         MembershipInstance @relation(fields: [membershipInstanceId], references: [id], onDelete: Cascade)
+  recurringCharges RecurringCharge[]
 
   @@unique([athleteId, membershipInstanceId])
   @@index([athleteId, status])
@@ -1093,9 +1098,10 @@ model Enrollment {
   updatedAt DateTime         @updatedAt
 
   // Relations
-  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
-  user    User?   @relation("UserEnrollments", fields: [userId], references: [id], onDelete: SetNull)
+  athlete          Athlete           @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  program          Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
+  user             User?             @relation("UserEnrollments", fields: [userId], references: [id], onDelete: SetNull)
+  recurringCharges RecurringCharge[]
 
   @@unique([programId, athleteId])
   @@index([userId])
@@ -1608,21 +1614,31 @@ model RecurringCharge {
   frequency       BillingInterval // MONTHLY, YEARLY, SESSION
   nextChargeDate  DateTime
   lastChargedAt   DateTime?
+  lastAttemptAt   DateTime? // When the last charge attempt was made (for retry spacing)
   status          RecurringStatus
   paymentMethodId String?
   failureCount    Int             @default(0)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
+  // Product links (optional - set for auto-created charges from product purchases)
+  athletePassId       String?
+  athleteMembershipId String?
+  enrollmentId        String?
+
   // Relations
-  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user          User?          @relation("UserRecurringCharges", fields: [userId], references: [id], onDelete: SetNull)
-  athlete       Athlete?       @relation(fields: [athleteId], references: [id])
-  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User?              @relation("UserRecurringCharges", fields: [userId], references: [id], onDelete: SetNull)
+  athlete           Athlete?           @relation(fields: [athleteId], references: [id])
+  paymentMethod     PaymentMethod?     @relation(fields: [paymentMethodId], references: [id])
+  athletePass       AthletePass?       @relation(fields: [athletePassId], references: [id], onDelete: SetNull)
+  athleteMembership AthleteMembership? @relation(fields: [athleteMembershipId], references: [id], onDelete: SetNull)
+  enrollment        Enrollment?        @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([userId])
   @@index([nextChargeDate])
+  @@index([status, nextChargeDate])
 }
 
 enum RecurringStatus {
@@ -3479,6 +3495,12 @@ enum NotificationTriggerType {
   CONTRACT_RENEWAL // Contract up for renewal
   MAKEUP_CLASS_EXPIRING // Makeup class credit expiring
 
+  // Recurring billing
+  RECURRING_CHARGE_UPCOMING // Charge coming in N days
+  RECURRING_CHARGE_SUCCEEDED // Charge processed successfully
+  RECURRING_CHARGE_FAILED // Charge attempt failed
+  RECURRING_CHARGE_SUSPENDED // All retries exhausted, entitlement suspended
+
   // Custom
   CUSTOM // Custom/manual trigger
 }
@@ -4511,9 +4533,10 @@ model AthletePass {
   updatedAt DateTime   @updatedAt
 
   // Relations
-  pass    Pass     @relation(fields: [passId], references: [id], onDelete: Cascade)
-  athlete Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-  user    User?    @relation("UserAthletePasses", fields: [userId], references: [id], onDelete: SetNull)
+  pass             Pass              @relation(fields: [passId], references: [id], onDelete: Cascade)
+  athlete          Athlete           @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  user             User?             @relation("UserAthletePasses", fields: [userId], references: [id], onDelete: SetNull)
+  recurringCharges RecurringCharge[]
 
   @@unique([passId, athleteId])
   @@index([passId])

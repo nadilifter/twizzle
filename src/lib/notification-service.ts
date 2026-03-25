@@ -62,6 +62,7 @@ export interface ExecuteNotificationParams {
   eventId?: string;
   invoiceId?: string;
   recipientOverride?: NotificationRecipient[];
+  contextOverride?: Record<string, string>;
 }
 
 export interface ExecuteNotificationResult {
@@ -808,6 +809,10 @@ export async function executeNotification(
     invoiceId: params.invoiceId,
   });
 
+  if (params.contextOverride) {
+    Object.assign(baseContext, params.contextOverride);
+  }
+
   // Execute for each recipient
   for (const recipient of recipients) {
     // Build recipient-specific context
@@ -1246,4 +1251,43 @@ export async function getNotificationLogs(
     take: options?.limit || 50,
     skip: options?.offset || 0,
   });
+}
+
+/**
+ * Fire a notification by trigger type for a specific organization.
+ * Finds active rules matching the trigger and executes them.
+ * If no rules exist for the trigger, this is a no-op (does not throw).
+ */
+export async function executeNotificationByTrigger(params: {
+  organizationId: string;
+  triggerType: string;
+  userId?: string;
+  athleteId?: string;
+  context?: Record<string, string>;
+}): Promise<void> {
+  const rules = await db.notificationRule.findMany({
+    where: {
+      organizationId: params.organizationId,
+      triggerType: params.triggerType as NotificationTriggerType,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+
+  for (const rule of rules) {
+    try {
+      await executeNotification({
+        ruleId: rule.id,
+        userId: params.userId,
+        athleteId: params.athleteId,
+        contextOverride: params.context,
+      });
+    } catch (err) {
+      console.error("executeNotificationByTrigger: rule execution failed", {
+        ruleId: rule.id,
+        triggerType: params.triggerType,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 }

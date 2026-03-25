@@ -1,8 +1,9 @@
 import { db } from "@/lib/db"
 import { chargeSubscription } from "@/lib/adyen"
+import { addMonths, addYears } from "date-fns"
 import type { Decimal } from "@prisma/client/runtime/library"
 
-interface RecurringChargeWithRelations {
+export interface RecurringChargeWithRelations {
   id: string
   organizationId: string
   userId: string | null
@@ -12,6 +13,9 @@ interface RecurringChargeWithRelations {
   frequency: string
   nextChargeDate: Date
   paymentMethodId: string | null
+  athletePassId: string | null
+  athleteMembershipId: string | null
+  enrollmentId: string | null
   paymentMethod: {
     id: string
     type: string
@@ -22,7 +26,7 @@ interface RecurringChargeWithRelations {
   } | null
 }
 
-interface ChargeResult {
+export interface ChargeResult {
   success: boolean
   pspReference?: string
   error?: string
@@ -44,7 +48,10 @@ export async function executeRecurringCharge(
   }
 
   const amountDollars = Number(charge.amount)
-  const reference = `recurring-${charge.id}-${Date.now()}`
+  // Deterministic reference per billing period prevents double-charging
+  // if the cron fires twice on the same day.
+  const chargeDateStr = charge.nextChargeDate.toISOString().split("T")[0]
+  const reference = `recurring-${charge.id}-${chargeDateStr}`
 
   try {
     const response = await chargeSubscription(
@@ -132,4 +139,107 @@ export async function executeRecurringCharge(
       error: error.responseBody?.message || error.message || "Unknown error",
     }
   }
+}
+
+/**
+ * Extend the entitlement period linked to a recurring charge after a successful payment.
+ * - AthletePass: rolls endDate forward by the billing interval
+ * - AthleteMembership: rolls endDate forward by the billing interval
+ * - Enrollment: no date change needed (enrollment is ongoing while charges succeed)
+ * - No product link (admin-created charge): no-op
+ */
+export async function extendEntitlement(
+  charge: Pick<RecurringChargeWithRelations, "id" | "frequency" | "athletePassId" | "athleteMembershipId" | "enrollmentId">
+): Promise<void> {
+  if (charge.athletePassId) {
+    const athletePass = await db.athletePass.findUnique({
+      where: { id: charge.athletePassId },
+      select: { id: true, endDate: true, status: true },
+    })
+    if (athletePass?.endDate) {
+      const newEnd = charge.frequency === "YEARLY"
+        ? addYears(athletePass.endDate, 1)
+        : addMonths(athletePass.endDate, 1)
+      await db.athletePass.update({
+        where: { id: charge.athletePassId },
+        data: { endDate: newEnd, status: "ACTIVE" },
+      })
+    }
+  } else if (charge.athleteMembershipId) {
+    const membership = await db.athleteMembership.findUnique({
+      where: { id: charge.athleteMembershipId },
+      select: { id: true, endDate: true, status: true },
+    })
+    if (membership?.endDate) {
+      const newEnd = charge.frequency === "YEARLY"
+        ? addYears(membership.endDate, 1)
+        : addMonths(membership.endDate, 1)
+      await db.athleteMembership.update({
+        where: { id: charge.athleteMembershipId },
+        data: { endDate: newEnd, status: "ACTIVE" },
+      })
+    }
+  }
+  // Enrollment-linked and admin-created charges: no entitlement date changes needed
+}
+
+/**
+ * Suspend the entitlement linked to a recurring charge after all retries are exhausted.
+ * The suspension is reversible -- if the guardian updates their payment method and pays,
+ * extendEntitlement will reactivate the entitlement.
+ */
+export async function suspendEntitlement(
+  charge: Pick<RecurringChargeWithRelations, "id" | "athletePassId" | "athleteMembershipId" | "enrollmentId">
+): Promise<void> {
+  if (charge.athletePassId) {
+    await db.athletePass.update({
+      where: { id: charge.athletePassId },
+      data: { status: "EXPIRED" },
+    })
+  } else if (charge.athleteMembershipId) {
+    await db.athleteMembership.update({
+      where: { id: charge.athleteMembershipId },
+      data: { status: "EXPIRED" },
+    })
+  } else if (charge.enrollmentId) {
+    await db.enrollment.update({
+      where: { id: charge.enrollmentId },
+      data: { status: "PAUSED" },
+    })
+  }
+}
+
+/**
+ * Check if a product-linked recurring charge should be terminated.
+ * Returns true if the linked entity has been cancelled, completed, or deleted.
+ */
+export async function shouldTerminateCharge(
+  charge: Pick<RecurringChargeWithRelations, "enrollmentId" | "athletePassId" | "athleteMembershipId">
+): Promise<boolean> {
+  if (charge.enrollmentId) {
+    const enrollment = await db.enrollment.findUnique({
+      where: { id: charge.enrollmentId },
+      select: { status: true, endDate: true },
+    })
+    if (!enrollment) return true
+    if (enrollment.status === "CANCELLED" || enrollment.status === "COMPLETED") return true
+    if (enrollment.endDate && enrollment.endDate < new Date()) return true
+  }
+  if (charge.athletePassId) {
+    const pass = await db.athletePass.findUnique({
+      where: { id: charge.athletePassId },
+      select: { status: true },
+    })
+    if (!pass) return true
+    if (pass.status === "CANCELLED" || pass.status === "ARCHIVED") return true
+  }
+  if (charge.athleteMembershipId) {
+    const membership = await db.athleteMembership.findUnique({
+      where: { id: charge.athleteMembershipId },
+      select: { status: true },
+    })
+    if (!membership) return true
+    if (membership.status === "CANCELLED" || membership.status === "ARCHIVED") return true
+  }
+  return false
 }

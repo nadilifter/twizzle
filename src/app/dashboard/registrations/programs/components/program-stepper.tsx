@@ -128,6 +128,8 @@ interface ProgramFormData {
   registrationType: "ALL_INSTANCES" | "PER_INSTANCE"
   /** Single price: per-session (per-class) or flat rate (entire program). Null/0 = free. */
   price: number | null
+  billingInterval: "ONE_TIME" | "MONTHLY" | "YEARLY"
+  recurringPrice: number | null
   
   // Step 2: Date & Location
   startDate: Date | null
@@ -263,6 +265,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       const val = isFlat ? p.basePrice : p.perSessionPrice
       return val != null ? Number(val) : null
     })(),
+    billingInterval: ((program as any)?.billingInterval || "ONE_TIME") as "ONE_TIME" | "MONTHLY" | "YEARLY",
+    recurringPrice: (program as any)?.recurringPrice != null ? Number((program as any).recurringPrice) : null,
     
     // Step 2: Date & Location
     startDate: program?.startDate ? new Date(program.startDate) : null,
@@ -712,6 +716,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     try {
       const isFlatRate = formData.registrationType === "ALL_INSTANCES"
       const priceValue = formData.price != null ? Math.max(0, Math.round(formData.price * 100) / 100) : null
+      const recurringPriceValue = formData.recurringPrice != null ? Math.max(0, Math.round(formData.recurringPrice * 100) / 100) : null
 
       const payload: CreateProgramPayload | UpdateProgramPayload = {
         name: formData.name,
@@ -721,6 +726,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         pricingModel: isFlatRate ? "FLAT_RATE" : "PER_SESSION",
         basePrice: isFlatRate ? priceValue : null,
         perSessionPrice: !isFlatRate ? priceValue : null,
+        billingInterval: formData.billingInterval,
+        recurringPrice: formData.billingInterval !== "ONE_TIME" ? recurringPriceValue : null,
         startDate: formData.startDate?.toISOString(),
         endDate: formData.endDate?.toISOString(),
         startTime: formData.startTime,
@@ -1018,53 +1025,144 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 </RadioGroup>
               </div>
               
-              {/* Price */}
-              <div className="space-y-2">
-                <Label htmlFor="price" className="text-base font-medium flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  {formData.registrationType === "ALL_INSTANCES"
-                    ? "Price (flat rate)"
-                    : "Price (per session)"}
-                </Label>
-                <div className="relative max-w-[200px]">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="price"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    placeholder="0.00"
-                    className="pl-7"
-                    value={formData.price === null ? "" : formData.price}
-                    onChange={(e) => {
-                      const raw = e.target.value
-                      if (raw === "") {
-                        setFormData(prev => ({ ...prev, price: null }))
-                        return
-                      }
-                      const parsed = parseFloat(raw)
-                      if (Number.isNaN(parsed)) return
-                      if (parsed < 0) return
-                      const rounded = Math.round(parsed * 100) / 100
-                      setFormData(prev => ({ ...prev, price: rounded }))
-                    }}
-                    onBlur={(e) => {
-                      const raw = e.target.value
-                      if (raw === "") return
-                      const parsed = parseFloat(raw)
-                      if (!Number.isNaN(parsed) && parsed >= 0) {
-                        const rounded = Math.round(parsed * 100) / 100
-                        if (rounded !== formData.price) {
-                          setFormData(prev => ({ ...prev, price: rounded }))
-                        }
-                      }
-                    }}
-                  />
+              {/* Billing Schedule (only for full-program / ALL_INSTANCES registration) */}
+              {formData.registrationType === "ALL_INSTANCES" && (
+                <div className="space-y-3">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    Billing Schedule
+                  </Label>
+                  <RadioGroup
+                    value={formData.billingInterval}
+                    onValueChange={(val) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        billingInterval: val as "ONE_TIME" | "MONTHLY" | "YEARLY",
+                      }))
+                    }
+                    className="grid gap-2"
+                  >
+                    <label className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <RadioGroupItem value="ONE_TIME" />
+                      <div>
+                        <p className="font-medium text-sm">One-time payment</p>
+                        <p className="text-xs text-muted-foreground">
+                          Guardian pays the flat rate once at checkout
+                        </p>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <RadioGroupItem value="MONTHLY" />
+                      <div>
+                        <p className="font-medium text-sm">Monthly recurring</p>
+                        <p className="text-xs text-muted-foreground">
+                          Guardian is billed a set amount each month while enrolled
+                        </p>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <RadioGroupItem value="YEARLY" />
+                      <div>
+                        <p className="font-medium text-sm">Annual recurring</p>
+                        <p className="text-xs text-muted-foreground">
+                          Guardian is billed a set amount each year while enrolled
+                        </p>
+                      </div>
+                    </label>
+                  </RadioGroup>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Optional. Leave blank or set to 0 for free programs. Maximum 2 decimal places.
-                </p>
-              </div>
+              )}
+
+              {/* Price — contextual based on billing schedule */}
+              {(formData.registrationType === "PER_INSTANCE" || formData.billingInterval === "ONE_TIME") && (
+                <div className="space-y-2">
+                  <Label htmlFor="price" className="text-base font-medium flex items-center gap-2">
+                    {formData.registrationType === "PER_INSTANCE" && (
+                      <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    {formData.registrationType === "ALL_INSTANCES"
+                      ? "Price (flat rate)"
+                      : "Price (per session)"}
+                  </Label>
+                  <div className="relative max-w-[200px]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      id="price"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      placeholder="0.00"
+                      className="pl-7"
+                      value={formData.price === null ? "" : formData.price}
+                      onChange={(e) => {
+                        const raw = e.target.value
+                        if (raw === "") {
+                          setFormData(prev => ({ ...prev, price: null }))
+                          return
+                        }
+                        const parsed = parseFloat(raw)
+                        if (Number.isNaN(parsed)) return
+                        if (parsed < 0) return
+                        const rounded = Math.round(parsed * 100) / 100
+                        setFormData(prev => ({ ...prev, price: rounded }))
+                      }}
+                      onBlur={(e) => {
+                        const raw = e.target.value
+                        if (raw === "") return
+                        const parsed = parseFloat(raw)
+                        if (!Number.isNaN(parsed) && parsed >= 0) {
+                          const rounded = Math.round(parsed * 100) / 100
+                          if (rounded !== formData.price) {
+                            setFormData(prev => ({ ...prev, price: rounded }))
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Optional. Leave blank or set to 0 for free programs. Maximum 2 decimal places.
+                  </p>
+                </div>
+              )}
+
+              {/* Recurring Price — only for monthly/yearly billing */}
+              {formData.registrationType === "ALL_INSTANCES" && formData.billingInterval !== "ONE_TIME" && (
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">
+                    {formData.billingInterval === "MONTHLY" ? "Monthly" : "Annual"} Price
+                  </Label>
+                  <div className="relative max-w-[200px]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      placeholder="0.00"
+                      className="pl-7"
+                      value={formData.recurringPrice === null ? "" : formData.recurringPrice}
+                      onChange={(e) => {
+                        const raw = e.target.value
+                        if (raw === "") {
+                          setFormData((prev) => ({ ...prev, recurringPrice: null }))
+                          return
+                        }
+                        const parsed = parseFloat(raw)
+                        if (Number.isNaN(parsed) || parsed < 0) return
+                        setFormData((prev) => ({
+                          ...prev,
+                          recurringPrice: Math.round(parsed * 100) / 100,
+                        }))
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Amount charged per {formData.billingInterval === "MONTHLY" ? "month" : "year"}.
+                    First payment collected at checkout.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { addMonths, addYears } from "date-fns";
 
 export interface InvoiceMetadata {
   membershipPurchases: {
@@ -98,6 +99,14 @@ export async function processInvoiceRegistrations(
       }
     }
 
+    // Look up guardian's default payment method once for recurring charge creation
+    const defaultPaymentMethod = userId
+      ? await tx.paymentMethod.findFirst({
+          where: { userId, isDefault: true },
+          select: { id: true },
+        })
+      : null;
+
     // 2. Program registrations
     const programItems = items.filter((item) => item.type === "program");
     for (const item of programItems) {
@@ -166,7 +175,7 @@ export async function processInvoiceRegistrations(
           }
         }
 
-        await tx.enrollment.upsert({
+        const enrollment = await tx.enrollment.upsert({
           where: { programId_athleteId: { programId, athleteId } },
           update: {},
           create: {
@@ -177,6 +186,39 @@ export async function processInvoiceRegistrations(
             status: enrollStatus,
           },
         });
+
+        // Auto-create RecurringCharge for recurring program billing
+        if (organizationId && enrollStatus === "ACTIVE") {
+          const program = await tx.program.findUnique({
+            where: { id: programId },
+            select: { name: true, billingInterval: true, recurringPrice: true },
+          });
+          if (
+            program &&
+            program.billingInterval !== "ONE_TIME" &&
+            program.billingInterval !== "SESSION" &&
+            program.recurringPrice
+          ) {
+            const now = new Date();
+            const nextDate = program.billingInterval === "YEARLY"
+              ? addYears(now, 1)
+              : addMonths(now, 1);
+            await tx.recurringCharge.create({
+              data: {
+                organizationId,
+                userId: userId ?? undefined,
+                athleteId,
+                description: `${program.name} – ${program.billingInterval.toLowerCase()} billing`,
+                amount: program.recurringPrice,
+                frequency: program.billingInterval,
+                nextChargeDate: nextDate,
+                paymentMethodId: defaultPaymentMethod?.id,
+                status: "ACTIVE",
+                enrollmentId: enrollment.id,
+              },
+            });
+          }
+        }
 
         if (enrollStatus === "ACTIVE") {
           const instances = await tx.programInstance.findMany({
@@ -244,7 +286,7 @@ export async function processInvoiceRegistrations(
           }
         }
 
-        await tx.athleteMembership.create({
+        const newMembership = await tx.athleteMembership.create({
           data: {
             athleteId: purchase.athleteId,
             membershipInstanceId: purchase.membershipInstanceId,
@@ -252,6 +294,42 @@ export async function processInvoiceRegistrations(
             status: "ACTIVE",
           },
         });
+
+        // Auto-create RecurringCharge for recurring memberships
+        if (organizationId && instance) {
+          const fullInstance = await tx.membershipInstance.findUnique({
+            where: { id: purchase.membershipInstanceId },
+            select: {
+              billingInterval: true,
+              price: true,
+              endDate: true,
+              group: { select: { name: true, allowAutoRenew: true } },
+            },
+          });
+          if (
+            fullInstance &&
+            fullInstance.billingInterval !== "ONE_TIME" &&
+            fullInstance.billingInterval !== "SESSION" &&
+            fullInstance.group.allowAutoRenew
+          ) {
+            const nextDate = fullInstance.endDate
+              ?? (fullInstance.billingInterval === "YEARLY" ? addYears(new Date(), 1) : addMonths(new Date(), 1));
+            await tx.recurringCharge.create({
+              data: {
+                organizationId,
+                userId: userId ?? undefined,
+                athleteId: purchase.athleteId,
+                description: `${fullInstance.group.name} – auto-renewal`,
+                amount: fullInstance.price,
+                frequency: fullInstance.billingInterval,
+                nextChargeDate: nextDate,
+                paymentMethodId: defaultPaymentMethod?.id,
+                status: "ACTIVE",
+                athleteMembershipId: newMembership.id,
+              },
+            });
+          }
+        }
       }
     }
 
@@ -271,14 +349,11 @@ export async function processInvoiceRegistrations(
       if (!existing) {
         const now = new Date();
         const interval = purchase.billingInterval || "MONTHLY";
-        const endDate = new Date(now);
-        if (interval === "YEARLY") {
-          endDate.setFullYear(endDate.getFullYear() + 1);
-        } else {
-          endDate.setMonth(endDate.getMonth() + 1);
-        }
+        const endDate = interval === "YEARLY"
+          ? addYears(now, 1)
+          : addMonths(now, 1);
 
-        await tx.athletePass.create({
+        const newAthletePass = await tx.athletePass.create({
           data: {
             athleteId: purchase.athleteId,
             passId: purchase.passId,
@@ -289,6 +364,30 @@ export async function processInvoiceRegistrations(
             autoRenew: true,
           },
         });
+
+        // Auto-create RecurringCharge for recurring passes
+        if (organizationId && interval !== "ONE_TIME" && interval !== "SESSION") {
+          const pass = await tx.pass.findUnique({
+            where: { id: purchase.passId },
+            select: { name: true, price: true },
+          });
+          if (pass) {
+            await tx.recurringCharge.create({
+              data: {
+                organizationId,
+                userId: userId ?? undefined,
+                athleteId: purchase.athleteId,
+                description: `${pass.name} – auto-renewal`,
+                amount: pass.price,
+                frequency: interval as any,
+                nextChargeDate: endDate,
+                paymentMethodId: defaultPaymentMethod?.id,
+                status: "ACTIVE",
+                athletePassId: newAthletePass.id,
+              },
+            });
+          }
+        }
       }
     }
 

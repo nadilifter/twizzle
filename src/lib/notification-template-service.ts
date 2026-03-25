@@ -474,6 +474,13 @@ export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType):
       additionalCategories.push("athlete", "guardian", "program");
       break;
       
+    case "RECURRING_CHARGE_UPCOMING":
+    case "RECURRING_CHARGE_SUCCEEDED":
+    case "RECURRING_CHARGE_FAILED":
+    case "RECURRING_CHARGE_SUSPENDED":
+      additionalCategories.push("guardian", "payment");
+      break;
+
     case "CUSTOM":
       return PLACEHOLDER_DEFINITIONS;
       
@@ -760,6 +767,71 @@ Please ensure {{athleteFirstName}} arrives on time and has all necessary equipme
 See you soon!
 {{organizationName}}`,
     smsBody: `{{organizationName}}: Reminder - {{athleteFirstName}} has {{programName}} on {{eventDate}} at {{eventTime}}.`,
+  },
+  {
+    triggerType: "RECURRING_CHARGE_UPCOMING",
+    name: "Upcoming Recurring Charge",
+    subject: "Upcoming Payment - {{organizationName}}",
+    body: `Dear {{guardianName}},
+
+This is a reminder that your card ending in {{cardLast4}} will be charged {{chargeAmount}} for {{chargeDescription}} on {{chargeDate}}.
+
+If you need to update your payment method, please visit your billing page.
+
+Thank you,
+{{organizationName}}`,
+    smsBody: `{{organizationName}}: Your card ending in {{cardLast4}} will be charged {{chargeAmount}} on {{chargeDate}} for {{chargeDescription}}.`,
+  },
+  {
+    triggerType: "RECURRING_CHARGE_SUCCEEDED",
+    name: "Recurring Payment Receipt",
+    subject: "Payment Receipt - {{organizationName}}",
+    body: `Dear {{guardianName}},
+
+Your payment of {{chargeAmount}} for {{chargeDescription}} has been processed successfully.
+
+Your next charge date is {{nextChargeDate}}.
+
+Thank you,
+{{organizationName}}`,
+    smsBody: `{{organizationName}}: Payment of {{chargeAmount}} for {{chargeDescription}} processed successfully. Next charge: {{nextChargeDate}}.`,
+  },
+  {
+    triggerType: "RECURRING_CHARGE_FAILED",
+    name: "Recurring Payment Failed",
+    subject: "Payment Failed - Action Required",
+    body: `Dear {{guardianName}},
+
+Your payment of {{chargeAmount}} for {{chargeDescription}} could not be processed.
+
+Reason: {{failureReason}}
+Retries remaining: {{retriesRemaining}}
+
+Please update your payment method to avoid service interruption.
+
+If you need assistance, please contact us at {{organizationEmail}}.
+
+Thank you,
+{{organizationName}}`,
+    smsBody: `{{organizationName}}: Payment of {{chargeAmount}} for {{chargeDescription}} failed. Please update your payment method.`,
+  },
+  {
+    triggerType: "RECURRING_CHARGE_SUSPENDED",
+    name: "Service Suspended - Payment Failed",
+    subject: "URGENT: Service Suspended Due to Payment Failure",
+    body: `Dear {{guardianName}},
+
+Your {{chargeDescription}} has been suspended due to repeated payment failures.
+
+Last failure reason: {{failureReason}}
+
+To reactivate your service, please update your payment method on your billing page.
+
+If you need help, please contact us at {{organizationEmail}}.
+
+Thank you,
+{{organizationName}}`,
+    smsBody: `URGENT from {{organizationName}}: {{chargeDescription}} suspended due to payment failure. Please update your payment method to reactivate.`,
   },
 ];
 
