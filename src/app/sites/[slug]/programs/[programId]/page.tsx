@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProgramRegistrationFlow } from "@/components/sites/program-registration-flow";
 import type { FileRequirementConfig } from "@/types/file-requirements";
 import { formatRRuleDays } from "@/lib/rrule-utils";
+import { getHeroContrastStyles } from "@/lib/color-utils";
 
 const getCachedProgramConfig = unstable_cache(
     async (subdomain: string) => {
@@ -206,11 +207,13 @@ export default async function ProgramDetailPage({
         facility: i.facility ? { name: i.facility.name, city: i.facility.city } : undefined,
     }));
 
+    const hero = getHeroContrastStyles(primaryColor);
+
     return (
         <div className="min-h-screen">
             {/* Hero Section */}
             <section
-                className="relative py-12 md:py-16 text-white"
+                className={`relative py-12 md:py-16 ${hero.text}`}
                 style={{
                     background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
                 }}
@@ -218,7 +221,7 @@ export default async function ProgramDetailPage({
                 <div className="mx-auto w-full max-w-4xl px-4 md:px-8">
                     <Link 
                         href="/calendar"
-                        className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white mb-6 transition-colors"
+                        className={`inline-flex items-center gap-2 text-sm ${hero.textSubtle} ${hero.hoverText} mb-6 transition-colors`}
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Back to Calendar
@@ -233,12 +236,12 @@ export default async function ProgramDetailPage({
 
                     {program.description && (
                         <div
-                            className="text-white/80 leading-relaxed max-w-2xl mb-6 prose prose-invert prose-p:my-1 [&>p]:text-white/80"
+                            className={`${hero.textMuted} leading-relaxed max-w-2xl mb-6 ${hero.prose}`}
                             dangerouslySetInnerHTML={{ __html: sanitizeHtml(program.description) }}
                         />
                     )}
 
-                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-white/80">
+                    <div className={`flex flex-wrap gap-x-6 gap-y-2 ${hero.textMuted}`}>
                         {program.startDate && (
                             <div className="flex items-center gap-1.5">
                                 <Calendar className="h-4 w-4" />
@@ -317,18 +320,18 @@ export default async function ProgramDetailPage({
 
                     {/* Coaches in hero */}
                     {program.staffAssignments.length > 0 && (
-                        <div className="flex items-center gap-3 mt-6 pt-4 border-t border-white/20">
+                        <div className={`flex items-center gap-3 mt-6 pt-4 border-t ${hero.isLight ? "border-black/20" : "border-white/20"}`}>
                             <div className="flex -space-x-2">
                                 {program.staffAssignments.slice(0, 4).map((sa) => (
-                                    <Avatar key={sa.id} className="h-8 w-8 border-2 border-white/30">
+                                    <Avatar key={sa.id} className={`h-8 w-8 border-2 ${hero.isLight ? "border-black/20" : "border-white/30"}`}>
                                         <AvatarImage src={sa.member.user.avatar || ""} />
-                                        <AvatarFallback className="text-xs bg-white/20 text-white">
+                                        <AvatarFallback className={`text-xs ${hero.isLight ? "bg-black/10 text-gray-900" : "bg-white/20 text-white"}`}>
                                             {sa.member.user.name?.charAt(0) || "?"}
                                         </AvatarFallback>
                                     </Avatar>
                                 ))}
                             </div>
-                            <span className="text-sm text-white/70">
+                            <span className={`text-sm ${hero.textSubtle}`}>
                                 {program.staffAssignments.slice(0, 2).map(sa => sa.member.user.name).join(", ")}
                                 {program.staffAssignments.length > 2 && ` +${program.staffAssignments.length - 2} more`}
                             </span>

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, MapPin, Trophy } from "lucide-react";
 import { FilterableProgramList } from "@/components/sites/filterable-program-list";
 import { InfoSection } from "@/components/sites/info-section";
+import { getHeroContrastStyles } from "@/lib/color-utils";
 
 function hasContent(html: string | null | undefined): boolean {
   if (!html) return false;
@@ -105,6 +106,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
   if (!config) return notFound();
 
   const primaryColor = config.primaryColor || "#000000";
+  const hero = getHeroContrastStyles(primaryColor);
 
   const { programs, levels, waitlistedCounts } = await getCachedHomePrograms(config.organizationId);
   const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
@@ -121,7 +123,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
     <div className="min-h-screen">
       {/* Hero Section */}
       <section 
-        className="relative py-20 text-white"
+        className={`relative py-20 ${hero.text}`}
         style={{
           background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
         }}
@@ -131,7 +133,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
           <div
             className="absolute inset-0"
             style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='${hero.patternFill}' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
             }}
           />
         </div>
@@ -140,7 +142,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
           <div className="mx-auto max-w-3xl text-center">
             <Badge
               variant="secondary"
-              className="mb-6 bg-white/20 text-white backdrop-blur-sm border-white/20"
+              className={`mb-6 ${hero.badge}`}
             >
               <Trophy className="mr-1.5 h-3.5 w-3.5" />
               Registration Now Open
@@ -157,7 +159,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
                 style={{ 
                   color: config.secondaryColor && config.secondaryColor !== "#ffffff" 
                     ? config.secondaryColor 
-                    : "rgba(255,255,255,0.9)" 
+                    : hero.secondaryFallback 
                 }}
               >
                 {config.organization.name}
@@ -165,13 +167,13 @@ export default async function SitePage({ params }: { params: { slug: string } })
             </h1>
 
             {config.heroSubheadline && (
-              <p className="mb-8 text-lg text-white/80 sm:text-xl">
+              <p className={`mb-8 text-lg ${hero.textMuted} sm:text-xl`}>
                 {config.heroSubheadline}
               </p>
             )}
 
             {(config.heroAgeRange || config.heroProgramPeriods || config.heroLocation) && (
-              <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-white/70">
+              <div className={`flex flex-wrap items-center justify-center gap-4 text-sm ${hero.textSubtle}`}>
                 {config.heroAgeRange && (
                   <div className="flex items-center gap-1.5">
                     <Users className="h-4 w-4" />

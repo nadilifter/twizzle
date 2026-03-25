@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { Users, User, ArrowRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { getHeroContrastStyles } from "@/lib/color-utils"
 
 const getCachedSiteConfig = unstable_cache(
   async (slug: string) => {
@@ -41,8 +42,7 @@ const getCachedTeamMembers = unstable_cache(
       overrideImage: h.overrideImage,
       bio: h.bio,
       displayOrder: h.displayOrder,
-      title: h.member.title,
-      role: h.member.role,
+      title: h.title || h.member.title,
       userId: h.member.user.id,
       name: h.member.user.name,
       avatar: h.member.user.avatar,
@@ -53,20 +53,6 @@ const getCachedTeamMembers = unstable_cache(
   { revalidate: 30 }
 )
 
-function getRoleBadgeLabel(role: string): string {
-  switch (role) {
-    case "ADMIN":
-      return "Director"
-    case "COACH":
-      return "Coach"
-    case "VOLUNTEER":
-      return "Volunteer"
-    case "ACCOUNTANT":
-      return "Staff"
-    default:
-      return "Team Member"
-  }
-}
 
 export default async function TeamPage({
   params,
@@ -78,13 +64,14 @@ export default async function TeamPage({
   if (!config || !config.showTeam) return notFound()
 
   const primaryColor = config.primaryColor || "#000000"
+  const hero = getHeroContrastStyles(primaryColor)
   const teamMembers = await getCachedTeamMembers(config.organizationId)
 
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <section
-        className="relative py-16 text-white"
+        className={`relative py-16 ${hero.text}`}
         style={{
           background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
         }}
@@ -94,7 +81,7 @@ export default async function TeamPage({
             <Users className="h-8 w-8" />
             <h1 className="text-4xl font-bold tracking-tight">Our Team</h1>
           </div>
-          <p className="text-lg text-white/80 max-w-2xl">
+          <p className={`text-lg ${hero.textMuted} max-w-2xl`}>
             {teamMembers.length > 1
               ? `Meet the ${teamMembers.length} dedicated professionals who make our programs exceptional.`
               : "Meet the dedicated professional behind our programs."}
@@ -109,7 +96,6 @@ export default async function TeamPage({
             {teamMembers.map((member, index) => {
               const isReversed = index % 2 === 1
               const imageUrl = member.overrideImage || member.avatar
-              const roleLabel = getRoleBadgeLabel(member.role)
 
               return (
                 <article
@@ -162,11 +148,6 @@ export default async function TeamPage({
                           <h2 className="text-2xl font-bold tracking-tight">
                             {member.name}
                           </h2>
-                          {member.title && (
-                            <p className="text-muted-foreground mt-0.5">
-                              {member.title}
-                            </p>
-                          )}
                           <span
                             className="inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full"
                             style={{
@@ -174,7 +155,7 @@ export default async function TeamPage({
                               color: primaryColor,
                             }}
                           >
-                            {roleLabel}
+                            {member.title}
                           </span>
                         </div>
                       </div>
@@ -189,7 +170,7 @@ export default async function TeamPage({
                         <div className="mt-auto">
                           <Link
                             href={`/register?coach=${member.userId}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors hover:opacity-90"
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${hero.isLight ? "text-gray-900" : "text-white"} transition-colors hover:opacity-90`}
                             style={{ backgroundColor: primaryColor }}
                           >
                             View Programs

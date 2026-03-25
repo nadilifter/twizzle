@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { Trophy } from "lucide-react"
 import { CompetitionCard } from "@/components/sites/competition-card"
+import { getHeroContrastStyles } from "@/lib/color-utils"
 
 const getCachedSiteConfig = unstable_cache(
   async (slug: string) => {
@@ -71,6 +72,7 @@ export default async function CompetitionsPage({ params }: { params: { slug: str
   const heading = config.competitionsHeading || "Competitions"
   const description = config.competitionsDescription || "Browse our upcoming competitions and register today."
   const primaryColor = config.primaryColor || "#000000"
+  const hero = getHeroContrastStyles(primaryColor)
 
   const serialized = await getCachedCompetitions(config.organizationId)
 
@@ -78,7 +80,7 @@ export default async function CompetitionsPage({ params }: { params: { slug: str
     <div className="min-h-screen">
       {/* Header Section */}
       <section
-        className="relative py-16 text-white"
+        className={`relative py-16 ${hero.text}`}
         style={{
           background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
         }}
@@ -88,7 +90,7 @@ export default async function CompetitionsPage({ params }: { params: { slug: str
             <Trophy className="h-8 w-8" />
             <h1 className="text-4xl font-bold tracking-tight">{heading}</h1>
           </div>
-          <p className="text-lg text-white/80 max-w-2xl">{description}</p>
+          <p className={`text-lg ${hero.textMuted} max-w-2xl`}>{description}</p>
         </div>
       </section>
 

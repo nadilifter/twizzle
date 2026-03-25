@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { MapPin, Clock, Phone, Mail, Building2 } from "lucide-react"
 import { LocationMap, MultiLocationMap } from "@/components/location-map"
+import { getHeroContrastStyles } from "@/lib/color-utils"
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
 
@@ -149,6 +150,7 @@ export default async function LocationsPage({
   if (!config || !config.showLocations) return notFound()
 
   const primaryColor = config.primaryColor || "#000000"
+  const hero = getHeroContrastStyles(primaryColor)
   const facilities = await getCachedFacilities(config.organizationId)
 
   const geoFacilities = facilities.filter(
@@ -159,7 +161,7 @@ export default async function LocationsPage({
     <div className="min-h-screen">
       {/* Hero Section */}
       <section
-        className="relative py-16 text-white"
+        className={`relative py-16 ${hero.text}`}
         style={{
           background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
         }}
@@ -169,7 +171,7 @@ export default async function LocationsPage({
             <MapPin className="h-8 w-8" />
             <h1 className="text-4xl font-bold tracking-tight">Our Locations</h1>
           </div>
-          <p className="text-lg text-white/80 max-w-2xl">
+          <p className={`text-lg ${hero.textMuted} max-w-2xl`}>
             {facilities.length > 1
               ? `Visit us at any of our ${facilities.length} locations. We look forward to seeing you!`
               : "Come visit us! We look forward to seeing you."}

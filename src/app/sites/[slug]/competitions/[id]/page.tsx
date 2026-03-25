@@ -6,6 +6,7 @@ import { Trophy, CalendarDays, MapPin, Clock } from "lucide-react"
 import { CompetitionRegistrationFlow } from "@/components/sites/competition-registration-flow"
 import { LocationMap } from "@/components/location-map"
 import type { FileRequirementConfig } from "@/types/file-requirements"
+import { getHeroContrastStyles } from "@/lib/color-utils"
 
 export default async function CompetitionDetailPage({
   params,
@@ -128,11 +129,13 @@ export default async function CompetitionDetailPage({
     })),
   }
 
+  const hero = getHeroContrastStyles(primaryColor)
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <section
-        className="relative py-16 text-white"
+        className={`relative py-16 ${hero.text}`}
         style={{
           background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}e6, ${primaryColor}cc)`,
         }}
@@ -145,7 +148,7 @@ export default async function CompetitionDetailPage({
             </h1>
           </div>
 
-          <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-white/80">
+          <div className={`flex flex-wrap gap-x-6 gap-y-2 mt-4 ${hero.textMuted}`}>
             <div className="flex items-center gap-1.5">
               <CalendarDays className="h-4 w-4" />
               <span>
