@@ -4,8 +4,9 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, User, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield, ClipboardList } from "lucide-react";
+import { CalendarDays, User, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield, ClipboardList, CalendarClock } from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { formatRRuleDays } from "@/lib/rrule-utils";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -81,6 +82,7 @@ interface ProgramCardProps {
     endDate?: string | Date | null;
     startTime?: string | null;
     duration?: number | null;
+    rrule?: string | null;
     facility?: Facility | null;
     capacity?: number | null;
     hasCapacityRestriction?: boolean;
@@ -137,6 +139,8 @@ export function ProgramCard({ program }: ProgramCardProps) {
     program.waitlistCapacity == null || waitlistedCount < program.waitlistCapacity
   );
   const canJoinWaitlist = isFull && waitlistHasRoom;
+
+  const daysLabel = program.rrule ? formatRRuleDays(program.rrule) : null;
 
   const ageLabel = program.hasAgeRestriction && (program.minAge !== null || program.maxAge !== null)
     ? program.minAge && program.maxAge
@@ -225,6 +229,13 @@ export function ProgramCard({ program }: ProgramCardProps) {
               </div>
             )}
             
+            {daysLabel && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+                <span>{daysLabel}</span>
+              </div>
+            )}
+
             {program.startTime && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5 shrink-0" />

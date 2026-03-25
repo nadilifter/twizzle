@@ -80,6 +80,7 @@ interface Program {
   endDate?: string | Date | null;
   startTime?: string | null;
   duration?: number | null;
+  rrule?: string | null;
   facility?: { id: string; name: string; city?: string | null; stateProvince?: string | null } | null;
   instances?: { id: string; date: string | Date; startTime: string; endTime: string; status: string }[];
   capacity?: number | null;

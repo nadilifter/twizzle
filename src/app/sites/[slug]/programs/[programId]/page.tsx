@@ -7,6 +7,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { 
     ArrowLeft, 
     Calendar, 
+    CalendarClock,
     Clock, 
     MapPin, 
     Repeat, 
@@ -18,6 +19,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProgramRegistrationFlow } from "@/components/sites/program-registration-flow";
 import type { FileRequirementConfig } from "@/types/file-requirements";
+import { formatRRuleDays } from "@/lib/rrule-utils";
 
 const getCachedProgramConfig = unstable_cache(
     async (subdomain: string) => {
@@ -142,6 +144,8 @@ export default async function ProgramDetailPage({
             : `Up to age ${program.maxAge}`
         : null;
 
+    const daysLabel = program.rrule ? formatRRuleDays(program.rrule) : null;
+
     const locationLabel = program.facility
         ? `${program.facility.name}${program.facility.city ? `, ${program.facility.city}` : ""}`
         : null;
@@ -243,6 +247,13 @@ export default async function ProgramDetailPage({
                                         ? `${format(new Date(program.startDate), "MMM d")} – ${format(new Date(program.endDate), "MMM d, yyyy")}`
                                         : format(new Date(program.startDate), "EEEE, MMMM d, yyyy")}
                                 </span>
+                            </div>
+                        )}
+
+                        {daysLabel && (
+                            <div className="flex items-center gap-1.5">
+                                <CalendarClock className="h-4 w-4" />
+                                <span>{daysLabel}</span>
                             </div>
                         )}
 
