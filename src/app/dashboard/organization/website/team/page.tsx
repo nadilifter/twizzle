@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { ImageUpload } from "@/components/ui/image-upload";
+import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -17,6 +17,9 @@ import {
   User,
   ArrowLeft,
   Save,
+  Camera,
+  X,
+  Upload,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -64,6 +67,14 @@ export default function TeamHighlightsPage() {
   const [highlights, setHighlights] = useState<TeamHighlight[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cropState, setCropState] = useState<{
+    memberId: string;
+    imageSrc: string;
+  } | null>(null);
+  const [uploadingMemberId, setUploadingMemberId] = useState<string | null>(
+    null
+  );
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const fetchData = useCallback(async () => {
     try {
@@ -176,6 +187,52 @@ export default function TeamHighlightsPage() {
 
   const getStaffMember = (memberId: string): StaffMember | undefined => {
     return staff.find((s) => s.id === memberId);
+  };
+
+  const handlePhotoSelect = useCallback(
+    (memberId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Image must be smaller than 10MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCropState({ memberId, imageSrc: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    },
+    []
+  );
+
+  const handleCropComplete = async (blob: Blob) => {
+    if (!cropState) return;
+    const { memberId } = cropState;
+    setCropState(null);
+    setUploadingMemberId(memberId);
+    try {
+      const formData = new FormData();
+      formData.append("file", blob, "team-photo.jpg");
+      formData.append("type", "team");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      updateHighlight(memberId, "overrideImage", data.url);
+      toast.success("Photo updated");
+    } catch {
+      toast.error("Failed to upload photo");
+    } finally {
+      setUploadingMemberId(null);
+    }
   };
 
   if (loading) {
@@ -323,23 +380,84 @@ export default function TeamHighlightsPage() {
                       {/* Settings */}
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                          <Label>Override Image</Label>
+                          <Label>
+                            Team Photo{" "}
+                            <span className="text-muted-foreground text-xs font-normal">
+                              (Optional)
+                            </span>
+                          </Label>
                           <p className="text-xs text-muted-foreground mb-2">
                             Replaces the member&apos;s profile photo on the team
-                            page.
+                            page. Image will be cropped to portrait.
                           </p>
-                          <ImageUpload
-                            label="Team Photo"
-                            type="team"
-                            value={highlight.overrideImage}
-                            onChange={(url) =>
-                              updateHighlight(
-                                highlight.memberId,
-                                "overrideImage",
-                                url
-                              )
+                          <div
+                            className="relative group w-[150px] aspect-[3/4] rounded-lg overflow-hidden bg-muted border-2 border-dashed cursor-pointer transition-colors hover:border-primary/50"
+                            onClick={() =>
+                              !uploadingMemberId &&
+                              fileInputRefs.current[
+                                highlight.memberId
+                              ]?.click()
                             }
-                          />
+                          >
+                            {highlight.overrideImage ? (
+                              <>
+                                <img
+                                  src={highlight.overrideImage}
+                                  alt="Team photo"
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  {uploadingMemberId ===
+                                  highlight.memberId ? (
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                  ) : (
+                                    <Camera className="h-5 w-5" />
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  className="absolute top-1.5 right-1.5 p-1 rounded-full bg-destructive text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/90"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateHighlight(
+                                      highlight.memberId,
+                                      "overrideImage",
+                                      null
+                                    );
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+                                {uploadingMemberId ===
+                                highlight.memberId ? (
+                                  <Loader2 className="h-6 w-6 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Upload className="h-6 w-6" />
+                                    <span className="text-xs">
+                                      Upload Photo
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            <input
+                              ref={(el) => {
+                                fileInputRefs.current[highlight.memberId] =
+                                  el;
+                              }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) =>
+                                handlePhotoSelect(highlight.memberId, e)
+                              }
+                              disabled={uploadingMemberId !== null}
+                            />
+                          </div>
                         </div>
 
                         <div className="space-y-4">
@@ -394,6 +512,22 @@ export default function TeamHighlightsPage() {
             );
           })}
         </div>
+      )}
+
+      {cropState && (
+        <ImageCropDialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setCropState(null);
+          }}
+          imageSrc={cropState.imageSrc}
+          onCropComplete={handleCropComplete}
+          aspect={3 / 4}
+          cropShape="rect"
+          title="Crop Team Photo"
+          maxOutputWidth={1200}
+          maxOutputHeight={1600}
+        />
       )}
     </div>
   );
