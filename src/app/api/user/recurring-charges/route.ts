@@ -2,48 +2,60 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { getTodayNoonUTC } from "@/lib/date-utils"
 
 /**
  * GET /api/user/recurring-charges
  *
  * List the authenticated guardian's recurring charges across all orgs.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const charges = await db.recurringCharge.findMany({
-      where: { userId: session.user.id },
-      include: {
-        paymentMethod: {
-          select: { id: true, last4: true, brand: true, type: true },
-        },
-        organization: {
-          select: { id: true, name: true },
-        },
-        athlete: {
-          select: { id: true, name: true },
-        },
-        athletePass: {
-          select: { id: true, pass: { select: { name: true } } },
-        },
-        athleteMembership: {
-          select: {
-            id: true,
-            instance: { select: { group: { select: { name: true } } } },
+    const { searchParams } = new URL(request.url)
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100)
+    const offset = parseInt(searchParams.get("offset") || "0")
+
+    const where = { userId: session.user.id }
+
+    const [charges, total] = await Promise.all([
+      db.recurringCharge.findMany({
+        where,
+        include: {
+          paymentMethod: {
+            select: { id: true, last4: true, brand: true, type: true },
+          },
+          organization: {
+            select: { id: true, name: true },
+          },
+          athlete: {
+            select: { id: true, name: true },
+          },
+          athletePass: {
+            select: { id: true, pass: { select: { name: true } } },
+          },
+          athleteMembership: {
+            select: {
+              id: true,
+              instance: { select: { group: { select: { name: true } } } },
+            },
+          },
+          enrollment: {
+            select: { id: true, program: { select: { name: true } } },
           },
         },
-        enrollment: {
-          select: { id: true, program: { select: { name: true } } },
-        },
-      },
-      orderBy: { nextChargeDate: "asc" },
-    })
+        orderBy: { nextChargeDate: "asc" },
+        take: limit,
+        skip: offset,
+      }),
+      db.recurringCharge.count({ where }),
+    ])
 
-    return NextResponse.json({ data: charges })
+    return NextResponse.json({ data: charges, total, limit, offset })
   } catch (error) {
     console.error("Error fetching user recurring charges:", error)
     return NextResponse.json(
@@ -101,11 +113,9 @@ export async function PATCH(request: NextRequest) {
 
     // If charge was FAILED, reactivate it for retry on the next cron run
     if (charge.status === "FAILED") {
-      const today = new Date()
-      today.setUTCHours(0, 0, 0, 0)
       updateData.status = "ACTIVE"
       updateData.failureCount = 0
-      updateData.nextChargeDate = today
+      updateData.nextChargeDate = getTodayNoonUTC()
     }
 
     const updated = await db.recurringCharge.update({
