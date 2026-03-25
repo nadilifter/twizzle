@@ -140,13 +140,15 @@ export default async function SitePage({ params }: { params: { slug: string } })
 
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <Badge
-              variant="secondary"
-              className={`mb-6 ${hero.badge}`}
-            >
-              <Trophy className="mr-1.5 h-3.5 w-3.5" />
-              Registration Now Open
-            </Badge>
+            {config.showRegistration && enrichedPrograms.length > 0 && (
+              <Badge
+                variant="secondary"
+                className={`mb-6 ${hero.badge}`}
+              >
+                <Trophy className="mr-1.5 h-3.5 w-3.5" />
+                Registration Now Open
+              </Badge>
+            )}
 
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               {config.heroHeadline && (
