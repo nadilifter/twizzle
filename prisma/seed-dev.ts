@@ -1773,14 +1773,14 @@ async function main() {
     // JO Level 3 program uses Pre-Team and JO Level 3 templates
     {
       id: `${ORG1_ID}-pet-jo3-preteam`,
-      programId: `${ORG1_ID}-prog-jo-level3`,
+      programId: `${ORG1_ID}-prog-jo`,
       templateId: `${ORG1_ID}-template-preteam`,
       isRequired: false,
       dueDate: null,
     },
     {
       id: `${ORG1_ID}-pet-jo3-jo3`,
-      programId: `${ORG1_ID}-prog-jo-level3`,
+      programId: `${ORG1_ID}-prog-jo`,
       templateId: `${ORG1_ID}-template-jo-level3`,
       isRequired: true,
       dueDate: null,
@@ -1933,13 +1933,13 @@ async function main() {
   // Evaluation 3 - Olivia (JO athlete) - Pre-Team Assessment - PASS
   const eval3 = await prisma.evaluation.upsert({
     where: { id: `${ORG1_ID}-eval-3` },
-    update: { programId: `${ORG1_ID}-prog-jo-level3` },
+    update: { programId: `${ORG1_ID}-prog-jo` },
     create: {
       id: `${ORG1_ID}-eval-3`,
       athleteId: `${ORG1_ID}-ath-3`,
       coachId: org1Coach2.id,
       templateId: `${ORG1_ID}-template-preteam`,
-      programId: `${ORG1_ID}-prog-jo-level3`, // Link to JO Level 3 program
+      programId: `${ORG1_ID}-prog-jo`, // Link to JO Level 3 program
       date: daysAgo(45),
       levelId: `${ORG1_ID}-level-silver`,
       overallScore: 8.0,
