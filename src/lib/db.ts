@@ -123,6 +123,7 @@ const TENANT_MODELS = [
   "OrganizationSport",
   "OrganizationCategoryPreference",
   "Order",
+  "TeamMemberHighlight",
 ] as const;
 
 // Helper type for models that have organizationId

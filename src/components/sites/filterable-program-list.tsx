@@ -103,6 +103,7 @@ interface FilterableProgramListProps {
   levels: Level[];
   slug: string;
   primaryColor?: string;
+  initialCoachId?: string;
 }
 
 function toDate(value: string | Date | null | undefined): Date | null {
@@ -120,9 +121,13 @@ export function FilterableProgramList({
   levels,
   slug,
   primaryColor,
+  initialCoachId,
 }: FilterableProgramListProps) {
   const isMobile = useIsMobile();
-  const [filters, setFilters] = useState<ProgramFilterState>({ ...DEFAULT_FILTERS });
+  const [filters, setFilters] = useState<ProgramFilterState>(() => ({
+    ...DEFAULT_FILTERS,
+    selectedCoaches: initialCoachId ? [initialCoachId] : [],
+  }));
   const [open, setOpen] = useState(false);
 
   const activeFilterCount = countActiveFilters(filters);

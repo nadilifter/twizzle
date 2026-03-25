@@ -158,6 +158,9 @@ model Organization {
 
   // Accounting Integrations (QuickBooks Online, Xero)
   accountingConnections AccountingConnection[]
+
+  // Team Member Highlights (marketing site)
+  teamMemberHighlights TeamMemberHighlight[]
 }
 
 model OrganizationMember {
@@ -193,6 +196,9 @@ model OrganizationMember {
   // Certifications
   memberCertifications MemberCertification[]
   certGrantedBy        MemberCertification[] @relation("CertGrantedBy")
+
+  // Team highlights (marketing site)
+  teamMemberHighlight TeamMemberHighlight?
 
   @@unique([organizationId, userId])
 }
@@ -2488,6 +2494,7 @@ model WebsiteConfig {
   showCompetitions Boolean @default(false)
   showStore        Boolean @default(true)
   showLocations    Boolean @default(false)
+  showTeam         Boolean @default(false)
 
   // Competitions marketing content
   competitionsHeading     String?
@@ -2520,6 +2527,23 @@ model WebsiteConfig {
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model TeamMemberHighlight {
+  id             String  @id @default(cuid())
+  organizationId String
+  memberId       String  @unique
+  displayOrder   Int     @default(0)
+  overrideImage  String?
+  bio            String? @db.Text
+  isVisible      Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, memberId])
 }
 
 // ============================================

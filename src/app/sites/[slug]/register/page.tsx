@@ -80,7 +80,7 @@ const getCachedRegisterPrograms = unstable_cache(
     { revalidate: 30 }
 );
 
-export default async function RegisterPage({ params }: { params: { slug: string } }) {
+export default async function RegisterPage({ params, searchParams }: { params: { slug: string }; searchParams: { coach?: string } }) {
     const subdomain = params.slug;
 
     const config = await getCachedRegisterConfig(subdomain);
@@ -135,6 +135,7 @@ export default async function RegisterPage({ params }: { params: { slug: string 
                     levels={levels}
                     slug={subdomain}
                     primaryColor={config.primaryColor || undefined}
+                    initialCoachId={searchParams.coach}
                 />
             </div>
         </QueueGateWrapper>

@@ -10,7 +10,8 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Check, Globe, Palette, Image, Eye, LayoutGrid } from "lucide-react";
+import { Loader2, AlertCircle, Check, Globe, Palette, Image, Eye, LayoutGrid, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { getBaseDomainSuffix, getBaseDomainFromHostname } from "@/lib/client-domains";
@@ -567,6 +568,26 @@ export default function WebsitePage() {
             <Switch 
               checked={config.showLocations === true} 
               onCheckedChange={(c) => updateConfig("showLocations", c)} 
+            />
+          </div>
+
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Label>Show Team</Label>
+                <Link
+                  href="/dashboard/organization/website/team"
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Manage Team <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
+              <p className="text-sm text-muted-foreground">Display your team members on the public site.</p>
+            </div>
+            <Switch 
+              checked={config.showTeam === true} 
+              onCheckedChange={(c) => updateConfig("showTeam", c)} 
             />
           </div>
 

@@ -21,6 +21,7 @@ const websiteConfigSchema = z.object({
   showCompetitions: z.boolean().optional(),
   showStore: z.boolean().optional(),
   showLocations: z.boolean().optional(),
+  showTeam: z.boolean().optional(),
   competitionsHeading: z.string().optional().nullable(),
   competitionsDescription: z.string().optional().nullable(),
   competitionsCtaText: z.string().optional().nullable(),

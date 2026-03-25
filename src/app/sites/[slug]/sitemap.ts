@@ -114,5 +114,15 @@ export default async function sitemap({
     });
   }
 
+  // Add team page if enabled
+  if (config.showTeam) {
+    routes.push({
+      url: `${baseUrl}/team`,
+      lastModified: config.updatedAt || now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    });
+  }
+
   return routes;
 }
