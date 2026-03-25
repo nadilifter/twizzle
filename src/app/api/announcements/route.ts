@@ -50,8 +50,30 @@ export async function GET(request: NextRequest) {
       db.announcement.count({ where }),
     ]);
 
+    // Resolve program and event names for display
+    const programIds = [...new Set(announcements.map((a) => a.targetProgramId).filter(Boolean))] as string[];
+    const eventIds = [...new Set(announcements.map((a) => a.targetEventId).filter(Boolean))] as string[];
+
+    const [programs, events] = await Promise.all([
+      programIds.length > 0
+        ? db.program.findMany({ where: { id: { in: programIds } }, select: { id: true, name: true } })
+        : Promise.resolve([]),
+      eventIds.length > 0
+        ? db.event.findMany({ where: { id: { in: eventIds } }, select: { id: true, title: true } })
+        : Promise.resolve([]),
+    ]);
+
+    const programMap = Object.fromEntries(programs.map((p) => [p.id, p]));
+    const eventMap = Object.fromEntries(events.map((e) => [e.id, { id: e.id, name: e.title }]));
+
+    const enriched = announcements.map((a) => ({
+      ...a,
+      program: a.targetProgramId ? programMap[a.targetProgramId] || null : null,
+      event: a.targetEventId ? eventMap[a.targetEventId] || null : null,
+    }));
+
     return NextResponse.json({
-      data: announcements,
+      data: enriched,
       total,
       limit,
       offset,

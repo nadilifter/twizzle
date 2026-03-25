@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useFeatures } from "@/components/feature-context"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Loader2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Loader2, Archive } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 
@@ -55,10 +55,14 @@ interface Announcement {
   title: string
   content: string
   targetScope: "ALL" | "PROGRAM" | "EVENT" | "GUARDIAN"
+  targetProgramId: string | null
+  targetEventId: string | null
   priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
   publishedAt: string | null
   createdAt: string
+  program?: { id: string; name: string } | null
+  event?: { id: string; name: string } | null
 }
 
 const priorityColors = {
@@ -82,11 +86,18 @@ export default function AnnouncementsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [saving, setSaving] = useState(false)
+
+  // Reference data
+  const [programs, setPrograms] = useState<{ id: string; name: string }[]>([])
+  const [events, setEvents] = useState<{ id: string; name: string }[]>([])
   
   // Form State
   const [title, setTitle] = useState("")
   const [targetScope, setTargetScope] = useState<"ALL" | "PROGRAM" | "EVENT" | "GUARDIAN">("ALL")
+  const [targetProgramId, setTargetProgramId] = useState("")
+  const [targetEventId, setTargetEventId] = useState("")
   const [priority, setPriority] = useState<"LOW" | "NORMAL" | "HIGH" | "URGENT">("NORMAL")
   const [status, setStatus] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("DRAFT")
 
@@ -116,10 +127,13 @@ export default function AnnouncementsPage() {
     },
   })
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch("/api/announcements")
+      const params = new URLSearchParams()
+      if (searchQuery) params.set("search", searchQuery)
+      if (statusFilter !== "all") params.set("status", statusFilter)
+      const response = await fetch(`/api/announcements?${params}`)
       if (response.ok) {
         const data = await response.json()
         setAnnouncements(data.data || [])
@@ -130,15 +144,32 @@ export default function AnnouncementsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [searchQuery, statusFilter])
 
   useEffect(() => {
     fetchAnnouncements()
+  }, [fetchAnnouncements])
+
+  useEffect(() => {
+    fetch("/api/programs")
+      .then((r) => r.json())
+      .then((data) => setPrograms((data.data || data.programs || []).map((p: any) => ({ id: p.id, name: p.name }))))
+      .catch((err) => console.error("Failed to load programs:", err))
   }, [])
+
+  useEffect(() => {
+    if (!eventsEnabled) return
+    fetch("/api/events")
+      .then((r) => r.json())
+      .then((data) => setEvents((data.data || data.events || []).map((e: any) => ({ id: e.id, name: e.title || e.name }))))
+      .catch((err) => console.error("Failed to load events:", err))
+  }, [eventsEnabled])
 
   const resetForm = () => {
     setTitle("")
     setTargetScope("ALL")
+    setTargetProgramId("")
+    setTargetEventId("")
     setPriority("NORMAL")
     setStatus("DRAFT")
     editor?.commands.clearContent()
@@ -150,6 +181,8 @@ export default function AnnouncementsPage() {
       setEditingAnnouncement(announcement)
       setTitle(announcement.title)
       setTargetScope(announcement.targetScope)
+      setTargetProgramId(announcement.targetProgramId || "")
+      setTargetEventId(announcement.targetEventId || "")
       setPriority(announcement.priority)
       setStatus(announcement.status)
       editor?.commands.setContent(announcement.content)
@@ -171,6 +204,8 @@ export default function AnnouncementsPage() {
         title,
         content: editor.getHTML(),
         targetScope,
+        targetProgramId: targetScope === "PROGRAM" && targetProgramId && targetProgramId !== "all" ? targetProgramId : null,
+        targetEventId: targetScope === "EVENT" && targetEventId ? targetEventId : null,
         priority,
         status,
       }
@@ -241,9 +276,31 @@ export default function AnnouncementsPage() {
     }
   }
 
-  const filteredAnnouncements = announcements.filter((item) =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handleArchive = async (id: string) => {
+    try {
+      const response = await fetch(`/api/announcements/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ARCHIVED" }),
+      })
+
+      if (response.ok) {
+        toast.success("Announcement archived")
+        fetchAnnouncements()
+      } else {
+        throw new Error("Failed to archive announcement")
+      }
+    } catch (error) {
+      toast.error("Failed to archive announcement")
+    }
+  }
+
+  const scopeLabel = (a: Announcement) => {
+    if (a.targetScope === "PROGRAM" && a.program) return a.program.name
+    if (a.targetScope === "EVENT" && a.event) return a.event.name
+    const labels: Record<string, string> = { ALL: "All Members", GUARDIAN: "Guardians", PROGRAM: "All Program Registrants", EVENT: "Event" }
+    return labels[a.targetScope] || a.targetScope
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -289,7 +346,11 @@ export default function AnnouncementsPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="grid gap-2">
                   <Label>Audience</Label>
-                  <Select value={targetScope} onValueChange={(val: any) => setTargetScope(val)}>
+                  <Select value={targetScope} onValueChange={(val: any) => {
+                    setTargetScope(val)
+                    if (val !== "PROGRAM") setTargetProgramId("")
+                    if (val !== "EVENT") setTargetEventId("")
+                  }}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -329,6 +390,47 @@ export default function AnnouncementsPage() {
                   </Select>
                 </div>
               </div>
+
+              {targetScope === "PROGRAM" && (
+                <div className="grid gap-2">
+                  <Label>Program</Label>
+                  <Select value={targetProgramId} onValueChange={setTargetProgramId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All program registrants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Program Registrants</SelectItem>
+                      {programs.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {targetProgramId && targetProgramId !== "all"
+                      ? "Only members with athletes registered for this program will see this announcement."
+                      : "All members with athletes enrolled in any program will see this announcement."}
+                  </p>
+                </div>
+              )}
+
+              {targetScope === "EVENT" && eventsEnabled && (
+                <div className="grid gap-2">
+                  <Label>Event</Label>
+                  <Select value={targetEventId} onValueChange={setTargetEventId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an event" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {events.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Only members with athletes registered for this event will see this announcement.
+                  </p>
+                </div>
+              )}
 
               <div className="grid gap-2">
                 <Label>Content</Label>
@@ -428,7 +530,7 @@ export default function AnnouncementsPage() {
         </Dialog>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -439,6 +541,17 @@ export default function AnnouncementsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="DRAFT">Draft</SelectItem>
+            <SelectItem value="PUBLISHED">Published</SelectItem>
+            <SelectItem value="ARCHIVED">Archived</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
@@ -447,10 +560,15 @@ export default function AnnouncementsPage() {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : filteredAnnouncements.length === 0 ? (
+          ) : announcements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                {searchQuery ? "No announcements match your search" : "No announcements yet"}
+              <p className="font-medium text-sm text-muted-foreground">
+                {searchQuery || statusFilter !== "all"
+                  ? "No announcements match your filters."
+                  : "No announcements yet."}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {!searchQuery && statusFilter === "all" && "Create your first announcement to get started."}
               </p>
             </div>
           ) : (
@@ -466,10 +584,10 @@ export default function AnnouncementsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAnnouncements.map((announcement) => (
+                {announcements.map((announcement) => (
                   <TableRow key={announcement.id}>
                     <TableCell className="font-medium">{announcement.title}</TableCell>
-                    <TableCell>{announcement.targetScope}</TableCell>
+                    <TableCell className="text-sm">{scopeLabel(announcement)}</TableCell>
                     <TableCell>
                       <Badge className={priorityColors[announcement.priority]}>
                         {announcement.priority}
@@ -501,6 +619,12 @@ export default function AnnouncementsPage() {
                             <DropdownMenuItem onClick={() => handlePublish(announcement.id)}>
                               <Eye className="mr-2 h-4 w-4" />
                               Publish
+                            </DropdownMenuItem>
+                          )}
+                          {announcement.status === "PUBLISHED" && (
+                            <DropdownMenuItem onClick={() => handleArchive(announcement.id)}>
+                              <Archive className="mr-2 h-4 w-4" />
+                              Archive
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
