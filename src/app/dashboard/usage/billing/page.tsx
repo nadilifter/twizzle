@@ -273,6 +273,7 @@ export default async function BillingPage() {
                   membershipTypes: membershipTypesCount,
                 }}
                 billingCycle={subscription?.billingCycle || "MONTHLY"}
+                hasPaymentMethod={organization.organizationPaymentMethods.length > 0}
               />
             </CardFooter>
           )}
@@ -682,6 +683,7 @@ export default async function BillingPage() {
                         billingCycle={subscription?.billingCycle || "MONTHLY"}
                         variant="compact"
                         targetPlanId={plan.id}
+                        hasPaymentMethod={organization.organizationPaymentMethods.length > 0}
                       />
                     )}
                   </TableCell>

@@ -61,6 +61,9 @@ export function PaymentMethodsCard({
   hasSubscription,
 }: PaymentMethodsCardProps) {
   const [paymentMethods, setPaymentMethods] = React.useState(initialPaymentMethods)
+  React.useEffect(() => {
+    setPaymentMethods(initialPaymentMethods)
+  }, [initialPaymentMethods])
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
   const [sessionId, setSessionId] = React.useState<string | null>(null)
