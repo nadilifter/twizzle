@@ -212,6 +212,9 @@ src/app/api/feedback/[id]/vote/route.ts
 src/app/api/feedback/[id]/comments/route.ts
 src/app/api/feedback/categories/route.ts
 
+# --- Cart (public, no session; organizationId passed from client) ---
+src/app/api/cart/validate/route.ts
+
 # --- Queue (registration queue, scoped via queue config) ---
 src/app/api/queue/status/route.ts
 src/app/api/queue/enter/route.ts

@@ -48,13 +48,13 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
-async function validateCartItems(items: CartItem[]): Promise<CartItem[]> {
+async function validateCartItems(items: CartItem[], organizationId?: string): Promise<CartItem[]> {
   try {
     const payload = items.map((i) => ({ referenceId: i.referenceId, type: i.type }))
     const res = await fetch("/api/cart/validate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: payload }),
+      body: JSON.stringify({ items: payload, organizationId }),
     })
     if (!res.ok) return items
     const { valid } = (await res.json()) as { valid: string[] }
@@ -145,7 +145,7 @@ export function CartProvider({ children, organizationId }: CartProviderProps) {
 
     // Validate cart items against the server and remove any that reference deleted entities
     if (parsed.length > 0) {
-      validateCartItems(parsed).then((validItems) => {
+      validateCartItems(parsed, organizationId).then((validItems) => {
         if (validItems.length < parsed.length) {
           setItems(validItems)
         }

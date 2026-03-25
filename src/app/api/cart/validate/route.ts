@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { db } from "@/lib/db" // tenant-isolation-ok: public cart validation endpoint with no session; organizationId passed from client for Product queries
 
 interface ValidateItem {
   referenceId: string
@@ -13,7 +13,7 @@ interface ValidateItem {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { items } = (await request.json()) as { items: ValidateItem[] }
+    const { items, organizationId } = (await request.json()) as { items: ValidateItem[]; organizationId?: string }
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ valid: [] })
@@ -98,7 +98,11 @@ export async function POST(request: NextRequest) {
       checks.push(
         db.product
           .findMany({
-            where: { id: { in: grouped.item }, isActive: true },
+            where: {
+              id: { in: grouped.item },
+              isActive: true,
+              ...(organizationId ? { organizationId } : {}),
+            },
             select: { id: true },
           })
           .then((rows) => rows.forEach((r) => validIds.add(r.id)))
