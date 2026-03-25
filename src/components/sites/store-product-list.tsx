@@ -18,6 +18,14 @@ import {
 import { useCart } from "@/components/sites/cart-context"
 import { toast } from "sonner"
 
+type ProductVariant = {
+  id: string
+  label: string
+  price: number | null
+  currentInventory: number | null
+  maxInventory: number | null
+}
+
 type Product = {
   id: string
   name: string
@@ -27,6 +35,8 @@ type Product = {
   imageUrl: string | null
   currentInventory: number | null
   maxInventory: number | null
+  typeName: string | null
+  variants: ProductVariant[]
 }
 
 interface StoreProductListProps {
@@ -50,6 +60,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
   const [selectedCategory, setSelectedCategory] = React.useState("All")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(true)
+  const [selectedVariants, setSelectedVariants] = React.useState<Record<string, string>>({})
   const { items, addItem } = useCart()
 
   React.useEffect(() => {
@@ -79,37 +90,97 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
     return matchesCategory && matchesSearch
   })
 
+  const getEffectivePrice = (product: Product, variantId?: string) => {
+    if (variantId && product.variants.length > 0) {
+      const variant = product.variants.find(v => v.id === variantId)
+      if (variant?.price !== null && variant?.price !== undefined) {
+        return Number(variant.price)
+      }
+    }
+    return Number(product.price)
+  }
+
+  const getEffectiveInventory = (product: Product, variantId?: string) => {
+    if (variantId && product.variants.length > 0) {
+      const variant = product.variants.find(v => v.id === variantId)
+      if (variant) return variant.currentInventory
+    }
+    return product.currentInventory
+  }
+
   const handleAddToCart = (product: Product) => {
-    if (product.currentInventory !== null && product.currentInventory <= 0) {
+    const hasVariants = product.typeName && product.variants.length > 0
+    const variantId = hasVariants ? selectedVariants[product.id] : undefined
+
+    if (hasVariants && !variantId) {
+      toast.error(`Please select a ${product.typeName?.toLowerCase() || "type"}`)
+      return
+    }
+
+    const inventory = getEffectiveInventory(product, variantId)
+    if (inventory !== null && inventory <= 0) {
       toast.error("This product is out of stock")
       return
     }
 
-    const existingItem = items.find((item) => item.referenceId === product.id)
-    if (product.currentInventory !== null && existingItem) {
-      if (existingItem.quantity >= product.currentInventory) {
-        toast.error(`Only ${product.currentInventory} available in stock`)
+    const variant = variantId ? product.variants.find(v => v.id === variantId) : undefined
+    const existingItem = items.find(
+      (item) =>
+        item.referenceId === product.id &&
+        (variantId ? item.details?.variantId === variantId : !item.details?.variantId)
+    )
+    if (inventory !== null && existingItem) {
+      if (existingItem.quantity >= inventory) {
+        toast.error(`Only ${inventory} available in stock`)
         return
       }
     }
+
+    const effectivePrice = getEffectivePrice(product, variantId)
 
     addItem({
       referenceId: product.id,
       type: "item",
       name: product.name,
-      price: Number(product.price),
+      price: effectivePrice,
       quantity: 1,
       athleteId: "",
       athleteName: "Customer",
       details: {
         category: product.category,
+        ...(variantId && variant
+          ? { variantId, variantLabel: variant.label, typeName: product.typeName }
+          : {}),
       },
     })
 
-    toast.success(`${product.name} added to cart`)
+    toast.success(`${product.name}${variant ? ` (${variant.label})` : ""} added to cart`)
   }
 
   const getStockStatus = (product: Product) => {
+    const hasVariants = product.typeName && product.variants.length > 0
+
+    if (hasVariants) {
+      const variantId = selectedVariants[product.id]
+      if (!variantId) {
+        const allOutOfStock = product.variants.every(v => v.currentInventory !== null && v.currentInventory <= 0)
+        if (allOutOfStock) {
+          return { label: "Out of Stock", variant: "destructive" as const }
+        }
+        return null
+      }
+      const variant = product.variants.find(v => v.id === variantId)
+      if (!variant) return null
+      if (variant.maxInventory === null && variant.currentInventory === null) return null
+      if (variant.currentInventory === 0) {
+        return { label: "Out of Stock", variant: "destructive" as const }
+      }
+      if (variant.currentInventory !== null && variant.currentInventory <= 5) {
+        return { label: `Only ${variant.currentInventory} left!`, variant: "destructive" as const }
+      }
+      return null
+    }
+
     if (product.maxInventory === null && product.currentInventory === null) {
       return null
     }
@@ -120,6 +191,19 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
       return { label: `Only ${product.currentInventory} left!`, variant: "destructive" as const }
     }
     return null
+  }
+
+  const isOutOfStock = (product: Product) => {
+    const hasVariants = product.typeName && product.variants.length > 0
+    if (hasVariants) {
+      const variantId = selectedVariants[product.id]
+      if (!variantId) {
+        return product.variants.every(v => v.currentInventory !== null && v.currentInventory <= 0)
+      }
+      const variant = product.variants.find(v => v.id === variantId)
+      return variant?.currentInventory !== null && (variant?.currentInventory ?? 0) <= 0
+    }
+    return product.currentInventory !== null && product.currentInventory <= 0
   }
 
   const hasActiveFilters = selectedCategory !== "All" || searchQuery !== ""
@@ -201,14 +285,16 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProducts.map((product) => {
             const stockStatus = getStockStatus(product)
-            const isOutOfStock = product.currentInventory !== null && product.currentInventory <= 0
-            const price = Number(product.price)
+            const outOfStock = isOutOfStock(product)
+            const hasVariants = product.typeName && product.variants.length > 0
+            const currentVariantId = selectedVariants[product.id]
+            const effectivePrice = getEffectivePrice(product, currentVariantId)
 
             return (
               <Card
                 key={product.id}
                 className={`group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 ${
-                  isOutOfStock ? "opacity-60" : ""
+                  outOfStock ? "opacity-60" : ""
                 }`}
               >
                 {product.imageUrl && (
@@ -259,20 +345,50 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                       <Package className="h-10 w-10 text-muted-foreground/30" />
                     </div>
                   )}
+
+                  {/* Variant selector */}
+                  {hasVariants && (
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">{product.typeName} <span className="text-destructive">*</span></p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {product.variants.map((variant) => {
+                          const variantOutOfStock = variant.currentInventory !== null && variant.currentInventory <= 0
+                          const isSelected = currentVariantId === variant.id
+                          return (
+                            <Button
+                              key={variant.id}
+                              variant={isSelected ? "default" : "outline"}
+                              size="sm"
+                              className={`h-7 text-xs px-2.5 ${variantOutOfStock ? "opacity-40 line-through" : ""}`}
+                              disabled={variantOutOfStock}
+                              onClick={() =>
+                                setSelectedVariants((prev) => ({
+                                  ...prev,
+                                  [product.id]: isSelected ? "" : variant.id,
+                                }))
+                              }
+                            >
+                              {variant.label}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
 
                 <CardFooter className="flex flex-col gap-3 border-t bg-muted/30 pt-4">
                   <div className="flex items-center justify-between w-full">
                     <span className="text-sm font-medium">Price</span>
-                    <span className="font-bold">{formatPrice(price)}</span>
+                    <span className="font-bold">{formatPrice(effectivePrice)}</span>
                   </div>
                   <Button
                     onClick={() => handleAddToCart(product)}
-                    disabled={isOutOfStock}
+                    disabled={outOfStock}
                     className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
                   >
                     <ShoppingCart className="h-4 w-4" />
-                    {isOutOfStock ? "Sold Out" : "Add to Cart"}
+                    {outOfStock ? "Sold Out" : "Add to Cart"}
                   </Button>
                 </CardFooter>
               </Card>

@@ -65,10 +65,21 @@ import {
   Infinity,
   RefreshCw,
   Loader2,
+  Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { GLCodeSelector } from "@/components/gl-code-selector"
 import { ImageUpload } from "@/components/ui/image-upload"
+
+type ProductVariant = {
+  id?: string
+  label: string
+  price: number | null
+  maxInventory: number | null
+  currentInventory: number | null
+  sortOrder: number
+  isActive: boolean
+}
 
 type Product = {
   id: string
@@ -80,9 +91,20 @@ type Product = {
   imageUrl: string | null
   maxInventory: number | null
   currentInventory: number | null
+  typeName: string | null
+  variants: ProductVariant[]
   isActive: boolean
   createdAt: string
   updatedAt: string
+}
+
+type VariantFormData = {
+  id?: string
+  label: string
+  price: string
+  maxInventory: string
+  currentInventory: string
+  isUnlimited: boolean
 }
 
 type ProductFormData = {
@@ -97,6 +119,17 @@ type ProductFormData = {
   isUnlimited: boolean
   isActive: boolean
   glCodeId: string | null
+  hasType: boolean
+  typeName: string
+  variants: VariantFormData[]
+}
+
+const defaultVariant: VariantFormData = {
+  label: "",
+  price: "",
+  maxInventory: "10",
+  currentInventory: "10",
+  isUnlimited: false,
 }
 
 const defaultFormData: ProductFormData = {
@@ -111,9 +144,12 @@ const defaultFormData: ProductFormData = {
   isUnlimited: true,
   isActive: true,
   glCodeId: null,
+  hasType: false,
+  typeName: "",
+  variants: [],
 }
 
-const defaultCategories = ["General", "Merchandise", "Drinks/Snacks", "Equipment", "Services"]
+const defaultCategories = ["General", "Drinks/Snacks", "Equipment", "Merchandise", "Services"]
 
 export default function StorePage() {
   const [products, setProducts] = React.useState<Product[]>([])
@@ -133,6 +169,7 @@ export default function StorePage() {
   const [isSaving, setIsSaving] = React.useState(false)
   const [restockQuantity, setRestockQuantity] = React.useState<number>(0)
   const [restockType, setRestockType] = React.useState<"add" | "set" | "max">("add")
+  const [restockVariantId, setRestockVariantId] = React.useState<string>("")
 
   // Fetch products
   const fetchProducts = React.useCallback(async () => {
@@ -143,7 +180,9 @@ export default function StorePage() {
       const data = await response.json()
       setProducts(data.data || [])
       if (data.categories?.length > 0) {
-        setCategories(Array.from(new Set([...defaultCategories, ...data.categories])))
+        const allCats = Array.from(new Set([...defaultCategories, ...data.categories]))
+        const sorted = allCats.filter(c => c !== "General").sort((a, b) => a.localeCompare(b))
+        setCategories(["General", ...sorted])
       }
     } catch (error) {
       console.error("Error fetching products:", error)
@@ -169,8 +208,36 @@ export default function StorePage() {
       return
     }
 
+    if (formData.hasType) {
+      if (!formData.typeName.trim()) {
+        toast.error("Type name is required (e.g., \"Size\", \"Color\")")
+        return
+      }
+      if (formData.variants.length === 0) {
+        toast.error("Add at least one type option")
+        return
+      }
+      for (const v of formData.variants) {
+        if (!v.label.trim()) {
+          toast.error("All type options must have a label")
+          return
+        }
+      }
+    }
+
     setIsSaving(true)
     try {
+      const variants = formData.hasType
+        ? formData.variants.map((v, i) => ({
+            id: v.id,
+            label: v.label,
+            price: v.price ? parseFloat(v.price) : null,
+            maxInventory: v.isUnlimited ? null : (parseInt(v.maxInventory) || null),
+            currentInventory: v.isUnlimited ? null : (parseInt(v.currentInventory) || null),
+            sortOrder: i,
+          }))
+        : undefined
+
       const payload = {
         name: formData.name,
         description: formData.description || null,
@@ -178,10 +245,12 @@ export default function StorePage() {
         category: formData.category,
         price: formData.price,
         imageUrl: formData.imageUrl || null,
-        maxInventory: formData.isUnlimited ? null : formData.maxInventory,
-        currentInventory: formData.isUnlimited ? null : formData.currentInventory,
+        maxInventory: formData.hasType ? null : (formData.isUnlimited ? null : formData.maxInventory),
+        currentInventory: formData.hasType ? null : (formData.isUnlimited ? null : formData.currentInventory),
         isActive: formData.isActive,
         glCodeId: formData.glCodeId,
+        typeName: formData.hasType ? formData.typeName : null,
+        variants: formData.hasType ? variants : null,
       }
 
       let response: Response
@@ -229,6 +298,7 @@ export default function StorePage() {
         body: JSON.stringify({
           type: restockType,
           quantity: restockType !== "max" ? restockQuantity : undefined,
+          variantId: restockVariantId || undefined,
         }),
       })
 
@@ -241,6 +311,7 @@ export default function StorePage() {
       setRestockDialogOpen(false)
       setRestockingProduct(null)
       setRestockQuantity(0)
+      setRestockVariantId("")
       fetchProducts()
     } catch (error) {
       console.error("Error restocking:", error)
@@ -270,6 +341,7 @@ export default function StorePage() {
   // Open edit dialog
   const openEditDialog = (product: Product) => {
     setEditingProduct(product)
+    const hasType = !!product.typeName && product.variants.length > 0
     setFormData({
       name: product.name,
       description: product.description || "",
@@ -279,9 +351,21 @@ export default function StorePage() {
       imageUrl: product.imageUrl || "",
       maxInventory: product.maxInventory,
       currentInventory: product.currentInventory,
-      isUnlimited: product.maxInventory === null && product.currentInventory === null,
+      isUnlimited: !hasType && product.maxInventory === null && product.currentInventory === null,
       isActive: product.isActive,
       glCodeId: (product as any).glCodeId || null,
+      hasType,
+      typeName: product.typeName || "",
+      variants: hasType
+        ? product.variants.map((v) => ({
+            id: v.id,
+            label: v.label,
+            price: v.price !== null ? String(v.price) : "",
+            maxInventory: v.maxInventory !== null ? String(v.maxInventory) : "",
+            currentInventory: v.currentInventory !== null ? String(v.currentInventory) : "",
+            isUnlimited: v.maxInventory === null && v.currentInventory === null,
+          }))
+        : [],
     })
     setDialogOpen(true)
   }
@@ -291,11 +375,31 @@ export default function StorePage() {
     setRestockingProduct(product)
     setRestockQuantity(0)
     setRestockType("add")
+    const hasTrackedVariants = product.variants.some(v => v.maxInventory !== null)
+    setRestockVariantId(hasTrackedVariants ? product.variants.find(v => v.maxInventory !== null)?.id || "" : "")
     setRestockDialogOpen(true)
   }
 
   // Get inventory status
   const getInventoryStatus = (product: Product) => {
+    if (product.typeName && product.variants.length > 0) {
+      const allUnlimited = product.variants.every(v => v.maxInventory === null && v.currentInventory === null)
+      if (allUnlimited) {
+        return { label: "Unlimited", variant: "secondary" as const, icon: Infinity }
+      }
+      const totalCurrent = product.variants.reduce((sum, v) => sum + (v.currentInventory ?? 0), 0)
+      const totalMax = product.variants.reduce((sum, v) => sum + (v.maxInventory ?? v.currentInventory ?? 0), 0)
+      const percentage = totalMax > 0 ? (totalCurrent / totalMax) * 100 : 0
+
+      if (totalCurrent === 0) {
+        return { label: "Out of Stock", variant: "destructive" as const, icon: AlertCircle }
+      }
+      if (percentage <= 20) {
+        return { label: `Low Stock (${totalCurrent})`, variant: "warning" as const, icon: AlertCircle }
+      }
+      return { label: `${totalCurrent}/${totalMax}`, variant: "default" as const, icon: Package }
+    }
+
     if (product.maxInventory === null && product.currentInventory === null) {
       return { label: "Unlimited", variant: "secondary" as const, icon: Infinity }
     }
@@ -310,6 +414,35 @@ export default function StorePage() {
       return { label: `Low Stock (${current})`, variant: "warning" as const, icon: AlertCircle }
     }
     return { label: `${current}/${max}`, variant: "default" as const, icon: Package }
+  }
+
+  const hasTrackedInventory = (product: Product) => {
+    if (product.typeName && product.variants.length > 0) {
+      return product.variants.some(v => v.maxInventory !== null)
+    }
+    return product.maxInventory !== null
+  }
+
+  // Variant helpers
+  const addVariant = () => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: [...prev.variants, { ...defaultVariant }],
+    }))
+  }
+
+  const removeVariant = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index),
+    }))
+  }
+
+  const updateVariant = (index: number, updates: Partial<VariantFormData>) => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: prev.variants.map((v, i) => (i === index ? { ...v, ...updates } : v)),
+    }))
   }
 
   const columns: ColumnDef<Product>[] = [
@@ -353,10 +486,22 @@ export default function StorePage() {
               </div>
             )}
             <div className="flex flex-col">
-              <span className="font-medium">{product.name}</span>
-              {product.sku && (
-                <span className="text-xs text-muted-foreground">SKU: {product.sku}</span>
-              )}
+              <button
+                className="font-medium text-left hover:underline"
+                onClick={() => openEditDialog(product)}
+              >
+                {product.name}
+              </button>
+              <div className="flex items-center gap-2">
+                {product.sku && (
+                  <span className="text-xs text-muted-foreground">SKU: {product.sku}</span>
+                )}
+                {product.typeName && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    {product.typeName}: {product.variants.length} options
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         )
@@ -389,7 +534,7 @@ export default function StorePage() {
               {status.variant === "warning" && <AlertCircle className="h-3 w-3 mr-1" />}
               {status.label}
             </Badge>
-            {product.maxInventory !== null && (
+            {hasTrackedInventory(product) && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -430,7 +575,7 @@ export default function StorePage() {
               <DropdownMenuItem onClick={() => openEditDialog(product)}>
                 Edit Product
               </DropdownMenuItem>
-              {product.maxInventory !== null && (
+              {hasTrackedInventory(product) && (
                 <DropdownMenuItem onClick={() => openRestockDialog(product)}>
                   Restock
                 </DropdownMenuItem>
@@ -471,6 +616,9 @@ export default function StorePage() {
     },
   })
 
+  // Get restock variant info
+  const restockVariant = restockingProduct?.variants.find(v => v.id === restockVariantId)
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <div className="flex items-center justify-between">
@@ -499,7 +647,7 @@ export default function StorePage() {
                 {editingProduct ? "Update product details." : "Add a new product to your store inventory."}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="grid gap-4 py-4 px-1 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Product Name *</Label>
@@ -549,7 +697,7 @@ export default function StorePage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price ($) *</Label>
+                  <Label htmlFor="price">Base Price ($) *</Label>
                   <Input
                     id="price"
                     type="number"
@@ -569,58 +717,178 @@ export default function StorePage() {
                 type="product"
               />
 
+              {/* Type / Variants Section */}
               <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Unlimited Inventory</Label>
+                    <Label>Product Type</Label>
                     <p className="text-xs text-muted-foreground">
-                      Don&apos;t track inventory for this product
+                      Enable to add options like sizes, colors, or fits
                     </p>
                   </div>
                   <Switch
-                    checked={formData.isUnlimited}
-                    onCheckedChange={(checked) => setFormData({
-                      ...formData,
-                      isUnlimited: checked,
-                      maxInventory: checked ? null : formData.maxInventory ?? 10,
-                      currentInventory: checked ? null : formData.currentInventory ?? 10,
-                    })}
+                    checked={formData.hasType}
+                    onCheckedChange={(checked) => {
+                      setFormData({
+                        ...formData,
+                        hasType: checked,
+                        variants: checked && formData.variants.length === 0
+                          ? [{ ...defaultVariant }]
+                          : formData.variants,
+                      })
+                    }}
                   />
                 </div>
 
-                {!formData.isUnlimited && (
-                  <div className="grid grid-cols-2 gap-4 pt-2">
+                {formData.hasType && (
+                  <div className="space-y-4 pt-2">
                     <div className="space-y-2">
-                      <Label htmlFor="maxInventory">Max Inventory</Label>
+                      <Label htmlFor="typeName">Type Name *</Label>
                       <Input
-                        id="maxInventory"
-                        type="number"
-                        min="1"
-                        placeholder="e.g. 100"
-                        value={formData.maxInventory ?? ""}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          maxInventory: parseInt(e.target.value) || null,
-                        })}
+                        id="typeName"
+                        placeholder='e.g. "Size", "Color", "Fit"'
+                        value={formData.typeName}
+                        onChange={(e) => setFormData({ ...formData, typeName: e.target.value })}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="currentInventory">Current Stock</Label>
-                      <Input
-                        id="currentInventory"
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 50"
-                        value={formData.currentInventory ?? ""}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          currentInventory: parseInt(e.target.value) || null,
-                        })}
-                      />
+
+                    <div className="space-y-3">
+                      <Label>Options</Label>
+                      {formData.variants.map((variant, index) => (
+                        <div key={index} className="space-y-2 p-3 border rounded-md bg-background">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="Label (e.g. Red, Large)"
+                              value={variant.label}
+                              onChange={(e) => updateVariant(index, { label: e.target.value })}
+                              className="flex-[3]"
+                            />
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Price override"
+                              value={variant.price}
+                              onChange={(e) => updateVariant(index, { price: e.target.value })}
+                              className="flex-[2]"
+                            />
+                            {formData.variants.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive shrink-0"
+                                onClick={() => removeVariant(index)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                              <Checkbox
+                                checked={variant.isUnlimited}
+                                onCheckedChange={(checked) =>
+                                  updateVariant(index, {
+                                    isUnlimited: !!checked,
+                                    maxInventory: checked ? "" : variant.maxInventory || "10",
+                                    currentInventory: checked ? "" : variant.currentInventory || "10",
+                                  })
+                                }
+                              />
+                              Unlimited
+                            </label>
+                            {!variant.isUnlimited && (
+                              <>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  placeholder="Max"
+                                  value={variant.maxInventory}
+                                  onChange={(e) => updateVariant(index, { maxInventory: e.target.value })}
+                                  className="h-7 w-20 text-xs"
+                                />
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  placeholder="Current"
+                                  value={variant.currentInventory}
+                                  onChange={(e) => updateVariant(index, { currentInventory: e.target.value })}
+                                  className="h-7 w-20 text-xs"
+                                />
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addVariant}
+                        className="w-full"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Add Option
+                      </Button>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Standard Inventory (only when no type) */}
+              {!formData.hasType && (
+                <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Unlimited Inventory</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Don&apos;t track inventory for this product
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.isUnlimited}
+                      onCheckedChange={(checked) => setFormData({
+                        ...formData,
+                        isUnlimited: checked,
+                        maxInventory: checked ? null : formData.maxInventory ?? 10,
+                        currentInventory: checked ? null : formData.currentInventory ?? 10,
+                      })}
+                    />
+                  </div>
+
+                  {!formData.isUnlimited && (
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="maxInventory">Max Inventory</Label>
+                        <Input
+                          id="maxInventory"
+                          type="number"
+                          min="1"
+                          placeholder="e.g. 100"
+                          value={formData.maxInventory ?? ""}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            maxInventory: parseInt(e.target.value) || null,
+                          })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="currentInventory">Current Stock</Label>
+                        <Input
+                          id="currentInventory"
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 50"
+                          value={formData.currentInventory ?? ""}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            currentInventory: parseInt(e.target.value) || null,
+                          })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <GLCodeSelector
                 value={formData.glCodeId}
@@ -660,10 +928,39 @@ export default function StorePage() {
           <DialogHeader>
             <DialogTitle>Restock {restockingProduct?.name}</DialogTitle>
             <DialogDescription>
-              Current stock: {restockingProduct?.currentInventory ?? 0} / {restockingProduct?.maxInventory ?? "∞"}
+              {restockVariant
+                ? `${restockingProduct?.typeName}: ${restockVariant.label} — Stock: ${restockVariant.currentInventory ?? 0} / ${restockVariant.maxInventory ?? "∞"}`
+                : `Current stock: ${restockingProduct?.currentInventory ?? 0} / ${restockingProduct?.maxInventory ?? "∞"}`}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {restockingProduct?.typeName && restockingProduct.variants.length > 0 && (
+              <div className="space-y-2">
+                <Label>Variant</Label>
+                <Select
+                  value={restockVariantId}
+                  onValueChange={(value) => {
+                    setRestockVariantId(value)
+                    setRestockQuantity(0)
+                    setRestockType("add")
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select variant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {restockingProduct.variants
+                      .filter(v => v.maxInventory !== null || v.currentInventory !== null)
+                      .map((v) => (
+                        <SelectItem key={v.id} value={v.id!}>
+                          {v.label} ({v.currentInventory ?? 0}/{v.maxInventory ?? "∞"})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Restock Type</Label>
               <Select
@@ -676,8 +973,10 @@ export default function StorePage() {
                 <SelectContent>
                   <SelectItem value="add">Add to current stock</SelectItem>
                   <SelectItem value="set">Set exact quantity</SelectItem>
-                  {restockingProduct?.maxInventory && (
-                    <SelectItem value="max">Restore to max ({restockingProduct.maxInventory})</SelectItem>
+                  {(restockVariant?.maxInventory ?? restockingProduct?.maxInventory) && (
+                    <SelectItem value="max">
+                      Restore to max ({restockVariant?.maxInventory ?? restockingProduct?.maxInventory})
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>

@@ -90,6 +90,11 @@ export function CartSheet() {
                         <div key={item.id} className="flex gap-4">
                           <div className="flex-1 space-y-1">
                             <h4 className="font-medium text-sm">{item.name}</h4>
+                            {item.details?.variantLabel && (
+                              <p className="text-xs text-primary">
+                                {item.details.typeName ? `${item.details.typeName}: ` : ""}{item.details.variantLabel}
+                              </p>
+                            )}
                             {item.description && (
                               <p className="text-xs text-muted-foreground line-clamp-1">
                                 {item.description}

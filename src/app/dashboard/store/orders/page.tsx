@@ -46,6 +46,8 @@ interface OrderLineItem {
   unitPrice: number
   total: number
   productId: string | null
+  productVariantId: string | null
+  productVariant: { id: string; label: string } | null
 }
 
 interface Order {
@@ -358,7 +360,12 @@ export default function OrdersPage() {
                               <TableBody>
                                 {order.invoice.lineItems.map((item) => (
                                   <TableRow key={item.id}>
-                                    <TableCell className="text-sm">{item.description}</TableCell>
+                                    <TableCell className="text-sm">
+                                      {item.description}
+                                      {item.productVariant && (
+                                        <span className="text-xs text-muted-foreground ml-1">({item.productVariant.label})</span>
+                                      )}
+                                    </TableCell>
                                     <TableCell className="text-right text-sm">{item.quantity}</TableCell>
                                     <TableCell className="text-right text-sm">
                                       ${Number(item.unitPrice).toFixed(2)}

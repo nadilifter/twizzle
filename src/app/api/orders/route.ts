@@ -66,6 +66,10 @@ export async function GET(request: NextRequest) {
                   unitPrice: true,
                   total: true,
                   productId: true,
+                  productVariantId: true,
+                  productVariant: {
+                    select: { id: true, label: true },
+                  },
                 },
               },
             },

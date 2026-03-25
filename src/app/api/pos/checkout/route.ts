@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         id: { in: productIds },
         organizationId: session.user.organizationId,
       },
+      include: { variants: true },
     });
 
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -79,19 +80,40 @@ export async function POST(request: NextRequest) {
 
     const reference = `POS-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
+    // Collect variant IDs that need locking
+    const variantIds = validatedData.items
+      .map((item) => item.details?.variantId as string | undefined)
+      .filter(Boolean) as string[];
+
     const result = await db.$transaction(async (tx) => {
       // Lock product rows to prevent concurrent inventory modifications
       await tx.$queryRaw(
         Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(productIds)}) FOR UPDATE`
       );
 
+      // Lock variant rows if any
+      if (variantIds.length > 0) {
+        await tx.$queryRaw(
+          Prisma.sql`SELECT id FROM "ProductVariant" WHERE id IN (${Prisma.join(variantIds)}) FOR UPDATE`
+        );
+      }
+
       const freshProducts = await tx.product.findMany({
         where: {
           id: { in: productIds },
           organizationId: session.user.organizationId,
         },
+        include: { variants: true },
       });
       const freshMap = new Map(freshProducts.map((p) => [p.id, p]));
+
+      // Build variant map for quick lookup
+      const freshVariantMap = new Map<string, (typeof freshProducts)[0]["variants"][0]>();
+      for (const p of freshProducts) {
+        for (const v of p.variants) {
+          freshVariantMap.set(v.id, v);
+        }
+      }
 
       // Validate inventory with fresh data
       for (const item of validatedData.items) {
@@ -99,14 +121,34 @@ export async function POST(request: NextRequest) {
         if (!product || !product.isActive) {
           throw new Error(`Product no longer available: ${item.name}`);
         }
-        if (product.currentInventory !== null && product.currentInventory < item.quantity) {
-          throw new Error(`Insufficient inventory for ${item.name}. Only ${product.currentInventory} available.`);
+
+        const variantId = item.details?.variantId as string | undefined;
+        if (variantId) {
+          const variant = freshVariantMap.get(variantId);
+          if (!variant || !variant.isActive) {
+            throw new Error(`Variant no longer available for ${item.name}`);
+          }
+          if (variant.currentInventory !== null && variant.currentInventory < item.quantity) {
+            throw new Error(`Insufficient inventory for ${item.name} (${variant.label}). Only ${variant.currentInventory} available.`);
+          }
+        } else {
+          if (product.currentInventory !== null && product.currentInventory < item.quantity) {
+            throw new Error(`Insufficient inventory for ${item.name}. Only ${product.currentInventory} available.`);
+          }
         }
       }
 
       const subtotal = validatedData.items.reduce((sum, item) => {
         const product = freshMap.get(item.referenceId)!;
-        return sum + Number(product.price) * item.quantity;
+        const variantId = item.details?.variantId as string | undefined;
+        let unitPrice = Number(product.price);
+        if (variantId) {
+          const variant = freshVariantMap.get(variantId);
+          if (variant?.price !== null && variant?.price !== undefined) {
+            unitPrice = Number(variant.price);
+          }
+        }
+        return sum + unitPrice * item.quantity;
       }, 0);
       const tax = Math.round(subtotal * taxRate * 100) / 100;
       const total = Math.round((subtotal + tax) * 100) / 100;
@@ -133,7 +175,14 @@ export async function POST(request: NextRequest) {
       const lineItems = await Promise.all(
         validatedData.items.map((item) => {
           const product = freshMap.get(item.referenceId)!;
-          const verifiedPrice = Number(product.price);
+          const variantId = item.details?.variantId as string | undefined;
+          let verifiedPrice = Number(product.price);
+          if (variantId) {
+            const variant = freshVariantMap.get(variantId);
+            if (variant?.price !== null && variant?.price !== undefined) {
+              verifiedPrice = Number(variant.price);
+            }
+          }
           return tx.lineItem.create({
             data: {
               invoiceId: invoice.id,
@@ -142,6 +191,7 @@ export async function POST(request: NextRequest) {
               unitPrice: verifiedPrice,
               total: verifiedPrice * item.quantity,
               productId: product.id,
+              productVariantId: variantId || undefined,
               glCodeId: product?.glCodeId ?? defaultProductGLCode?.id ?? undefined,
             },
           });
@@ -173,30 +223,60 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Decrement inventory
       for (const item of validatedData.items) {
         const product = freshMap.get(item.referenceId)!;
-        if (product.currentInventory === null) continue;
+        const variantId = item.details?.variantId as string | undefined;
 
-        const previousQty = product.currentInventory;
-        const newQty = previousQty - item.quantity;
+        if (variantId) {
+          const variant = freshVariantMap.get(variantId)!;
+          if (variant.currentInventory === null) continue;
 
-        await tx.product.update({
-          where: { id: product.id },
-          data: { currentInventory: newQty },
-        });
+          const previousQty = variant.currentInventory;
+          const newQty = previousQty - item.quantity;
 
-        await tx.stockMovement.create({
-          data: {
-            productId: product.id,
-            type: "SALE",
-            quantity: -item.quantity,
-            previousQty,
-            newQty,
-            referenceId: invoice.id,
-            notes: `POS Sale: ${reference}`,
-            createdBy: session.user.id,
-          },
-        });
+          await tx.productVariant.update({
+            where: { id: variantId },
+            data: { currentInventory: newQty },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              productId: product.id,
+              productVariantId: variantId,
+              type: "SALE",
+              quantity: -item.quantity,
+              previousQty,
+              newQty,
+              referenceId: invoice.id,
+              notes: `POS Sale: ${reference}`,
+              createdBy: session.user.id,
+            },
+          });
+        } else {
+          if (product.currentInventory === null) continue;
+
+          const previousQty = product.currentInventory;
+          const newQty = previousQty - item.quantity;
+
+          await tx.product.update({
+            where: { id: product.id },
+            data: { currentInventory: newQty },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              productId: product.id,
+              type: "SALE",
+              quantity: -item.quantity,
+              previousQty,
+              newQty,
+              referenceId: invoice.id,
+              notes: `POS Sale: ${reference}`,
+              createdBy: session.user.id,
+            },
+          });
+        }
       }
 
       return { invoice, lineItems, total };
@@ -215,7 +295,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (error instanceof Error && (error.message.startsWith("Insufficient inventory") || error.message.startsWith("Product no longer"))) {
+    if (error instanceof Error && (error.message.startsWith("Insufficient inventory") || error.message.startsWith("Product no longer") || error.message.startsWith("Variant no longer"))) {
       return NextResponse.json(
         { error: error.message },
         { status: 409 }

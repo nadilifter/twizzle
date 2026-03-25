@@ -1348,6 +1348,7 @@ model LineItem {
   competitionId         String? // What competition is this for?
   competitionCategoryId String? // What competition category?
   productId             String? // What product is this for?
+  productVariantId      String? // What product variant (type option)?
   glCodeId              String? // GL code at time of sale
   createdAt             DateTime @default(now())
 
@@ -1362,6 +1363,7 @@ model LineItem {
   competition         Competition?         @relation(fields: [competitionId], references: [id], onDelete: SetNull)
   competitionCategory CompetitionCategory? @relation(fields: [competitionCategoryId], references: [id], onDelete: SetNull)
   product             Product?             @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productVariant      ProductVariant?      @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
   glCode              GLCode?              @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
 
   @@index([glCodeId])
@@ -2578,16 +2580,18 @@ model Product {
   category         String   @default("General")
   price            Decimal  @db.Decimal(10, 2)
   imageUrl         String?
-  maxInventory     Int? // null = unlimited
-  currentInventory Int? // null = unlimited
+  maxInventory     Int? // null = unlimited (or null when variants manage inventory)
+  currentInventory Int? // null = unlimited (or null when variants manage inventory)
+  typeName         String? // e.g., "Color", "Size" — null means no variants
   isActive         Boolean  @default(true)
   glCodeId         String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   // Relations
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  glCode         GLCode?         @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  glCode         GLCode?          @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  variants       ProductVariant[]
   stockMovements StockMovement[]
   lineItems      LineItem[]
 
@@ -2596,22 +2600,44 @@ model Product {
   @@index([glCodeId])
 }
 
-model StockMovement {
-  id          String            @id @default(cuid())
-  productId   String
-  type        StockMovementType
-  quantity    Int // positive for additions, negative for sales
-  previousQty Int
-  newQty      Int
-  referenceId String? // invoiceId, orderId, etc.
-  notes       String?
-  createdBy   String?
-  createdAt   DateTime          @default(now())
+model ProductVariant {
+  id               String   @id @default(cuid())
+  productId        String
+  label            String
+  price            Decimal? @db.Decimal(10, 2)
+  maxInventory     Int?
+  currentInventory Int?
+  sortOrder        Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  // Relations
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
+  lineItems      LineItem[]
 
   @@index([productId])
+}
+
+model StockMovement {
+  id               String            @id @default(cuid())
+  productId        String
+  productVariantId String?
+  type             StockMovementType
+  quantity         Int // positive for additions, negative for sales
+  previousQty      Int
+  newQty           Int
+  referenceId      String? // invoiceId, orderId, etc.
+  notes            String?
+  createdBy        String?
+  createdAt        DateTime          @default(now())
+
+  // Relations
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([productVariantId])
   @@index([referenceId, type])
 }
 

@@ -220,6 +220,9 @@ async function handleAuthorisation(
   if (productLineItems.length > 0) {
     try {
       const productIds = productLineItems.map((li) => li.productId!)
+      const variantIdsForLock = productLineItems
+        .map((li) => li.productVariantId)
+        .filter(Boolean) as string[]
       await db.$transaction(async (tx) => {
         const existingMovement = await tx.stockMovement.findFirst({
           where: { referenceId: invoice.id, type: "SALE" },
@@ -230,30 +233,63 @@ async function handleAuthorisation(
         await tx.$queryRaw(
           Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(productIds)}) FOR UPDATE`
         )
+        if (variantIdsForLock.length > 0) {
+          await tx.$queryRaw(
+            Prisma.sql`SELECT id FROM "ProductVariant" WHERE id IN (${Prisma.join(variantIdsForLock)}) FOR UPDATE`
+          )
+        }
         for (const li of productLineItems) {
-          const product = await tx.product.findUnique({
-            where: { id: li.productId! },
-            select: { id: true, currentInventory: true },
-          })
-          if (product && product.currentInventory !== null) {
-            const previousQty = product.currentInventory
-            const newQty = Math.max(previousQty - li.quantity, 0)
-            await tx.product.update({
-              where: { id: product.id },
-              data: { currentInventory: newQty },
+          if (li.productVariantId) {
+            const variant = await tx.productVariant.findUnique({
+              where: { id: li.productVariantId },
+              select: { id: true, currentInventory: true },
             })
-            await tx.stockMovement.create({
-              data: {
-                productId: product.id,
-                type: "SALE",
-                quantity: -li.quantity,
-                previousQty,
-                newQty,
-                referenceId: invoice.id,
-                notes: `Online Sale: ${invoice.reference}`,
-                createdBy: invoice.userId || undefined,
-              },
+            if (variant && variant.currentInventory !== null) {
+              const previousQty = variant.currentInventory
+              const newQty = Math.max(previousQty - li.quantity, 0)
+              await tx.productVariant.update({
+                where: { id: variant.id },
+                data: { currentInventory: newQty },
+              })
+              await tx.stockMovement.create({
+                data: {
+                  productId: li.productId!,
+                  productVariantId: li.productVariantId,
+                  type: "SALE",
+                  quantity: -li.quantity,
+                  previousQty,
+                  newQty,
+                  referenceId: invoice.id,
+                  notes: `Online Sale: ${invoice.reference}`,
+                  createdBy: invoice.userId || undefined,
+                },
+              })
+            }
+          } else {
+            const product = await tx.product.findUnique({
+              where: { id: li.productId! },
+              select: { id: true, currentInventory: true },
             })
+            if (product && product.currentInventory !== null) {
+              const previousQty = product.currentInventory
+              const newQty = Math.max(previousQty - li.quantity, 0)
+              await tx.product.update({
+                where: { id: product.id },
+                data: { currentInventory: newQty },
+              })
+              await tx.stockMovement.create({
+                data: {
+                  productId: product.id,
+                  type: "SALE",
+                  quantity: -li.quantity,
+                  previousQty,
+                  newQty,
+                  referenceId: invoice.id,
+                  notes: `Online Sale: ${invoice.reference}`,
+                  createdBy: invoice.userId || undefined,
+                },
+              })
+            }
           }
         }
       })

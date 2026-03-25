@@ -37,6 +37,9 @@ const cartItemSchema = z.object({
     entryFee: z.number().nullable().optional(),
     seedMarks: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
     waitlist: z.boolean().optional(),
+    variantId: z.string().optional(),
+    variantLabel: z.string().optional(),
+    typeName: z.string().optional(),
   }).optional(),
 });
 
@@ -85,6 +88,9 @@ interface CartItem {
     entryFee?: number | null;
     seedMarks?: Record<string, Record<string, unknown>>;
     waitlist?: boolean;
+    variantId?: string;
+    variantLabel?: string;
+    typeName?: string;
   };
 }
 
@@ -888,7 +894,7 @@ export async function POST(
       }
     }
 
-    // Verify product (store item) prices and inventory
+    // Verify product (store item) prices and inventory (including variants)
     const productItemsForPrice = items
       .map((item: CartItem, index: number) => ({ item, index }))
       .filter(({ item }) => item.type === "item");
@@ -898,7 +904,7 @@ export async function POST(
       )] as string[];
       const productsForPrice = await db.product.findMany({
         where: { id: { in: allProductIds }, organizationId, isActive: true },
-        select: { id: true, price: true, currentInventory: true, name: true },
+        select: { id: true, price: true, currentInventory: true, name: true, typeName: true, variants: { select: { id: true, label: true, price: true, currentInventory: true, isActive: true } } },
       });
       const productPriceMap = new Map(productsForPrice.map(p => [p.id, p]));
 
@@ -910,13 +916,34 @@ export async function POST(
             { status: 400 }
           );
         }
-        serverPrices.set(index, Number(product.price) * item.quantity);
 
-        if (product.currentInventory !== null && product.currentInventory < item.quantity) {
-          return NextResponse.json(
-            { error: `Insufficient stock for "${product.name}". Only ${product.currentInventory} available.` },
-            { status: 400 }
-          );
+        const variantId = item.details?.variantId as string | undefined;
+        if (variantId) {
+          const variant = product.variants.find(v => v.id === variantId);
+          if (!variant || !variant.isActive) {
+            return NextResponse.json(
+              { error: `Variant for "${item.name}" is no longer available` },
+              { status: 400 }
+            );
+          }
+          const unitPrice = variant.price !== null ? Number(variant.price) : Number(product.price);
+          serverPrices.set(index, unitPrice * item.quantity);
+
+          if (variant.currentInventory !== null && variant.currentInventory < item.quantity) {
+            return NextResponse.json(
+              { error: `Insufficient stock for "${product.name}" (${variant.label}). Only ${variant.currentInventory} available.` },
+              { status: 400 }
+            );
+          }
+        } else {
+          serverPrices.set(index, Number(product.price) * item.quantity);
+
+          if (product.currentInventory !== null && product.currentInventory < item.quantity) {
+            return NextResponse.json(
+              { error: `Insufficient stock for "${product.name}". Only ${product.currentInventory} available.` },
+              { status: 400 }
+            );
+          }
         }
       }
     }
@@ -1263,6 +1290,7 @@ export async function POST(
               passId: item.type === 'pass' ? (item.details?.passId || item.referenceId) : undefined,
               competitionId: item.type === 'competition' ? (item.details?.competitionId || item.referenceId) : undefined,
               productId: item.type === 'item' ? item.referenceId : undefined,
+              productVariantId: item.type === 'item' ? (item.details?.variantId || undefined) : undefined,
               athleteId: item.athleteId || item.details?.athleteId || undefined,
               glCodeId,
             };
@@ -1338,34 +1366,72 @@ export async function POST(
       // Decrement inventory for store products (atomic with row-level locking)
       if (productItems.length > 0) {
         const productIds = productItems.map((i: CartItem) => i.referenceId);
+        const variantIdsForLock = productItems
+          .map((i: CartItem) => i.details?.variantId as string | undefined)
+          .filter(Boolean) as string[];
         await db.$transaction(async (tx) => {
           await tx.$queryRaw(
             Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(productIds)}) FOR UPDATE`
           );
+          if (variantIdsForLock.length > 0) {
+            await tx.$queryRaw(
+              Prisma.sql`SELECT id FROM "ProductVariant" WHERE id IN (${Prisma.join(variantIdsForLock)}) FOR UPDATE`
+            );
+          }
           for (const item of productItems) {
-            const product = await tx.product.findUnique({
-              where: { id: item.referenceId },
-              select: { id: true, currentInventory: true },
-            });
-            if (product && product.currentInventory !== null) {
-              const previousQty = product.currentInventory;
-              const newQty = Math.max(previousQty - item.quantity, 0);
-              await tx.product.update({
-                where: { id: product.id },
-                data: { currentInventory: newQty },
+            const variantId = item.details?.variantId as string | undefined;
+
+            if (variantId) {
+              const variant = await tx.productVariant.findUnique({
+                where: { id: variantId },
+                select: { id: true, currentInventory: true },
               });
-              await tx.stockMovement.create({
-                data: {
-                  productId: product.id,
-                  type: "SALE",
-                  quantity: -item.quantity,
-                  previousQty,
-                  newQty,
-                  referenceId: invoice.id,
-                  notes: `Online Sale: ${invoice.reference}`,
-                  createdBy: authUserId || undefined,
-                },
+              if (variant && variant.currentInventory !== null) {
+                const previousQty = variant.currentInventory;
+                const newQty = Math.max(previousQty - item.quantity, 0);
+                await tx.productVariant.update({
+                  where: { id: variant.id },
+                  data: { currentInventory: newQty },
+                });
+                await tx.stockMovement.create({
+                  data: {
+                    productId: item.referenceId,
+                    productVariantId: variantId,
+                    type: "SALE",
+                    quantity: -item.quantity,
+                    previousQty,
+                    newQty,
+                    referenceId: invoice.id,
+                    notes: `Online Sale: ${invoice.reference}`,
+                    createdBy: authUserId || undefined,
+                  },
+                });
+              }
+            } else {
+              const product = await tx.product.findUnique({
+                where: { id: item.referenceId },
+                select: { id: true, currentInventory: true },
               });
+              if (product && product.currentInventory !== null) {
+                const previousQty = product.currentInventory;
+                const newQty = Math.max(previousQty - item.quantity, 0);
+                await tx.product.update({
+                  where: { id: product.id },
+                  data: { currentInventory: newQty },
+                });
+                await tx.stockMovement.create({
+                  data: {
+                    productId: product.id,
+                    type: "SALE",
+                    quantity: -item.quantity,
+                    previousQty,
+                    newQty,
+                    referenceId: invoice.id,
+                    notes: `Online Sale: ${invoice.reference}`,
+                    createdBy: authUserId || undefined,
+                  },
+                });
+              }
             }
           }
         });

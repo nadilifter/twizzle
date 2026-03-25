@@ -46,6 +46,18 @@ export async function GET(request: NextRequest) {
         imageUrl: true,
         currentInventory: true,
         maxInventory: true,
+        typeName: true,
+        variants: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            label: true,
+            price: true,
+            currentInventory: true,
+            maxInventory: true,
+          },
+          orderBy: { sortOrder: "asc" },
+        },
       },
       orderBy: [{ category: "asc" }, { name: "asc" }],
     });

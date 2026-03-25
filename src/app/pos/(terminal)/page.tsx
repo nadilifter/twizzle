@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, Trash2, Plus, Minus, ScanBarcode, Package, Loader2, ShoppingCart } from "lucide-react"
+import { Search, Trash2, Plus, Minus, ScanBarcode, Package, Loader2, ShoppingCart, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useCart } from "@/components/sites/cart-context"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,15 @@ import Image from "next/image"
 import { toast } from "sonner"
 import { verifyOrganizationMembership } from "@/app/actions/organization"
 import { getClientSubdomainUrl } from "@/lib/client-domains"
+
+type ProductVariant = {
+  id: string
+  label: string
+  price: number | null
+  maxInventory: number | null
+  currentInventory: number | null
+  isActive: boolean
+}
 
 type Product = {
   id: string
@@ -24,6 +33,8 @@ type Product = {
   imageUrl: string | null
   maxInventory: number | null
   currentInventory: number | null
+  typeName: string | null
+  variants: ProductVariant[]
   isActive: boolean
 }
 
@@ -74,6 +85,7 @@ function POSPageContent() {
   const [taxRate, setTaxRate] = useState(0)
   
   const { items, addItem, removeItem, updateQuantity, clearCart, subtotal, totalItems } = useCart()
+  const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null)
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -115,42 +127,67 @@ function POSPageContent() {
     return matchesCategory && matchesSearch
   })
 
-  // Add to cart
-  const handleAddToCart = (product: Product) => {
-    // Check inventory
-    if (product.currentInventory !== null && product.currentInventory <= 0) {
+  // Add to cart (for non-variant products or after variant selection)
+  const handleAddToCart = (product: Product, variant?: ProductVariant) => {
+    const hasVariants = product.typeName && product.variants?.length > 0
+    if (hasVariants && !variant) {
+      setVariantPickerProduct(product)
+      return
+    }
+
+    const inventory = variant ? variant.currentInventory : product.currentInventory
+    if (inventory !== null && inventory <= 0) {
       toast.error("This product is out of stock")
       return
     }
 
-    // Check if adding more would exceed inventory
-    const existingItem = items.find(item => item.referenceId === product.id)
-    if (product.currentInventory !== null && existingItem) {
-      if (existingItem.quantity >= product.currentInventory) {
-        toast.error(`Only ${product.currentInventory} available in stock`)
+    const existingItem = items.find(
+      (item) =>
+        item.referenceId === product.id &&
+        (variant ? item.details?.variantId === variant.id : !item.details?.variantId)
+    )
+    if (inventory !== null && existingItem) {
+      if (existingItem.quantity >= inventory) {
+        toast.error(`Only ${inventory} available in stock`)
         return
       }
     }
+
+    const unitPrice = variant?.price !== null && variant?.price !== undefined
+      ? Number(variant.price)
+      : Number(product.price)
 
     addItem({
       referenceId: product.id,
       type: "item",
       name: product.name,
-      price: Number(product.price),
+      price: unitPrice,
       quantity: 1,
       athleteId: "",
       athleteName: "Walk-in",
       details: {
         sku: product.sku,
         category: product.category,
+        ...(variant ? { variantId: variant.id, variantLabel: variant.label, typeName: product.typeName } : {}),
       },
     })
+
+    setVariantPickerProduct(null)
   }
 
   // Get stock status for display
   const getStockStatus = (product: Product) => {
+    const hasVariants = product.typeName && product.variants?.length > 0
+    if (hasVariants) {
+      const allOutOfStock = product.variants.every(v => v.currentInventory !== null && v.currentInventory <= 0)
+      if (allOutOfStock) return { label: "Out of Stock", variant: "destructive" as const }
+      const totalLeft = product.variants.reduce((sum, v) => sum + (v.currentInventory ?? 0), 0)
+      const anyTracked = product.variants.some(v => v.currentInventory !== null)
+      if (anyTracked && totalLeft <= 5) return { label: `${totalLeft} left`, variant: "secondary" as const }
+      return null
+    }
     if (product.maxInventory === null && product.currentInventory === null) {
-      return null // Unlimited, don't show badge
+      return null
     }
     if (product.currentInventory === 0) {
       return { label: "Out of Stock", variant: "destructive" as const }
@@ -159,6 +196,14 @@ function POSPageContent() {
       return { label: `${product.currentInventory} left`, variant: "secondary" as const }
     }
     return null
+  }
+
+  const isProductOutOfStock = (product: Product) => {
+    const hasVariants = product.typeName && product.variants?.length > 0
+    if (hasVariants) {
+      return product.variants.every(v => v.currentInventory !== null && v.currentInventory <= 0)
+    }
+    return product.currentInventory !== null && product.currentInventory <= 0
   }
 
   const tax = Math.round(subtotal * taxRate * 100) / 100
@@ -225,44 +270,93 @@ function POSPageContent() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
                 {filteredProducts.map((product) => {
                   const stockStatus = getStockStatus(product)
-                  const isOutOfStock = product.currentInventory !== null && product.currentInventory <= 0
+                  const outOfStock = isProductOutOfStock(product)
+                  const hasVariants = product.typeName && product.variants?.length > 0
                   
                   return (
-                    <Button
-                      key={product.id}
-                      variant="outline"
-                      className={`h-auto min-h-[120px] md:min-h-[140px] flex flex-col gap-1.5 md:gap-2 whitespace-normal p-2 md:p-3 hover:border-primary hover:bg-accent/50 relative transition-colors touch-manipulation ${
-                        isOutOfStock ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                      onClick={() => handleAddToCart(product)}
-                      disabled={isOutOfStock}
-                    >
-                      {stockStatus && (
-                        <Badge
-                          variant={stockStatus.variant}
-                          className="absolute top-1.5 right-1.5 text-[10px]"
-                        >
-                          {stockStatus.label}
-                        </Badge>
-                      )}
-                      {product.imageUrl ? (
-                        <Image
-                          src={product.imageUrl}
-                          alt={product.name}
-                          width={48}
-                          height={48}
-                          className="rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                          <Package className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
+                    <div key={product.id} className="relative">
+                      <Button
+                        variant="outline"
+                        className={`w-full h-auto min-h-[120px] md:min-h-[140px] flex flex-col gap-1.5 md:gap-2 whitespace-normal p-2 md:p-3 hover:border-primary hover:bg-accent/50 relative transition-colors touch-manipulation ${
+                          outOfStock ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                        onClick={() => handleAddToCart(product)}
+                        disabled={outOfStock}
+                      >
+                        {stockStatus && (
+                          <Badge
+                            variant={stockStatus.variant}
+                            className="absolute top-1.5 right-1.5 text-[10px]"
+                          >
+                            {stockStatus.label}
+                          </Badge>
+                        )}
+                        {hasVariants && (
+                          <Badge
+                            variant="outline"
+                            className="absolute top-1.5 left-1.5 text-[10px]"
+                          >
+                            {product.typeName}
+                          </Badge>
+                        )}
+                        {product.imageUrl ? (
+                          <Image
+                            src={product.imageUrl}
+                            alt={product.name}
+                            width={48}
+                            height={48}
+                            className="rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                            <Package className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <span className="font-medium text-center leading-tight text-xs md:text-sm line-clamp-2">{product.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          ${Number(product.price).toFixed(2)}
+                        </span>
+                      </Button>
+
+                      {/* Variant picker overlay */}
+                      {variantPickerProduct?.id === product.id && (
+                        <div className="absolute inset-0 z-10 bg-background border-2 border-primary rounded-md p-2 flex flex-col gap-1 shadow-lg">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium truncate">{product.typeName}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              onClick={(e) => { e.stopPropagation(); setVariantPickerProduct(null) }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="flex-1 overflow-y-auto space-y-1">
+                            {product.variants.filter(v => v.isActive).map((variant) => {
+                              const variantOOS = variant.currentInventory !== null && variant.currentInventory <= 0
+                              const variantPrice = variant.price !== null ? Number(variant.price) : Number(product.price)
+                              return (
+                                <Button
+                                  key={variant.id}
+                                  variant="outline"
+                                  size="sm"
+                                  className={`w-full justify-between h-8 text-xs ${variantOOS ? "opacity-40" : ""}`}
+                                  disabled={variantOOS}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleAddToCart(product, variant)
+                                  }}
+                                >
+                                  <span className="truncate">{variant.label}</span>
+                                  <span className="shrink-0 ml-1">${variantPrice.toFixed(2)}</span>
+                                </Button>
+                              )
+                            })}
+                          </div>
                         </div>
                       )}
-                      <span className="font-medium text-center leading-tight text-xs md:text-sm line-clamp-2">{product.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        ${Number(product.price).toFixed(2)}
-                      </span>
-                    </Button>
+                    </div>
                   )
                 })}
               </div>
@@ -309,6 +403,11 @@ function POSPageContent() {
                 >
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="font-medium text-sm truncate">{item.name}</div>
+                    {item.details?.variantLabel && (
+                      <div className="text-xs text-primary truncate">
+                        {item.details.typeName}: {item.details.variantLabel}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       ${item.price.toFixed(2)} each
                     </div>

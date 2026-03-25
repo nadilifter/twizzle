@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
-import { getScopedDb } from "@/lib/db";
+import { getScopedDb, db } from "@/lib/db";
 import { z } from "zod";
+
+const variantSchema = z.object({
+  label: z.string().min(1, "Variant label is required"),
+  price: z.number().min(0).optional().nullable(),
+  maxInventory: z.number().int().positive().optional().nullable(),
+  currentInventory: z.number().int().min(0).optional().nullable(),
+  sortOrder: z.number().int().min(0).optional(),
+});
 
 const createProductSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -14,6 +22,8 @@ const createProductSchema = z.object({
   currentInventory: z.number().int().min(0).optional().nullable(),
   isActive: z.boolean().default(true),
   glCodeId: z.string().optional().nullable(),
+  typeName: z.string().optional().nullable(),
+  variants: z.array(variantSchema).optional(),
 });
 
 // GET /api/products - List products
@@ -59,6 +69,9 @@ export async function GET(request: NextRequest) {
     const [products, total] = await Promise.all([
       scopedDb.product.findMany({
         where,
+        include: {
+          variants: { orderBy: { sortOrder: "asc" } },
+        },
         orderBy: { name: "asc" },
         take: limit,
         skip: offset,
@@ -114,6 +127,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createProductSchema.parse(body);
 
+    const hasVariants = !!validatedData.typeName;
+
+    if (hasVariants && (!validatedData.variants || validatedData.variants.length === 0)) {
+      return NextResponse.json(
+        { error: "At least one variant option is required when a type is set" },
+        { status: 400 }
+      );
+    }
+
     // Check if SKU already exists for this organization (if provided)
     if (validatedData.sku) {
       const existingProduct = await scopedDb.product.findFirst({
@@ -135,23 +157,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If maxInventory is set and currentInventory is not, default to maxInventory
-    const currentInventory = validatedData.currentInventory ?? validatedData.maxInventory;
+    // When variants exist, inventory is managed at variant level
+    const currentInventory = hasVariants ? null : (validatedData.currentInventory ?? validatedData.maxInventory);
+    const maxInventory = hasVariants ? null : validatedData.maxInventory;
 
-    const product = await scopedDb.product.create({
-      data: {
-        organizationId: session.user.organizationId,
-        name: validatedData.name,
-        description: validatedData.description,
-        sku: validatedData.sku,
-        category: validatedData.category,
-        price: validatedData.price,
-        imageUrl: validatedData.imageUrl,
-        maxInventory: validatedData.maxInventory,
-        currentInventory: currentInventory,
-        isActive: validatedData.isActive,
-        glCodeId: validatedData.glCodeId,
-      },
+    const product = await db.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: {
+          organizationId: session.user.organizationId,
+          name: validatedData.name,
+          description: validatedData.description,
+          sku: validatedData.sku,
+          category: validatedData.category,
+          price: validatedData.price,
+          imageUrl: validatedData.imageUrl,
+          maxInventory,
+          currentInventory,
+          typeName: hasVariants ? validatedData.typeName : null,
+          isActive: validatedData.isActive,
+          glCodeId: validatedData.glCodeId,
+        },
+      });
+
+      if (hasVariants && validatedData.variants) {
+        await tx.productVariant.createMany({
+          data: validatedData.variants.map((v, i) => ({
+            productId: created.id,
+            label: v.label,
+            price: v.price ?? null,
+            maxInventory: v.maxInventory ?? null,
+            currentInventory: v.currentInventory ?? v.maxInventory ?? null,
+            sortOrder: v.sortOrder ?? i,
+          })),
+        });
+      }
+
+      return tx.product.findUnique({
+        where: { id: created.id },
+        include: { variants: { orderBy: { sortOrder: "asc" } } },
+      });
     });
 
     return NextResponse.json(product);

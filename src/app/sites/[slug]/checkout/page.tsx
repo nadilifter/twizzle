@@ -1384,7 +1384,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       <div className="pl-5 space-y-1">
                         {athleteItems.map((item) => (
                           <div key={item.id} className="flex justify-between text-sm">
-                            <span>{item.name}</span>
+                            <div>
+                              <span>{item.name}</span>
+                              {item.details?.variantLabel && (
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({item.details.variantLabel})
+                                </span>
+                              )}
+                            </div>
                             <span className="text-muted-foreground">${(item.price * item.quantity).toFixed(2)}</span>
                           </div>
                         ))}
@@ -1472,6 +1479,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         <div key={item.id} className="flex justify-between gap-4 text-sm">
                           <div className="flex-1">
                             <span className="font-medium">{item.name}</span>
+                            {item.details?.variantLabel && (
+                              <span className="text-xs text-muted-foreground ml-1">({item.details.variantLabel})</span>
+                            )}
                             <div className="text-xs text-muted-foreground mt-1">
                               Qty: {item.quantity}
                               {checkoutStep === "details" && (
