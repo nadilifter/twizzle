@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
-  Plus, Search, Settings, Loader2, AlertCircle, CalendarDays, 
+  Plus, Search, Settings, Loader2, AlertCircle, CalendarDays, CalendarClock,
   Clock, MapPin, Users, UserCheck, Shield, DollarSign, Repeat, Star, User
 } from "lucide-react"
 import {
@@ -24,6 +24,7 @@ import {
   SheetContent,
 } from "@/components/ui/sheet"
 import { usePrograms } from "@/hooks/use-programs"
+import { formatRRuleDays } from "@/lib/rrule-utils"
 import { ProgramConfiguration } from "./program-configuration"
 
 function formatPrice(price: number | string | null | undefined): string {
@@ -131,6 +132,8 @@ export default function ProgramsPage() {
             const hasCapacity = p.hasCapacityRestriction && capacity > 0;
             const spotsLeft = hasCapacity ? Math.max(0, capacity - enrolled) : null;
 
+            const daysLabel = p.rrule ? formatRRuleDays(p.rrule) : null;
+
             // Age restriction label
             const hasAge = p.hasAgeRestriction && (p.minAge !== null || p.maxAge !== null);
             const ageLabel = hasAge
@@ -196,6 +199,13 @@ export default function ProgramsPage() {
                         {price && p.pricingModel === "PER_SESSION" && <span className="text-muted-foreground">/session</span>}
                       </div>
                     </div>
+
+                    {daysLabel && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        <span>{daysLabel}</span>
+                      </div>
+                    )}
 
                     {/* Location */}
                     {p.facility && (
