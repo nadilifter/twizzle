@@ -41,6 +41,10 @@ model Organization {
   deactivationReason String?
   deactivationNotes  String?
 
+  // Billing grace period (set when all payment methods fail)
+  scheduledDeactivationDate DateTime?
+  dunningWarningsSent       Json?
+
   // Relations
   statusLogs          OrganizationStatusLog[]
   membershipGroups    MembershipGroup[]
@@ -123,6 +127,9 @@ model Organization {
 
   // Organization Payment Methods (for SaaS subscription billing)
   organizationPaymentMethods OrganizationPaymentMethod[]
+
+  // Subscription Invoices (platform billing)
+  subscriptionInvoices SubscriptionInvoice[]
 
   // Adyen Platform
   adyenPlatformAccount AdyenPlatformAccount?
@@ -2995,7 +3002,8 @@ model SubscriptionPlan {
   updatedAt DateTime @updatedAt
 
   // Relations
-  subscriptions OrganizationSubscription[]
+  subscriptions        OrganizationSubscription[]
+  subscriptionInvoices SubscriptionInvoice[]
 }
 
 model OrganizationSubscription {
@@ -3083,11 +3091,15 @@ model OrganizationPaymentMethod {
   isDefault Boolean @default(false)
   isActive  Boolean @default(true)
 
+  // Charge order (lower = tried first; default payment method always takes priority)
+  priority Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  paymentAttempts SubscriptionPaymentAttempt[]
 
   @@index([organizationId])
   @@index([shopperReference])
@@ -4316,11 +4328,11 @@ model OrganizationStatusLog {
   action         String   // "DEACTIVATED" | "REACTIVATED"
   reason         String?
   notes          String?
-  performedBy    String
+  performedBy    String? // Null for system-automated actions (cron, billing)
   performedAt    DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation("StatusLogPerformer", fields: [performedBy], references: [id])
+  user         User?        @relation("StatusLogPerformer", fields: [performedBy], references: [id])
 
   @@index([organizationId])
 }
@@ -4618,4 +4630,75 @@ enum AccountingMappingType {
   PROCESSING_FEES
   REFUNDS
   UNDEPOSITED_FUNDS
+}
+
+// ============================================
+// Subscription Billing (Platform → Org)
+// ============================================
+
+model SubscriptionInvoice {
+  id             String @id @default(cuid())
+  organizationId String
+  planId         String
+
+  reference   String   @unique
+  periodStart DateTime
+  periodEnd   DateTime
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("USD")
+
+  status SubscriptionInvoiceStatus @default(PENDING)
+
+  paidAt   DateTime?
+  failedAt DateTime?
+
+  // Support / remediation fields
+  notes          String? @db.Text // Internal support notes
+  voidedBy       String? // Superadmin user ID who voided
+  voidedAt       DateTime?
+  adjustedFrom   Decimal? @db.Decimal(10, 2) // Original amount before adjustment
+  markedPaidBy   String? // Superadmin user ID who manually marked paid
+  markedPaidNote String? // Reason for manual payment marking
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan            SubscriptionPlan            @relation(fields: [planId], references: [id])
+  paymentAttempts SubscriptionPaymentAttempt[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+}
+
+enum SubscriptionInvoiceStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  VOID
+}
+
+model SubscriptionPaymentAttempt {
+  id                    String @id @default(cuid())
+  subscriptionInvoiceId String
+  paymentMethodId       String
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("USD")
+
+  status        String
+  pspReference  String?
+  failureReason String?
+
+  attemptNumber Int
+  attemptedAt   DateTime @default(now())
+
+  subscriptionInvoice SubscriptionInvoice    @relation(fields: [subscriptionInvoiceId], references: [id], onDelete: Cascade)
+  paymentMethod       OrganizationPaymentMethod @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([subscriptionInvoiceId])
+  @@index([paymentMethodId])
 }

@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/accounting-sync",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/subscription-billing",
+      "schedule": "0 12 1 * *"
+    },
+    {
+      "path": "/api/cron/subscription-dunning",
+      "schedule": "0 12 * * *"
     }
   ]
 }

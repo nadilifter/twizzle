@@ -140,8 +140,13 @@ const navItems = [
     icon: Users,
   },
   {
-    title: "Billing",
+    title: "Customer Transactions",
     url: "/superadmin/billing",
+    icon: CreditCard,
+  },
+  {
+    title: "Subscription Billing",
+    url: "/superadmin/subscription-billing",
     icon: CreditCard,
   },
   {

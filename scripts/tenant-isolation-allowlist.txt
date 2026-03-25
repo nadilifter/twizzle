@@ -255,3 +255,10 @@ src/app/api/athletes/chat/conversations/route.ts
 src/app/api/athletes/chat/conversations/[id]/route.ts
 src/app/api/athletes/chat/conversations/[id]/messages/route.ts
 src/app/api/athletes/chat/unread-count/route.ts
+
+# --- Subscription billing (platform-level models, system/superadmin managed) ---
+src/app/api/cron/subscription-billing/route.ts
+src/app/api/cron/subscription-dunning/route.ts
+src/app/api/payment-methods/retry-billing/route.ts
+src/app/api/superadmin/subscription-invoices/[id]/action/route.ts
+src/app/api/superadmin/organizations/[id]/grace-period/route.ts

@@ -67,11 +67,13 @@ export async function POST(request: NextRequest) {
       success,
     })
 
-    if (eventCode === "AUTHORISATION" && (success === "true" || success === true)) {
-      await handleAuthorisation(merchantReference, pspReference, amount, paymentMethodType, request)
-    }
+    const isSubscriptionPayment = merchantReference?.startsWith("SUB-INV-")
 
-    if (eventCode === "AUTHORISATION" && success !== "true" && success !== true) {
+    if (eventCode === "AUTHORISATION" && isSubscriptionPayment) {
+      await handleSubscriptionAuthorisation(merchantReference, pspReference, success === "true" || success === true)
+    } else if (eventCode === "AUTHORISATION" && (success === "true" || success === true)) {
+      await handleAuthorisation(merchantReference, pspReference, amount, paymentMethodType, request)
+    } else if (eventCode === "AUTHORISATION" && success !== "true" && success !== true) {
       logger.info("Adyen webhook: payment authorisation failed", { merchantReference, pspReference })
       await handleFailedAuthorisation(merchantReference)
     }
@@ -500,5 +502,76 @@ async function handleFailure(eventCode: string, notificationItem: any) {
         data: { status: "ERROR" },
       })
     }
+  }
+}
+
+/**
+ * Handle Adyen webhook for subscription invoice payments.
+ * The merchantReference on subscription payments uses the format:
+ *   SUB-INV-YYYY-MM-slug-attempt-N
+ * We extract the invoice reference (everything before "-attempt-") and update
+ * the corresponding SubscriptionPaymentAttempt record.
+ */
+async function handleSubscriptionAuthorisation(
+  merchantReference: string,
+  pspReference: string,
+  success: boolean
+) {
+  const attemptSuffix = merchantReference.match(/-attempt-(\d+)$/)
+  const invoiceRef = attemptSuffix
+    ? merchantReference.replace(/-attempt-\d+$/, "")
+    : merchantReference
+
+  const invoice = await db.subscriptionInvoice.findUnique({
+    where: { reference: invoiceRef },
+  })
+
+  if (!invoice) {
+    logger.info("Subscription webhook: invoice not found for reference", { merchantReference, invoiceRef })
+    return
+  }
+
+  if (pspReference) {
+    await db.subscriptionPaymentAttempt.updateMany({
+      where: {
+        subscriptionInvoiceId: invoice.id,
+        pspReference,
+      },
+      data: {
+        status: success ? "SUCCESS" : "FAILED",
+        failureReason: success ? null : "Declined via webhook",
+      },
+    })
+  }
+
+  if (success && invoice.status !== "PAID") {
+    await db.subscriptionInvoice.update({
+      where: { id: invoice.id },
+      data: { status: "PAID", paidAt: new Date() },
+    })
+
+    await db.organization.update({
+      where: { id: invoice.organizationId },
+      data: {
+        scheduledDeactivationDate: null,
+        dunningWarningsSent: Prisma.DbNull,
+      },
+    })
+    await db.organizationSubscription.updateMany({
+      where: { organizationId: invoice.organizationId, status: "PAST_DUE" },
+      data: { status: "ACTIVE" },
+    })
+
+    logger.info("Subscription payment confirmed via webhook", {
+      invoiceId: invoice.id,
+      pspReference,
+    })
+  }
+
+  if (!success) {
+    logger.info("Subscription payment failed via webhook", {
+      invoiceId: invoice.id,
+      pspReference,
+    })
   }
 }

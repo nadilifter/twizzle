@@ -179,6 +179,25 @@ async function handleTokenCreated(tokenData: {
   }
 
   logger.info("Created payment method for org", { orgId })
+
+  // Auto-retry outstanding subscription invoice if the org is in a grace period
+  try {
+    const org = await db.organization.findUnique({
+      where: { id: orgId },
+      select: { scheduledDeactivationDate: true },
+    })
+
+    if (org?.scheduledDeactivationDate) {
+      const { retryOutstandingInvoice } = await import("@/lib/subscription-billing")
+      const success = await retryOutstandingInvoice(orgId)
+      logger.info("Auto-retry billing after new payment method", { orgId, success })
+    }
+  } catch (err) {
+    logger.error("Failed to auto-retry billing after new payment method", {
+      orgId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
 }
 
 /**

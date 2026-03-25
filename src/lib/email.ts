@@ -280,7 +280,11 @@ export type EmailTemplate =
   | 'mfa-code'
   | 'email-login-code'
   | 'no-account-login'
-  | 'signup-verification-code';
+  | 'signup-verification-code'
+  | 'subscription-payment-success'
+  | 'subscription-payment-failed'
+  | 'subscription-deactivation-warning'
+  | 'subscription-deactivated';
 
 /**
  * Wrap email body content in a branded Uplifter layout.
@@ -878,6 +882,149 @@ If you want to create a new organization on Uplifter, you can get started here:
 {{signupUrl}}
 
 If you didn't request this, you can safely ignore this email.`,
+    },
+    'subscription-payment-success': {
+      subject: 'Payment Received - Uplifter Subscription',
+      html: wrapInBrandedLayout({
+        preheaderText: 'Your Uplifter subscription payment of {{amount}} has been processed.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #050D22;">Payment Received</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Your Uplifter subscription is active</p>
+              <p style="margin: 0 0 16px;">Your subscription payment of <strong>{{amount}}</strong> for <strong>{{organizationName}}</strong> has been processed successfully.</p>
+              <p style="margin: 0 0 16px;"><strong>Reference:</strong> {{reference}}</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">If you have any questions about this charge, please contact support.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Payment Received
+
+Your subscription payment of {{amount}} for {{organizationName}} has been processed successfully.
+
+Reference: {{reference}}
+
+If you have any questions about this charge, please contact support.`,
+    },
+    'subscription-payment-failed': {
+      subject: 'Action Required: Payment Failed - Uplifter Subscription',
+      html: wrapInBrandedLayout({
+        preheaderText: 'We were unable to process your subscription payment. Please update your payment method.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #dc2626;">Payment Failed</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Action required to keep your account active</p>
+              <p style="margin: 0 0 16px;">We were unable to process the subscription payment for <strong>{{organizationName}}</strong>. We tried all payment methods on file, but none were successful.</p>
+              <p style="margin: 0 0 16px;">To avoid any interruption to your service, please update your payment method within <strong>30 days</strong>.</p>
+              <!-- Warning box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+                <tr>
+                  <td style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px;">
+                    <p style="margin: 0; font-size: 14px; color: #991b1b;">&#9888; If no valid payment method is provided within 30 days, your account will be deactivated and your site will go offline.</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 16px;">You can update your payment method by logging into your admin dashboard and navigating to Settings &gt; Billing.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">If you believe this is an error, please contact support.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Payment Failed - Action Required
+
+We were unable to process the subscription payment for {{organizationName}}. We tried all payment methods on file, but none were successful.
+
+To avoid any interruption to your service, please update your payment method within 30 days.
+
+WARNING: If no valid payment method is provided within 30 days, your account will be deactivated and your site will go offline.
+
+You can update your payment method by logging into your admin dashboard and navigating to Settings > Billing.
+
+If you believe this is an error, please contact support.`,
+    },
+    'subscription-deactivation-warning': {
+      subject: 'Urgent: Your Uplifter account will be deactivated in {{daysRemaining}} days',
+      html: wrapInBrandedLayout({
+        preheaderText: 'Your Uplifter account will be deactivated in {{daysRemaining}} days due to a failed payment.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #dc2626;">Account Deactivation Warning</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">{{daysRemaining}} days remaining</p>
+              <p style="margin: 0 0 16px;">Your <strong>{{organizationName}}</strong> account on Uplifter will be <strong>deactivated in {{daysRemaining}} days</strong> due to an unpaid subscription invoice.</p>
+              <p style="margin: 0 0 16px;">When your account is deactivated:</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 16px;">
+                <tr><td style="padding: 4px 0 4px 16px; color: #374151; font-size: 14px;">&#8226;&ensp;Your public site will go offline</td></tr>
+                <tr><td style="padding: 4px 0 4px 16px; color: #374151; font-size: 14px;">&#8226;&ensp;Admin dashboard access will be suspended</td></tr>
+                <tr><td style="padding: 4px 0 4px 16px; color: #374151; font-size: 14px;">&#8226;&ensp;No data will be deleted &mdash; you can reactivate at any time</td></tr>
+              </table>
+              <p style="margin: 0 0 16px;"><strong>To prevent deactivation</strong>, log in to your admin dashboard and add or update a payment method under Settings &gt; Billing.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">Need help? Contact our support team.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Account Deactivation Warning - {{daysRemaining}} days remaining
+
+Your {{organizationName}} account on Uplifter will be deactivated in {{daysRemaining}} days due to an unpaid subscription invoice.
+
+When your account is deactivated:
+- Your public site will go offline
+- Admin dashboard access will be suspended
+- No data will be deleted -- you can reactivate at any time
+
+To prevent deactivation, log in to your admin dashboard and add or update a payment method under Settings > Billing.
+
+Need help? Contact our support team.`,
+    },
+    'subscription-deactivated': {
+      subject: 'Your Uplifter account has been deactivated',
+      html: wrapInBrandedLayout({
+        preheaderText: 'Your Uplifter account has been deactivated due to non-payment. Add a payment method to reactivate.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #dc2626;">Account Deactivated</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Your site is now offline</p>
+              <p style="margin: 0 0 16px;">Your <strong>{{organizationName}}</strong> account on Uplifter has been deactivated due to non-payment.</p>
+              <p style="margin: 0 0 16px;">Your public site is now offline and admin dashboard access has been suspended. <strong>No data has been deleted.</strong></p>
+              <p style="margin: 0 0 16px;"><strong>To reactivate your account</strong>, simply add a valid payment method. Your outstanding balance will be charged and your account will be reactivated immediately.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">Need help? Contact our support team.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Account Deactivated
+
+Your {{organizationName}} account on Uplifter has been deactivated due to non-payment.
+
+Your public site is now offline and admin dashboard access has been suspended. No data has been deleted.
+
+To reactivate your account, simply add a valid payment method. Your outstanding balance will be charged and your account will be reactivated immediately.
+
+Need help? Contact our support team.`,
     },
   };
 

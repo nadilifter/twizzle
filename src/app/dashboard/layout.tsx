@@ -6,6 +6,7 @@ import { DemoDataBanner } from "@/components/demo-data-banner"
 import { FeatureProvider } from "@/components/feature-context"
 import { ZendeskWidget } from "@/components/zendesk-widget"
 import { BreadcrumbOverrideProvider } from "@/components/breadcrumb-context"
+import { BillingGracePeriodBanner } from "@/components/billing-grace-period-banner"
 import { getAuthSession } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { getSubdomainUrl } from "@/lib/env-domains"
@@ -17,10 +18,12 @@ export default async function DashboardLayout({
 }) {
   const session = await getAuthSession()
 
+  let scheduledDeactivationDate: Date | null = null
+
   if (session?.user?.organizationId && !session.user.isSuperAdmin) {
     const org = await db.organization.findUnique({
       where: { id: session.user.organizationId },
-      select: { isActive: true, name: true, deactivationReason: true },
+      select: { isActive: true, name: true, deactivationReason: true, scheduledDeactivationDate: true },
     })
 
     if (org && !org.isActive) {
@@ -31,6 +34,8 @@ export default async function DashboardLayout({
       const loginBase = getSubdomainUrl("login")
       redirect(`${loginBase}/organization-deactivated?${params.toString()}`)
     }
+
+    scheduledDeactivationDate = org?.scheduledDeactivationDate ?? null
   }
 
   return (
@@ -40,6 +45,7 @@ export default async function DashboardLayout({
           <AppSidebar />
           <SidebarInset>
             <SiteHeader />
+            <BillingGracePeriodBanner scheduledDeactivationDate={scheduledDeactivationDate} />
             <div className="flex flex-1 flex-col">
               {children}
             </div>

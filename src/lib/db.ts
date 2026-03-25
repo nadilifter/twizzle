@@ -70,8 +70,9 @@ export const db = (
 
 // Models that have a direct organizationId field and should be auto-scoped.
 // Platform-level models (OrganizationSubscription, OrganizationFeatureOverride,
-// OrganizationPaymentMethod, AdyenPlatformAccount, OrganizationStatusLog) are
-// intentionally excluded -- they are managed by superadmins.
+// OrganizationPaymentMethod, AdyenPlatformAccount, OrganizationStatusLog,
+// SubscriptionInvoice, SubscriptionPaymentAttempt) are intentionally excluded
+// -- they are managed by superadmins and system cron jobs.
 const TENANT_MODELS = [
   "Program",
   "Event",

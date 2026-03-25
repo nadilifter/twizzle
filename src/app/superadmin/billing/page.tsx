@@ -118,9 +118,9 @@ export default async function SuperadminBillingPage() {
   return (
     <div className="flex flex-col gap-6 p-4">
       <div>
-        <h1 className="text-2xl font-bold">Platform Billing</h1>
+        <h1 className="text-2xl font-bold">Customer Transactions</h1>
         <p className="text-muted-foreground">
-          Overview of all billing activity across the platform
+          Invoices and payments that organizations have collected from their customers
         </p>
       </div>
 

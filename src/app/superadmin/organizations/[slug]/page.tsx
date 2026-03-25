@@ -13,7 +13,18 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle, Trophy, Ban } from "lucide-react"
+import { Building2, Users, FileText, Globe, ExternalLink, LayoutDashboard, CreditCard, AlertTriangle, Trophy, Ban, Receipt } from "lucide-react"
+import { InvoiceActions } from "@/app/superadmin/subscription-billing/invoice-actions"
+import { GracePeriodManager } from "./grace-period-manager"
+import { DeletePaymentMethodButton } from "./delete-payment-method-button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { SubscriptionManager } from "./subscription-manager"
 import { FeatureOverrides } from "./feature-overrides"
 import { DeactivationDialog } from "./deactivation-dialog"
@@ -104,6 +115,19 @@ export default async function OrganizationDetailPage({ params }: Props) {
           { createdAt: "desc" },
         ],
       },
+      subscriptionInvoices: {
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: {
+          plan: { select: { name: true } },
+          paymentAttempts: {
+            orderBy: { attemptNumber: "asc" },
+            include: {
+              paymentMethod: { select: { brand: true, lastFour: true } },
+            },
+          },
+        },
+      },
       statusLogs: {
         orderBy: { performedAt: "desc" },
         take: 1,
@@ -138,6 +162,14 @@ export default async function OrganizationDetailPage({ params }: Props) {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
+      {organization.scheduledDeactivationDate && organization.isActive && (
+        <GracePeriodManager
+          organizationId={organization.id}
+          orgName={organization.name}
+          scheduledDeactivationDate={organization.scheduledDeactivationDate.toISOString()}
+        />
+      )}
 
       {!organization.isActive && (
         <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
@@ -498,13 +530,107 @@ export default async function OrganizationDetailPage({ params }: Props) {
                         )}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Added {method.createdAt.toLocaleDateString()}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        Added {method.createdAt.toLocaleDateString()}
+                      </span>
+                      <DeletePaymentMethodButton
+                        organizationId={organization.id}
+                        paymentMethodId={method.id}
+                        label={`${method.brand || method.type} •••• ${method.lastFour}`}
+                      />
                     </div>
                   </div>
                 )
               })}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Subscription Billing History */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            <CardTitle>Subscription Billing History</CardTitle>
+          </div>
+          <CardDescription>Platform subscription invoices and payment attempts</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {organization.subscriptionInvoices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No subscription invoices yet</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Attempts</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {organization.subscriptionInvoices.map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-medium font-mono text-sm">{inv.reference}</TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(inv.periodStart).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                    </TableCell>
+                    <TableCell className="text-sm">{inv.plan.name}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        inv.status === "PAID" ? "default" :
+                        inv.status === "FAILED" ? "destructive" :
+                        inv.status === "PROCESSING" ? "outline" :
+                        "secondary"
+                      }>
+                        {inv.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      ${Number(inv.amount).toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      {inv.paymentAttempts.length === 0 ? (
+                        <span className="text-sm text-muted-foreground">--</span>
+                      ) : (
+                        <div className="space-y-1">
+                          {inv.paymentAttempts.map((attempt) => (
+                            <div key={attempt.id} className="flex items-center gap-2 text-xs">
+                              <span className={attempt.status === "SUCCESS" ? "text-green-600" : "text-destructive"}>
+                                {attempt.status === "SUCCESS" ? "Paid" : "Failed"}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {attempt.paymentMethod.brand ?? "card"} ••{attempt.paymentMethod.lastFour}
+                              </span>
+                              {attempt.failureReason && (
+                                <span className="text-muted-foreground truncate max-w-[150px]" title={attempt.failureReason}>
+                                  ({attempt.failureReason})
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <InvoiceActions
+                        invoiceId={inv.id}
+                        reference={inv.reference}
+                        status={inv.status}
+                        amount={Number(inv.amount)}
+                        orgName={organization.name}
+                        notes={inv.notes}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
