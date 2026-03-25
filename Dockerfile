@@ -24,6 +24,7 @@ ARG NEXT_PUBLIC_ADYEN_CLIENT_KEY
 ARG NEXT_PUBLIC_ADYEN_ENVIRONMENT
 ENV NEXT_PUBLIC_ADYEN_CLIENT_KEY=$NEXT_PUBLIC_ADYEN_CLIENT_KEY
 ENV NEXT_PUBLIC_ADYEN_ENVIRONMENT=$NEXT_PUBLIC_ADYEN_ENVIRONMENT
+ENV NODE_OPTIONS="--max-old-space-size=3072"
 
 # Cache .next/cache across builds for incremental compilation
 RUN --mount=type=cache,id=nextjs-cache,target=/app/.next/cache \
