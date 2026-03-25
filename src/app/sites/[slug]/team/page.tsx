@@ -53,7 +53,6 @@ const getCachedTeamMembers = unstable_cache(
   { revalidate: 30 }
 )
 
-
 export default async function TeamPage({
   params,
 }: {

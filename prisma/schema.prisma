@@ -2551,6 +2551,7 @@ model TeamMemberHighlight {
   memberId       String  @unique
   displayOrder   Int     @default(0)
   overrideImage  String?
+  title          String?
   bio            String? @db.Text
   isVisible      Boolean @default(true)
   createdAt      DateTime @default(now())

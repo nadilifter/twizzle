@@ -4,14 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { toast } from "sonner";
 import {
@@ -19,21 +14,11 @@ import {
   Users,
   ChevronUp,
   ChevronDown,
-  Plus,
-  Trash2,
   User,
   ArrowLeft,
-  GripVertical,
   Save,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 
@@ -54,6 +39,7 @@ interface TeamHighlight {
   memberId: string;
   displayOrder: number;
   overrideImage: string | null;
+  title: string | null;
   bio: string | null;
   isVisible: boolean;
 }
@@ -78,7 +64,6 @@ export default function TeamHighlightsPage() {
   const [highlights, setHighlights] = useState<TeamHighlight[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
 
   const fetchData = useCallback(async () => {
     try {
@@ -87,24 +72,44 @@ export default function TeamHighlightsPage() {
         fetch("/api/organization/team-highlights"),
       ]);
 
+      let staffData: StaffMember[] = [];
       if (staffRes.ok) {
-        const staffData = await staffRes.json();
+        staffData = await staffRes.json();
         setStaff(staffData);
       }
 
+      let existingHighlights: TeamHighlight[] = [];
       if (highlightsRes.ok) {
         const highlightsData: TeamHighlightWithMember[] =
           await highlightsRes.json();
-        setHighlights(
-          highlightsData.map((h) => ({
-            memberId: h.memberId,
-            displayOrder: h.displayOrder,
-            overrideImage: h.overrideImage,
-            bio: h.bio,
-            isVisible: h.isVisible,
-          }))
-        );
+        existingHighlights = highlightsData.map((h) => ({
+          memberId: h.memberId,
+          displayOrder: h.displayOrder,
+          overrideImage: h.overrideImage,
+          title: h.title,
+          bio: h.bio,
+          isVisible: h.isVisible,
+        }));
       }
+
+      const existingMemberIds = new Set(
+        existingHighlights.map((h) => h.memberId)
+      );
+      const eligible = staffData.filter(
+        (s) => s.status === "ACTIVE" || s.status === "INVITED"
+      );
+      const newEntries: TeamHighlight[] = eligible
+        .filter((s) => !existingMemberIds.has(s.id))
+        .map((s, i) => ({
+          memberId: s.id,
+          displayOrder: existingHighlights.length + i,
+          overrideImage: null,
+          title: null,
+          bio: null,
+          isVisible: false,
+        }));
+
+      setHighlights([...existingHighlights, ...newEntries]);
     } catch {
       toast.error("Failed to load team data");
     } finally {
@@ -117,6 +122,14 @@ export default function TeamHighlightsPage() {
   }, [fetchData]);
 
   const handleSave = async () => {
+    const missingTitle = highlights.some(
+      (h) => h.isVisible && !h.title?.trim()
+    );
+    if (missingTitle) {
+      toast.error("Every visible team member must have a title before saving.");
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await fetch("/api/organization/team-highlights", {
@@ -131,33 +144,6 @@ export default function TeamHighlightsPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const addMember = () => {
-    if (!selectedMemberId) return;
-    if (highlights.some((h) => h.memberId === selectedMemberId)) {
-      toast.error("This member is already on the team page");
-      return;
-    }
-    setHighlights((prev) => [
-      ...prev,
-      {
-        memberId: selectedMemberId,
-        displayOrder: prev.length,
-        overrideImage: null,
-        bio: null,
-        isVisible: true,
-      },
-    ]);
-    setSelectedMemberId("");
-  };
-
-  const removeMember = (memberId: string) => {
-    setHighlights((prev) =>
-      prev
-        .filter((h) => h.memberId !== memberId)
-        .map((h, i) => ({ ...h, displayOrder: i }))
-    );
   };
 
   const moveUp = (index: number) => {
@@ -192,12 +178,6 @@ export default function TeamHighlightsPage() {
     return staff.find((s) => s.id === memberId);
   };
 
-  const availableStaff = staff.filter(
-    (s) =>
-      s.status === "ACTIVE" &&
-      !highlights.some((h) => h.memberId === s.id)
-  );
-
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -221,7 +201,8 @@ export default function TeamHighlightsPage() {
               Team Highlights
             </h1>
             <p className="text-muted-foreground">
-              Choose which team members appear on your public website.
+              Toggle visibility and customize how each team member appears on
+              your public website.
             </p>
           </div>
         </div>
@@ -235,58 +216,6 @@ export default function TeamHighlightsPage() {
         </Button>
       </div>
 
-      {/* Add Member */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Plus className="h-5 w-5 text-primary" />
-            <CardTitle>Add Team Member</CardTitle>
-          </div>
-          <CardDescription>
-            Select a staff member to feature on your public team page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <Select
-              value={selectedMemberId}
-              onValueChange={setSelectedMemberId}
-            >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select a staff member..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableStaff.length === 0 ? (
-                  <SelectItem value="__none__" disabled>
-                    No available staff members
-                  </SelectItem>
-                ) : (
-                  availableStaff.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      <span className="flex items-center gap-2">
-                        {member.user.name}
-                        {member.title && (
-                          <span className="text-muted-foreground">
-                            — {member.title}
-                          </span>
-                        )}
-                      </span>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            <Button
-              onClick={addMember}
-              disabled={!selectedMemberId}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Team Member List */}
       {highlights.length === 0 ? (
         <Card>
@@ -294,11 +223,11 @@ export default function TeamHighlightsPage() {
             <div className="text-center">
               <Users className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
               <p className="text-lg font-medium text-muted-foreground mb-1">
-                No team members added yet
+                No team members found
               </p>
               <p className="text-sm text-muted-foreground">
-                Use the selector above to add staff members to your public team
-                page.
+                Add staff members to your organization and they will appear here
+                automatically.
               </p>
             </div>
           </CardContent>
@@ -310,12 +239,16 @@ export default function TeamHighlightsPage() {
             if (!member) return null;
 
             return (
-              <Card key={highlight.memberId}>
+              <Card
+                key={highlight.memberId}
+                className={
+                  highlight.isVisible ? "" : "opacity-60"
+                }
+              >
                 <CardContent className="pt-6">
                   <div className="flex gap-6">
                     {/* Reorder Controls */}
                     <div className="flex flex-col items-center gap-1 pt-1">
-                      <GripVertical className="h-4 w-4 text-muted-foreground/40 mb-1" />
                       <Button
                         variant="ghost"
                         size="icon"
@@ -364,34 +297,24 @@ export default function TeamHighlightsPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <Label
-                              htmlFor={`visible-${highlight.memberId}`}
-                              className="text-sm text-muted-foreground"
-                            >
-                              Visible
-                            </Label>
-                            <Switch
-                              id={`visible-${highlight.memberId}`}
-                              checked={highlight.isVisible}
-                              onCheckedChange={(c) =>
-                                updateHighlight(
-                                  highlight.memberId,
-                                  "isVisible",
-                                  c
-                                )
-                              }
-                            />
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => removeMember(highlight.memberId)}
+                        <div className="flex items-center gap-2">
+                          <Label
+                            htmlFor={`visible-${highlight.memberId}`}
+                            className="text-sm text-muted-foreground"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            Visible
+                          </Label>
+                          <Switch
+                            id={`visible-${highlight.memberId}`}
+                            checked={highlight.isVisible}
+                            onCheckedChange={(c) =>
+                              updateHighlight(
+                                highlight.memberId,
+                                "isVisible",
+                                c
+                              )
+                            }
+                          />
                         </div>
                       </div>
 
@@ -419,23 +342,49 @@ export default function TeamHighlightsPage() {
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label>Bio</Label>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            A short description shown on the public team page.
-                          </p>
-                          <Textarea
-                            value={highlight.bio || ""}
-                            onChange={(e) =>
-                              updateHighlight(
-                                highlight.memberId,
-                                "bio",
-                                e.target.value || null
-                              )
-                            }
-                            placeholder="Tell visitors about this team member..."
-                            rows={3}
-                          />
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>
+                              Title{" "}
+                              {highlight.isVisible && (
+                                <span className="text-destructive">*</span>
+                              )}
+                            </Label>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Their role or position shown on the public team
+                              page.
+                            </p>
+                            <Input
+                              value={highlight.title || ""}
+                              onChange={(e) =>
+                                updateHighlight(
+                                  highlight.memberId,
+                                  "title",
+                                  e.target.value || null
+                                )
+                              }
+                              placeholder="e.g. Head Coach, Program Director..."
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Bio</Label>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              A short description shown on the public team page.
+                            </p>
+                            <Textarea
+                              value={highlight.bio || ""}
+                              onChange={(e) =>
+                                updateHighlight(
+                                  highlight.memberId,
+                                  "bio",
+                                  e.target.value || null
+                                )
+                              }
+                              placeholder="Tell visitors about this team member..."
+                              rows={3}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>

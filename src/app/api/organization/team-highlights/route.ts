@@ -9,6 +9,7 @@ const teamHighlightSchema = z.object({
       memberId: z.string(),
       displayOrder: z.number().int().min(0),
       overrideImage: z.string().nullable().optional(),
+      title: z.string().nullable().optional(),
       bio: z.string().nullable().optional(),
       isVisible: z.boolean().optional(),
     })
@@ -108,6 +109,7 @@ export async function PUT(request: NextRequest) {
           update: {
             displayOrder: h.displayOrder,
             ...(h.overrideImage !== undefined && { overrideImage: h.overrideImage }),
+            ...(h.title !== undefined && { title: h.title }),
             ...(h.bio !== undefined && { bio: h.bio }),
             isVisible: h.isVisible ?? true,
           },
@@ -116,6 +118,7 @@ export async function PUT(request: NextRequest) {
             memberId: h.memberId,
             displayOrder: h.displayOrder,
             overrideImage: h.overrideImage ?? null,
+            title: h.title ?? null,
             bio: h.bio ?? null,
             isVisible: h.isVisible ?? true,
           },
