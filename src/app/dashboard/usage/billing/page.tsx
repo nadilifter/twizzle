@@ -653,25 +653,25 @@ export default async function BillingPage() {
                     ) : (
                       <PlanSelector
                         currentPlanId={subscription?.planId || null}
-                        plans={[{
-                          id: plan.id,
-                          name: plan.name,
-                          slug: plan.slug,
-                          monthlyPrice: Number(plan.monthlyPrice),
-                          yearlyPrice: plan.yearlyPrice ? Number(plan.yearlyPrice) : null,
-                          transactionFee: Number(plan.transactionFee),
-                          perTransactionFee: Number(plan.perTransactionFee),
-                          maxAthletes: plan.maxAthletes,
-                          maxUsers: plan.maxUsers,
-                          maxPrograms: plan.maxPrograms,
-                          maxEvents: plan.maxEvents,
-                          smsIncluded: plan.smsIncluded,
-                          emailIncluded: plan.emailIncluded,
-                          maxStorageMB: plan.maxStorageMB,
-                          maxMembershipTypes: plan.maxMembershipTypes,
-                          features: plan.features as string[],
-                          isPopular: plan.isPopular,
-                        }]}
+                        plans={availablePlans.map(p => ({
+                          id: p.id,
+                          name: p.name,
+                          slug: p.slug,
+                          monthlyPrice: Number(p.monthlyPrice),
+                          yearlyPrice: p.yearlyPrice ? Number(p.yearlyPrice) : null,
+                          transactionFee: Number(p.transactionFee),
+                          perTransactionFee: Number(p.perTransactionFee),
+                          maxAthletes: p.maxAthletes,
+                          maxUsers: p.maxUsers,
+                          maxPrograms: p.maxPrograms,
+                          maxEvents: p.maxEvents,
+                          smsIncluded: p.smsIncluded,
+                          emailIncluded: p.emailIncluded,
+                          maxStorageMB: p.maxStorageMB,
+                          maxMembershipTypes: p.maxMembershipTypes,
+                          features: p.features as string[],
+                          isPopular: p.isPopular,
+                        }))}
                         currentUsage={{
                           athletes: organization._count.organizationAthletes,
                           users: organization._count.members,
