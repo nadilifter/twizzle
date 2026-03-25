@@ -258,12 +258,12 @@ export const authOptions: NextAuthOptions = {
         ]
       : []),
     // Only add Azure AD provider if credentials are configured
-    ...(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET && process.env.AZURE_AD_TENANT_ID
+    ...(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET
       ? [
           AzureADProvider({
             clientId: process.env.AZURE_AD_CLIENT_ID,
             clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
-            tenantId: process.env.AZURE_AD_TENANT_ID,
+            tenantId: process.env.AZURE_AD_TENANT_ID || "common",
             allowDangerousEmailAccountLinking:
               process.env.ALLOW_OAUTH_ACCOUNT_LINKING === "true",
             authorization: {
