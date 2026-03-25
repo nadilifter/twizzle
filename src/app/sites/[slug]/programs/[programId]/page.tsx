@@ -322,7 +322,7 @@ export default async function ProgramDetailPage({
                                 <Users className="h-4 w-4" />
                                 <span>
                                     {spotsAvailable > 0
-                                        ? `${spotsAvailable} of ${totalCapacity} spots`
+                                        ? `${spotsAvailable} spot${spotsAvailable !== 1 ? "s" : ""} left`
                                         : canJoinWaitlist
                                         ? "Full — Waitlist available"
                                         : isPerInstance

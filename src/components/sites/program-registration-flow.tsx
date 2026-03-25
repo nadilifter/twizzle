@@ -1212,7 +1212,7 @@ export function ProgramRegistrationFlow({
                           <div className={`text-xs ${
                             isFull && instanceWaitlistAvailable ? "text-amber-600 dark:text-amber-400" : isFull ? "text-red-600 dark:text-red-400" : spotsLeft <= 3 ? "text-orange-600 dark:text-orange-400" : "text-green-600 dark:text-green-400"
                           }`}>
-                            {isFull && instanceWaitlistAvailable ? "Waitlist" : isFull ? "Full" : `${spotsLeft} spots`}
+                            {isFull && instanceWaitlistAvailable ? "Waitlist" : isFull ? "Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
                           </div>
                         ) : null}
                       </div>
