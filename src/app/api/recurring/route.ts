@@ -283,18 +283,17 @@ export async function PATCH(request: NextRequest) {
 
     // If running a batch
     if (body.action === "run_batch") {
-      const today = new Date();
-      today.setHours(23, 59, 59, 999);
+      const now = new Date();
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23, 59, 59, 999);
+      const MIN_RETRY_INTERVAL_MS = 20 * 60 * 60 * 1000; // 20 hours
 
-      // Get all active charges due today or earlier (skip deactivated orgs)
       const dueCharges = await db.recurringCharge.findMany({
         where: {
           organizationId: session.user.organizationId,
           organization: { isActive: true },
           status: "ACTIVE",
-          nextChargeDate: {
-            lte: today,
-          },
+          nextChargeDate: { lte: todayEnd },
         },
         include: {
           paymentMethod: {
@@ -327,7 +326,20 @@ export async function PATCH(request: NextRequest) {
           continue;
         }
 
+        if (charge.lastAttemptAt) {
+          const timeSinceLastAttempt = now.getTime() - charge.lastAttemptAt.getTime();
+          if (timeSinceLastAttempt < MIN_RETRY_INTERVAL_MS) {
+            results.skipped++;
+            continue;
+          }
+        }
+
         try {
+          await db.recurringCharge.update({
+            where: { id: charge.id },
+            data: { lastAttemptAt: now },
+          });
+
           const result = await executeRecurringCharge(charge, charge.organizationId);
 
           if (result.success) {
@@ -339,7 +351,7 @@ export async function PATCH(request: NextRequest) {
               where: { id: charge.id },
               data: {
                 nextChargeDate: nextDate,
-                lastChargedAt: new Date(),
+                lastChargedAt: now,
                 failureCount: 0,
               },
             });
