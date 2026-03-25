@@ -357,25 +357,27 @@ export async function chargeSubscription(
   description?: string
 ) {
   try {
-    const response = await checkoutApi.PaymentsApi.payments({
-      amount: { 
-        currency: "USD", 
-        value: Math.round(amount * 100)  // Amount in minor units
+    const response = await checkoutApi.PaymentsApi.payments(
+      {
+        amount: { 
+          currency: "USD", 
+          value: Math.round(amount * 100)
+        },
+        reference,
+        merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
+        shopperReference,
+        paymentMethod: {
+          type: "scheme" as any,
+          storedPaymentMethodId,
+        },
+        shopperInteraction: "ContAuth" as any,
+        recurringProcessingModel: "Subscription" as any,
+        ...(description && { 
+          metadata: { description } 
+        }),
       },
-      reference,
-      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!,
-      shopperReference,
-      paymentMethod: {
-        type: "scheme" as any,
-        storedPaymentMethodId,
-      },
-      shopperInteraction: "ContAuth" as any,  // Continuous authorization (recurring)
-      recurringProcessingModel: "Subscription" as any,
-      // Optional metadata
-      ...(description && { 
-        metadata: { description } 
-      }),
-    });
+      { idempotencyKey: reference }
+    );
 
     return response;
   } catch (error) {
