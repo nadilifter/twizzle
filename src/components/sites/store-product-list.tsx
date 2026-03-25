@@ -298,7 +298,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                 }`}
               >
                 {product.imageUrl && (
-                  <div className="relative aspect-video w-full overflow-hidden">
+                  <div className="relative aspect-square w-full overflow-hidden">
                     <Image
                       src={product.imageUrl}
                       alt={product.name}
