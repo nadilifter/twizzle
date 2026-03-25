@@ -363,7 +363,7 @@ export async function processInvoiceRegistrations(
             athleteId: purchase.athleteId,
             passId: purchase.passId,
             userId: userId ?? undefined,
-            startDate: now,
+            startDate: today,
             endDate,
             status: "ACTIVE",
             autoRenew: true,
