@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import {
   Search,
   Send,
@@ -13,9 +15,12 @@ import {
   Building2,
   Loader2,
   AlertTriangle,
+  Phone,
+  ArrowRight,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 import { Chat } from "@/components/chat/chat"
 import {
@@ -62,6 +67,11 @@ interface Message {
   deliveredAt: string | null
   failedAt: string | null
   errorMessage: string | null
+}
+
+interface UserPhoneStatus {
+  phone: string | null
+  phoneVerified: boolean
 }
 
 // ============================================
@@ -201,8 +211,31 @@ export default function AthleteChatPage() {
   const [newMessage, setNewMessage] = useState("")
   const [isSending, setIsSending] = useState(false)
 
+  const [phoneStatus, setPhoneStatus] = useState<UserPhoneStatus | null>(null)
+  const [isLoadingPhone, setIsLoadingPhone] = useState(true)
+
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const messagesPollRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    async function fetchPhoneStatus() {
+      try {
+        const res = await fetch("/api/user/profile")
+        if (res.ok) {
+          const data = await res.json()
+          setPhoneStatus({
+            phone: data.phone,
+            phoneVerified: data.phoneVerified,
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching phone status:", error)
+      } finally {
+        setIsLoadingPhone(false)
+      }
+    }
+    fetchPhoneStatus()
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(conversationSearch), 300)
@@ -333,6 +366,48 @@ export default function AthleteChatPage() {
   }, [newMessage, selectedConversationId, isSending, fetchMessages, fetchConversations])
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId)
+
+  // ============================================
+  // Phone prompt check
+  // ============================================
+
+  const needsPhone = phoneStatus && (!phoneStatus.phone || !phoneStatus.phoneVerified)
+
+  if (isLoadingPhone) {
+    return (
+      <div className="flex h-[calc(100vh-3rem)] items-center justify-center p-4 md:p-6">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (needsPhone) {
+    return (
+      <div className="flex h-[calc(100vh-3rem)] items-center justify-center p-4 md:p-6">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <Phone className="h-7 w-7 text-primary" />
+            </div>
+            <CardTitle>Phone Number Required</CardTitle>
+            <CardDescription>
+              {!phoneStatus?.phone
+                ? "To use SMS messaging, you need to add and verify a phone number on your account."
+                : "Your phone number is not yet verified. Please verify it to use SMS messaging."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button asChild>
+              <Link href="/athletes/account">
+                {!phoneStatus?.phone ? "Add Phone Number" : "Verify Phone Number"}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // ============================================
   // Render

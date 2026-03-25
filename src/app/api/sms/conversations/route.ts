@@ -67,15 +67,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId } = createConversationSchema.parse(body);
 
+    const organizationId = session.user.organizationId;
+
+    // Check if user belongs to this org as a staff member OR as a guardian
     const user = await db.user.findFirst({
       where: {
         id: userId,
-        memberships: {
-          some: {
-            organizationId: session.user.organizationId,
-            status: "ACTIVE",
+        OR: [
+          {
+            memberships: {
+              some: { organizationId, status: "ACTIVE" },
+            },
           },
-        },
+          {
+            athleteGuardians: {
+              some: {
+                athlete: {
+                  organizationAthletes: { some: { organizationId } },
+                },
+              },
+            },
+          },
+        ],
       },
     });
 

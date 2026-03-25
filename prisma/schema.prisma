@@ -215,7 +215,8 @@ model User {
   name         String
   passwordHash String?
   avatar       String?
-  phone        String?
+  phone         String?
+  phoneVerified Boolean    @default(false)
   role         Role       @default(COACH)
   status       UserStatus @default(ACTIVE)
   isSuperAdmin Boolean    @default(false)
@@ -349,6 +350,7 @@ enum VerificationCodeType {
   MFA_CHALLENGE
   EMAIL_LOGIN
   SIGNUP_VERIFICATION
+  PHONE_VERIFICATION
 }
 
 // Email verification codes for MFA challenges and passwordless email login

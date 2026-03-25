@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         phone: true,
+        phoneVerified: true,
         avatar: true,
         createdAt: true,
       },
@@ -59,14 +60,28 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const validatedData = updateProfileSchema.parse(body);
 
+    const updateData: Record<string, unknown> = {};
+    if (validatedData.name !== undefined) updateData.name = validatedData.name;
+    if (validatedData.phone !== undefined) {
+      const currentUser = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { phone: true },
+      });
+      updateData.phone = validatedData.phone;
+      if (validatedData.phone !== currentUser?.phone) {
+        updateData.phoneVerified = false;
+      }
+    }
+
     const user = await db.user.update({
       where: { id: session.user.id },
-      data: validatedData,
+      data: updateData,
       select: {
         id: true,
         name: true,
         email: true,
         phone: true,
+        phoneVerified: true,
         avatar: true,
         createdAt: true,
       },

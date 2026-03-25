@@ -184,6 +184,8 @@ src/app/api/sites/[slug]/info/route.ts
 # --- User-scoped routes (no org data, personal to user) ---
 src/app/api/avatar/route.ts
 src/app/api/user/profile/route.ts
+src/app/api/user/phone/send-code/route.ts
+src/app/api/user/phone/verify/route.ts
 src/app/api/user/billing-addresses/route.ts
 src/app/api/user/billing-addresses/[id]/route.ts
 src/app/api/user/contacts/route.ts
