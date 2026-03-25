@@ -1,35 +1,33 @@
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY package.json pnpm-lock.yaml ./
-# Copy prisma schema for postinstall generate
 COPY prisma ./prisma
-RUN pnpm install --frozen-lockfile
 
-# Rebuild the source code only when needed
+# Cache the pnpm store across builds so unchanged packages aren't re-downloaded
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# NEXT_PUBLIC_* vars are inlined at build time by Next.js
 ARG NEXT_PUBLIC_ADYEN_CLIENT_KEY
 ARG NEXT_PUBLIC_ADYEN_ENVIRONMENT
 ENV NEXT_PUBLIC_ADYEN_CLIENT_KEY=$NEXT_PUBLIC_ADYEN_CLIENT_KEY
 ENV NEXT_PUBLIC_ADYEN_ENVIRONMENT=$NEXT_PUBLIC_ADYEN_ENVIRONMENT
 
-RUN pnpm run build
+# Cache .next/cache across builds for incremental compilation
+RUN --mount=type=cache,id=nextjs-cache,target=/app/.next/cache \
+    pnpm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner

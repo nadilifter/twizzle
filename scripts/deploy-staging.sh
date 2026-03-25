@@ -30,16 +30,6 @@ echo "   Target: upliftergymnastics.com"
 echo "========================================"
 echo ""
 
-# Run local type check to catch build errors before deploying
-log_step "Running local type check..."
-TS_ERRORS=$(pnpm tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
-if [ -n "$TS_ERRORS" ]; then
-    log_error "TypeScript errors detected in project files — fix before deploying:"
-    echo "$TS_ERRORS" | head -20
-    exit 1
-fi
-log_info "Type check passed"
-
 # Check SSH connection
 log_step "Checking SSH connection..."
 if ! ssh -o ConnectTimeout=5 "$SSH_HOST" "echo 'connected'" > /dev/null 2>&1; then
@@ -95,7 +85,7 @@ source ~/.env.uplifter
 set +a
 
 log_info "Building Docker image..."
-sudo docker build \
+sudo DOCKER_BUILDKIT=1 docker build \
     --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
     --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
     -t uplifter:latest .
@@ -166,9 +156,9 @@ if [ "$DANGLING" -gt 0 ]; then
     log_info "Removed $DANGLING dangling image(s)"
 fi
 
-# Prune build cache (keep recent layers for faster builds)
+# Prune build cache (keep recent layers + pnpm/next.js caches for faster rebuilds)
 CACHE_SIZE=$(sudo docker system df --format '{{.Size}}' | tail -1)
-sudo docker builder prune -f --keep-storage 2GB > /dev/null 2>&1
+sudo docker builder prune -f --keep-storage 5GB > /dev/null 2>&1
 log_info "Pruned build cache (was: $CACHE_SIZE)"
 
 # Remove unused networks
