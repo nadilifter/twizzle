@@ -84,14 +84,11 @@ set -a
 source ~/.env.uplifter
 set +a
 
-log_info "Stopping app container to free memory for build..."
-sudo docker compose -f docker-compose.staging.yml stop app 2>/dev/null || true
-
-log_info "Building Docker image..."
+log_info "Building Docker image (app stays live during build)..."
 sudo DOCKER_BUILDKIT=1 docker build \
     --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
     --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
-    -t uplifter:latest .
+    -t uplifter:new .
 
 log_info "Running database migrations..."
 
@@ -99,14 +96,15 @@ log_info "Running database migrations..."
 sudo docker compose -f docker-compose.staging.yml up -d postgres
 sleep 3
 
-# Run migrations using the baked-in Prisma CLI (no npx download needed)
+# Run migrations using the new image before swapping
 sudo docker run --rm \
     --network uplifter-network \
     -e DATABASE_URL="postgresql://uplifter:${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter" \
-    uplifter:latest \
+    uplifter:new \
     prisma migrate deploy
 
-log_info "Restarting application..."
+log_info "Swapping to new image..."
+sudo docker tag uplifter:new uplifter:latest
 cd ~/uplifter
 sudo docker compose -f docker-compose.staging.yml up -d app
 
