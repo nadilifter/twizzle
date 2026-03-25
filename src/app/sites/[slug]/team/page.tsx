@@ -134,18 +134,12 @@ export default async function TeamPage({
                       }`}
                     >
                       <div className="mb-5">
+                        <p className="text-sm text-muted-foreground">
+                          {member.title}
+                        </p>
                         <h2 className="text-2xl font-bold tracking-tight">
                           {member.name}
                         </h2>
-                        <span
-                          className="inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full"
-                          style={{
-                            backgroundColor: `${primaryColor}15`,
-                            color: primaryColor,
-                          }}
-                        >
-                          {member.title}
-                        </span>
                       </div>
 
                       {member.bio && (
