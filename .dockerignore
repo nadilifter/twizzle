@@ -16,25 +16,34 @@ Dockerfile
 Dockerfile.dev
 .dockerignore
 docker-compose.yml
+docker-compose.staging.yml
 
 # IDE and editor
 .idea
 .vscode
+.cursor
 *.swp
 *.swo
 
-# Environment files (use docker-compose environment instead)
+# Environment and secrets
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.enc
+.sops.yaml
 
-# Misc
-README.md
+# Directories not needed for build
+docs/
+infrastructure/
+gitops/
+charts/
+scripts/
+.husky/
+
+# Files not needed for build
+deploy.sh
+get-docker.sh
+prisma.config.ts
 *.md
-.cursor
 temp_*
-
-
-
-

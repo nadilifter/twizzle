@@ -94,29 +94,24 @@ sudo DOCKER_BUILDKIT=1 docker build \
     -t uplifter:latest .
 
 log_info "Running database migrations..."
-# Source environment variables
-set -a
-source ~/.env.uplifter
-set +a
 
 # Ensure PostgreSQL is running before migrations
 sudo docker compose -f docker-compose.staging.yml up -d postgres
 sleep 3
 
-# Run migrations using the container (pin to Prisma 6 to match project version)
-# Network is external (not Compose-prefixed)
+# Run migrations using the baked-in Prisma CLI (no npx download needed)
 sudo docker run --rm \
     --network uplifter-network \
     -e DATABASE_URL="postgresql://uplifter:${POSTGRES_PASSWORD}@uplifter-postgres:5432/uplifter" \
     uplifter:latest \
-    npx prisma@^6 migrate deploy
+    prisma migrate deploy
 
 log_info "Restarting application..."
 cd ~/uplifter
 sudo docker compose -f docker-compose.staging.yml up -d app
 
 log_info "Waiting for application to start..."
-sleep 10
+sleep 3
 
 log_info "Checking application health..."
 MAX_RETRIES=10

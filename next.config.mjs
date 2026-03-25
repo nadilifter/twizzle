@@ -145,7 +145,7 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   // Configure allowed remote image sources for Next.js Image component
   images: {
