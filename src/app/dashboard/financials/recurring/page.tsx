@@ -207,7 +207,7 @@ export default function RecurringBillingPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeCount}</div>
             <p className="text-xs text-muted-foreground">
-              ${Number(stats.activeAmount).toFixed(2)}/month total
+              ${Number(stats.activeAmount).toFixed(2)} total recurring
             </p>
           </CardContent>
         </Card>
