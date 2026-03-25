@@ -28,6 +28,7 @@ export function ProgramCalendar({
   slug,
   isPublic = false,
   eventFilter,
+  eventTransform,
 }: ProgramCalendarProps) {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(initialDate || new Date());
@@ -105,8 +106,9 @@ export function ProgramCalendar({
         return false;
       }
     });
-    return eventFilter ? dateFiltered.filter(eventFilter) : dateFiltered;
-  }, [events, currentDate, viewMode, eventFilter]);
+    const filtered = eventFilter ? dateFiltered.filter(eventFilter) : dateFiltered;
+    return eventTransform ? filtered.map(eventTransform) : filtered;
+  }, [events, currentDate, viewMode, eventFilter, eventTransform]);
 
   const handleEventClick = useCallback(
     (event: CalendarEvent) => {

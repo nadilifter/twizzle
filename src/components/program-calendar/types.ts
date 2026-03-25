@@ -40,6 +40,8 @@ export interface ProgramCalendarProps {
   isPublic?: boolean;
   /** Optional predicate to filter visible events (applied after date-range filtering) */
   eventFilter?: (event: CalendarEvent) => boolean;
+  /** Optional transform applied to each event before rendering (e.g. to override colors) */
+  eventTransform?: (event: CalendarEvent) => CalendarEvent;
 }
 
 export interface CalendarContextType {

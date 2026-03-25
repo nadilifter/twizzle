@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Filter, X } from "lucide-react";
+import { Filter, X, Palette, Layers } from "lucide-react";
 
 import { ProgramCalendar } from "@/components/program-calendar";
 import type { CalendarEvent } from "@/components/program-calendar";
@@ -82,6 +82,26 @@ export function SiteCalendar({
   const isMobile = useIsMobile();
   const [filters, setFilters] = useState<ProgramFilterState>({ ...DEFAULT_FILTERS });
   const [open, setOpen] = useState(false);
+  const [colorBy, setColorBy] = useState<"program" | "level">("program");
+
+  const levelColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const level of levels) {
+      if (level.color) map.set(level.id, level.color);
+    }
+    return map;
+  }, [levels]);
+
+  const eventTransform = useMemo(() => {
+    if (colorBy !== "level") return undefined;
+    return (event: CalendarEvent) => {
+      const firstLevelId = event.levelIds?.[0];
+      if (!firstLevelId) return event;
+      const levelColor = levelColorMap.get(firstLevelId);
+      if (!levelColor) return event;
+      return { ...event, color: levelColor };
+    };
+  }, [colorBy, levelColorMap]);
 
   const activeFilterCount = countActiveFilters(filters, { hideDateRange: true });
 
@@ -179,6 +199,22 @@ export function SiteCalendar({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2">
+        {levels.length > 0 && (
+          <Button
+            variant={colorBy === "level" ? "secondary" : "outline"}
+            size="sm"
+            className="gap-2"
+            onClick={() => setColorBy((prev) => (prev === "program" ? "level" : "program"))}
+          >
+            {colorBy === "level" ? (
+              <Layers className="h-4 w-4" />
+            ) : (
+              <Palette className="h-4 w-4" />
+            )}
+            {colorBy === "level" ? "By Level" : "By Program"}
+          </Button>
+        )}
+
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -237,6 +273,7 @@ export function SiteCalendar({
         onEventClick={handleEventClick}
         className="shadow-none"
         eventFilter={hasActiveFilters ? eventFilter : undefined}
+        eventTransform={eventTransform}
       />
     </div>
   );
