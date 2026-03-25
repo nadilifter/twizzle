@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 
+export const dynamic = "force-dynamic"
+
 // GET /api/signups/plans - Get public subscription plans
 // This is a public endpoint, no authentication required
 export async function GET() {

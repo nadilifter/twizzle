@@ -4,6 +4,8 @@ import { isRedisAvailable } from "@/lib/redis";
 import { isAdyenConfigured } from "@/lib/adyen";
 import { isTwilioConfigured } from "@/lib/twilio";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Health Check Endpoint
  * 
