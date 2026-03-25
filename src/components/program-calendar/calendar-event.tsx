@@ -39,9 +39,18 @@ export function EventPill({ event, showTime = true, className }: EventPillProps)
   const isCancelled = event.status === "CANCELLED";
 
   const statusLabel = event.isSoldOut
-    ? "Sold Out"
+    ? "FULL"
     : event.isWaitlistAvailable
-    ? "Waitlist"
+    ? "WAITLIST"
+    : null;
+
+  const statusTagClass = statusLabel
+    ? cn(
+        "inline-block text-[8px] font-bold leading-none px-1 py-0.5 rounded",
+        event.isSoldOut
+          ? "bg-red-500/20 text-red-700 dark:text-red-300"
+          : "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+      )
     : null;
 
   return (
@@ -53,19 +62,22 @@ export function EventPill({ event, showTime = true, className }: EventPillProps)
       className={cn(
         getEventPillClasses(event.color, isCancelled),
         "w-full text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
-        showTime && "flex flex-col",
+        "flex flex-col",
         event.isSoldOut && "opacity-60",
         className
       )}
       title={`${event.title} - ${formatTime12h(event.startTime)} to ${formatTime12h(event.endTime)}${statusLabel ? ` - ${statusLabel}` : ""}`}
     >
       {showTime && (
-        <span className="text-[10px] opacity-75">{formatTime12h(event.startTime, true)}</span>
+        <span className="text-[10px] opacity-75 flex items-center gap-1">
+          {formatTime12h(event.startTime, true)}
+          {statusLabel && <span className={statusTagClass!}>{statusLabel}</span>}
+        </span>
       )}
-      <span className="truncate">
-        {event.title}
-        {statusLabel && <span className="ml-1 text-[9px] font-semibold uppercase opacity-80">{statusLabel}</span>}
-      </span>
+      <span className="truncate">{event.title}</span>
+      {!showTime && statusLabel && (
+        <span className={cn(statusTagClass!, "self-start")}>{statusLabel}</span>
+      )}
     </button>
   );
 }
@@ -178,21 +190,23 @@ export function EventCompactCard({ event, className }: EventCompactCardProps) {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className={cn("font-medium text-sm truncate", isCancelled && "line-through")}>
-            {event.title}
-          </div>
-          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
-            <span>{formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}</span>
+          <div className="flex items-center gap-1.5">
+            <span className={cn("font-medium text-sm truncate", isCancelled && "line-through")}>
+              {event.title}
+            </span>
             {event.isSoldOut && (
-              <Badge variant="destructive" className="text-[9px] px-1 py-0">
+              <Badge variant="destructive" className="text-[9px] px-1 py-0 shrink-0">
                 Sold Out
               </Badge>
             )}
             {event.isWaitlistAvailable && (
-              <Badge variant="secondary" className="text-[9px] px-1 py-0">
+              <Badge variant="secondary" className="text-[9px] px-1 py-0 shrink-0">
                 Waitlist
               </Badge>
             )}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+            <span>{formatTime12h(event.startTime)} - {formatTime12h(event.endTime)}</span>
           </div>
         </div>
         {event.levelName && (

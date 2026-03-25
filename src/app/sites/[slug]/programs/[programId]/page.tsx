@@ -15,7 +15,12 @@ import {
     UserCheck, 
     DollarSign,
     ClipboardList,
+    Ban,
+    ListEnd,
+    Hourglass,
+    CircleCheck,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProgramRegistrationFlow } from "@/components/sites/program-registration-flow";
 import type { FileRequirementConfig } from "@/types/file-requirements";
@@ -227,11 +232,36 @@ export default async function ProgramDetailPage({
                         Back to Calendar
                     </Link>
 
-                    <div className="flex items-center gap-3 mb-4">
-                        <ClipboardList className="h-8 w-8" />
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                            {program.name}
-                        </h1>
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                            <ClipboardList className="h-8 w-8" />
+                            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                                {program.name}
+                            </h1>
+                        </div>
+                        {isFull ? (
+                            canJoinWaitlist ? (
+                                <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-amber-500 text-white border-amber-500 shadow-lg">
+                                    <ListEnd className="h-4 w-4" />
+                                    Waitlist Only
+                                </Badge>
+                            ) : isPerInstance ? (
+                                <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-blue-500 text-white border-blue-500 shadow-lg">
+                                    <Hourglass className="h-4 w-4" />
+                                    Pending
+                                </Badge>
+                            ) : (
+                                <Badge variant="destructive" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 shadow-lg">
+                                    <Ban className="h-4 w-4" />
+                                    Sold Out
+                                </Badge>
+                            )
+                        ) : (
+                            <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-emerald-500 text-white border-emerald-500 shadow-lg">
+                                <CircleCheck className="h-4 w-4" />
+                                Registration Open
+                            </Badge>
+                        )}
                     </div>
 
                     {program.description && (

@@ -129,12 +129,14 @@ export async function GET(request: NextRequest) {
         if (isDropIn) {
           const instCap = instance.capacity ?? prog.capacity;
           const instFull = instance._count.registrations >= instCap;
-          if (instFull && prog.waitlistEnabled) {
-            const wlCount = waitlistMap.get(instance.programId) || 0;
-            isWaitlistAvailable = prog.waitlistCapacity == null || wlCount < prog.waitlistCapacity;
+          if (instFull) {
+            if (prog.waitlistEnabled) {
+              const wlCount = waitlistMap.get(instance.programId) || 0;
+              isWaitlistAvailable = prog.waitlistCapacity == null || wlCount < prog.waitlistCapacity;
+            }
+            isSoldOut = !isWaitlistAvailable;
           }
         } else {
-          // ALL_INSTANCES: use program-level enrollment
           const enrolled = enrollmentMap.get(instance.programId) || 0;
           const progFull = enrolled >= prog.capacity;
           if (progFull) {
