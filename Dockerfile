@@ -47,8 +47,9 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 
-# Copy Prisma CLI from deps instead of re-installing (~16s saved)
+# Copy Prisma CLI + engines from deps instead of re-installing (~16s saved)
 COPY --from=deps /usr/local/lib/node_modules/prisma /usr/local/lib/node_modules/prisma
+COPY --from=deps /usr/local/lib/node_modules/@prisma /usr/local/lib/node_modules/@prisma
 COPY --from=deps /usr/local/bin/prisma /usr/local/bin/prisma
 
 RUN mkdir .next && chown nextjs:nodejs .next
