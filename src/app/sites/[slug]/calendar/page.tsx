@@ -19,12 +19,53 @@ const getCachedCalendarConfig = unstable_cache(
     { revalidate: 30 }
 );
 
+const getCachedCalendarFilterData = unstable_cache(
+    async (organizationId: string) => {
+        const [levels, coachAssignments] = await Promise.all([
+            db.level.findMany({
+                where: { organizationId },
+                select: { id: true, name: true, color: true },
+                orderBy: { order: "asc" },
+            }),
+            db.programStaff.findMany({
+                where: {
+                    role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] },
+                    program: { organizationId, status: "ACTIVE" },
+                },
+                select: {
+                    member: {
+                        select: {
+                            user: { select: { id: true, name: true, avatar: true } },
+                        },
+                    },
+                },
+                distinct: ["memberId"],
+            }),
+        ]);
+
+        const coachMap = new Map<string, { id: string; name: string; avatar: string | null }>();
+        for (const sa of coachAssignments) {
+            const user = sa.member.user;
+            if (!coachMap.has(user.id)) {
+                coachMap.set(user.id, { id: user.id, name: user.name, avatar: user.avatar });
+            }
+        }
+        const coaches = Array.from(coachMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+        return { levels, coaches };
+    },
+    ["site-calendar-filter-data"],
+    { revalidate: 30 }
+);
+
 export default async function CalendarPage({ params }: { params: { slug: string } }) {
     const subdomain = params.slug;
 
     const config = await getCachedCalendarConfig(subdomain);
 
     if (!config) return notFound();
+
+    const { levels, coaches } = await getCachedCalendarFilterData(config.organizationId);
 
     return (
         <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
@@ -33,6 +74,8 @@ export default async function CalendarPage({ params }: { params: { slug: string 
                 slug={subdomain}
                 organizationId={config.organizationId}
                 organizationName={config.organization.name}
+                levels={levels}
+                coaches={coaches}
             />
         </div>
     );

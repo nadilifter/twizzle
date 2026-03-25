@@ -30,6 +30,7 @@ import { ProgramCard } from "./program-card";
 import {
   ProgramFiltersContent,
   DEFAULT_FILTERS,
+  countActiveFilters,
   type Level,
   type Coach,
   type ProgramFilterState,
@@ -102,16 +103,6 @@ interface FilterableProgramListProps {
   levels: Level[];
   slug: string;
   primaryColor?: string;
-}
-
-function countActiveFilters(filters: ProgramFilterState): number {
-  let count = 0;
-  if (filters.ageRange[0] !== DEFAULT_FILTERS.ageRange[0] || filters.ageRange[1] !== DEFAULT_FILTERS.ageRange[1]) count++;
-  if (filters.dateRange?.from) count++;
-  if (filters.timeRange[0] || filters.timeRange[1]) count++;
-  if (filters.selectedLevels.length > 0) count++;
-  if (filters.selectedCoaches.length > 0) count++;
-  return count;
 }
 
 function toDate(value: string | Date | null | undefined): Date | null {

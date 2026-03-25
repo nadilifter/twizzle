@@ -19,6 +19,12 @@ export interface CalendarEvent {
   registrationType: string | null;
   isSoldOut: boolean;
   isWaitlistAvailable: boolean;
+  hasAgeRestriction?: boolean;
+  minAge?: number | null;
+  maxAge?: number | null;
+  hasLevelRestriction?: boolean;
+  levelIds?: string[];
+  coachIds?: string[];
 }
 
 export type ViewMode = "month" | "week" | "day";
@@ -32,6 +38,8 @@ export interface ProgramCalendarProps {
   slug?: string;
   /** When true, hides sensitive data like registration counts and attendance in the UI */
   isPublic?: boolean;
+  /** Optional predicate to filter visible events (applied after date-range filtering) */
+  eventFilter?: (event: CalendarEvent) => boolean;
 }
 
 export interface CalendarContextType {

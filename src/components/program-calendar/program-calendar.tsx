@@ -27,6 +27,7 @@ export function ProgramCalendar({
   showHeader = true,
   slug,
   isPublic = false,
+  eventFilter,
 }: ProgramCalendarProps) {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(initialDate || new Date());
@@ -93,7 +94,7 @@ export function ProgramCalendar({
         ? endOfWeek(currentDate, { weekStartsOn: 0 })
         : endOfDay(currentDate);
 
-    return events.filter((event) => {
+    const dateFiltered = events.filter((event) => {
       try {
         const eventDate = parseISO(event.start);
         return isWithinInterval(eventDate, {
@@ -104,7 +105,8 @@ export function ProgramCalendar({
         return false;
       }
     });
-  }, [events, currentDate, viewMode]);
+    return eventFilter ? dateFiltered.filter(eventFilter) : dateFiltered;
+  }, [events, currentDate, viewMode, eventFilter]);
 
   const handleEventClick = useCallback(
     (event: CalendarEvent) => {

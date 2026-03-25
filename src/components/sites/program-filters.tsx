@@ -57,12 +57,26 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => {
   return { value, label };
 });
 
+export function countActiveFilters(
+  filters: ProgramFilterState,
+  { hideDateRange = false }: { hideDateRange?: boolean } = {}
+): number {
+  let count = 0;
+  if (filters.ageRange[0] !== DEFAULT_FILTERS.ageRange[0] || filters.ageRange[1] !== DEFAULT_FILTERS.ageRange[1]) count++;
+  if (!hideDateRange && filters.dateRange?.from) count++;
+  if (filters.timeRange[0] || filters.timeRange[1]) count++;
+  if (filters.selectedLevels.length > 0) count++;
+  if (filters.selectedCoaches.length > 0) count++;
+  return count;
+}
+
 interface ProgramFiltersProps {
   levels: Level[];
   coaches: Coach[];
   filters: ProgramFilterState;
   onFiltersChange: (filters: ProgramFilterState) => void;
   activeFilterCount: number;
+  hideDateRange?: boolean;
 }
 
 export function ProgramFiltersContent({
@@ -71,6 +85,7 @@ export function ProgramFiltersContent({
   filters,
   onFiltersChange,
   activeFilterCount,
+  hideDateRange = false,
 }: ProgramFiltersProps) {
   const handleMinAgeChange = (raw: string) => {
     const val = raw === "" ? 0 : Math.max(0, Math.min(99, parseInt(raw, 10) || 0));
@@ -155,59 +170,63 @@ export function ProgramFiltersContent({
         </div>
       </div>
 
-      <Separator />
+      {!hideDateRange && (
+        <>
+          <Separator />
 
-      {/* Date Range */}
-      <div className="space-y-3">
-        <Label className="flex items-center gap-1.5 text-sm font-medium">
-          <CalendarDays className="h-3.5 w-3.5" />
-          Date Range
-        </Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !filters.dateRange?.from && "text-muted-foreground"
-              )}
-            >
-              <CalendarDays className="mr-2 h-4 w-4" />
-              {filters.dateRange?.from ? (
-                filters.dateRange.to ? (
-                  <>
-                    {format(filters.dateRange.from, "MMM d")} -{" "}
-                    {format(filters.dateRange.to, "MMM d, yyyy")}
-                  </>
-                ) : (
-                  format(filters.dateRange.from, "MMM d, yyyy")
-                )
-              ) : (
-                "Select dates"
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={filters.dateRange}
-              onSelect={handleDateChange}
-              numberOfMonths={1}
-            />
-          </PopoverContent>
-        </Popover>
-        {filters.dateRange?.from && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-muted-foreground"
-            onClick={() => onFiltersChange({ ...filters, dateRange: undefined })}
-          >
-            <X className="mr-1 h-3 w-3" />
-            Clear dates
-          </Button>
-        )}
-      </div>
+          {/* Date Range */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Date Range
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !filters.dateRange?.from && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {filters.dateRange?.from ? (
+                    filters.dateRange.to ? (
+                      <>
+                        {format(filters.dateRange.from, "MMM d")} -{" "}
+                        {format(filters.dateRange.to, "MMM d, yyyy")}
+                      </>
+                    ) : (
+                      format(filters.dateRange.from, "MMM d, yyyy")
+                    )
+                  ) : (
+                    "Select dates"
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={filters.dateRange}
+                  onSelect={handleDateChange}
+                  numberOfMonths={1}
+                />
+              </PopoverContent>
+            </Popover>
+            {filters.dateRange?.from && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground"
+                onClick={() => onFiltersChange({ ...filters, dateRange: undefined })}
+              >
+                <X className="mr-1 h-3 w-3" />
+                Clear dates
+              </Button>
+            )}
+          </div>
+        </>
+      )}
 
       <Separator />
 

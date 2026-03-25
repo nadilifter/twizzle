@@ -66,6 +66,17 @@ export async function GET(request: NextRequest) {
             hasCapacityRestriction: true,
             waitlistEnabled: true,
             waitlistCapacity: true,
+            hasAgeRestriction: true,
+            minAge: true,
+            maxAge: true,
+            hasLevelRestriction: true,
+            levelRequirements: {
+              select: { levelId: true },
+            },
+            staffAssignments: {
+              where: { role: { in: ["LEAD_COACH", "ASSISTANT_COACH"] } },
+              select: { member: { select: { user: { select: { id: true } } } } },
+            },
           },
         },
         facility: {
@@ -155,6 +166,12 @@ export async function GET(request: NextRequest) {
         registrationType: prog.registrationType,
         isSoldOut,
         isWaitlistAvailable,
+        hasAgeRestriction: prog.hasAgeRestriction,
+        minAge: prog.minAge,
+        maxAge: prog.maxAge,
+        hasLevelRestriction: prog.hasLevelRestriction,
+        levelIds: prog.levelRequirements.map((lr) => lr.levelId),
+        coachIds: prog.staffAssignments.map((sa) => sa.member.user.id),
       };
     });
 
