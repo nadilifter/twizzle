@@ -133,30 +133,19 @@ export default async function TeamPage({
                         isReversed ? "[direction:ltr]" : ""
                       }`}
                     >
-                      <div className="flex items-start gap-3 mb-5">
-                        <div
-                          className="p-2.5 rounded-lg shrink-0"
-                          style={{ backgroundColor: `${primaryColor}15` }}
+                      <div className="mb-5">
+                        <h2 className="text-2xl font-bold tracking-tight">
+                          {member.name}
+                        </h2>
+                        <span
+                          className="inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: `${primaryColor}15`,
+                            color: primaryColor,
+                          }}
                         >
-                          <User
-                            className="h-5 w-5"
-                            style={{ color: primaryColor }}
-                          />
-                        </div>
-                        <div>
-                          <h2 className="text-2xl font-bold tracking-tight">
-                            {member.name}
-                          </h2>
-                          <span
-                            className="inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full"
-                            style={{
-                              backgroundColor: `${primaryColor}15`,
-                              color: primaryColor,
-                            }}
-                          >
-                            {member.title}
-                          </span>
-                        </div>
+                          {member.title}
+                        </span>
                       </div>
 
                       {member.bio && (
