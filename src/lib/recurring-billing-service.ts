@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { chargeSubscription } from "@/lib/adyen"
 import { addMonths, addYears } from "date-fns"
+import { getTodayNoonUTC, normalizeToNoonUTC } from "@/lib/date-utils"
 import type { Decimal } from "@prisma/client/runtime/library"
 
 export interface RecurringChargeWithRelations {
@@ -79,7 +80,7 @@ export async function executeRecurringCharge(
           userId: charge.userId,
           reference: `REC-${charge.id.slice(-8)}-${Date.now()}`,
           status: "PAID",
-          dueDate: new Date(),
+          dueDate: getTodayNoonUTC(),
           subtotal: amountDollars,
           total: amountDollars,
           notes: JSON.stringify({ recurringChargeId: charge.id }),
@@ -157,9 +158,11 @@ export async function extendEntitlement(
       select: { id: true, endDate: true, status: true },
     })
     if (athletePass?.endDate) {
-      const newEnd = charge.frequency === "YEARLY"
-        ? addYears(athletePass.endDate, 1)
-        : addMonths(athletePass.endDate, 1)
+      const newEnd = normalizeToNoonUTC(
+        charge.frequency === "YEARLY"
+          ? addYears(athletePass.endDate, 1)
+          : addMonths(athletePass.endDate, 1)
+      )!
       await db.athletePass.update({
         where: { id: charge.athletePassId },
         data: { endDate: newEnd, status: "ACTIVE" },
@@ -171,9 +174,11 @@ export async function extendEntitlement(
       select: { id: true, endDate: true, status: true },
     })
     if (membership?.endDate) {
-      const newEnd = charge.frequency === "YEARLY"
-        ? addYears(membership.endDate, 1)
-        : addMonths(membership.endDate, 1)
+      const newEnd = normalizeToNoonUTC(
+        charge.frequency === "YEARLY"
+          ? addYears(membership.endDate, 1)
+          : addMonths(membership.endDate, 1)
+      )!
       await db.athleteMembership.update({
         where: { id: charge.athleteMembershipId },
         data: { endDate: newEnd, status: "ACTIVE" },

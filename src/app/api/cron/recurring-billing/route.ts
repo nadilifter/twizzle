@@ -2,6 +2,7 @@ import crypto from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { addMonths, addYears } from "date-fns"
 import { db } from "@/lib/db"
+import { normalizeToNoonUTC } from "@/lib/date-utils"
 import {
   executeRecurringCharge,
   extendEntitlement,
@@ -173,11 +174,11 @@ export async function GET(request: NextRequest) {
           // Advance next charge date using date-fns for safe month-edge handling
           let nextDate: Date
           if (charge.frequency === "MONTHLY") {
-            nextDate = addMonths(charge.nextChargeDate, 1)
+            nextDate = normalizeToNoonUTC(addMonths(charge.nextChargeDate, 1))!
           } else if (charge.frequency === "YEARLY") {
-            nextDate = addYears(charge.nextChargeDate, 1)
+            nextDate = normalizeToNoonUTC(addYears(charge.nextChargeDate, 1))!
           } else {
-            nextDate = addMonths(charge.nextChargeDate, 1) // fallback
+            nextDate = normalizeToNoonUTC(addMonths(charge.nextChargeDate, 1))!
           }
 
           await db.recurringCharge.update({

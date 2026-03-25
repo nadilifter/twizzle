@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { addMonths, addYears } from "date-fns";
+import { getTodayNoonUTC, normalizeToNoonUTC } from "@/lib/date-utils";
 
 export interface InvoiceMetadata {
   membershipPurchases: {
@@ -199,10 +200,12 @@ export async function processInvoiceRegistrations(
             program.billingInterval !== "SESSION" &&
             program.recurringPrice
           ) {
-            const now = new Date();
-            const nextDate = program.billingInterval === "YEARLY"
-              ? addYears(now, 1)
-              : addMonths(now, 1);
+            const today = getTodayNoonUTC();
+            const nextDate = normalizeToNoonUTC(
+              program.billingInterval === "YEARLY"
+                ? addYears(today, 1)
+                : addMonths(today, 1)
+            )!;
             await tx.recurringCharge.create({
               data: {
                 organizationId,
@@ -313,7 +316,7 @@ export async function processInvoiceRegistrations(
             fullInstance.group.allowAutoRenew
           ) {
             const nextDate = fullInstance.endDate
-              ?? (fullInstance.billingInterval === "YEARLY" ? addYears(new Date(), 1) : addMonths(new Date(), 1));
+              ?? normalizeToNoonUTC(fullInstance.billingInterval === "YEARLY" ? addYears(getTodayNoonUTC(), 1) : addMonths(getTodayNoonUTC(), 1))!;
             await tx.recurringCharge.create({
               data: {
                 organizationId,
@@ -347,11 +350,13 @@ export async function processInvoiceRegistrations(
       });
 
       if (!existing) {
-        const now = new Date();
+        const today = getTodayNoonUTC();
         const interval = purchase.billingInterval || "MONTHLY";
-        const endDate = interval === "YEARLY"
-          ? addYears(now, 1)
-          : addMonths(now, 1);
+        const endDate = normalizeToNoonUTC(
+          interval === "YEARLY"
+            ? addYears(today, 1)
+            : addMonths(today, 1)
+        )!;
 
         const newAthletePass = await tx.athletePass.create({
           data: {
