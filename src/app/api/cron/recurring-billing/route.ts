@@ -30,7 +30,7 @@ function verifyCronSecret(authHeader: string | null): boolean {
 export async function GET(request: NextRequest) {
   try {
     if (!CRON_SECRET) {
-      console.error("CRON_SECRET is not configured")
+      logger.error("CRON_SECRET is not configured")
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
     }
 
@@ -278,7 +278,7 @@ export async function GET(request: NextRequest) {
       timestamp: now.toISOString(),
     })
   } catch (error) {
-    console.error("Error in recurring-billing cron:", error)
+    logger.error("Error in recurring-billing cron:", { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       {
         success: false,
@@ -290,6 +290,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/** Allow POST for manual triggers (e.g. superadmin tooling); Vercel cron uses GET. */
 export async function POST(request: NextRequest) {
   return GET(request)
 }
