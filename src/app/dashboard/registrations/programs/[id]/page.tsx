@@ -7,6 +7,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { format } from "date-fns";
 import { 
     ArrowLeft, 
+    Building2,
     Calendar, 
     Clock, 
     MapPin, 
@@ -127,6 +128,12 @@ export default function ProgramDetailPage() {
     const [registrationsLoading, setRegistrationsLoading] = useState(false);
     const [attendanceLoading, setAttendanceLoading] = useState<string | null>(null);
 
+    // Org mismatch state
+    const [orgMismatch, setOrgMismatch] = useState<{
+        organizationId: string;
+        organizationName: string | null;
+    } | null>(null);
+
     // Waitlist state
     const [waitlistEntries, setWaitlistEntries] = useState<Array<{
         id: string;
@@ -158,7 +165,17 @@ export default function ProgramDetailPage() {
     const fetchProgram = async () => {
         try {
             const response = await fetch(`/api/programs/${programId}`);
-            if (!response.ok) throw new Error("Failed to fetch program");
+            if (!response.ok) {
+                const data = await response.json().catch(() => null);
+                if (data?.code === "ORG_MISMATCH") {
+                    setOrgMismatch({
+                        organizationId: data.organizationId,
+                        organizationName: data.organizationName,
+                    });
+                    return;
+                }
+                throw new Error("Failed to fetch program");
+            }
             const data = await response.json();
             setProgram(data);
         } catch (error) {
@@ -172,7 +189,11 @@ export default function ProgramDetailPage() {
         setInstancesLoading(true);
         try {
             const response = await fetch(`/api/programs/${programId}/instances`);
-            if (!response.ok) throw new Error("Failed to fetch instances");
+            if (!response.ok) {
+                const data = await response.json().catch(() => null);
+                if (data?.code === "ORG_MISMATCH") return;
+                throw new Error("Failed to fetch instances");
+            }
             const data = await response.json();
             setInstances(data.instances || []);
         } catch (error) {
@@ -208,7 +229,11 @@ export default function ProgramDetailPage() {
         setWaitlistLoading(true);
         try {
             const response = await fetch(`/api/programs/${programId}/waitlist`);
-            if (!response.ok) throw new Error("Failed to fetch waitlist");
+            if (!response.ok) {
+                const data = await response.json().catch(() => null);
+                if (data?.code === "ORG_MISMATCH") return;
+                throw new Error("Failed to fetch waitlist");
+            }
             const data = await response.json();
             setWaitlistEntries(data.waitlisted || []);
         } catch (error) {
@@ -303,6 +328,35 @@ export default function ProgramDetailPage() {
                 <Skeleton className="h-8 w-48" />
                 <Skeleton className="h-32 w-full" />
                 <Skeleton className="h-64 w-full" />
+            </div>
+        );
+    }
+
+    if (orgMismatch) {
+        const switchUrl = `/dashboard/switch-org?orgId=${encodeURIComponent(orgMismatch.organizationId)}&orgName=${encodeURIComponent(orgMismatch.organizationName || "")}&redirect=${encodeURIComponent(`/dashboard/registrations/programs/${programId}`)}`;
+        return (
+            <div className="container mx-auto p-6">
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="rounded-full bg-muted p-4 mb-4">
+                        <Building2 className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h2 className="text-xl font-semibold">Wrong organization</h2>
+                    <p className="text-muted-foreground mt-2 max-w-md">
+                        This program belongs to{" "}
+                        <span className="font-medium text-foreground">
+                            {orgMismatch.organizationName || "another organization"}
+                        </span>
+                        . Switch organizations to view it.
+                    </p>
+                    <div className="flex gap-3 mt-6">
+                        <Button variant="outline" asChild>
+                            <Link href="/dashboard/registrations/programs">Back to Programs</Link>
+                        </Button>
+                        <Button asChild>
+                            <Link href={switchUrl}>Switch to {orgMismatch.organizationName || "Organization"}</Link>
+                        </Button>
+                    </div>
+                </div>
             </div>
         );
     }

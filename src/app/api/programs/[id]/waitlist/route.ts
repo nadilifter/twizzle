@@ -23,6 +23,16 @@ export async function GET(
     });
 
     if (!program) {
+      const existsElsewhere = await db.program.findFirst({
+        where: { id: programId },
+        select: { id: true },
+      });
+      if (existsElsewhere) {
+        return NextResponse.json(
+          { error: "This program belongs to a different organization", code: "ORG_MISMATCH" },
+          { status: 404 }
+        );
+      }
       return NextResponse.json({ error: "Program not found" }, { status: 404 });
     }
 
