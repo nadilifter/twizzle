@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { SiteCalendar } from "./site-calendar";
 
 const getCachedCalendarConfig = unstable_cache(
@@ -65,7 +66,10 @@ export default async function CalendarPage({ params }: { params: { slug: string 
 
     if (!config) return notFound();
 
-    const { levels, coaches } = await getCachedCalendarFilterData(config.organizationId);
+    const [{ levels, coaches }, trainingEnabled] = await Promise.all([
+        getCachedCalendarFilterData(config.organizationId),
+        isFeatureEnabled(config.organizationId, "training"),
+    ]);
 
     return (
         <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
@@ -74,7 +78,7 @@ export default async function CalendarPage({ params }: { params: { slug: string 
                 slug={subdomain}
                 organizationId={config.organizationId}
                 organizationName={config.organization.name}
-                levels={levels}
+                levels={trainingEnabled ? levels : []}
                 coaches={coaches}
             />
         </div>

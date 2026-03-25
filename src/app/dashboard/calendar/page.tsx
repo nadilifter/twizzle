@@ -124,8 +124,7 @@ export default function CalendarPage() {
         ]);
 
         if (facilitiesRes.ok) {
-          const data = await facilitiesRes.json();
-          setFacilities(Array.isArray(data) ? data : []);
+          setFacilities(await facilitiesRes.json());
         }
         if (programsRes.ok) {
           const data = await programsRes.json();
