@@ -75,9 +75,10 @@ export async function generateMonthlyInvoices(): Promise<{
     try {
       const price =
         sub.billingCycle === "YEARLY"
-          ? sub.plan.yearlyPrice ?? sub.plan.monthlyPrice
+          ? (sub.plan.yearlyPrice ?? sub.plan.monthlyPrice)
           : sub.plan.monthlyPrice
-      const amount = Number(price)
+      const amount =
+        sub.billingCycle === "YEARLY" ? Number(price) / 12 : Number(price)
 
       if (amount <= 0) {
         skipped++
@@ -153,6 +154,20 @@ export async function processInvoicePayment(invoiceId: string): Promise<boolean>
     return true
   }
 
+  // Atomically claim this invoice for processing to prevent double-charges
+  // when concurrent processes (cron + manual retry, double-triggered cron) race.
+  const claimed = await db.subscriptionInvoice.updateMany({
+    where: { id: invoiceId, status: { in: ["PENDING", "FAILED"] } },
+    data: { status: "PROCESSING" },
+  })
+  if (claimed.count === 0) {
+    const current = await db.subscriptionInvoice.findUnique({
+      where: { id: invoiceId },
+      select: { status: true },
+    })
+    return current?.status === "PAID"
+  }
+
   const allMethods = invoice.organization.organizationPaymentMethods
   const paymentMethods = allMethods.filter((pm) => !isPaymentMethodExpired(pm))
   const expiredCount = allMethods.length - paymentMethods.length
@@ -179,11 +194,6 @@ export async function processInvoicePayment(invoiceId: string): Promise<boolean>
     logger.error("Adyen not configured, cannot process subscription payment")
     return false
   }
-
-  await db.subscriptionInvoice.update({
-    where: { id: invoiceId },
-    data: { status: "PROCESSING" },
-  })
 
   const shopperReference =
     invoice.organization.subscription?.adyenShopperReference ??

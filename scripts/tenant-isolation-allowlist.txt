@@ -260,5 +260,6 @@ src/app/api/athletes/chat/unread-count/route.ts
 src/app/api/cron/subscription-billing/route.ts
 src/app/api/cron/subscription-dunning/route.ts
 src/app/api/payment-methods/retry-billing/route.ts
+src/app/api/superadmin/subscription-billing/retry/route.ts
 src/app/api/superadmin/subscription-invoices/[id]/action/route.ts
 src/app/api/superadmin/organizations/[id]/grace-period/route.ts

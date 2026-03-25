@@ -1,9 +1,13 @@
+import crypto from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import {
   processDunningEmails,
   deactivateExpiredOrgs,
   recoverAndRetryStaleInvoices,
 } from "@/lib/subscription-billing"
+
+export const dynamic = "force-dynamic"
+export const maxDuration = 300
 
 /**
  * Subscription Dunning Cron
@@ -24,6 +28,13 @@ import {
 
 const CRON_SECRET = process.env.CRON_SECRET
 
+function verifyCronSecret(authHeader: string | null): boolean {
+  if (!CRON_SECRET || !authHeader) return false
+  const expected = `Bearer ${CRON_SECRET}`
+  if (authHeader.length !== expected.length) return false
+  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!CRON_SECRET) {
@@ -31,8 +42,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
     }
 
-    const authHeader = request.headers.get("authorization")
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    if (!verifyCronSecret(request.headers.get("authorization"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
