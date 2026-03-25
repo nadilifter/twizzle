@@ -35,12 +35,12 @@ export default function FeedbackLayout({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto max-w-6xl px-6 py-3 flex items-center justify-between">
           <UplifterLogo width={90} height={24} className="h-6" />
           <AnimatedThemeToggler />
         </div>
       </header>
-      <main className="container mx-auto max-w-5xl p-4">
+      <main className="mx-auto max-w-6xl px-6 py-8">
         {children}
       </main>
     </div>

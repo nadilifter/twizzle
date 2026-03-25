@@ -259,63 +259,66 @@ export function FeedbackContent() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] p-4 md:p-6 space-y-6 overflow-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0">
-        <div>
+    <div className="space-y-8">
+      {/* Hero */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Product Feedback</h1>
-          <p className="text-muted-foreground">
-            Help us improve by voting on features or suggesting new ones.
+          <p className="text-muted-foreground text-base">
+            Vote on features you want, or suggest something new.
           </p>
         </div>
-        <Button onClick={handleSubmitClick}>
+        <Button onClick={handleSubmitClick} size="lg" className="shrink-0">
           <Plus className="mr-2 h-4 w-4" />
           Submit Feedback
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.name} value={cat.name}>
-                  {cat.name} ({cat.count})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="votes">Most Voted</SelectItem>
-            <SelectItem value="newest">Newest</SelectItem>
-            <SelectItem value="targetDate">Target Date</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <Tabs defaultValue="requests" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="shrink-0 w-fit">
-            <TabsTrigger value="requests">Feature Requests</TabsTrigger>
-            <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
-          </TabsList>
-          <TabsContent value="requests" className="flex-1 mt-4 min-h-0">
+        <Tabs defaultValue="requests" className="w-full">
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
+            <TabsList className="w-fit">
+              <TabsTrigger value="requests">Feature Requests</TabsTrigger>
+              <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
+            </TabsList>
+
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-[160px] h-9 text-sm">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.name} value={cat.name}>
+                      {cat.name} ({cat.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[140px] h-9 text-sm">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="votes">Most Voted</SelectItem>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="targetDate">Target Date</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Content */}
+          <TabsContent value="requests" className="mt-6">
             {features.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="flex flex-col items-center justify-center py-24 text-center">
                 <p className="text-muted-foreground">No features found</p>
                 {selectedCategory !== "all" && (
                   <Button 
@@ -336,7 +339,7 @@ export function FeedbackContent() {
               />
             )}
           </TabsContent>
-          <TabsContent value="roadmap" className="flex-1 mt-4 min-h-0">
+          <TabsContent value="roadmap" className="mt-6">
             <RoadmapBoard 
               features={features} 
               onSelect={handleSelectFeature}
