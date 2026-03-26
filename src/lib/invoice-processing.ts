@@ -75,6 +75,27 @@ export async function processInvoiceRegistrations(
     for (const reg of metadata.competitionRegistrations) {
       if (!reg.competitionId || !reg.athleteId || !reg.categoryIds?.length) continue;
 
+      // Lock the Competition row and re-check capacity to prevent concurrent over-enrollment
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM "Competition" WHERE id = ${reg.competitionId} FOR UPDATE`
+      );
+      const comp = await tx.competition.findUnique({
+        where: { id: reg.competitionId },
+        select: { capacity: true, hasCapacityRestriction: true },
+      });
+      if (comp?.hasCapacityRestriction && comp.capacity != null) {
+        const currentCount = await tx.competitionEntry.count({
+          where: {
+            competitionId: reg.competitionId,
+            status: { notIn: ["WITHDRAWN", "REJECTED"] },
+          },
+        });
+        if (currentCount >= comp.capacity) {
+          console.warn(`Competition ${reg.competitionId} at capacity, skipping entries for athlete ${reg.athleteId}`);
+          continue;
+        }
+      }
+
       for (const categoryId of reg.categoryIds) {
         const rawSeed = (reg.seedMarks?.[categoryId] || {}) as Record<string, unknown>;
         const { seedData, hasSeed } = pickSeedFields(rawSeed);

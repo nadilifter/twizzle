@@ -25,6 +25,7 @@ interface RequiredMembership {
   name: string
   price: number
   billingInterval: string
+  earlyAccessCode?: string | null
   group: {
     id: string
     name: string

@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { programId, organizationSlug, sessionToken: existingToken, earlyAccessCode } = body
+    const { programId, competitionId, organizationSlug, sessionToken: existingToken, earlyAccessCode } = body
 
     if (!organizationSlug) {
       return NextResponse.json(
@@ -58,12 +58,43 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check registration window if a specific competition is targeted
+    if (competitionId) {
+      const competition = await db.competition.findFirst({
+        where: { id: competitionId, organizationId: organization.id },
+        select: {
+          name: true,
+          registrationOpen: true,
+          registrationStartDate: true,
+          registrationStartTime: true,
+          registrationEndDate: true,
+          registrationEndTime: true,
+          earlyAccessCode: true,
+        },
+      })
+
+      if (competition) {
+        const status = getRegistrationStatus(competition)
+        if (status !== "open") {
+          const hasValidCode = earlyAccessCode && competition.earlyAccessCode && earlyAccessCode === competition.earlyAccessCode
+          if (!hasValidCode) {
+            const reason = status === "closed" ? "Registration has closed" : "Registration is not yet open"
+            return NextResponse.json(
+              { error: `${reason} for "${competition.name}".` },
+              { status: 400 }
+            )
+          }
+        }
+      }
+    }
+
     // Find the queue config (program-specific first, then global fallback)
-    let queueConfig = programId
+    const entityId = programId || competitionId
+    let queueConfig = entityId
       ? await db.registrationQueueConfig.findFirst({
           where: {
             organizationId: organization.id,
-            programId,
+            programId: entityId,
             isEnabled: true,
           },
         })

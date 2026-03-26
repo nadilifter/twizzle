@@ -654,6 +654,22 @@ export async function POST(
           );
         }
 
+        // Capacity pre-check (authoritative check with row-level locking happens in processInvoiceRegistrations)
+        if (competition.hasCapacityRestriction && competition.capacity != null) {
+          const currentEntries = await db.competitionEntry.count({
+            where: {
+              competitionId: compId,
+              status: { notIn: ["WITHDRAWN", "REJECTED"] },
+            },
+          });
+          if (currentEntries >= competition.capacity) {
+            return NextResponse.json(
+              { error: `Competition "${competition.name}" has reached its capacity limit.` },
+              { status: 400 }
+            );
+          }
+        }
+
         const compRegStatus = getRegistrationStatus(competition);
         if (compRegStatus !== "open") {
           const code = item.details?.earlyAccessCode;

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { subDays } from "date-fns";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { resolvePublicRequest } from "@/lib/public-api";
+import { getRegistrationStatus } from "@/lib/registration-utils";
 
 /**
  * GET /api/public/memberships?organizationId=xxx
@@ -78,6 +79,12 @@ export async function GET(request: NextRequest) {
             || effectiveCapacity == null
             || instance._count.athleteMemberships < effectiveCapacity;
 
+          // Check registration window (new fields take precedence over legacy purchase window)
+          if (instance.registrationStartDate || instance.registrationEndDate || !instance.registrationOpen) {
+            const regStatus = getRegistrationStatus(instance);
+            if (regStatus === "closed") return false;
+          }
+
           return withinWindow && hasCapacity;
         });
 
@@ -106,16 +113,23 @@ export async function GET(request: NextRequest) {
           waiverRequirements: group.waiverRequirements,
 
           // Purchasable instances (with counts for capacity display)
-          instances: purchasableInstances.map((inst) => ({
-            id: inst.id,
-            name: inst.name,
-            price: inst.price,
-            billingInterval: inst.billingInterval,
-            startDate: inst.startDate,
-            endDate: inst.endDate,
-            capacity: inst.capacity ?? group.capacity,
-            enrolled: inst._count.athleteMemberships,
-          })),
+          instances: purchasableInstances.map((inst) => {
+            const regStatus = (inst.registrationStartDate || inst.registrationEndDate || !inst.registrationOpen)
+              ? getRegistrationStatus(inst)
+              : "open";
+            return {
+              id: inst.id,
+              name: inst.name,
+              price: inst.price,
+              billingInterval: inst.billingInterval,
+              startDate: inst.startDate,
+              endDate: inst.endDate,
+              capacity: inst.capacity ?? group.capacity,
+              enrolled: inst._count.athleteMemberships,
+              registrationStatus: regStatus,
+              registrationStartDate: inst.registrationStartDate,
+            };
+          }),
         };
       })
       .filter(Boolean);

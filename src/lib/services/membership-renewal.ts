@@ -236,6 +236,20 @@ export async function processAthleteRenewals() {
 
     if (existingNext) continue;
 
+    // Check capacity before renewing to prevent over-enrollment
+    if (membership.instance.group.hasCapacityRestriction) {
+      const effectiveCapacity = nextInstance.capacity ?? membership.instance.group.capacity;
+      if (effectiveCapacity != null) {
+        const currentCount = await db.athleteMembership.count({
+          where: { membershipInstanceId: nextInstance.id, status: "ACTIVE" },
+        });
+        if (currentCount >= effectiveCapacity) {
+          console.warn(`Membership instance ${nextInstance.id} at capacity, skipping renewal for athlete ${membership.athleteId}`);
+          continue;
+        }
+      }
+    }
+
     await db.athleteMembership.create({
       data: {
         athleteId: membership.athleteId,
