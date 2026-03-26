@@ -230,7 +230,7 @@ export async function POST(
         .map((item: CartItem) => item.details?.programId || item.referenceId)
         .filter(Boolean);
 
-      const [programsWithMedical, programsWithFiles, programsWithMembership] = await Promise.all([
+      const [programsWithMedical, programsWithFiles, programsWithMembership, programsForRegCheck] = await Promise.all([
         db.program.findMany({
           where: { id: { in: programIds }, organizationId, hasMedicalRequirement: true },
           select: { id: true },
@@ -243,7 +243,41 @@ export async function POST(
           where: { id: { in: programIds }, organizationId, hasMembershipRestriction: true },
           select: { id: true, name: true, requiredMemberships: { select: { id: true } } },
         }),
+        db.program.findMany({
+          where: { id: { in: programIds }, organizationId },
+          select: {
+            id: true,
+            name: true,
+            registrationOpen: true,
+            registrationStartDate: true,
+            registrationStartTime: true,
+            registrationEndDate: true,
+            registrationEndTime: true,
+            earlyAccessCode: true,
+          },
+        }),
       ]);
+
+      // Registration window check — fail fast before validating requirements
+      for (const prog of programsForRegCheck) {
+        const status = getRegistrationStatus(prog);
+        if (status === "open") continue;
+
+        const cartItemsForProgram = programItems.filter(
+          (item: CartItem) => (item.details?.programId || item.referenceId) === prog.id
+        );
+        for (const item of cartItemsForProgram) {
+          const code = item.details?.earlyAccessCode;
+          const hasValidCode = code && prog.earlyAccessCode && code === prog.earlyAccessCode;
+          if (!hasValidCode) {
+            const reason = status === "closed" ? "Registration has closed" : "Registration is not yet open";
+            return NextResponse.json(
+              { error: `${reason} for "${prog.name}".` },
+              { status: 400 }
+            );
+          }
+        }
+      }
 
       // Medical info check (already batched)
       if (programsWithMedical.length > 0) {
@@ -307,41 +341,6 @@ export async function POST(
                 { status: 400 }
               );
             }
-          }
-        }
-      }
-
-      // Registration window check — reject if registration is closed or not yet open
-      const programsForRegCheck = await db.program.findMany({
-        where: { id: { in: programIds }, organizationId },
-        select: {
-          id: true,
-          name: true,
-          registrationOpen: true,
-          registrationStartDate: true,
-          registrationStartTime: true,
-          registrationEndDate: true,
-          registrationEndTime: true,
-          earlyAccessCode: true,
-        },
-      });
-
-      for (const prog of programsForRegCheck) {
-        const status = getRegistrationStatus(prog);
-        if (status === "open") continue;
-
-        const cartItemsForProgram = programItems.filter(
-          (item: CartItem) => (item.details?.programId || item.referenceId) === prog.id
-        );
-        for (const item of cartItemsForProgram) {
-          const code = item.details?.earlyAccessCode;
-          const hasValidCode = code && prog.earlyAccessCode && code === prog.earlyAccessCode;
-          if (!hasValidCode) {
-            const reason = status === "closed" ? "Registration has closed" : "Registration is not yet open";
-            return NextResponse.json(
-              { error: `${reason} for "${prog.name}".` },
-              { status: 400 }
-            );
           }
         }
       }
