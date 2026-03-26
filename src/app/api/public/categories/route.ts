@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { name: "asc" },
+      orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
     });
 
     return NextResponse.json({ data: categories });

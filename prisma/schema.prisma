@@ -5010,6 +5010,7 @@ model Category {
   name           String
   description    String?
   imageUrl       String?
+  displayOrder   Int      @default(0)
   organizationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

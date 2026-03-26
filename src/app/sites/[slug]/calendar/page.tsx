@@ -76,7 +76,7 @@ const getCachedCalendarCategories = unstable_cache(
         return db.category.findMany({
             where: { organizationId },
             select: { id: true, name: true },
-            orderBy: { name: "asc" },
+            orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
         });
     },
     ["site-calendar-categories"],

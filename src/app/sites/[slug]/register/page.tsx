@@ -10,7 +10,7 @@ const getCachedRegisterCategories = unstable_cache(
         return db.category.findMany({
             where: { organizationId },
             select: { id: true, name: true, description: true },
-            orderBy: { name: "asc" },
+            orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
         });
     },
     ["site-categories-register"],

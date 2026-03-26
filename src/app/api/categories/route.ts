@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { name: "asc" },
+      orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
     });
 
     return NextResponse.json({ data: categories });
@@ -73,11 +73,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createCategorySchema.parse(body);
 
+    const maxOrder = await scopedDb.category.aggregate({
+      _max: { displayOrder: true },
+    });
+    const nextOrder = (maxOrder._max.displayOrder ?? -1) + 1;
+
     const category = await scopedDb.category.create({
       data: {
         name: validatedData.name,
         description: validatedData.description,
         imageUrl: validatedData.imageUrl,
+        displayOrder: nextOrder,
         organizationId: session.user.organizationId!,
       },
       include: {

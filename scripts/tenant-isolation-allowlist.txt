@@ -48,6 +48,7 @@ src/app/api/email/campaigns/route.ts
 src/app/api/lesson-plans/route.ts
 src/app/api/levels/route.ts
 src/app/api/levels/reorder/route.ts
+src/app/api/categories/reorder/route.ts
 src/app/api/skills/route.ts
 src/app/api/achievements/route.ts
 src/app/api/achievements/[id]/route.ts
