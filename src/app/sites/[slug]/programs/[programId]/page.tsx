@@ -213,9 +213,9 @@ export default async function ProgramDetailPage({
         })),
         waiverRequirements: program.waiverRequirements,
         registrationOpen: program.registrationOpen,
-        registrationStartDate: program.registrationStartDate?.toISOString() || null,
+        registrationStartDate: program.registrationStartDate ? new Date(program.registrationStartDate).toISOString() : null,
         registrationStartTime: program.registrationStartTime,
-        registrationEndDate: program.registrationEndDate?.toISOString() || null,
+        registrationEndDate: program.registrationEndDate ? new Date(program.registrationEndDate).toISOString() : null,
         registrationEndTime: program.registrationEndTime,
     };
 
