@@ -55,13 +55,20 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
+    const seasonId = searchParams.get("seasonId")
 
     const competitions = await db.competition.findMany({
       where: {
         organizationId,
         ...(status ? { status: status as any } : {}),
+        ...(seasonId ? { seasonId } : {}),
       },
-      include: competitionInclude,
+      include: {
+        ...competitionInclude,
+        season: {
+          select: { id: true, name: true, color: true, startDate: true, endDate: true },
+        },
+      },
       orderBy: { startDate: "desc" },
     })
 
@@ -150,6 +157,7 @@ const createCompetitionSchema = z.object({
   scheduledGoLiveTime: z.string().optional(),
 
   glCodeId: z.string().optional().nullable(),
+  seasonId: z.string().optional().nullable(),
 })
 
 /**
@@ -276,6 +284,7 @@ export async function POST(request: NextRequest) {
         fileRequirementConfig: data.fileRequirementConfig ?? undefined,
 
         glCodeId: data.glCodeId ?? undefined,
+        seasonId: data.seasonId ?? undefined,
 
         // Pricing
         pricingMode: data.pricingMode,

@@ -43,6 +43,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner"
 import { GLCodeSelector } from "@/components/gl-code-selector"
 import { useFeatures } from "@/components/feature-context"
+import { useSeasons } from "@/hooks/use-seasons"
+import { SeasonDateWarning } from "@/components/season-date-warning"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import type { BillingInterval, CreateMembershipGroupPayload, GenderDeclaration, MembershipInstanceStatus } from "@/types/memberships"
@@ -72,6 +74,9 @@ interface PendingInstance {
 }
 
 interface MembershipFormData {
+  // Season
+  seasonId: string | null
+
   // Step 1: Details
   name: string
   description: string
@@ -105,6 +110,7 @@ interface MembershipFormData {
 }
 
 const { useStepper } = defineStepper(
+  { id: "season", title: "Season" },
   { id: "details", title: "Details" },
   { id: "pricing", title: "Pricing" },
   { id: "requirements", title: "Requirements" },
@@ -115,6 +121,9 @@ export function MembershipStepper() {
   const router = useRouter()
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
+  const seasonsEnabled = isFeatureEnabled("seasons")
+
+  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
 
   const [levels, setLevels] = React.useState<Level[]>([])
   const [loadingLevels, setLoadingLevels] = React.useState(true)
@@ -122,6 +131,7 @@ export function MembershipStepper() {
   const [loadingWaivers, setLoadingWaivers] = React.useState(true)
 
   const [formData, setFormData] = React.useState<MembershipFormData>({
+    seasonId: null,
     name: "",
     description: "",
     programTypes: "",
@@ -149,11 +159,30 @@ export function MembershipStepper() {
     waiverRequirementIds: [],
   })
 
+  const showSeasonStep = seasonsEnabled && seasons.length > 0
+  const selectedSeason = React.useMemo(() => {
+    if (!formData.seasonId) return null
+    return seasons.find((s) => s.id === formData.seasonId) ?? null
+  }, [formData.seasonId, seasons])
+
+  const visibleStepIds = React.useMemo(() => {
+    const ids: string[] = []
+    if (showSeasonStep) ids.push("season")
+    ids.push("details", "pricing", "requirements", "instances")
+    return ids
+  }, [showSeasonStep])
+
   const [pendingInstances, setPendingInstances] = React.useState<PendingInstance[]>([])
   const [isAddingInstance, setIsAddingInstance] = React.useState(false)
   const [newInstance, setNewInstance] = React.useState<PendingInstance>(() => makeEmptyInstance())
   const [isSaving, setIsSaving] = React.useState(false)
   const stepper = useStepper()
+
+  React.useEffect(() => {
+    if (!visibleStepIds.includes(stepper.state.current.data.id)) {
+      stepper.navigation.goTo(visibleStepIds[0] as "details")
+    }
+  }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation])
 
   function makeEmptyInstance(): PendingInstance {
     return {
@@ -272,12 +301,18 @@ export function MembershipStepper() {
 
   const handleNext = () => {
     if (validateStep(stepper.state.current.data.id)) {
-      stepper.navigation.next()
+      const nextIdx = currentVisibleIndex + 1
+      if (nextIdx < visibleSteps.length) {
+        stepper.navigation.goTo(visibleSteps[nextIdx].id)
+      }
     }
   }
 
   const handlePrev = () => {
-    stepper.navigation.prev()
+    const prevIdx = currentVisibleIndex - 1
+    if (prevIdx >= 0) {
+      stepper.navigation.goTo(visibleSteps[prevIdx].id)
+    }
   }
 
   const handleAddInstance = () => {
@@ -354,6 +389,7 @@ export function MembershipStepper() {
         hasMedicalRequirement: formData.hasMedicalRequirement,
         hasLevelRestriction: formData.hasLevelRestriction,
         hasWaiverRestriction: formData.hasWaiverRestriction,
+        seasonId: formData.seasonId,
       }
 
       // 1. Create the membership group
@@ -431,14 +467,16 @@ export function MembershipStepper() {
     }
   }
 
+  const visibleSteps = stepper.state.all.filter(s => visibleStepIds.includes(s.id))
+  const currentVisibleIndex = visibleSteps.findIndex(s => s.id === stepper.state.current.data.id)
   const currentIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id)
 
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="flex flex-col gap-4">
         <StepperNav className="mb-4">
-          {stepper.state.all.map((step, index) => {
-            const status = getStepStatus(index, currentIndex)
+          {visibleSteps.map((step, index) => {
+            const status = getStepStatus(index, currentVisibleIndex)
             return (
               <React.Fragment key={step.id}>
                 <StepperItem status={status}>
@@ -446,18 +484,62 @@ export function MembershipStepper() {
                     status={status}
                     step={index + 1}
                     onClick={() => {
-                      if (index < currentIndex) stepper.navigation.goTo(step.id)
+                      if (index < currentVisibleIndex) stepper.navigation.goTo(step.id)
                     }}
                   />
                   <StepperTitle status={status} className="hidden sm:block">{step.title}</StepperTitle>
                 </StepperItem>
-                {index < stepper.state.all.length - 1 && (
+                {index < visibleSteps.length - 1 && (
                   <StepperSeparator status={status} className="hidden sm:block" />
                 )}
               </React.Fragment>
             )
           })}
         </StepperNav>
+
+        {/* Season Step */}
+        {stepper.state.current.data.id === "season" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Season</CardTitle>
+              <CardDescription>Optionally assign this membership to a season</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Season</Label>
+                <Select
+                  value={formData.seasonId || "none"}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, seasonId: val === "none" ? null : val }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select a season" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {seasons.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                          {s.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedSeason && (
+                <div className="rounded-lg border p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedSeason.color }} />
+                    <span className="font-medium">{selectedSeason.name}</span>
+                    <Badge variant="outline" className="text-xs">{selectedSeason.status}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(selectedSeason.startDate), "MMM d, yyyy")} – {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Step 1: Details */}
         {stepper.state.current.data.id === "details" && (
@@ -1133,6 +1215,32 @@ export function MembershipStepper() {
                         </div>
                       </div>
 
+                      {selectedSeason && (
+                        <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedSeason.color }} />
+                            <span className="font-medium">{selectedSeason.name}</span>
+                            <span className="text-muted-foreground">
+                              {format(new Date(selectedSeason.startDate), "MMM d")} – {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setNewInstance(prev => ({
+                                ...prev,
+                                startDate: new Date(selectedSeason.startDate),
+                                endDate: new Date(selectedSeason.endDate),
+                              }))
+                            }}
+                          >
+                            Use Season Dates
+                          </Button>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Start Date *</Label>
@@ -1305,7 +1413,7 @@ export function MembershipStepper() {
           </Button>
 
           <div className="flex items-center gap-2">
-            {!stepper.state.isFirst && (
+            {currentVisibleIndex > 0 && (
               <Button
                 type="button"
                 variant="outline"
@@ -1316,7 +1424,7 @@ export function MembershipStepper() {
               </Button>
             )}
 
-            {!stepper.state.isLast ? (
+            {currentVisibleIndex < visibleSteps.length - 1 ? (
               <Button type="button" onClick={handleNext}>
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />

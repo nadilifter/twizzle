@@ -47,16 +47,28 @@ import { Separator } from "@/components/ui/separator"
 import { useMemberships } from "@/hooks/use-memberships"
 import { useMembershipGroup } from "@/hooks/use-membership-group"
 import { useFeatures } from "@/components/feature-context"
+import { useSeasons } from "@/hooks/use-seasons"
 import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import { toast } from "sonner"
 import type { BillingInterval, MembershipInstanceStatus } from "@/types/memberships"
 
 export default function MembershipsPage() {
-  const { memberships, isLoading, error, deleteMembershipGroup } = useMemberships()
+  const { memberships, isLoading, error, deleteMembershipGroup, fetchMemberships } = useMemberships()
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
+  const seasonsEnabled = isFeatureEnabled("seasons")
+  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
+  const [seasonFilter, setSeasonFilter] = React.useState<string>("all")
   
   const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    if (seasonFilter && seasonFilter !== "all") {
+      fetchMemberships({ seasonId: seasonFilter })
+    } else {
+      fetchMemberships({})
+    }
+  }, [seasonFilter, fetchMemberships])
 
   const handleDeleteGroup = async (id: string) => {
     if (confirm("Are you sure? This will delete all instances within this group.")) {
@@ -81,6 +93,27 @@ export default function MembershipsPage() {
           </Button>
         }
       />
+
+      {seasonsEnabled && seasons.length > 0 && (
+        <div className="flex items-center gap-4">
+          <Select value={seasonFilter} onValueChange={setSeasonFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All Seasons" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Seasons</SelectItem>
+              {seasons.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                    {s.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {isLoading && memberships.length === 0 && (
         <div className="flex items-center justify-center h-64">
@@ -136,6 +169,15 @@ export default function MembershipsPage() {
                   <Badge variant={group.isRecurring ? "default" : "secondary"}>
                     {group.isRecurring ? "Recurring" : "One-time"}
                   </Badge>
+                  {group.season && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs"
+                      style={{ borderColor: group.season.color, color: group.season.color }}
+                    >
+                      {group.season.name}
+                    </Badge>
+                  )}
                   {group.defaultPrice != null && (
                     <Badge variant="outline">
                       ${Number(group.defaultPrice).toFixed(2)} / {group.defaultBillingInterval.toLowerCase().replace("_", "-")}

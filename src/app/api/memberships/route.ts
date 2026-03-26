@@ -43,6 +43,7 @@ const createMembershipGroupSchema = z.object({
   maxAge: z.number().int().min(0).max(100).nullable().optional(),
 
   glCodeId: z.string().optional().nullable(),
+  seasonId: z.string().optional().nullable(),
 });
 
 // GET /api/memberships - List Membership Groups
@@ -61,10 +62,16 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
     const includeInstances = searchParams.get("include") === "instances";
     const includeRestrictions = searchParams.get("include")?.includes("restrictions");
+    const seasonId = searchParams.get("seasonId");
     const scopedDb = getScopedDb(session.user.organizationId);
+
+    const where = {
+      ...(seasonId && { seasonId }),
+    };
 
     const [groups, total] = await Promise.all([
       scopedDb.membershipGroup.findMany({
+        where,
         include: {
           _count: {
             select: {
@@ -83,12 +90,15 @@ export async function GET(request: NextRequest) {
           waiverRequirements: includeRestrictions ? {
             include: { waiver: { select: { id: true, title: true, status: true } } },
           } : undefined,
+          season: {
+            select: { id: true, name: true, color: true, startDate: true, endDate: true },
+          },
         },
         orderBy: { name: "asc" },
         take: limit,
         skip: offset,
       }),
-      scopedDb.membershipGroup.count(),
+      scopedDb.membershipGroup.count({ where }),
     ]);
 
     return NextResponse.json({
@@ -204,6 +214,7 @@ export async function POST(request: NextRequest) {
           minAge: validatedData.minAge ?? null,
           maxAge: validatedData.maxAge ?? null,
           glCodeId: validatedData.glCodeId ?? null,
+          seasonId: validatedData.seasonId ?? null,
         },
       });
 

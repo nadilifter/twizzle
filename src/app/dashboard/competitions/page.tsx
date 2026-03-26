@@ -36,6 +36,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useFeatures } from "@/components/feature-context"
+import { useSeasons } from "@/hooks/use-seasons"
 import { CompetitionConfiguration } from "./competition-configuration"
 import {
   COMPETITION_TYPE_LABELS,
@@ -75,22 +84,29 @@ interface Competition {
   facility?: { id: string; name: string; city?: string | null; stateProvince?: string | null } | null
   _count?: { entries: number; results: number; teams: number }
   categories?: any[]
+  season?: { id: string; name: string; color: string; startDate: string; endDate: string } | null
 }
 
 export default function CompetitionsPage() {
+  const { isFeatureEnabled } = useFeatures()
+  const seasonsEnabled = isFeatureEnabled("seasons")
+  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
   const [competitions, setCompetitions] = React.useState<Competition[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [seasonFilter, setSeasonFilter] = React.useState<string>("all")
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [isEditOpen, setIsEditOpen] = React.useState(false)
   const [selectedCompetition, setSelectedCompetition] = React.useState<Competition | null>(null)
 
-  const fetchCompetitions = React.useCallback(async () => {
+  const fetchCompetitions = React.useCallback(async (seasonId?: string) => {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch("/api/competitions")
+      const url = new URL("/api/competitions", window.location.origin)
+      if (seasonId) url.searchParams.set("seasonId", seasonId)
+      const response = await fetch(url.toString())
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || "Failed to fetch competitions")
@@ -106,8 +122,8 @@ export default function CompetitionsPage() {
   }, [])
 
   React.useEffect(() => {
-    fetchCompetitions()
-  }, [fetchCompetitions])
+    fetchCompetitions(seasonFilter !== "all" ? seasonFilter : undefined)
+  }, [fetchCompetitions, seasonFilter])
 
   const handleDelete = async (competition: Competition) => {
     setDeletingId(competition.id)
@@ -175,6 +191,24 @@ export default function CompetitionsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        {seasonsEnabled && seasons.length > 0 && (
+          <Select value={seasonFilter} onValueChange={setSeasonFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All Seasons" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Seasons</SelectItem>
+              {seasons.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                    {s.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {isLoading && competitions.length === 0 && (
@@ -258,6 +292,15 @@ export default function CompetitionsPage() {
                           className="w-3 h-3 rounded-full shrink-0"
                           style={{ backgroundColor: competition.color || "#3b82f6" }}
                         />
+                        {competition.season && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0"
+                            style={{ borderColor: competition.season.color, color: competition.season.color }}
+                          >
+                            {competition.season.name}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>

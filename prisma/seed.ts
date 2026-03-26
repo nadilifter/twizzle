@@ -79,7 +79,7 @@ async function main() {
       featureToggles: {
         events: false, sms: false, emailCampaigns: false,
         customDomains: false, accountingIntegrations: false, training: false, store: false, memberships: false, waitlists: false, passes: false,
-        liveSupport: false,
+        seasons: false, liveSupport: false,
       },
     },
     create: {
@@ -94,7 +94,7 @@ async function main() {
       featureToggles: {
         events: false, sms: false, emailCampaigns: false,
         customDomains: false, accountingIntegrations: false, training: false, store: false, memberships: false, waitlists: false, passes: false,
-        liveSupport: false,
+        seasons: false, liveSupport: false,
       },
       isPopular: false, displayOrder: 0, isActive: true, isPublic: true,
     },
@@ -109,7 +109,7 @@ async function main() {
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
         customDomains: false, accountingIntegrations: false, training: false, store: true, memberships: false, waitlists: true, passes: false,
-        liveSupport: false,
+        seasons: false, liveSupport: false,
       },
     },
     create: {
@@ -124,7 +124,7 @@ async function main() {
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
         customDomains: false, accountingIntegrations: false, training: false, store: true, memberships: false, waitlists: true, passes: false,
-        liveSupport: false,
+        seasons: false, liveSupport: false,
       },
       isPopular: false, displayOrder: 1, isActive: true, isPublic: true,
     },
@@ -139,7 +139,7 @@ async function main() {
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
         customDomains: true, accountingIntegrations: false, training: true, store: true, memberships: false, waitlists: true, passes: true,
-        liveSupport: true,
+        seasons: false, liveSupport: true,
       },
     },
     create: {
@@ -154,7 +154,7 @@ async function main() {
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
         customDomains: true, accountingIntegrations: false, training: true, store: true, memberships: false, waitlists: true, passes: true,
-        liveSupport: true,
+        seasons: false, liveSupport: true,
       },
       isPopular: true, displayOrder: 2, isActive: true, isPublic: true,
     },
@@ -169,7 +169,7 @@ async function main() {
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
         customDomains: true, accountingIntegrations: true, training: true, store: true, memberships: false, waitlists: true, passes: true,
-        liveSupport: true,
+        seasons: false, liveSupport: true,
       },
     },
     create: {
@@ -184,7 +184,7 @@ async function main() {
       featureToggles: {
         events: true, sms: true, emailCampaigns: true,
         customDomains: true, accountingIntegrations: true, training: true, store: true, memberships: false, waitlists: true, passes: true,
-        liveSupport: true,
+        seasons: false, liveSupport: true,
       },
       isPopular: false, displayOrder: 3, isActive: true, isPublic: true,
     },

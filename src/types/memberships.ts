@@ -42,6 +42,16 @@ export interface MembershipGroup {
   minAge: number | null;
   maxAge: number | null;
 
+  // Season
+  seasonId?: string | null;
+  season?: {
+    id: string;
+    name: string;
+    color: string;
+    startDate: string;
+    endDate: string;
+  } | null;
+
   createdAt: string;
   updatedAt: string;
   instances?: MembershipInstance[];
@@ -162,6 +172,9 @@ export interface CreateMembershipGroupPayload {
 
   // GL Code
   glCodeId?: string | null;
+
+  // Season
+  seasonId?: string | null;
 }
 
 export interface UpdateMembershipGroupPayload extends Partial<CreateMembershipGroupPayload> {}
@@ -181,6 +194,7 @@ export interface CreateMembershipInstancePayload {
 }
 
 export interface MembershipsQueryParams {
+  seasonId?: string;
   limit?: number;
   offset?: number;
   include?: string;

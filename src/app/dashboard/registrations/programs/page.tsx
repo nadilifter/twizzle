@@ -23,7 +23,16 @@ import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { usePrograms } from "@/hooks/use-programs"
+import { useSeasons } from "@/hooks/use-seasons"
+import { useFeatures } from "@/components/feature-context"
 import { formatRRuleDays } from "@/lib/rrule-utils"
 import { ProgramConfiguration } from "./program-configuration"
 
@@ -42,17 +51,24 @@ function formatPrice(price: number | string | null | undefined): string {
 export default function ProgramsPage() {
   const router = useRouter()
   const { programs, isLoading, error, fetchPrograms } = usePrograms()
+  const { isFeatureEnabled } = useFeatures()
+  const seasonsEnabled = isFeatureEnabled("seasons")
+  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [seasonFilter, setSeasonFilter] = React.useState<string>("all")
   const [isConfigOpen, setIsConfigOpen] = React.useState(false)
   const [selectedProgram, setSelectedProgram] = React.useState<any>(null)
 
-  // Debounced search
+  // Debounced search + season filter
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      fetchPrograms({ search: searchTerm })
+      fetchPrograms({
+        search: searchTerm,
+        ...(seasonFilter && seasonFilter !== "all" ? { seasonId: seasonFilter } : {}),
+      })
     }, 500)
     return () => clearTimeout(timer)
-  }, [searchTerm, fetchPrograms])
+  }, [searchTerm, seasonFilter, fetchPrograms])
 
   const handleQuickConfigure = (program: any) => {
     setSelectedProgram(program)
@@ -87,6 +103,24 @@ export default function ProgramsPage() {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
+        {seasonsEnabled && seasons.length > 0 && (
+          <Select value={seasonFilter} onValueChange={setSeasonFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All Seasons" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Seasons</SelectItem>
+              {seasons.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                    {s.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {isLoading && programs.length === 0 && (
@@ -171,6 +205,15 @@ export default function ProgramsPage() {
                       <Badge variant={program.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px]">
                         {program.status}
                       </Badge>
+                      {program.season && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0"
+                          style={{ borderColor: program.season.color, color: program.season.color }}
+                        >
+                          {program.season.name}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </CardHeader>

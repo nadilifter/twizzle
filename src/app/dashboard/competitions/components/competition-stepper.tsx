@@ -50,6 +50,8 @@ import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-co
 import type { FileRequirementConfig } from "@/types/file-requirements"
 import { useFeatures } from "@/components/feature-context"
 import { useMemberships } from "@/hooks/use-memberships"
+import { useSeasons } from "@/hooks/use-seasons"
+import { SeasonDateWarning } from "@/components/season-date-warning"
 import { cn } from "@/lib/utils"
 import { CopySettingsDialog } from "@/components/copy-settings-dialog"
 import { ColorSelector } from "@/components/color-selector"
@@ -161,6 +163,9 @@ const EVENT_GROUP_LABELS: Record<string, string> = {
 }
 
 interface CompetitionFormData {
+  // Season (optional first step)
+  seasonId: string | null
+
   // Step 1: General
   name: string
   color: string
@@ -223,6 +228,7 @@ interface CompetitionStepperProps {
 
 
 const { useStepper } = defineStepper(
+  { id: "season", title: "Season" },
   { id: "general", title: "General" },
   { id: "categories", title: "Categories" },
   { id: "restrictions", title: "Restrictions" },
@@ -237,8 +243,10 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
   const membershipsEnabled = isFeatureEnabled("memberships")
+  const seasonsEnabled = isFeatureEnabled("seasons")
 
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
+  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
 
   // Levels state
   const [levels, setLevels] = React.useState<Level[]>([])
@@ -271,6 +279,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
   // Form state
   const [formData, setFormData] = React.useState<CompetitionFormData>({
+    // Season
+    seasonId: null,
+
     // Step 1: General
     name: "",
     color: "#3b82f6",
@@ -323,6 +334,12 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
     // GL Code
     glCodeId: null,
   })
+
+  const showSeasonStep = seasonsEnabled && seasons.length > 0
+  const selectedSeason = React.useMemo(() => {
+    if (!formData.seasonId) return null
+    return seasons.find((s) => s.id === formData.seasonId) ?? null
+  }, [formData.seasonId, seasons])
 
   const [isSaving, setIsSaving] = React.useState(false)
   const [loadingCompetition, setLoadingCompetition] = React.useState(!!competitionId)
@@ -418,6 +435,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         publishStatus: "DRAFT",
         scheduledGoLiveDate: null,
         scheduledGoLiveTime: "09:00",
+        seasonId: data.seasonId || null,
       }))
 
       toast.success(`Settings copied from "${data.name}"`)
@@ -490,6 +508,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         }
 
         setFormData({
+          seasonId: data.seasonId || null,
           name: data.name || "",
           color: data.color || "#3b82f6",
           competitionType: data.competitionType || null,
@@ -873,12 +892,18 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         setFormData((prev) => ({ ...prev, categoryResults: results }))
       }
 
-      stepper.navigation.next()
+      const nextVisibleIndex = currentVisibleIndex + 1
+      if (nextVisibleIndex < visibleSteps.length) {
+        stepper.navigation.goTo(visibleSteps[nextVisibleIndex].id)
+      }
     }
   }
 
   const handlePrev = () => {
-    stepper.navigation.prev()
+    const prevVisibleIndex = currentVisibleIndex - 1
+    if (prevVisibleIndex >= 0) {
+      stepper.navigation.goTo(visibleSteps[prevVisibleIndex].id)
+    }
   }
 
   const handleSubmit = async () => {
@@ -949,6 +974,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         scheduledGoLiveDate: formData.scheduledGoLiveDate?.toISOString(),
         scheduledGoLiveTime: formData.scheduledGoLiveTime,
         glCodeId: formData.glCodeId,
+        seasonId: formData.seasonId,
       }
 
       const url = isEditing ? `/api/competitions/${competitionId}` : "/api/competitions"
@@ -980,6 +1006,21 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
     }
   }
 
+  const visibleStepIds = React.useMemo(() => {
+    const ids: string[] = []
+    if (showSeasonStep) ids.push("season")
+    ids.push("general", "categories", "restrictions", "results", "pricing", "confirmation")
+    return ids
+  }, [showSeasonStep])
+
+  React.useEffect(() => {
+    if (!visibleStepIds.includes(stepper.state.current.data.id)) {
+      stepper.navigation.goTo(visibleStepIds[0] as "general")
+    }
+  }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation])
+
+  const visibleSteps = stepper.state.all.filter(s => visibleStepIds.includes(s.id))
+  const currentVisibleIndex = visibleSteps.findIndex(s => s.id === stepper.state.current.data.id)
   const currentIndex = stepper.state.all.findIndex(s => s.id === stepper.state.current.data.id)
 
   if (loadingCompetition) {
@@ -995,8 +1036,8 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
       <div className="flex flex-col gap-4">
         {/* Step Navigation */}
         <StepperNav className="mb-4">
-          {stepper.state.all.map((step, index) => {
-            const status = getStepStatus(index, currentIndex)
+          {visibleSteps.map((step, index) => {
+            const status = getStepStatus(index, currentVisibleIndex)
             return (
               <React.Fragment key={step.id}>
                 <StepperItem status={status}>
@@ -1004,18 +1045,71 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                     status={status}
                     step={index + 1}
                     onClick={() => {
-                      if (index < currentIndex) stepper.navigation.goTo(step.id)
+                      if (index < currentVisibleIndex) stepper.navigation.goTo(step.id)
                     }}
                   />
                   <StepperTitle status={status} className="hidden sm:block">{step.title}</StepperTitle>
                 </StepperItem>
-                {index < stepper.state.all.length - 1 && (
+                {index < visibleSteps.length - 1 && (
                   <StepperSeparator status={status} className="hidden sm:block" />
                 )}
               </React.Fragment>
             )
           })}
         </StepperNav>
+
+        {/* Season Step */}
+        {stepper.state.current.data.id === "season" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Season</CardTitle>
+              <CardDescription>Optionally assign this competition to a season</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Season</Label>
+                <Select
+                  value={formData.seasonId || "none"}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, seasonId: val === "none" ? null : val }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select a season" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {seasons.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                          {s.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedSeason && (
+                <div className="rounded-lg border p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedSeason.color }} />
+                    <span className="font-medium">{selectedSeason.name}</span>
+                    <Badge variant="outline" className="text-xs">{selectedSeason.status}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(selectedSeason.startDate), "MMM d, yyyy")} – {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
+                  </p>
+                </div>
+              )}
+              {selectedSeason && formData.startDate && (
+                <SeasonDateWarning
+                  itemStartDate={formData.startDate}
+                  itemEndDate={formData.endDate}
+                  seasonStartDate={selectedSeason.startDate}
+                  seasonEndDate={selectedSeason.endDate}
+                  itemLabel="competition"
+                />
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Step 1: General */}
         {stepper.state.current.data.id === "general" && (
@@ -2743,7 +2837,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           </Button>
 
           <div className="flex items-center gap-2">
-            {!stepper.state.isFirst && (
+            {currentVisibleIndex > 0 && (
               <Button
                 type="button"
                 variant="outline"
@@ -2754,7 +2848,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
               </Button>
             )}
 
-            {!stepper.state.isLast ? (
+            {currentVisibleIndex < visibleSteps.length - 1 ? (
               <Button type="button" onClick={handleNext}>
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />

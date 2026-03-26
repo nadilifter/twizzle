@@ -66,6 +66,8 @@ import { useStaff } from "@/hooks/use-staff"
 import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
 import { useMemberships } from "@/hooks/use-memberships"
 import { usePasses } from "@/hooks/use-passes"
+import { useSeasons } from "@/hooks/use-seasons"
+import { SeasonDateWarning } from "@/components/season-date-warning"
 import type { ProgramStaffRole } from "@/types/staff"
 import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, SpaceWithAvailability } from "@/types/programs"
 import { cn } from "@/lib/utils"
@@ -120,6 +122,9 @@ interface StaffAssignment {
 }
 
 interface ProgramFormData {
+  // Season (optional first step)
+  seasonId: string | null
+
   // Step 1: General
   name: string
   description: string
@@ -186,6 +191,7 @@ const ROLE_LABELS: Record<ProgramStaffRole, string> = {
 }
 
 const { useStepper } = defineStepper(
+  { id: "season", title: "Season" },
   { id: "general", title: "General" },
   { id: "schedule", title: "Schedule" },
   { id: "requirements", title: "Requirements" },
@@ -201,10 +207,12 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const trainingEnabled = isFeatureEnabled("training")
   const membershipsEnabled = isFeatureEnabled("memberships")
   const waitlistsEnabled = isFeatureEnabled("waitlists")
+  const seasonsEnabled = isFeatureEnabled("seasons")
   
   // Hooks for data
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
+  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
   const { passes: availablePasses, isLoading: loadingPasses } = usePasses()
   const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("programs")
   
@@ -241,17 +249,13 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const [loadingEvalTemplates, setLoadingEvalTemplates] = React.useState(false)
   const [existingTemplateAssignment, setExistingTemplateAssignment] = React.useState<string | null>(null)
   
-  // Visible step filtering (hides evaluation step when training is disabled)
-  const visibleStepIds = React.useMemo(() => {
-    const ids = ["general", "schedule", "requirements"]
-    if (waitlistsEnabled) ids.push("waitlist")
-    if (trainingEnabled) ids.push("evaluation")
-    ids.push("staff")
-    return ids
-  }, [trainingEnabled, waitlistsEnabled])
+  const showSeasonStep = seasonsEnabled && seasons.length > 0
   
   // Form state
   const [formData, setFormData] = React.useState<ProgramFormData>(() => ({
+    // Season
+    seasonId: (program as any)?.seasonId || null,
+
     // Step 1: General
     name: program?.name || "",
     description: program?.description || "",
@@ -315,9 +319,30 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     showCoachOnSite: program?.showCoachOnSite ?? true,
   }))
   
+  const selectedSeason = React.useMemo(() => {
+    if (!formData.seasonId) return null
+    return seasons.find((s) => s.id === formData.seasonId) ?? null
+  }, [formData.seasonId, seasons])
+
+  const visibleStepIds = React.useMemo(() => {
+    const ids: string[] = []
+    if (showSeasonStep) ids.push("season")
+    ids.push("general", "schedule", "requirements")
+    if (waitlistsEnabled) ids.push("waitlist")
+    if (trainingEnabled) ids.push("evaluation")
+    ids.push("staff")
+    return ids
+  }, [trainingEnabled, waitlistsEnabled, showSeasonStep])
+
   const [isSaving, setIsSaving] = React.useState(false)
   const [copyDialogOpen, setCopyDialogOpen] = React.useState(false)
   const stepper = useStepper()
+
+  React.useEffect(() => {
+    if (!visibleStepIds.includes(stepper.state.current.data.id)) {
+      stepper.navigation.goTo(visibleStepIds[0] as "general")
+    }
+  }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation])
 
   const handleCopyFromProgram = React.useCallback(async (sourceId: string) => {
     try {
@@ -763,6 +788,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           role: sa.role,
           isPrimary: sa.isPrimary,
         })),
+        seasonId: formData.seasonId,
       }
       
       const url = isEditing ? `/api/programs/${program.id}` : "/api/programs"
@@ -913,6 +939,52 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         </StepperNav>
         
         {/* Step Content */}
+        {stepper.state.current.data.id === "season" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Season</CardTitle>
+              <CardDescription>Optionally assign this program to a season</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Season</Label>
+                <Select
+                  value={formData.seasonId || "none"}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, seasonId: val === "none" ? null : val }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select a season" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {seasons.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                          {s.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedSeason && (
+                <div className="rounded-lg border p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedSeason.color }} />
+                    <span className="font-medium">{selectedSeason.name}</span>
+                    <Badge variant="outline" className="text-xs">{selectedSeason.status}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(selectedSeason.startDate), "MMM d, yyyy")} – {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
+                  </p>
+                  {selectedSeason.description && (
+                    <p className="text-sm text-muted-foreground">{selectedSeason.description}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {stepper.state.current.data.id === "general" && (
           <Card>
             <CardHeader>
@@ -1180,6 +1252,33 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Use Season Dates */}
+              {selectedSeason && (
+                <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedSeason.color }} />
+                    <span className="font-medium">{selectedSeason.name}</span>
+                    <span className="text-muted-foreground">
+                      {format(new Date(selectedSeason.startDate), "MMM d")} – {format(new Date(selectedSeason.endDate), "MMM d, yyyy")}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        startDate: new Date(selectedSeason.startDate),
+                        endDate: new Date(selectedSeason.endDate),
+                      }))
+                    }}
+                  >
+                    Use Season Dates
+                  </Button>
+                </div>
+              )}
+
               {/* Date Selection */}
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
@@ -1241,6 +1340,17 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   </Popover>
                 </div>
               </div>
+
+              {/* Season Date Warning */}
+              {selectedSeason && (
+                <SeasonDateWarning
+                  itemStartDate={formData.startDate}
+                  itemEndDate={formData.endDate}
+                  seasonStartDate={selectedSeason.startDate}
+                  seasonEndDate={selectedSeason.endDate}
+                  itemLabel="program"
+                />
+              )}
               
               {/* Time and Duration */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

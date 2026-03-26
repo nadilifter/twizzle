@@ -72,6 +72,7 @@ const createProgramSchema = z.object({
     isPrimary: z.boolean().default(false),
   })).optional(),
   glCodeId: z.string().optional().nullable(),
+  seasonId: z.string().optional().nullable(),
 });
 
 /**
@@ -126,6 +127,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status");
+    const seasonId = searchParams.get("seasonId");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
     const scopedDb = getScopedDb(session.user.organizationId);
@@ -138,6 +140,7 @@ export async function GET(request: NextRequest) {
         ],
       }),
       ...(status && { status: status as "ACTIVE" | "INACTIVE" | "ARCHIVED" }),
+      ...(seasonId && { seasonId }),
     };
 
     const [programs, total] = await Promise.all([
@@ -196,6 +199,9 @@ export async function GET(request: NextRequest) {
                 select: { id: true, name: true, capacity: true, status: true },
               },
             },
+          },
+          season: {
+            select: { id: true, name: true, color: true, startDate: true, endDate: true },
           },
         },
         orderBy: { name: "asc" },
@@ -335,6 +341,7 @@ export async function POST(request: NextRequest) {
           waitlistAutoPromote: validatedData.waitlistAutoPromote,
           waitlistCapacity: validatedData.waitlistCapacity,
           glCodeId: validatedData.glCodeId ?? undefined,
+          seasonId: validatedData.seasonId ?? undefined,
           organizationId: session.user.organizationId,
           ...(validatedData.membershipRequirementIds?.length && {
             requiredMemberships: {

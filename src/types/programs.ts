@@ -110,6 +110,16 @@ export interface Program {
   
   // Gender restriction values
   allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
+  
+  // Season
+  seasonId?: string | null;
+  season?: {
+    id: string;
+    name: string;
+    color: string;
+    startDate: string;
+    endDate: string;
+  } | null;
 }
 
 // Program Instance - individual occurrences of a program
@@ -278,6 +288,7 @@ export interface CreateProgramPayload {
   passRequirementIds?: string[];
   waiverRequirementIds?: string[];
   spaceIds?: string[];
+  seasonId?: string | null;
 }
 
 export interface UpdateProgramPayload {
@@ -332,11 +343,13 @@ export interface UpdateProgramPayload {
   waiverRequirementIds?: string[];
   // For space assignments
   spaceIds?: string[];
+  seasonId?: string | null;
 }
 
 export interface ProgramsQueryParams {
   search?: string;
   status?: ProgramStatus;
+  seasonId?: string;
   limit?: number;
   offset?: number;
 }
