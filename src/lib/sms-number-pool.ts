@@ -130,8 +130,25 @@ export async function getPoolNumberForSend(
   const existing = await db.smsNumberAssignment.findUnique({
     where: { phone_organizationId: { phone: normalized, organizationId } },
   });
-  if (existing && pool.includes(existing.twilioNumber)) {
-    return existing.twilioNumber;
+
+  if (existing) {
+    if (pool.includes(existing.twilioNumber)) {
+      return existing.twilioNumber;
+    }
+    // Assignment points to a number no longer in the verified pool.
+    // Re-assign to the first available verified number.
+    const takenByOthers = await db.smsNumberAssignment.findMany({
+      where: { phone: normalized, organizationId: { not: organizationId } },
+      select: { twilioNumber: true },
+    });
+    const taken = new Set(takenByOthers.map((a) => a.twilioNumber));
+    const replacement = pool.find((n) => !taken.has(n)) ?? pool[0];
+
+    await db.smsNumberAssignment.update({
+      where: { id: existing.id },
+      data: { twilioNumber: replacement, updatedAt: new Date() },
+    });
+    return replacement;
   }
 
   const takenAssignments = await db.smsNumberAssignment.findMany({
@@ -161,7 +178,6 @@ export async function getPoolNumberForSend(
       data: { phone: normalized, twilioNumber: chosen, organizationId },
     });
   } catch (err: any) {
-    // Concurrent request already created this assignment — read it back
     if (err?.code === "P2002") {
       const raced = await db.smsNumberAssignment.findUnique({
         where: { phone_organizationId: { phone: normalized, organizationId } },
