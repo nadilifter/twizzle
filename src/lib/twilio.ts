@@ -197,14 +197,13 @@ export async function sendSms(options: SendSmsOptions): Promise<SendSmsResult> {
       messageOptions.statusCallback = webhookUrl;
     }
 
-    // Route through the Messaging Service for A2P compliance when available.
-    // Setting both messagingServiceSid and from tells Twilio to use the
-    // specified sender while still applying Messaging Service compliance rules.
+    // When a Messaging Service is configured, let it handle sender selection.
+    // The service's sticky_sender setting maintains per-recipient consistency,
+    // and its A2P/10DLC registration ensures deliverability. Passing an
+    // explicit `from` can cause 30034 blocks if that number lacks its own
+    // 10DLC campaign registration, so we omit it here.
     if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
       messageOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-      if (options.from) {
-        messageOptions.from = options.from;
-      }
     } else if (options.from) {
       messageOptions.from = options.from;
     } else if (process.env.TWILIO_PHONE_NUMBER) {
