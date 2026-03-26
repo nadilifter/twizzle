@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
 import { getSubdomainUrl } from '@/lib/env-domains';
+import { isFeatureEnabled } from '@/lib/feature-resolver';
 
 /**
  * Generate a dynamic sitemap for each tenant site.
@@ -79,18 +80,30 @@ export default async function sitemap({
     });
   }
 
-  // Add store page if enabled and has active products
-  if (config.showStore) {
-    const productCount = await db.product.count({
+  // Add store page and individual product pages if enabled
+  const storeFeatureEnabled = config.showStore
+    ? await isFeatureEnabled(config.organizationId, 'store')
+    : false;
+  if (config.showStore && storeFeatureEnabled) {
+    const products = await db.product.findMany({
       where: { organizationId: config.organizationId, isActive: true },
+      select: { id: true, updatedAt: true },
     });
-    if (productCount > 0) {
+    if (products.length > 0) {
       routes.push({ 
         url: `${baseUrl}/store`, 
         lastModified: now, 
         changeFrequency: 'weekly', 
         priority: 0.8 
       });
+      for (const product of products) {
+        routes.push({
+          url: `${baseUrl}/store/${product.id}`,
+          lastModified: product.updatedAt || now,
+          changeFrequency: 'weekly',
+          priority: 0.7,
+        });
+      }
     }
   }
 

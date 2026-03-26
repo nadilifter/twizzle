@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache"
 import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { StoreProductList } from "@/components/sites/store-product-list"
+import { isFeatureEnabled } from "@/lib/feature-resolver"
 
 const getCachedSiteConfig = unstable_cache(
   async (slug: string) => {
@@ -30,6 +31,9 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
   const config = await getCachedSiteConfig(slug)
 
   if (!config || !config.showStore) return notFound()
+
+  const storeEnabled = await isFeatureEnabled(config.organizationId, "store")
+  if (!storeEnabled) return notFound()
 
   const hasProducts = await getCachedHasActiveProducts(config.organizationId)
   if (!hasProducts) return notFound()

@@ -22,6 +22,7 @@ import { getSubdomainUrl, getLoginUrl as getEnvLoginUrl } from "@/lib/env-domain
 import { getAuthSession } from "@/lib/auth";
 import { MarketingUserMenu } from "@/components/sites/marketing-user-menu";
 import { SiteUnavailablePage } from "@/components/sites/site-unavailable";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 
 export const dynamic = "force-dynamic";
 
@@ -254,11 +255,10 @@ export default async function SiteLayout({
     }
   }
 
-  // Build portal URLs for the user menu
-  const adminUrl = getSubdomainUrl("admin");
-  const athleteUrl = getSubdomainUrl("athletes");
-
-  const hasProducts = config.showStore
+  const storeFeatureEnabled = config.showStore
+    ? await isFeatureEnabled(config.organizationId, "store")
+    : false;
+  const hasProducts = config.showStore && storeFeatureEnabled
     ? await getCachedHasActiveProducts(config.organizationId)
     : false;
 
@@ -362,8 +362,7 @@ export default async function SiteLayout({
                                 image: session.user.image,
                             }}
                             isAdmin={isAdmin}
-                            adminUrl={adminUrl}
-                            athleteUrl={athleteUrl}
+                            isSuperAdmin={session.user.isSuperAdmin === true}
                             siteUrl={siteUrl}
                         />
                     ) : (

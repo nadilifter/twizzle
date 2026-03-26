@@ -15,6 +15,7 @@ import {
   SearchX,
   X,
 } from "lucide-react"
+import Link from "next/link"
 import { useCart } from "@/components/sites/cart-context"
 import { toast } from "sonner"
 
@@ -298,16 +299,18 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                 }`}
               >
                 {product.imageUrl && (
-                  <div className="relative aspect-square w-full overflow-hidden">
-                    <Image
-                      src={product.imageUrl}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      loading="lazy"
-                    />
-                  </div>
+                  <Link href={`/store/${product.id}`} className="block">
+                    <div className="relative aspect-square w-full overflow-hidden">
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        loading="lazy"
+                      />
+                    </div>
+                  </Link>
                 )}
 
                 <CardHeader className="pb-3">
@@ -317,9 +320,11 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                     </p>
                   )}
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
-                      {product.name}
-                    </h3>
+                    <Link href={`/store/${product.id}`} className="hover:underline">
+                      <h3 className="font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
+                        {product.name}
+                      </h3>
+                    </Link>
                     <div className="flex items-center gap-1">
                       {stockStatus && (
                         <Badge
