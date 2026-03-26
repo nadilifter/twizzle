@@ -13,6 +13,7 @@ const featureTogglesSchema = z.object({
   training: z.boolean(),
   store: z.boolean(),
   liveSupport: z.boolean(),
+  customInformation: z.boolean(),
 }).optional()
 
 const createPlanSchema = z.object({

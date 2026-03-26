@@ -20,6 +20,7 @@ export const FEATURE_KEYS = [
   "passes",
   "seasons",
   "liveSupport",
+  "customInformation",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -40,6 +41,7 @@ export const DEFAULT_FEATURE_TOGGLES: FeatureToggles = {
   passes: false,
   seasons: false,
   liveSupport: false,
+  customInformation: false,
 };
 
 /** Human-readable labels for each feature */
@@ -57,6 +59,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   passes: "Passes",
   seasons: "Seasons",
   liveSupport: "Live Support",
+  customInformation: "Custom Information",
 };
 
 /** Descriptions shown to admins */
@@ -74,6 +77,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   passes: "Allow athletes to purchase passes for program access with session credits",
   seasons: "Recurring season groupings for programs, memberships, and competitions",
   liveSupport: "Live chat support from Uplifter via Zendesk",
+  customInformation: "Collect custom information from athletes during registration",
 };
 
 /**
@@ -172,6 +176,14 @@ export const FEATURE_SIDEBAR_MAP: Record<
     ],
   },
   liveSupport: {},
+  customInformation: {
+    subItems: [
+      {
+        section: "Athletes",
+        items: ["Questions"],
+      },
+    ],
+  },
 };
 
 /**
@@ -197,6 +209,7 @@ export const FEATURE_API_ROUTES: Record<FeatureKey, string[]> = {
   passes: ["/api/passes", "/api/public/passes"],
   seasons: ["/api/seasons"],
   liveSupport: [],
+  customInformation: ["/api/organization/custom-information"],
 };
 
 /**

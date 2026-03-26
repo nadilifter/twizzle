@@ -24,6 +24,12 @@ import { COUNTRIES, getRegionsForCountry } from "@/lib/location-data"
 import { StateProvinceCombobox } from "@/components/ui/state-province-combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
+import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information"
+
+const CustomInformationForm = dynamic(
+  () => import("@/components/sites/custom-information-form").then(m => m.CustomInformationForm),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted rounded-lg" /> }
+)
 
 const SignaturePad = dynamic(
   () => import("@/components/ui/signature-pad").then(m => m.SignaturePad),
@@ -61,7 +67,7 @@ interface SavedBillingAddress {
   isPrimary: boolean
 }
 
-type CheckoutStep = "details" | "waivers" | "medical" | "payment" | "confirmation"
+type CheckoutStep = "details" | "waivers" | "customInfo" | "medical" | "payment" | "confirmation"
 
 interface WaiverToSign {
   waiverId: string
@@ -320,6 +326,11 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [medicalConfig, setMedicalConfig] = useState<MedicalFormConfig | null>(null)
   const [medicalCustomQuestions, setMedicalCustomQuestions] = useState<CustomMedicalQuestion[]>([])
 
+  // Custom info state
+  const [customInfoQuestions, setCustomInfoQuestions] = useState<CustomInfoQuestion[]>([])
+  const [customInfoResponses, setCustomInfoResponses] = useState<CustomInfoResponse[]>([])
+  const [athleteCustomInfoComplete, setAthleteCustomInfoComplete] = useState<Set<string>>(new Set())
+
   // Per-athlete requirements flow
   const [athleteQueue, setAthleteQueue] = useState<AthleteRequirements[]>([])
   const [currentAthleteIndex, setCurrentAthleteIndex] = useState(0)
@@ -453,6 +464,56 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         next.add(athlete.athleteId)
         return next
       })
+
+      // Check custom info
+      if (orgId && !athleteCustomInfoComplete.has(athlete.athleteId)) {
+        try {
+          const itemsByAthlete = getItemsByAthlete()
+          const athleteEntry = itemsByAthlete.get(athlete.athleteId)
+          const athleteItems = athleteEntry?.items || []
+          const programIds = athleteItems.filter((it: CartItem) => it.type === "program").map((it: CartItem) => it.details?.programId).filter(Boolean)
+          const competitionIds = athleteItems.filter((it: CartItem) => it.type === "competition").map((it: CartItem) => it.details?.competitionId).filter(Boolean)
+          const membershipIds = athleteItems.filter((it: CartItem) => it.type === "membership").map((it: CartItem) => it.details?.membershipInstanceId).filter(Boolean)
+          const passIds = athleteItems.filter((it: CartItem) => it.type === "pass").map((it: CartItem) => it.details?.passId).filter(Boolean)
+
+          const ciParams = new URLSearchParams({ organizationId: orgId })
+          if (programIds.length > 0) ciParams.set("programIds", programIds.join(","))
+          if (competitionIds.length > 0) ciParams.set("competitionIds", competitionIds.join(","))
+          if (membershipIds.length > 0) ciParams.set("membershipIds", membershipIds.join(","))
+          if (passIds.length > 0) ciParams.set("passIds", passIds.join(","))
+
+          const ciRes = await fetch(`/api/public/custom-information?${ciParams}`)
+          if (ciRes.ok) {
+            const { questions } = await ciRes.json()
+            if (questions && questions.length > 0) {
+              const respRes = await fetch(
+                `/api/public/athletes/${athlete.athleteId}/custom-information?organizationId=${orgId}&email=${encodeURIComponent(formData.email)}`
+              )
+              let existingResponses: CustomInfoResponse[] = []
+              let isCurrent = false
+              if (respRes.ok) {
+                const rd = await respRes.json()
+                existingResponses = rd.responses || []
+                isCurrent = rd.isCurrent && existingResponses.length >= questions.length
+              }
+
+              if (!isCurrent) {
+                setCustomInfoQuestions(questions)
+                setCustomInfoResponses(existingResponses)
+                setCheckoutStep("customInfo")
+                return // Exit — custom info step shown
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to check custom info:", err)
+        }
+        setAthleteCustomInfoComplete((prev) => {
+          const next = new Set(prev)
+          next.add(athlete.athleteId)
+          return next
+        })
+      }
 
       // Check medical
       if (athlete.needsMedical) {
@@ -701,16 +762,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               return next
             })
 
-            if (currentAthlete.needsMedical) {
-              setCheckoutStep("medical")
-            } else {
-              setAthleteMedicalComplete((prev) => {
-                const next = new Set(prev)
-                next.add(currentAthlete.athleteId)
-                return next
-              })
-              await advanceToNextRequirement(currentAthleteIndex + 1)
-            }
+            // Re-enter flow to handle custom info -> medical -> next athlete
+            await advanceToNextRequirement(currentAthleteIndex)
           }
         }
       } else {
@@ -1242,6 +1295,59 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 </Button>
               </CardFooter>
             </Card>
+          )}
+
+          {/* Custom Information Step */}
+          {checkoutStep === "customInfo" && customInfoQuestions.length > 0 && athleteQueue.length > 0 && (
+            <>
+              {athleteQueue.length > 1 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                  <span>
+                    Athlete {currentAthleteIndex + 1} of {athleteQueue.length}
+                  </span>
+                </div>
+              )}
+              <Card>
+                <CardContent className="pt-6">
+                  <CustomInformationForm
+                    key={athleteQueue[currentAthleteIndex]?.athleteId}
+                    questions={customInfoQuestions}
+                    existingResponses={customInfoResponses}
+                    athleteId={athleteQueue[currentAthleteIndex]?.athleteId}
+                    organizationId={organizationId!}
+                    onComplete={async () => {
+                      const currentAthlete = athleteQueueRef.current[currentAthleteIndex]
+                      setAthleteCustomInfoComplete((prev) => {
+                        const next = new Set(prev)
+                        next.add(currentAthlete.athleteId)
+                        return next
+                      })
+
+                      // Continue to medical or next athlete
+                      if (currentAthlete.needsMedical) {
+                        setCheckoutStep("medical")
+                      } else {
+                        setAthleteMedicalComplete((prev) => {
+                          const next = new Set(prev)
+                          next.add(currentAthlete.athleteId)
+                          return next
+                        })
+                        setIsProcessing(true)
+                        try {
+                          await advanceToNextRequirement(currentAthleteIndex + 1)
+                        } finally {
+                          setIsProcessing(false)
+                        }
+                      }
+                    }}
+                    onBack={() => {
+                      setCheckoutStep("details")
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </>
           )}
 
           {/* Medical Information Step */}

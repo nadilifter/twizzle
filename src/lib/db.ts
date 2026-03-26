@@ -124,6 +124,9 @@ const TENANT_MODELS = [
   "OrganizationCategoryPreference",
   "Order",
   "TeamMemberHighlight",
+  "CustomInfoConfig",
+  "CustomInfoQuestion",
+  "CustomInfoResponse",
 ] as const;
 
 // Helper type for models that have organizationId

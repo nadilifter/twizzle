@@ -212,6 +212,7 @@ export default function AthleteProfilePage() {
   const eventsEnabled = isFeatureEnabled("events")
   const competitionsEnabled = isFeatureEnabled("competitions")
   const membershipsEnabled = isFeatureEnabled("memberships")
+  const customInfoEnabled = isFeatureEnabled("customInformation")
 
   const { athlete, isLoading, error, fetchAthlete, updateAthlete } = useAthlete(athleteId)
   const [isEditOpen, setIsEditOpen] = React.useState(false)
@@ -416,6 +417,12 @@ export default function AthleteProfilePage() {
             <CalendarCheck className="h-4 w-4" />
             Attendance
           </TabsTrigger>
+          {customInfoEnabled && (
+            <TabsTrigger value="customInfo" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Custom Info
+            </TabsTrigger>
+          )}
           {trainingEnabled && (
             <TabsTrigger value="evaluations" className="gap-2">
               <ClipboardList className="h-4 w-4" />
@@ -642,6 +649,13 @@ export default function AthleteProfilePage() {
             eventAttendances={eventAttendances}
           />
         </TabsContent>
+
+        {/* ===== CUSTOM INFO TAB ===== */}
+        {customInfoEnabled && (
+          <TabsContent value="customInfo">
+            <AthleteCustomInfoTab athleteId={athlete.id} />
+          </TabsContent>
+        )}
 
         {/* ===== EVALUATIONS TAB ===== */}
         {trainingEnabled && (
@@ -2539,6 +2553,230 @@ function MedicalInfoDisplay({ info }: { info: AthleteMedicalSummary }) {
           )}
         </>
       )}
+    </div>
+  )
+}
+
+// ─── Custom Info Tab ─────────────────────────────────────────────────
+
+function AthleteCustomInfoTab({ athleteId }: { athleteId: string }) {
+  const [responses, setResponses] = React.useState<any[]>([])
+  const [questions, setQuestions] = React.useState<any[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+  const [editingId, setEditingId] = React.useState<string | null>(null)
+  const [editValues, setEditValues] = React.useState<Record<string, string>>({})
+  const [isSaving, setIsSaving] = React.useState(false)
+
+  const fetchData = React.useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await api.get<{ responses: any[]; questions: any[]; config: any }>(
+        `/api/athletes/${athleteId}/custom-information`
+      )
+      setResponses(data.responses || [])
+      setQuestions(data.questions || [])
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to load custom info")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [athleteId])
+
+  React.useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  const [editError, setEditError] = React.useState<string | null>(null)
+
+  const handleSave = async (questionId: string) => {
+    const q = questions.find((q: any) => q.id === questionId)
+    const val = editValues[questionId] ?? ""
+
+    if (q?.questionType === "VALUE" && val.trim()) {
+      const num = Number(val)
+      if (isNaN(num)) {
+        setEditError("Must be a number")
+        return
+      }
+      if (!q.allowDecimals && !Number.isInteger(num)) {
+        setEditError("Decimal values are not allowed")
+        return
+      }
+      if (q.valueMin != null && num < q.valueMin) {
+        setEditError(`Must be at least ${q.valueMin}`)
+        return
+      }
+      if (q.valueMax != null && num > q.valueMax) {
+        setEditError(`Must be at most ${q.valueMax}`)
+        return
+      }
+    }
+
+    setEditError(null)
+    setIsSaving(true)
+    try {
+      await api.put(`/api/athletes/${athleteId}/custom-information`, {
+        responses: [{ questionId, responseValue: val }],
+      })
+      setEditingId(null)
+      await fetchData()
+    } catch (err) {
+      console.error("Failed to save:", err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <p className="text-sm text-destructive">{error}</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (responses.length === 0 && questions.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+          <p className="text-muted-foreground">No custom information questions configured.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const responseMap = new Map(responses.map((r: any) => [r.questionId, r]))
+
+  return (
+    <div className="space-y-4">
+      {questions.map((q: any) => {
+        const response = responseMap.get(q.id)
+        const isEditing = editingId === q.id
+
+        return (
+          <Card key={q.id}>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-medium text-sm">{q.questionText}</p>
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      {q.questionType === "VALUE" ? "Value" :
+                       q.questionType === "BOOLEAN" ? "True/False" :
+                       q.questionType === "SIGNATURE" ? "Signature" :
+                       q.questionType === "SHORT_TEXT" ? "Short Text" :
+                       q.questionType === "LONG_TEXT" ? "Long Text" :
+                       q.questionType === "IMAGE" ? "Image" : q.questionType}
+                    </Badge>
+                  </div>
+                  {q.description && (
+                    <p className="text-xs text-muted-foreground mb-2">{q.description}</p>
+                  )}
+
+                  {response ? (
+                    isEditing ? (
+                      <div className="mt-2 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type={q.questionType === "VALUE" ? "number" : "text"}
+                            step={q.questionType === "VALUE" ? (q.allowDecimals ? "any" : "1") : undefined}
+                            min={q.questionType === "VALUE" ? q.valueMin ?? undefined : undefined}
+                            max={q.questionType === "VALUE" ? q.valueMax ?? undefined : undefined}
+                            value={editValues[q.id] ?? response.responseValue ?? ""}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                              setEditValues((prev) => ({ ...prev, [q.id]: e.target.value }))
+                              setEditError(null)
+                            }}
+                            className="flex-1"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleSave(q.id)}
+                            disabled={isSaving}
+                          >
+                            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => { setEditingId(null); setEditError(null) }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                        {editError && <p className="text-xs text-destructive">{editError}</p>}
+                        {q.questionType === "VALUE" && q.valueMin != null && q.valueMax != null && (
+                          <p className="text-xs text-muted-foreground">
+                            Range: {q.valueMin}–{q.valueMax}{q.allowDecimals ? " (decimals allowed)" : " (whole numbers)"}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        {q.questionType === "BOOLEAN" ? (
+                          <Badge variant={response.responseValue === "true" ? "default" : "secondary"}>
+                            {response.responseValue === "true" ? "Yes" : "No"}
+                          </Badge>
+                        ) : q.questionType === "SIGNATURE" && response.signatureData ? (
+                          <img
+                            src={response.signatureData}
+                            alt="Signature"
+                            className="max-h-20 border rounded"
+                          />
+                        ) : q.questionType === "IMAGE" && response.fileUrl ? (
+                          <a
+                            href={response.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {response.fileName || "View uploaded file"}
+                          </a>
+                        ) : (
+                          <p className="text-sm">{response.responseValue || "—"}</p>
+                        )}
+                        {response.respondedAt && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Responded {format(new Date(response.respondedAt), "MMM d, yyyy")}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-1">No response</p>
+                  )}
+                </div>
+
+                {response && !isEditing && (q.questionType === "VALUE" || q.questionType === "SHORT_TEXT" || q.questionType === "LONG_TEXT" || q.questionType === "BOOLEAN") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingId(q.id)
+                      setEditValues((prev) => ({ ...prev, [q.id]: response.responseValue ?? "" }))
+                    }}
+                  >
+                    Edit
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })}
     </div>
   )
 }

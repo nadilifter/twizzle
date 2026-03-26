@@ -109,6 +109,11 @@ model Organization {
   medicalFormConfig      MedicalFormConfig?
   customMedicalQuestions CustomMedicalQuestion[]
 
+  // Custom Information
+  customInfoConfig    CustomInfoConfig?
+  customInfoQuestions CustomInfoQuestion[]
+  customInfoResponses CustomInfoResponse[]
+
   // Registration Queues
   queueConfigs RegistrationQueueConfig[]
 
@@ -297,6 +302,9 @@ model User {
 
   // Facility notes
   facilityNotes FacilityNote[]
+
+  // Custom information responses
+  customInfoResponses CustomInfoResponse[] @relation("UserCustomInfoResponses")
 }
 
 model Session {
@@ -467,6 +475,9 @@ model Athlete {
 
   // Medical information
   medicalInfo AthleteMedicalInfo?
+
+  // Custom information responses
+  customInfoResponses CustomInfoResponse[]
 
   // Program instance registrations & attendance
   instanceRegistrations InstanceRegistration[]
@@ -708,6 +719,113 @@ model CustomMedicalResponse {
 
   @@unique([medicalInfoId, questionId])
   @@index([medicalInfoId])
+  @@index([questionId])
+}
+
+// ============================================
+// Custom Information System
+// ============================================
+
+enum CustomInfoQuestionType {
+  VALUE
+  BOOLEAN
+  SIGNATURE
+  SHORT_TEXT
+  LONG_TEXT
+  IMAGE
+}
+
+enum CustomInfoScopeType {
+  ALL_PROGRAMS
+  ALL_EVENTS
+  ALL_COMPETITIONS
+  ALL_MEMBERSHIPS
+  ALL_PASSES
+  PROGRAM
+  EVENT
+  COMPETITION
+  MEMBERSHIP
+  PASS
+  SEASON
+}
+
+model CustomInfoConfig {
+  id             String @id @default(cuid())
+  organizationId String @unique
+
+  validityDays Int @default(365)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model CustomInfoQuestion {
+  id             String @id @default(cuid())
+  organizationId String
+
+  questionText  String
+  description   String?
+  questionType  CustomInfoQuestionType
+  required      Boolean @default(true)
+  displayOrder  Int     @default(0)
+  isActive      Boolean @default(true)
+
+  valueMin      Float?
+  valueMax      Float?
+  allowDecimals Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scopes       CustomInfoQuestionScope[]
+  responses    CustomInfoResponse[]
+
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+}
+
+model CustomInfoQuestionScope {
+  id         String              @id @default(cuid())
+  questionId String
+  scopeType  CustomInfoScopeType
+  targetId   String?
+
+  question CustomInfoQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, scopeType, targetId])
+  @@index([questionId])
+  @@index([scopeType, targetId])
+}
+
+model CustomInfoResponse {
+  id             String @id @default(cuid())
+  athleteId      String
+  organizationId String
+  questionId     String
+
+  responseValue String?  @db.Text
+  signatureData String?  @db.Text
+  fileUrl       String?
+  storageKey    String?
+  fileName      String?
+  contentType   String?
+
+  respondedAt   DateTime  @default(now())
+  respondedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  athlete      Athlete            @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  question     CustomInfoQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  respondedBy  User?              @relation("UserCustomInfoResponses", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@unique([athleteId, organizationId, questionId])
+  @@index([athleteId, organizationId])
   @@index([questionId])
 }
 

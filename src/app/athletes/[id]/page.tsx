@@ -429,6 +429,9 @@ export default function AthleteDetailPage() {
         />
       )}
 
+      {/* Custom Information */}
+      <PortalCustomInfoSection athleteId={athleteId} />
+
       {/* Registrations section */}
       <Card>
         <CardHeader className="pb-3">
@@ -600,5 +603,87 @@ export default function AthleteDetailPage() {
         </SheetContent>
       </Sheet>
     </div>
+  );
+}
+
+function PortalCustomInfoSection({ athleteId }: { athleteId: string }) {
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+
+    fetch("/api/athletes/me/custom-information")
+      .then(async (res) => {
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (cancelled) return;
+        const athleteData = json.athletes?.find((a: any) => a.athleteId === athleteId);
+        setData(athleteData);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [athleteId]);
+
+  if (isLoading) return null;
+  if (!data || !data.organizations || data.organizations.length === 0) return null;
+
+  return (
+    <>
+      {data.organizations.map((org: any) => {
+        if (!org.responses || org.responses.length === 0) return null;
+
+        return (
+          <Card key={org.organizationId}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                Custom Information — {org.organizationName}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {org.responses.map((r: any) => (
+                  <div key={r.id} className="flex items-start gap-3 py-2 border-b last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{r.question?.questionText}</p>
+                      <div className="mt-1">
+                        {r.question?.questionType === "BOOLEAN" ? (
+                          <Badge variant={r.responseValue === "true" ? "default" : "secondary"}>
+                            {r.responseValue === "true" ? "Yes" : "No"}
+                          </Badge>
+                        ) : r.question?.questionType === "SIGNATURE" && r.signatureData ? (
+                          <img src={r.signatureData} alt="Signature" className="max-h-16 border rounded" />
+                        ) : r.question?.questionType === "IMAGE" && r.fileUrl ? (
+                          <a
+                            href={r.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {r.fileName || "View file"}
+                          </a>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">{r.responseValue || "—"}</p>
+                        )}
+                      </div>
+                    </div>
+                    {r.respondedAt && (
+                      <p className="text-xs text-muted-foreground whitespace-nowrap">
+                        {format(new Date(r.respondedAt), "MMM d, yyyy")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </>
   );
 }

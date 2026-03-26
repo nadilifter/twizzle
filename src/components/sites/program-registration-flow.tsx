@@ -33,7 +33,9 @@ import {
 import { SignaturePad, type SignaturePadRef } from "@/components/ui/signature-pad"
 import { CheckoutMedicalForm } from "@/components/sites/checkout-medical-form"
 import { FileUploadStep } from "@/components/sites/file-upload-step"
+import { CustomInformationForm } from "@/components/sites/custom-information-form"
 import type { MedicalFormConfig, CustomMedicalQuestion } from "@/types/medical"
+import type { CustomInfoQuestion, CustomInfoResponse } from "@/types/custom-information"
 import type { FileRequirementConfig } from "@/types/file-requirements"
 import {
   User,
@@ -165,6 +167,7 @@ const { useStepper } = defineStepper(
   { id: "membership", title: "Membership" },
   { id: "pass", title: "Pass" },
   { id: "waivers", title: "Sign Waivers" },
+  { id: "customInfo", title: "Custom Info" },
   { id: "medical", title: "Medical Info" },
   { id: "files", title: "File Upload" },
   { id: "review", title: "Review & Register" },
@@ -267,6 +270,12 @@ export function ProgramRegistrationFlow({
   const [isLoadingMedicalConfig, setIsLoadingMedicalConfig] = useState(false)
   const [needsMedical, setNeedsMedical] = useState(false)
 
+  // Custom info state
+  const [customInfoQuestions, setCustomInfoQuestions] = useState<CustomInfoQuestion[]>([])
+  const [customInfoResponses, setCustomInfoResponses] = useState<CustomInfoResponse[]>([])
+  const [needsCustomInfo, setNeedsCustomInfo] = useState(false)
+  const [isLoadingCustomInfo, setIsLoadingCustomInfo] = useState(false)
+
   // File upload state
   const [uploadedFileId, setUploadedFileId] = useState<string | null>(null)
 
@@ -283,6 +292,7 @@ export function ProgramRegistrationFlow({
     if (needsMembershipPurchase) ids.push("membership")
     if (needsPass) ids.push("pass")
     if (needsWaivers) ids.push("waivers")
+    ids.push("customInfo")
     if (needsMedicalStep) ids.push("medical")
     if (needsFiles) ids.push("files")
     ids.push("review")
@@ -670,6 +680,73 @@ export function ProgramRegistrationFlow({
       setIsSigningWaiver(false)
     }
   }, [requiredWaivers, currentWaiverIndex, currentWaiverPages, currentPageIndex, signAllMode, program.organizationId, userId, selectedAthlete?.id, session?.user?.email, session?.user?.name, getNextStepId, loadWaiverContent, stepper.navigation])
+
+  // ---------- Custom info helpers ----------
+
+  const handleEnterCustomInfoStep = useCallback(async () => {
+    if (!selectedAthlete) return
+    setIsLoadingCustomInfo(true)
+
+    try {
+      const membershipIds = selectedMembership ? [selectedMembership.id] : []
+      const passIds = selectedPass ? [selectedPass.id] : []
+      const params = new URLSearchParams({
+        organizationId: program.organizationId,
+        programIds: program.id,
+      })
+      if (membershipIds.length > 0) params.set("membershipIds", membershipIds.join(","))
+      if (passIds.length > 0) params.set("passIds", passIds.join(","))
+
+      const questionsRes = await fetch(`/api/public/custom-information?${params}`)
+      if (!questionsRes.ok) {
+        setNeedsCustomInfo(false)
+        if (!isNavigatingBackRef.current) {
+          const nextId = getNextStepId("customInfo")
+          if (nextId) stepper.navigation.goTo(nextId as any)
+        }
+        return
+      }
+
+      const { questions, config } = await questionsRes.json()
+      if (!questions || questions.length === 0) {
+        setNeedsCustomInfo(false)
+        if (!isNavigatingBackRef.current) {
+          const nextId = getNextStepId("customInfo")
+          if (nextId) stepper.navigation.goTo(nextId as any)
+        }
+        return
+      }
+
+      // Check existing responses
+      const responsesRes = await fetch(
+        `/api/public/athletes/${selectedAthlete.id}/custom-information?organizationId=${program.organizationId}&email=${encodeURIComponent(session?.user?.email || "")}`
+      )
+      if (responsesRes.ok) {
+        const { responses, isCurrent } = await responsesRes.json()
+        if (isCurrent && responses.length >= questions.length) {
+          setNeedsCustomInfo(false)
+          if (!isNavigatingBackRef.current) {
+            const nextId = getNextStepId("customInfo")
+            if (nextId) stepper.navigation.goTo(nextId as any)
+          }
+          return
+        }
+        setCustomInfoResponses(responses || [])
+      }
+
+      setCustomInfoQuestions(questions)
+      setNeedsCustomInfo(true)
+    } catch (error) {
+      console.error("Failed to load custom info:", error)
+      setNeedsCustomInfo(false)
+      if (!isNavigatingBackRef.current) {
+        const nextId = getNextStepId("customInfo")
+        if (nextId) stepper.navigation.goTo(nextId as any)
+      }
+    } finally {
+      setIsLoadingCustomInfo(false)
+    }
+  }, [selectedAthlete, selectedMembership, selectedPass, program.organizationId, program.id, session?.user?.email, getNextStepId, stepper.navigation])
 
   // ---------- Medical helpers ----------
 
@@ -1466,6 +1543,27 @@ export function ProgramRegistrationFlow({
         />
       )}
 
+      {/* Step: Custom Info */}
+      {currentStepId === "customInfo" && (
+        <CustomInfoStep
+          isLoading={isLoadingCustomInfo}
+          needsCustomInfo={needsCustomInfo}
+          questions={customInfoQuestions}
+          existingResponses={customInfoResponses}
+          athleteId={selectedAthlete?.id || ""}
+          organizationId={program.organizationId}
+          onEnterStep={handleEnterCustomInfoStep}
+          onComplete={() => {
+            const nextId = getNextStepId("customInfo")
+            if (nextId) stepper.navigation.goTo(nextId as any)
+          }}
+          onBack={() => {
+            const prevId = getPreviousStepId("customInfo")
+            if (prevId) stepper.navigation.goTo(prevId as any)
+          }}
+        />
+      )}
+
       {/* Step: Medical Info */}
       {currentStepId === "medical" && (
         <MedicalStep
@@ -1847,6 +1945,64 @@ function WaiverStep({
           <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </CardFooter>
+    </Card>
+  )
+}
+
+// ---------- Custom Info Step Sub-component ----------
+
+function CustomInfoStep({
+  isLoading,
+  needsCustomInfo,
+  questions,
+  existingResponses,
+  athleteId,
+  organizationId,
+  onEnterStep,
+  onComplete,
+  onBack,
+}: {
+  isLoading: boolean
+  needsCustomInfo: boolean
+  questions: CustomInfoQuestion[]
+  existingResponses: CustomInfoResponse[]
+  athleteId: string
+  organizationId: string
+  onEnterStep: () => void
+  onComplete: () => void
+  onBack: () => void
+}) {
+  useEffect(() => {
+    onEnterStep()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!needsCustomInfo || questions.length === 0) {
+    return null
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <CustomInformationForm
+          questions={questions}
+          existingResponses={existingResponses}
+          athleteId={athleteId}
+          organizationId={organizationId}
+          onComplete={onComplete}
+          onBack={onBack}
+        />
+      </CardContent>
     </Card>
   )
 }

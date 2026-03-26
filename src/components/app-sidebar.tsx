@@ -203,6 +203,10 @@ const data = {
           url: "/dashboard/athletes/guardians",
         },
         {
+          title: "Questions",
+          url: "/dashboard/athletes/questions",
+        },
+        {
           title: "Medical Forms",
           url: "/dashboard/athletes/medical",
         },
