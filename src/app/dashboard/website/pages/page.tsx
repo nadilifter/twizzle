@@ -105,6 +105,7 @@ export default function PageVisibilityPage() {
       description: "Display your class and event schedule in an interactive calendar view. Visitors can see upcoming sessions, special events, and class times.",
       icon: <CalendarDays className="h-5 w-5" />,
       defaultValue: true,
+      manageLink: { href: "/dashboard/registrations/programs", label: "Manage Programs" },
     },
     {
       key: "showContact",
@@ -112,6 +113,7 @@ export default function PageVisibilityPage() {
       description: "Show a contact page with your organization's information and a contact form so visitors can reach out with questions or inquiries.",
       icon: <Mail className="h-5 w-5" />,
       defaultValue: true,
+      manageLink: { href: "/dashboard/organization/overview", label: "Organization Overview" },
     },
     {
       key: "showLocations",
@@ -213,12 +215,12 @@ export default function PageVisibilityPage() {
                     >
                       {page.icon}
                     </div>
-                    <div>
+                    <div className="flex flex-col -space-y-0.5">
                       <CardTitle className="text-base">{page.label}</CardTitle>
                       {page.manageLink && (
                         <Link
                           href={page.manageLink.href}
-                          className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
+                          className="text-xs text-primary hover:underline inline-flex items-center gap-1"
                         >
                           {page.manageLink.label}
                           <ExternalLink className="h-3 w-3" />
