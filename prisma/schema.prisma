@@ -783,6 +783,9 @@ model CustomInfoQuestion {
   allowDecimals         Boolean @default(false)
   requireSignatureOnYes Boolean @default(false)
 
+  // null = indefinite (never expires)
+  validityDays Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

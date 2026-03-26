@@ -83,6 +83,7 @@ export interface CustomInfoQuestion {
   valueMax: number | null;
   allowDecimals: boolean;
   requireSignatureOnYes: boolean;
+  validityDays: number | null;
   scopes: CustomInfoQuestionScope[];
   createdAt: string;
   updatedAt: string;
@@ -98,6 +99,7 @@ export interface CreateCustomInfoQuestionPayload {
   valueMax?: number | null;
   allowDecimals?: boolean;
   requireSignatureOnYes?: boolean;
+  validityDays?: number | null;
   scopes: { scopeType: CustomInfoScopeType; targetId?: string | null }[];
 }
 
@@ -112,6 +114,7 @@ export interface UpdateCustomInfoQuestionPayload {
   valueMax?: number | null;
   allowDecimals?: boolean;
   requireSignatureOnYes?: boolean;
+  validityDays?: number | null;
   scopes?: { scopeType: CustomInfoScopeType; targetId?: string | null }[];
 }
 
@@ -151,5 +154,4 @@ export interface CustomInfoResponsesByOrg {
   organizationId: string;
   organizationName: string;
   responses: CustomInfoResponseWithQuestion[];
-  validityDays: number;
 }

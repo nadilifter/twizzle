@@ -48,29 +48,22 @@ export async function GET(
       return NextResponse.json({ responses: [], isCurrent: true });
     }
 
-    const config = await db.customInfoConfig.findUnique({
-      where: { organizationId },
-      select: { validityDays: true },
-    });
-    const validityDays = config?.validityDays ?? 365;
-
     const responses = await db.customInfoResponse.findMany({
       where: { athleteId, organizationId },
       include: { question: { include: { scopes: true } } },
     });
 
-    // Check if all responses are still current
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - validityDays);
-
-    const isCurrent = responses.length > 0 && responses.every(
-      (r) => new Date(r.respondedAt) >= cutoff
-    );
+    const now = new Date();
+    const isCurrent = responses.length > 0 && responses.every((r) => {
+      if (r.question.validityDays == null) return true;
+      const cutoff = new Date(now);
+      cutoff.setDate(cutoff.getDate() - r.question.validityDays);
+      return new Date(r.respondedAt) >= cutoff;
+    });
 
     return NextResponse.json({
       responses,
       isCurrent,
-      validityDays,
     });
   } catch (error) {
     console.error("Error fetching custom info responses (public):", error);

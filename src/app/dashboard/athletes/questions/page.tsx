@@ -64,7 +64,6 @@ import {
   GripVertical,
   Loader2,
   FileText,
-  CalendarClock,
   Info,
   ChevronDown,
 } from "lucide-react";
@@ -75,7 +74,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { useCustomInfoConfig, useCustomInfoQuestions } from "@/hooks/use-custom-information";
+import { useCustomInfoQuestions } from "@/hooks/use-custom-information";
 import { useFeatures } from "@/components/feature-context";
 import { api } from "@/lib/api-client";
 import type {
@@ -85,73 +84,6 @@ import type {
   CreateCustomInfoQuestionPayload,
 } from "@/types/custom-information";
 import { QUESTION_TYPE_LABELS, SCOPE_TYPE_LABELS } from "@/types/custom-information";
-
-// ============================================
-// Validity Days Input
-// ============================================
-
-function ValidityDaysInput({
-  value,
-  onSave,
-  disabled,
-}: {
-  value: number;
-  onSave: (val: number) => void;
-  disabled: boolean;
-}) {
-  const [localValue, setLocalValue] = useState(String(value));
-
-  useEffect(() => {
-    setLocalValue(String(value));
-  }, [value]);
-
-  const handleBlur = () => {
-    const parsed = parseInt(localValue, 10);
-    if (!isNaN(parsed) && parsed >= 1 && parsed <= 3650 && parsed !== value) {
-      onSave(parsed);
-    } else {
-      setLocalValue(String(value));
-    }
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5">
-        <Label htmlFor="validityDays">Valid for (days)</Label>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-xs">
-              Athletes who have submitted responses within this window will not be asked again during registration.
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      <div className="flex items-center gap-2">
-        <Input
-          id="validityDays"
-          type="number"
-          min={1}
-          max={3650}
-          value={localValue}
-          onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleBlur();
-            }
-          }}
-          disabled={disabled}
-          className="w-32"
-        />
-        <span className="text-sm text-muted-foreground">days</span>
-      </div>
-    </div>
-  );
-}
 
 // ============================================
 // Scope Selector
@@ -449,6 +381,9 @@ function SortableQuestion({
                 + Signature on Yes
               </Badge>
             )}
+            <Badge variant="secondary" className="text-xs">
+              {question.validityDays == null ? "Indefinite" : `${question.validityDays}d validity`}
+            </Badge>
             {uniqueBadges.map((badge) => (
               <Badge key={badge} variant="outline" className="text-xs">
                 {badge}
@@ -516,6 +451,8 @@ function QuestionEditor({
   const [valueMax, setValueMax] = useState<string>("");
   const [allowDecimals, setAllowDecimals] = useState(false);
   const [requireSignatureOnYes, setRequireSignatureOnYes] = useState(false);
+  const [validityMode, setValidityMode] = useState<"indefinite" | "days">("indefinite");
+  const [validityDaysValue, setValidityDaysValue] = useState<string>("365");
 
   useEffect(() => {
     if (question) {
@@ -528,6 +465,8 @@ function QuestionEditor({
       setValueMax(question.valueMax != null ? String(question.valueMax) : "");
       setAllowDecimals(question.allowDecimals ?? false);
       setRequireSignatureOnYes(question.requireSignatureOnYes ?? false);
+      setValidityMode(question.validityDays == null ? "indefinite" : "days");
+      setValidityDaysValue(question.validityDays != null ? String(question.validityDays) : "365");
     } else {
       setQuestionText("");
       setDescription("");
@@ -538,6 +477,8 @@ function QuestionEditor({
       setValueMax("");
       setAllowDecimals(false);
       setRequireSignatureOnYes(false);
+      setValidityMode("indefinite");
+      setValidityDaysValue("365");
     }
   }, [question, open]);
 
@@ -559,6 +500,13 @@ function QuestionEditor({
         return;
       }
     }
+    if (validityMode === "days") {
+      const parsed = parseInt(validityDaysValue, 10);
+      if (isNaN(parsed) || parsed < 1 || parsed > 3650) {
+        toast.error("Validity days must be between 1 and 3650");
+        return;
+      }
+    }
     await onSave({
       id: question?.id,
       questionText,
@@ -576,6 +524,7 @@ function QuestionEditor({
         allowDecimals: false,
       }),
       requireSignatureOnYes: questionType === "BOOLEAN" ? requireSignatureOnYes : false,
+      validityDays: validityMode === "indefinite" ? null : parseInt(validityDaysValue, 10),
     });
   };
 
@@ -688,6 +637,44 @@ function QuestionEditor({
               <Label htmlFor="required">Required question</Label>
             </div>
 
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium">Validity Period</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      How long a response remains valid. Athletes with expired responses will be asked to re-submit during registration.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Select value={validityMode} onValueChange={(v) => setValidityMode(v as "indefinite" | "days")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="indefinite">Indefinite (never expires)</SelectItem>
+                  <SelectItem value="days">Expires after a set number of days</SelectItem>
+                </SelectContent>
+              </Select>
+              {validityMode === "days" && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={3650}
+                    value={validityDaysValue}
+                    onChange={(e) => setValidityDaysValue(e.target.value)}
+                    className="w-32"
+                  />
+                  <span className="text-sm text-muted-foreground">days</span>
+                </div>
+              )}
+            </div>
+
             <ScopeSelector scopes={scopes} onChange={setScopes} />
           </div>
           <DialogFooter>
@@ -710,7 +697,6 @@ function QuestionEditor({
 // ============================================
 
 export default function QuestionsPage() {
-  const { config, isLoading: configLoading, isSaving: configSaving, updateConfig } = useCustomInfoConfig();
   const {
     questions,
     isLoading: questionsLoading,
@@ -730,15 +716,6 @@ export default function QuestionsPage() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  const handleConfigSave = async (val: number) => {
-    const success = await updateConfig({ validityDays: val });
-    if (success) {
-      toast.success("Settings updated");
-    } else {
-      toast.error("Failed to update settings");
-    }
-  };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -797,7 +774,7 @@ export default function QuestionsPage() {
     setIsEditorOpen(true);
   };
 
-  if (configLoading || questionsLoading) {
+  if (questionsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -813,25 +790,6 @@ export default function QuestionsPage() {
           Configure questions to collect additional information from athletes during registration
         </p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5" />
-            Validity Period
-          </CardTitle>
-          <CardDescription>
-            How long collected responses remain valid before athletes are asked to re-submit
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ValidityDaysInput
-            value={config?.validityDays ?? 365}
-            onSave={handleConfigSave}
-            disabled={configSaving}
-          />
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
