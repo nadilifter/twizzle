@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { addYears, addMonths, subDays } from "date-fns";
+import { addYears, subDays } from "date-fns";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 import { normalizeToNoonUTC } from "@/lib/date-utils";
 
@@ -12,12 +12,12 @@ function advanceDateOneYear(date: Date): Date {
 }
 
 /**
- * Increment the first run of digits in a string by 1.
+ * Increment all runs of digits in a string by 1.
  * Falls back to appending the current year + 1 if no digits found.
  */
 function incrementName(name: string): string {
   if (/\d+/.test(name)) {
-    return name.replace(/\d+/, (match) => {
+    return name.replace(/\d+/g, (match) => {
       const num = parseInt(match);
       return (num + 1).toString();
     });
@@ -300,22 +300,11 @@ async function rolloverCompetitions(
 }
 
 /**
- * Calculate next season dates from a source season.
+ * Calculate next season dates by advancing both start and end by one year.
  */
 function calculateNextSeasonDates(season: { startDate: Date; endDate: Date }) {
-  const durationMs = season.endDate.getTime() - season.startDate.getTime();
-  const durationDays = Math.round(durationMs / (1000 * 60 * 60 * 24));
-
-  const nextStartDate = new Date(season.endDate);
-  let nextEndDate: Date;
-
-  if (durationDays >= 300) {
-    nextEndDate = addYears(nextStartDate, 1);
-  } else if (durationDays >= 25) {
-    nextEndDate = addMonths(nextStartDate, Math.round(durationDays / 30));
-  } else {
-    nextEndDate = new Date(nextStartDate.getTime() + durationMs);
-  }
+  const nextStartDate = advanceDateOneYear(season.startDate);
+  const nextEndDate = advanceDateOneYear(season.endDate);
 
   return { nextStartDate, nextEndDate };
 }
