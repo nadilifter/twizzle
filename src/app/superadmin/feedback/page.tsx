@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,6 +58,9 @@ import {
   Eye,
   User,
   ExternalLink,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -104,6 +107,14 @@ const statusLabels: Record<string, string> = {
   CLOSED: "Closed",
 }
 
+const STATUS_ORDER: Record<string, number> = {
+  CLOSED: 0,
+  DONE: 1,
+  SUBMITTED: 2,
+  IN_PROGRESS: 3,
+  PLANNED: 4,
+}
+
 const PREDEFINED_CATEGORIES = [
   "UI/UX",
   "Mobile",
@@ -145,6 +156,10 @@ export default function SuperadminFeedbackPage() {
   const [editTargetDate, setEditTargetDate] = useState("")
   const [mergeTargetId, setMergeTargetId] = useState("")
   
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+
   // Live features for merge target selection
   const [liveFeatures, setLiveFeatures] = useState<Feature[]>([])
 
@@ -206,6 +221,17 @@ export default function SuperadminFeedbackPage() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
+    setSortKey(null)
+    setSortDirection("asc")
+  }
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+    } else {
+      setSortKey(key)
+      setSortDirection("asc")
+    }
   }
 
   const openEditDialog = (feature: Feature) => {
@@ -406,6 +432,75 @@ export default function SuperadminFeedbackPage() {
     f.description.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const sortedFeatures = useMemo(() => {
+    const sorted = [...filteredFeatures]
+
+    if (sortKey) {
+      sorted.sort((a, b) => {
+        let aVal: string | number
+        let bVal: string | number
+        switch (sortKey) {
+          case "title":
+            aVal = a.title.toLowerCase()
+            bVal = b.title.toLowerCase()
+            break
+          case "status":
+            aVal = STATUS_ORDER[a.status] ?? 99
+            bVal = STATUS_ORDER[b.status] ?? 99
+            break
+          case "target":
+            aVal = a.targetDate || "\uffff"
+            bVal = b.targetDate || "\uffff"
+            break
+          case "votes":
+            aVal = a.voteCount
+            bVal = b.voteCount
+            break
+          case "comments":
+            aVal = a.commentCount
+            bVal = b.commentCount
+            break
+          case "updated":
+            aVal = a.statusChangedAt || a.createdAt
+            bVal = b.statusChangedAt || b.createdAt
+            break
+          case "author":
+            aVal = a.author?.name?.toLowerCase() || "\uffff"
+            bVal = b.author?.name?.toLowerCase() || "\uffff"
+            break
+          case "date":
+            aVal = a.createdAt
+            bVal = b.createdAt
+            break
+          default:
+            return 0
+        }
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
+        return 0
+      })
+    } else if (activeTab === "live") {
+      sorted.sort((a, b) => {
+        const statusDiff = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99)
+        if (statusDiff !== 0) return statusDiff
+        const aTarget = a.targetDate || "\uffff"
+        const bTarget = b.targetDate || "\uffff"
+        if (aTarget < bTarget) return -1
+        if (aTarget > bTarget) return 1
+        return 0
+      })
+    }
+
+    return sorted
+  }, [filteredFeatures, sortKey, sortDirection, activeTab])
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortKey !== columnKey) return <ArrowUpDown className="h-3 w-3 text-muted-foreground/50" />
+    return sortDirection === "asc"
+      ? <ArrowUp className="h-3 w-3" />
+      : <ArrowDown className="h-3 w-3" />
+  }
+
   const formatQuarter = (date: string | null) => {
     if (!date) return "-"
     const d = new Date(date)
@@ -473,16 +568,24 @@ export default function SuperadminFeedbackPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Submitted By</TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("title")}>
+                        <div className="flex items-center gap-1">Title <SortIcon columnKey="title" /></div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("author")}>
+                        <div className="flex items-center gap-1">Submitted By <SortIcon columnKey="author" /></div>
+                      </TableHead>
                       <TableHead>Categories</TableHead>
-                      <TableHead>Votes</TableHead>
-                      <TableHead>Date</TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("votes")}>
+                        <div className="flex items-center gap-1">Votes <SortIcon columnKey="votes" /></div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("date")}>
+                        <div className="flex items-center gap-1">Date <SortIcon columnKey="date" /></div>
+                      </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredFeatures.map((feature) => (
+                    {sortedFeatures.map((feature) => (
                       <TableRow key={feature.id}>
                         <TableCell>
                           <div className="flex flex-col">
@@ -592,17 +695,29 @@ export default function SuperadminFeedbackPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Target</TableHead>
-                      <TableHead>Votes</TableHead>
-                      <TableHead>Comments</TableHead>
-                      <TableHead>Last Updated</TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("title")}>
+                        <div className="flex items-center gap-1">Title <SortIcon columnKey="title" /></div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("status")}>
+                        <div className="flex items-center gap-1">Status <SortIcon columnKey="status" /></div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("target")}>
+                        <div className="flex items-center gap-1">Target <SortIcon columnKey="target" /></div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("votes")}>
+                        <div className="flex items-center gap-1">Votes <SortIcon columnKey="votes" /></div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("comments")}>
+                        <div className="flex items-center gap-1">Comments <SortIcon columnKey="comments" /></div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("updated")}>
+                        <div className="flex items-center gap-1">Last Updated <SortIcon columnKey="updated" /></div>
+                      </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredFeatures.map((feature) => (
+                    {sortedFeatures.map((feature) => (
                       <TableRow key={feature.id}>
                         <TableCell>
                           <div className="flex flex-col">
