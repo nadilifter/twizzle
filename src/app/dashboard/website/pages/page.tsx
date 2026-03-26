@@ -147,6 +147,7 @@ export default function PageVisibilityPage() {
       icon: <ShoppingBag className="h-5 w-5" />,
       defaultValue: false,
       manageLink: { href: "/dashboard/store/products", label: "Manage Products" },
+      featureGated: "store",
     },
   ];
 
