@@ -469,6 +469,22 @@ export async function POST(
           );
         }
 
+        // Registration window check (new fields take precedence over legacy purchase window)
+        if (instance.registrationStartDate || instance.registrationEndDate || !instance.registrationOpen) {
+          const memRegStatus = getRegistrationStatus(instance);
+          if (memRegStatus !== "open") {
+            const code = item.details?.earlyAccessCode;
+            const hasValidCode = code && instance.earlyAccessCode && code === instance.earlyAccessCode;
+            if (!hasValidCode) {
+              const reason = memRegStatus === "closed" ? "Registration has closed" : "Registration is not yet open";
+              return NextResponse.json(
+                { error: `${reason} for membership "${instance.name}".` },
+                { status: 400 }
+              );
+            }
+          }
+        }
+
         // Check capacity
         if (instance.group.hasCapacityRestriction) {
           const effectiveCapacity = instance.capacity ?? instance.group.capacity;
@@ -636,6 +652,19 @@ export async function POST(
             { error: `Competition "${competition.name}" is not open for registration.` },
             { status: 400 }
           );
+        }
+
+        const compRegStatus = getRegistrationStatus(competition);
+        if (compRegStatus !== "open") {
+          const code = item.details?.earlyAccessCode;
+          const hasValidCode = code && competition.earlyAccessCode && code === competition.earlyAccessCode;
+          if (!hasValidCode) {
+            const reason = compRegStatus === "closed" ? "Registration has closed" : "Registration is not yet open";
+            return NextResponse.json(
+              { error: `${reason} for "${competition.name}".` },
+              { status: 400 }
+            );
+          }
         }
 
         // Verify all requested categories exist and are active

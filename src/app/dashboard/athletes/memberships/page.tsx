@@ -2,11 +2,12 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Settings, Eye, Shield, Clock, Calendar as CalendarIcon } from "lucide-react"
+import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Settings, Eye, Shield, Clock, Calendar as CalendarIcon, KeyRound, RefreshCw, Link2, Copy } from "lucide-react"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -247,6 +248,12 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
   const [instanceStartDate, setInstanceStartDate] = React.useState<Date | undefined>(undefined)
   const [instanceEndDate, setInstanceEndDate] = React.useState<Date | undefined>(undefined)
   const [instanceAutoRenewDate, setInstanceAutoRenewDate] = React.useState<Date | undefined>(undefined)
+  const [registrationOpen, setRegistrationOpen] = React.useState(true)
+  const [registrationStartDate, setRegistrationStartDate] = React.useState<Date | undefined>(undefined)
+  const [registrationStartTime, setRegistrationStartTime] = React.useState("09:00")
+  const [registrationEndDate, setRegistrationEndDate] = React.useState<Date | undefined>(undefined)
+  const [registrationEndTime, setRegistrationEndTime] = React.useState("23:59")
+  const [earlyAccessCode, setEarlyAccessCode] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     fetchGroup(groupId)
@@ -265,6 +272,12 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
       endDate: instanceEndDate ? format(instanceEndDate, "yyyy-MM-dd") : "",
       autoRenewDate: instanceAutoRenewDate ? format(instanceAutoRenewDate, "yyyy-MM-dd") : undefined,
       status: (formData.get("status") as MembershipInstanceStatus) || "DRAFT",
+      registrationOpen,
+      registrationStartDate: !registrationOpen && registrationStartDate ? format(registrationStartDate, "yyyy-MM-dd") : null,
+      registrationStartTime: !registrationOpen ? registrationStartTime : null,
+      registrationEndDate: registrationEndDate ? format(registrationEndDate, "yyyy-MM-dd") : null,
+      registrationEndTime: registrationEndTime || null,
+      earlyAccessCode,
     })
 
     if (result) {
@@ -273,6 +286,12 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
       setInstanceStartDate(undefined)
       setInstanceEndDate(undefined)
       setInstanceAutoRenewDate(undefined)
+      setRegistrationOpen(true)
+      setRegistrationStartDate(undefined)
+      setRegistrationStartTime("09:00")
+      setRegistrationEndDate(undefined)
+      setRegistrationEndTime("23:59")
+      setEarlyAccessCode(null)
     }
   }
 
@@ -463,6 +482,186 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                       </Popover>
                     </div>
                   </div>
+                  <Separator />
+
+                  {/* Registration Window */}
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium">Registration Availability</Label>
+                    <RadioGroup
+                      value={registrationOpen ? "now" : "scheduled"}
+                      onValueChange={(value) => {
+                        const isNow = value === "now"
+                        setRegistrationOpen(isNow)
+                        if (isNow) setRegistrationStartDate(undefined)
+                      }}
+                      className="space-y-3"
+                    >
+                      <label
+                        className={cn(
+                          "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                          registrationOpen
+                            ? "border-primary bg-primary/5"
+                            : "hover:bg-muted/50"
+                        )}
+                      >
+                        <RadioGroupItem value="now" className="mt-1" />
+                        <div className="flex-1 space-y-1">
+                          <span className="font-medium">Open Registration Now</span>
+                          <p className="text-sm text-muted-foreground">
+                            Registration is immediately available for athletes
+                          </p>
+                        </div>
+                      </label>
+
+                      <label
+                        className={cn(
+                          "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                          !registrationOpen
+                            ? "border-primary bg-primary/5"
+                            : "hover:bg-muted/50"
+                        )}
+                      >
+                        <RadioGroupItem value="scheduled" className="mt-1" />
+                        <div className="flex-1 space-y-1">
+                          <span className="font-medium">Schedule Registration</span>
+                          <p className="text-sm text-muted-foreground">
+                            Set a specific date and time for registration to open
+                          </p>
+                        </div>
+                      </label>
+                    </RadioGroup>
+                  </div>
+
+                  {!registrationOpen && (
+                    <div className="space-y-4">
+                      <Label className="text-base font-medium">Registration Opens</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Set when registration becomes available
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label>Open Date</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className={cn("w-full justify-start text-left font-normal", !registrationStartDate && "text-muted-foreground")}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {registrationStartDate ? format(registrationStartDate, "PPP") : "Pick a date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={registrationStartDate}
+                                onSelect={(date) => setRegistrationStartDate(date)}
+                                disabled={(date) => instanceStartDate ? date > instanceStartDate : false}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Open Time</Label>
+                          <div className="relative">
+                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="time"
+                              value={registrationStartTime}
+                              onChange={e => setRegistrationStartTime(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium">Registration Closes</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Set when registration closes. Defaults to the instance end date if not specified.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Close Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn("w-full justify-start text-left font-normal", !registrationEndDate && "text-muted-foreground")}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {registrationEndDate
+                                ? format(registrationEndDate, "PPP")
+                                : instanceEndDate
+                                ? `Instance end: ${format(instanceEndDate, "PPP")}`
+                                : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={registrationEndDate}
+                              onSelect={(date) => setRegistrationEndDate(date)}
+                              disabled={(date) => {
+                                const earliest = !registrationOpen && registrationStartDate
+                                  ? registrationStartDate
+                                  : new Date()
+                                return date < earliest
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Close Time</Label>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="time"
+                            value={registrationEndTime}
+                            onChange={e => setRegistrationEndTime(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium flex items-center gap-2">
+                      <KeyRound className="h-4 w-4 text-muted-foreground" />
+                      Early Access Code
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Generate or enter a code that allows registration before the registration window opens
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Enter or generate a code"
+                        value={earlyAccessCode || ""}
+                        onChange={e => setEarlyAccessCode(e.target.value || null)}
+                        className="max-w-[300px]"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const code = crypto.randomUUID().slice(0, 8).toUpperCase()
+                          setEarlyAccessCode(code)
+                        }}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Generate
+                      </Button>
+                    </div>
+                  </div>
+
                   <Button type="submit">Create Instance</Button>
                 </form>
               </CardContent>
@@ -495,6 +694,16 @@ function MembershipGroupManager({ groupId }: { groupId: string }) {
                       {instance.capacity != null && (
                         <div className="text-muted-foreground text-xs mt-1">
                           Capacity: {instance._count?.athleteMemberships || 0}/{instance.capacity}
+                        </div>
+                      )}
+                      {instance.registrationOpen === false && instance.registrationStartDate && (
+                        <div className="text-muted-foreground text-xs mt-1">
+                          Reg opens: {format(new Date(instance.registrationStartDate), 'MMM d, yyyy')}{instance.registrationStartTime ? ` at ${instance.registrationStartTime}` : ''}
+                        </div>
+                      )}
+                      {instance.registrationEndDate && (
+                        <div className="text-muted-foreground text-xs mt-1">
+                          Reg closes: {format(new Date(instance.registrationEndDate), 'MMM d, yyyy')}{instance.registrationEndTime ? ` at ${instance.registrationEndTime}` : ''}
                         </div>
                       )}
                     </div>

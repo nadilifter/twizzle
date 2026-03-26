@@ -1009,6 +1009,14 @@ model MembershipInstance {
   purchaseStartDate DateTime? // Overrides group purchaseWindowDays calculation
   purchaseEndDate   DateTime? // Defaults to endDate if null
 
+  // Registration Window
+  registrationStartDate DateTime?
+  registrationStartTime String?
+  registrationEndDate   DateTime?
+  registrationEndTime   String?
+  registrationOpen      Boolean @default(true)
+  earlyAccessCode       String?
+
   // Instance-level capacity override
   capacity Int? // Overrides group capacity if set
 
@@ -4252,6 +4260,14 @@ model Competition {
 
   // GL Code
   glCodeId String?
+
+  // Registration Window
+  registrationStartDate DateTime?
+  registrationStartTime String?
+  registrationEndDate   DateTime?
+  registrationEndTime   String?
+  registrationOpen      Boolean @default(true)
+  earlyAccessCode       String?
 
   // Season
   seasonId String?

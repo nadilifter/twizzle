@@ -75,6 +75,14 @@ export interface MembershipInstance {
   purchaseStartDate: string | null;
   purchaseEndDate: string | null;
 
+  // Registration Window
+  registrationStartDate: string | null;
+  registrationStartTime: string | null;
+  registrationEndDate: string | null;
+  registrationEndTime: string | null;
+  registrationOpen: boolean;
+  earlyAccessCode: string | null;
+
   // Capacity override
   capacity: number | null;
 
@@ -191,6 +199,12 @@ export interface CreateMembershipInstancePayload {
   purchaseEndDate?: string;
   capacity?: number;
   status?: MembershipInstanceStatus;
+  registrationStartDate?: string | null;
+  registrationStartTime?: string | null;
+  registrationEndDate?: string | null;
+  registrationEndTime?: string | null;
+  registrationOpen?: boolean;
+  earlyAccessCode?: string | null;
 }
 
 export interface MembershipsQueryParams {

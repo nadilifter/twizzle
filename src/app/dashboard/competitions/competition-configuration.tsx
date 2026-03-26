@@ -31,6 +31,10 @@ import {
   Heart,
   FileText,
   Calendar as CalendarIcon,
+  KeyRound,
+  RefreshCw,
+  Link2,
+  Copy,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -187,7 +191,15 @@ interface CompetitionFormData {
   // Step 4: Results
   categoryResults: CategoryResultConfig[]
 
-  // Step 5: Pricing
+  // Step 5: Registration
+  registrationOpen: boolean
+  registrationStartDate: string
+  registrationStartTime: string
+  registrationEndDate: string
+  registrationEndTime: string
+  earlyAccessCode: string | null
+
+  // Step 6: Pricing
   pricingMode: "FREE" | "PER_COMPETITION" | "PER_EVENT" | "TIERED" | "PER_CATEGORY"
   entryFee: number | null
   pricingTiers: Array<{ minEvents: number; maxEvents: number | null; pricePerEvent: number }>
@@ -261,6 +273,12 @@ export function CompetitionConfiguration({
     hasFileRequirement: false,
     fileRequirementConfig: null,
     categoryResults: [],
+    registrationOpen: true,
+    registrationStartDate: "",
+    registrationStartTime: "09:00",
+    registrationEndDate: "",
+    registrationEndTime: "23:59",
+    earlyAccessCode: null,
     pricingMode: "FREE",
     entryFee: null,
     pricingTiers: [{ minEvents: 1, maxEvents: 3, pricePerEvent: 20 }, { minEvents: 4, maxEvents: null, pricePerEvent: 15 }],
@@ -377,6 +395,12 @@ export function CompetitionConfiguration({
           hasFileRequirement: compData.hasFileRequirement ?? false,
           fileRequirementConfig: compData.fileRequirementConfig ?? null,
           categoryResults,
+          registrationOpen: compData.registrationOpen ?? true,
+          registrationStartDate: compData.registrationStartDate ? new Date(compData.registrationStartDate).toISOString().split("T")[0] : (compData.startDate ? new Date(compData.startDate).toISOString().split("T")[0] : ""),
+          registrationStartTime: compData.registrationStartTime || "09:00",
+          registrationEndDate: compData.registrationEndDate ? new Date(compData.registrationEndDate).toISOString().split("T")[0] : (compData.endDate ? new Date(compData.endDate).toISOString().split("T")[0] : ""),
+          registrationEndTime: compData.registrationEndTime || "23:59",
+          earlyAccessCode: (compData.earlyAccessCode || null) as string | null,
           pricingMode: compData.pricingMode || "FREE",
           entryFee: compData.entryFee != null ? (typeof compData.entryFee === "string" ? parseFloat(compData.entryFee) : compData.entryFee) : null,
           pricingTiers,
@@ -629,6 +653,12 @@ export function CompetitionConfiguration({
             entryFee: formData.entryFee,
             pricingTiers: formData.pricingMode === "TIERED" ? formData.pricingTiers : [],
             categoryPrices: formData.pricingMode === "PER_CATEGORY" ? formData.categoryPrices : {},
+            registrationOpen: formData.registrationOpen,
+            registrationStartDate: !formData.registrationOpen && formData.registrationStartDate ? formData.registrationStartDate : null,
+            registrationStartTime: !formData.registrationOpen ? formData.registrationStartTime : null,
+            registrationEndDate: formData.registrationEndDate || null,
+            registrationEndTime: formData.registrationEndTime || null,
+            earlyAccessCode: formData.earlyAccessCode,
             publishStatus: formData.publishStatus,
             scheduledGoLiveDate: formData.scheduledGoLiveDate?.toISOString(),
             scheduledGoLiveTime: formData.scheduledGoLiveTime,
@@ -676,6 +706,7 @@ export function CompetitionConfiguration({
             <TabsTrigger value="restrictions">Restrictions</TabsTrigger>
             <TabsTrigger value="results">Results</TabsTrigger>
             <TabsTrigger value="pricing">Pricing</TabsTrigger>
+            <TabsTrigger value="registration">Registration</TabsTrigger>
             <TabsTrigger value="publishing">Publishing</TabsTrigger>
           </ResponsiveTabsList>
         </div>
@@ -1310,6 +1341,179 @@ export function CompetitionConfiguration({
                 </div>
             )}
 
+          </TabsContent>
+
+          {/* REGISTRATION TAB */}
+          <TabsContent value="registration" className="mt-0 space-y-6 max-w-2xl">
+            {/* Registration Availability */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                Registration Availability
+              </Label>
+              <RadioGroup
+                value={formData.registrationOpen ? "now" : "scheduled"}
+                onValueChange={(value) => {
+                  const isNow = value === "now"
+                  setFormData(prev => ({
+                    ...prev,
+                    registrationOpen: isNow,
+                    registrationStartDate: isNow ? "" : prev.registrationStartDate,
+                  }))
+                }}
+                className="space-y-3"
+              >
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.registrationOpen
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="now" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Open Registration Now</span>
+                    <p className="text-sm text-muted-foreground">
+                      Registration is immediately available for athletes
+                    </p>
+                  </div>
+                </label>
+
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    !formData.registrationOpen
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="scheduled" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Schedule Registration</span>
+                    <p className="text-sm text-muted-foreground">
+                      Set a specific date and time for registration to open
+                    </p>
+                  </div>
+                </label>
+              </RadioGroup>
+            </div>
+
+            {/* Registration Opens */}
+            {!formData.registrationOpen && (
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Registration Opens</Label>
+              <p className="text-sm text-muted-foreground">
+                Set when registration becomes available. Must be on or before the first day of the competition{formData.startDate ? ` (${format(formData.startDate, "PPP")})` : ""}.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Open Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.registrationStartDate}
+                    max={formData.startDate ? formData.startDate.toISOString().split("T")[0] : undefined}
+                    onChange={e => setFormData(prev => ({ ...prev, registrationStartDate: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Open Time</Label>
+                  <Input
+                    type="time"
+                    value={formData.registrationStartTime}
+                    onChange={e => setFormData(prev => ({ ...prev, registrationStartTime: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+            )}
+
+            {/* Registration End Date */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Registration Closes</Label>
+              <p className="text-sm text-muted-foreground">
+                Set when registration closes. Defaults to the competition end date if not specified.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Close Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.registrationEndDate}
+                    min={!formData.registrationOpen && formData.registrationStartDate ? formData.registrationStartDate : new Date().toISOString().split("T")[0]}
+                    onChange={e => setFormData(prev => ({ ...prev, registrationEndDate: e.target.value }))}
+                    placeholder={formData.endDate ? formData.endDate.toISOString().split("T")[0] : ""}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Close Time</Label>
+                  <Input
+                    type="time"
+                    value={formData.registrationEndTime}
+                    onChange={e => setFormData(prev => ({ ...prev, registrationEndTime: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Early Access Code */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                Early Access Code
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Generate or enter a code that allows registration before the registration window opens
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Enter or generate a code"
+                  value={formData.earlyAccessCode || ""}
+                  onChange={e => setFormData(prev => ({ ...prev, earlyAccessCode: e.target.value || null }))}
+                  className="max-w-[300px]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const code = crypto.randomUUID().slice(0, 8).toUpperCase()
+                    setFormData(prev => ({ ...prev, earlyAccessCode: code }))
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Generate
+                </Button>
+              </div>
+
+              {formData.earlyAccessCode && (
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Early Access Link
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
+                      {typeof window !== "undefined" ? `${window.location.origin}` : ""}/competitions/{competitionId}?code={formData.earlyAccessCode}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = `${window.location.origin}/competitions/${competitionId}?code=${formData.earlyAccessCode}`
+                        navigator.clipboard.writeText(url)
+                        toast.success("Link copied to clipboard")
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Share this link with athletes who should have early access to registration
+                  </p>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* PUBLISHING TAB */}

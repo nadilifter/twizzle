@@ -181,6 +181,14 @@ const updateCompetitionSchema = z.object({
   scheduledGoLiveDate: z.string().or(z.date()).nullable().optional(),
   scheduledGoLiveTime: z.string().optional(),
 
+  // Registration window
+  registrationStartDate: z.string().optional().nullable(),
+  registrationStartTime: z.string().optional().nullable(),
+  registrationEndDate: z.string().optional().nullable(),
+  registrationEndTime: z.string().optional().nullable(),
+  registrationOpen: z.boolean().optional(),
+  earlyAccessCode: z.string().optional().nullable(),
+
   glCodeId: z.string().optional().nullable(),
 })
 
@@ -298,6 +306,12 @@ export async function PATCH(
     }
     if (data.scheduledGoLiveDate !== undefined) updateData.scheduledGoLiveDate = data.scheduledGoLiveDate ? parseDateOnly(String(data.scheduledGoLiveDate)) : null
     if (data.scheduledGoLiveTime !== undefined) updateData.scheduledGoLiveTime = data.scheduledGoLiveTime
+    if (data.registrationStartDate !== undefined) updateData.registrationStartDate = data.registrationStartDate ? parseDateOnly(data.registrationStartDate) : null
+    if (data.registrationStartTime !== undefined) updateData.registrationStartTime = data.registrationStartTime
+    if (data.registrationEndDate !== undefined) updateData.registrationEndDate = data.registrationEndDate ? parseDateOnly(data.registrationEndDate) : null
+    if (data.registrationEndTime !== undefined) updateData.registrationEndTime = data.registrationEndTime
+    if (data.registrationOpen !== undefined) updateData.registrationOpen = data.registrationOpen
+    if (data.earlyAccessCode !== undefined) updateData.earlyAccessCode = data.earlyAccessCode
 
     const addressChanged = !data.facilityId && hasAddressChanged(
       {

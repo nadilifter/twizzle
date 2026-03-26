@@ -37,9 +37,11 @@ import {
   FileText,
   Plus,
   RefreshCw,
+  KeyRound,
 } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { toast } from "sonner"
 import { GLCodeSelector } from "@/components/gl-code-selector"
 import { useFeatures } from "@/components/feature-context"
@@ -71,6 +73,12 @@ interface PendingInstance {
   endDate: Date | null
   autoRenewDate: Date | null
   status: MembershipInstanceStatus
+  registrationOpen: boolean
+  registrationStartDate: Date | null
+  registrationStartTime: string
+  registrationEndDate: Date | null
+  registrationEndTime: string
+  earlyAccessCode: string | null
 }
 
 interface MembershipFormData {
@@ -194,6 +202,12 @@ export function MembershipStepper() {
       endDate: null,
       autoRenewDate: null,
       status: "DRAFT",
+      registrationOpen: true,
+      registrationStartDate: null,
+      registrationStartTime: "09:00",
+      registrationEndDate: null,
+      registrationEndTime: "23:59",
+      earlyAccessCode: null,
     }
   }
 
@@ -419,6 +433,12 @@ export function MembershipStepper() {
             endDate: instance.endDate ? format(instance.endDate, "yyyy-MM-dd") : "",
             autoRenewDate: instance.autoRenewDate ? format(instance.autoRenewDate, "yyyy-MM-dd") : undefined,
             status: instance.status,
+            registrationOpen: instance.registrationOpen,
+            registrationStartDate: !instance.registrationOpen && instance.registrationStartDate ? format(instance.registrationStartDate, "yyyy-MM-dd") : null,
+            registrationStartTime: !instance.registrationOpen ? instance.registrationStartTime : null,
+            registrationEndDate: instance.registrationEndDate ? format(instance.registrationEndDate, "yyyy-MM-dd") : null,
+            registrationEndTime: instance.registrationEndTime || null,
+            earlyAccessCode: instance.earlyAccessCode,
           }
 
           const instResponse = await fetch(`/api/memberships/${groupId}/instances`, {
@@ -1349,6 +1369,199 @@ export function MembershipStepper() {
                               />
                             </PopoverContent>
                           </Popover>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Registration Window */}
+                      <div className="space-y-4">
+                        <Label className="text-base font-medium">Registration Availability</Label>
+                        <RadioGroup
+                          value={newInstance.registrationOpen ? "now" : "scheduled"}
+                          onValueChange={(value) => {
+                            const isNow = value === "now"
+                            setNewInstance(prev => ({
+                              ...prev,
+                              registrationOpen: isNow,
+                              registrationStartDate: isNow ? null : prev.registrationStartDate,
+                            }))
+                          }}
+                          className="space-y-3"
+                        >
+                          <label
+                            className={cn(
+                              "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                              newInstance.registrationOpen
+                                ? "border-primary bg-primary/5"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
+                            <RadioGroupItem value="now" className="mt-1" />
+                            <div className="flex-1 space-y-1">
+                              <span className="font-medium">Open Registration Now</span>
+                              <p className="text-sm text-muted-foreground">
+                                Registration is immediately available for athletes
+                              </p>
+                            </div>
+                          </label>
+
+                          <label
+                            className={cn(
+                              "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                              !newInstance.registrationOpen
+                                ? "border-primary bg-primary/5"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
+                            <RadioGroupItem value="scheduled" className="mt-1" />
+                            <div className="flex-1 space-y-1">
+                              <span className="font-medium">Schedule Registration</span>
+                              <p className="text-sm text-muted-foreground">
+                                Set a specific date and time for registration to open
+                              </p>
+                            </div>
+                          </label>
+                        </RadioGroup>
+                      </div>
+
+                      {!newInstance.registrationOpen && (
+                        <div className="space-y-4">
+                          <Label className="text-base font-medium">Registration Opens</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Set when registration becomes available
+                          </p>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Open Date</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !newInstance.registrationStartDate && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {newInstance.registrationStartDate
+                                      ? format(newInstance.registrationStartDate, "PPP")
+                                      : "Pick a date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    fixedWeeks
+                                    selected={newInstance.registrationStartDate || undefined}
+                                    onSelect={date => setNewInstance(prev => ({ ...prev, registrationStartDate: date || null }))}
+                                    disabled={date => newInstance.startDate ? date > newInstance.startDate : false}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Open Time</Label>
+                              <div className="relative">
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="time"
+                                  value={newInstance.registrationStartTime}
+                                  onChange={e => setNewInstance(prev => ({ ...prev, registrationStartTime: e.target.value }))}
+                                  className="pl-10"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-4">
+                        <Label className="text-base font-medium">Registration Closes</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Set when registration closes. Defaults to the instance end date if not specified.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Close Date</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !newInstance.registrationEndDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {newInstance.registrationEndDate
+                                    ? format(newInstance.registrationEndDate, "PPP")
+                                    : newInstance.endDate
+                                    ? `Instance end: ${format(newInstance.endDate, "PPP")}`
+                                    : "Pick a date"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  fixedWeeks
+                                  selected={newInstance.registrationEndDate || undefined}
+                                  onSelect={date => setNewInstance(prev => ({ ...prev, registrationEndDate: date || null }))}
+                                  disabled={date => {
+                                    const earliest = !newInstance.registrationOpen && newInstance.registrationStartDate
+                                      ? newInstance.registrationStartDate
+                                      : new Date()
+                                    return date < earliest
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Close Time</Label>
+                            <div className="relative">
+                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="time"
+                                value={newInstance.registrationEndTime}
+                                onChange={e => setNewInstance(prev => ({ ...prev, registrationEndTime: e.target.value }))}
+                                className="pl-10"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <Label className="text-base font-medium flex items-center gap-2">
+                          <KeyRound className="h-4 w-4 text-muted-foreground" />
+                          Early Access Code
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Generate or enter a code that allows registration before the registration window opens
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Enter or generate a code"
+                            value={newInstance.earlyAccessCode || ""}
+                            onChange={e => setNewInstance(prev => ({ ...prev, earlyAccessCode: e.target.value || null }))}
+                            className="max-w-[300px]"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              const code = crypto.randomUUID().slice(0, 8).toUpperCase()
+                              setNewInstance(prev => ({ ...prev, earlyAccessCode: code }))
+                            }}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Generate
+                          </Button>
                         </div>
                       </div>
 

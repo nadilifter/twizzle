@@ -14,6 +14,7 @@ import {
   Shield,
   Tag,
 } from "lucide-react";
+import { getRegistrationStatus } from "@/lib/registration-utils";
 
 interface CompetitionCardProps {
   competition: {
@@ -36,6 +37,11 @@ interface CompetitionCardProps {
     hasCapacityRestriction?: boolean;
     capacity?: number | null;
     hasMembershipRestriction?: boolean;
+    registrationOpen?: boolean;
+    registrationStartDate?: string | Date | null;
+    registrationStartTime?: string | null;
+    registrationEndDate?: string | Date | null;
+    registrationEndTime?: string | null;
     _count?: {
       categories?: number;
       entries?: number;
@@ -131,6 +137,7 @@ export function CompetitionCard({ competition, primaryColor }: CompetitionCardPr
 
   const categoryCount = competition._count?.categories || 0;
   const pricingSummary = getPricingSummary(competition);
+  const registrationStatus = getRegistrationStatus(competition);
 
   return (
     <Card className="group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
@@ -224,16 +231,30 @@ export function CompetitionCard({ competition, primaryColor }: CompetitionCardPr
           <span className="text-sm font-medium">{pricingSummary}</span>
         </div>
 
-        <Button
-          asChild
-          disabled={spotsAvailable === 0}
-          className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
-        >
-          <Link href={`/competitions/${competition.id}`}>
+        {registrationStatus === "closed" || registrationStatus === "scheduled" ? (
+          <Button
+            disabled
+            className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
+          >
             <Trophy className="h-4 w-4" />
-            {spotsAvailable === 0 ? "Currently Full" : "Register"}
-          </Link>
-        </Button>
+            {registrationStatus === "closed"
+              ? "Registration Closed"
+              : competition.registrationStartDate
+              ? `Opens ${format(new Date(competition.registrationStartDate), "MMM d")}`
+              : "Coming Soon"}
+          </Button>
+        ) : (
+          <Button
+            asChild
+            disabled={spotsAvailable === 0}
+            className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
+          >
+            <Link href={`/competitions/${competition.id}`}>
+              <Trophy className="h-4 w-4" />
+              {spotsAvailable === 0 ? "Currently Full" : "Register"}
+            </Link>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

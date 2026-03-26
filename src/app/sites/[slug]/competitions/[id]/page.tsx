@@ -2,7 +2,9 @@ import React from "react"
 import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { format } from "date-fns"
-import { Trophy, CalendarDays, MapPin, Clock } from "lucide-react"
+import { Trophy, CalendarDays, MapPin, Clock, Ban, Hourglass } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { getRegistrationStatus } from "@/lib/registration-utils"
 import { CompetitionRegistrationFlow } from "@/components/sites/competition-registration-flow"
 import { LocationMap } from "@/components/location-map"
 import type { FileRequirementConfig } from "@/types/file-requirements"
@@ -10,8 +12,10 @@ import { getHeroContrastStyles } from "@/lib/color-utils"
 
 export default async function CompetitionDetailPage({
   params,
+  searchParams,
 }: {
   params: { slug: string; id: string }
+  searchParams: { code?: string }
 }) {
   const config = await db.websiteConfig.findUnique({
     where: { subdomain: params.slug },
@@ -54,6 +58,11 @@ export default async function CompetitionDetailPage({
 
   const primaryColor = config.primaryColor || "#000000"
 
+  const earlyAccessCode = searchParams.code || null
+  const registrationStatus = getRegistrationStatus(competition)
+  const hasValidEarlyAccess = earlyAccessCode !== null && competition.earlyAccessCode !== null && earlyAccessCode === competition.earlyAccessCode
+  const canRegister = registrationStatus === "open" || hasValidEarlyAccess
+
   const startDate = new Date(competition.startDate)
   const endDate = new Date(competition.endDate)
   const sameDay =
@@ -91,6 +100,11 @@ export default async function CompetitionDetailPage({
     hasMedicalRequirement: competition.hasMedicalRequirement,
     hasFileRequirement: competition.hasFileRequirement,
     fileRequirementConfig: competition.fileRequirementConfig as FileRequirementConfig | null,
+    registrationOpen: competition.registrationOpen,
+    registrationStartDate: competition.registrationStartDate?.toISOString() || null,
+    registrationStartTime: competition.registrationStartTime,
+    registrationEndDate: competition.registrationEndDate?.toISOString() || null,
+    registrationEndTime: competition.registrationEndTime,
     organizationId: competition.organizationId,
     categories: competition.categories.map((cat) => ({
       id: cat.id,
@@ -141,11 +155,26 @@ export default async function CompetitionDetailPage({
         }}
       >
         <div className="mx-auto w-full max-w-4xl px-4 md:px-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Trophy className="h-8 w-8" />
-            <h1 className="text-4xl font-bold tracking-tight">
-              {competition.name}
-            </h1>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <Trophy className="h-8 w-8" />
+              <h1 className="text-4xl font-bold tracking-tight">
+                {competition.name}
+              </h1>
+            </div>
+            {registrationStatus === "closed" ? (
+              <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-gray-500 text-white border-gray-500 shadow-lg">
+                <Ban className="h-4 w-4" />
+                Registration Closed
+              </Badge>
+            ) : registrationStatus === "scheduled" && !hasValidEarlyAccess ? (
+              <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-blue-500 text-white border-blue-500 shadow-lg">
+                <Hourglass className="h-4 w-4" />
+                {competition.registrationStartDate
+                  ? `Opens ${format(new Date(competition.registrationStartDate), "MMM d")}`
+                  : "Coming Soon"}
+              </Badge>
+            ) : null}
           </div>
 
           <div className={`flex flex-wrap gap-x-6 gap-y-2 mt-4 ${hero.textMuted}`}>
@@ -201,11 +230,32 @@ export default async function CompetitionDetailPage({
 
       {/* Registration Flow */}
       <section className="mx-auto w-full max-w-4xl px-4 py-12 md:px-8">
-        <CompetitionRegistrationFlow
-          competition={serializedCompetition}
-          slug={params.slug}
-          primaryColor={primaryColor}
-        />
+        {canRegister ? (
+          <CompetitionRegistrationFlow
+            competition={serializedCompetition}
+            slug={params.slug}
+            primaryColor={primaryColor}
+            earlyAccessCode={earlyAccessCode}
+          />
+        ) : registrationStatus === "closed" ? (
+          <div className="rounded-lg border bg-muted/30 p-8 text-center">
+            <Ban className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Registration Closed</h3>
+            <p className="text-muted-foreground">
+              Registration for this competition has closed.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-lg border bg-muted/30 p-8 text-center">
+            <Hourglass className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Registration Not Yet Open</h3>
+            <p className="text-muted-foreground">
+              {competition.registrationStartDate
+                ? `Registration opens on ${format(new Date(competition.registrationStartDate), "MMMM d, yyyy")}${competition.registrationStartTime ? ` at ${competition.registrationStartTime}` : ""}.`
+                : "Registration will open soon."}
+            </p>
+          </div>
+        )}
       </section>
     </div>
   )

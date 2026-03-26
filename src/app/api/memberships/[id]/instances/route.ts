@@ -16,6 +16,13 @@ const createInstanceSchema = z.object({
   purchaseEndDate: z.string().optional().transform((str) => str ? parseDateOnly(str) ?? undefined : undefined),
   capacity: z.number().int().min(0).optional(),
   status: z.enum(["DRAFT", "ACTIVE"]).default("DRAFT"),
+  // Registration window
+  registrationStartDate: z.string().optional().nullable().transform((str) => str ? parseDateOnly(str) ?? undefined : undefined),
+  registrationStartTime: z.string().optional().nullable(),
+  registrationEndDate: z.string().optional().nullable().transform((str) => str ? parseDateOnly(str) ?? undefined : undefined),
+  registrationEndTime: z.string().optional().nullable(),
+  registrationOpen: z.boolean().default(true),
+  earlyAccessCode: z.string().optional().nullable(),
 });
 
 // GET /api/memberships/[id]/instances
@@ -124,6 +131,12 @@ export async function POST(
         purchaseEndDate: validatedData.purchaseEndDate,
         capacity: validatedData.capacity,
         status: validatedData.status,
+        registrationOpen: validatedData.registrationOpen,
+        registrationStartDate: validatedData.registrationStartDate,
+        registrationStartTime: validatedData.registrationStartTime,
+        registrationEndDate: validatedData.registrationEndDate,
+        registrationEndTime: validatedData.registrationEndTime,
+        earlyAccessCode: validatedData.earlyAccessCode,
       },
       include: {
         _count: { select: { athleteMemberships: true } },

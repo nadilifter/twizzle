@@ -172,6 +172,7 @@ interface CompetitionRegistrationFlowProps {
   competition: CompetitionData
   slug: string
   primaryColor?: string
+  earlyAccessCode?: string | null
 }
 
 // ---------- Stepper definition ----------
@@ -330,6 +331,7 @@ export function CompetitionRegistrationFlow({
   competition,
   slug,
   primaryColor,
+  earlyAccessCode,
 }: CompetitionRegistrationFlowProps) {
   const { data: session } = useSession()
   const { addItem } = useCart()
@@ -943,6 +945,7 @@ export function CompetitionRegistrationFlow({
         requiredMemberships: selectedMembership ? [selectedMembership.id] : [],
         ...(Object.keys(structuredSeedMarks).length > 0 && { seedMarks: structuredSeedMarks }),
         ...(uploadedFileId && { fileUploadId: uploadedFileId }),
+        ...(earlyAccessCode && { earlyAccessCode }),
       },
     })
 

@@ -156,6 +156,14 @@ const createCompetitionSchema = z.object({
   scheduledGoLiveDate: z.string().or(z.date()).nullable().optional(),
   scheduledGoLiveTime: z.string().optional(),
 
+  // Registration window
+  registrationStartDate: z.string().optional().nullable(),
+  registrationStartTime: z.string().optional().nullable(),
+  registrationEndDate: z.string().optional().nullable(),
+  registrationEndTime: z.string().optional().nullable(),
+  registrationOpen: z.boolean().default(true),
+  earlyAccessCode: z.string().optional().nullable(),
+
   glCodeId: z.string().optional().nullable(),
   seasonId: z.string().optional().nullable(),
 })
@@ -291,6 +299,14 @@ export async function POST(request: NextRequest) {
         entryFee: data.pricingMode === "PER_COMPETITION" || data.pricingMode === "PER_EVENT"
           ? data.entryFee ?? null
           : null,
+
+        // Registration window
+        registrationOpen: data.registrationOpen,
+        registrationStartDate: data.registrationStartDate ? parseDateOnly(data.registrationStartDate) : null,
+        registrationStartTime: data.registrationStartTime,
+        registrationEndDate: data.registrationEndDate ? parseDateOnly(data.registrationEndDate) : null,
+        registrationEndTime: data.registrationEndTime,
+        earlyAccessCode: data.earlyAccessCode,
 
         // Publishing
         publishStatus: data.publishStatus,

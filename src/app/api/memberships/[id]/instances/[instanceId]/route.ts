@@ -16,6 +16,13 @@ const updateInstanceSchema = z.object({
   purchaseEndDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? parseDateOnly(val) ?? undefined : undefined),
   capacity: z.number().int().min(0).nullable().optional(),
   status: z.enum(["DRAFT", "ACTIVE", "EXPIRED", "CANCELLED", "ARCHIVED"]).optional(),
+  // Registration window
+  registrationStartDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? parseDateOnly(val) ?? undefined : undefined),
+  registrationStartTime: z.string().nullable().optional(),
+  registrationEndDate: z.string().nullable().optional().transform((val) => val === null ? null : val ? parseDateOnly(val) ?? undefined : undefined),
+  registrationEndTime: z.string().nullable().optional(),
+  registrationOpen: z.boolean().optional(),
+  earlyAccessCode: z.string().nullable().optional(),
 });
 
 // GET /api/memberships/[id]/instances/[instanceId]
@@ -116,6 +123,12 @@ export async function PATCH(
     if (validatedData.purchaseEndDate !== undefined) updateData.purchaseEndDate = validatedData.purchaseEndDate;
     if (validatedData.capacity !== undefined) updateData.capacity = validatedData.capacity;
     if (validatedData.status !== undefined) updateData.status = validatedData.status;
+    if (validatedData.registrationStartDate !== undefined) updateData.registrationStartDate = validatedData.registrationStartDate;
+    if (validatedData.registrationStartTime !== undefined) updateData.registrationStartTime = validatedData.registrationStartTime;
+    if (validatedData.registrationEndDate !== undefined) updateData.registrationEndDate = validatedData.registrationEndDate;
+    if (validatedData.registrationEndTime !== undefined) updateData.registrationEndTime = validatedData.registrationEndTime;
+    if (validatedData.registrationOpen !== undefined) updateData.registrationOpen = validatedData.registrationOpen;
+    if (validatedData.earlyAccessCode !== undefined) updateData.earlyAccessCode = validatedData.earlyAccessCode;
 
     const instance = await scopedDb.membershipInstance.update({
       where: { id: params.instanceId },
