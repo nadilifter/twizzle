@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { db, getScopedDb } from "@/lib/db";
 import { getMessageStatus, mapTwilioStatus, isTwilioConfigured } from "@/lib/twilio";
 import { logger } from "@/lib/logger";
@@ -17,6 +18,9 @@ export async function POST() {
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
+    if (smsBlocked) return smsBlocked;
 
     if (!isTwilioConfigured()) {
       return NextResponse.json({ error: "Twilio not configured" }, { status: 400 });

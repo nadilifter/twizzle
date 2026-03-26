@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { db } from "@/lib/db";
 
 // GET /api/sms/[id] - Get SMS message details
@@ -13,7 +14,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check permission
+    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
+    if (smsBlocked) return smsBlocked;
+
     if (
       !session.user.permissions?.includes("*") &&
       !session.user.permissions?.includes("communication.view")

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { z } from "zod";
 import { getExpandedSmsCampaignRecipients } from "@/lib/sms-campaign-service";
 import type { SmsTargetType } from "@prisma/client";
@@ -36,7 +37,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check permission
+    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
+    if (smsBlocked) return smsBlocked;
+
     if (
       !session.user.permissions?.includes("*") &&
       !session.user.permissions?.includes("communication.view")

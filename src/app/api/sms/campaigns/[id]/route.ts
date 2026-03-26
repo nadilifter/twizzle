@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
+import { checkFeatureGate } from "@/lib/feature-resolver";
 import { db, getScopedDb } from "@/lib/db";
 import { executeCampaign } from "@/lib/sms-service";
 import { z } from "zod";
@@ -15,7 +16,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check permission
+    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
+    if (smsBlocked) return smsBlocked;
+
     if (
       !session.user.permissions?.includes("*") &&
       !session.user.permissions?.includes("communication.view")
@@ -66,7 +69,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check permission
+    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
+    if (smsBlocked) return smsBlocked;
+
     if (
       !session.user.permissions?.includes("*") &&
       !session.user.permissions?.includes("communication.send")
@@ -149,7 +154,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check permission
+    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
+    if (smsBlocked) return smsBlocked;
+
     if (
       !session.user.permissions?.includes("*") &&
       !session.user.permissions?.includes("communication.send")

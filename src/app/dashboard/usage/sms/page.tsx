@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,7 +19,7 @@ import {
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react"
 import { MessagesTable, Message } from "@/components/messages-table"
 import { SmsStatsCards, SmsStatsProps } from "@/components/sms-stats-cards"
-import { SmsChartAreaInteractive } from "@/components/sms-chart-area-interactive"
+import { SmsChartAreaInteractive, SmsChartDataPoint } from "@/components/sms-chart-area-interactive"
 import { toast } from "sonner"
 
 interface SmsMessage {
@@ -166,6 +166,26 @@ export default function SMSPage() {
       }
     : undefined
 
+  // Build chart data by aggregating messages by date
+  const chartData: SmsChartDataPoint[] = useMemo(() => {
+    if (!apiData?.messages.length) return []
+
+    const byDate = new Map<string, { sent: number; delivered: number }>()
+
+    for (const msg of apiData.messages) {
+      if (msg.direction !== "OUTBOUND") continue
+      const dateKey = new Date(msg.createdAt).toISOString().split("T")[0]
+      const entry = byDate.get(dateKey) || { sent: 0, delivered: 0 }
+      entry.sent++
+      if (msg.twilioStatus === "DELIVERED") entry.delivered++
+      byDate.set(dateKey, entry)
+    }
+
+    return Array.from(byDate.entries())
+      .map(([date, counts]) => ({ date, ...counts }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+  }, [apiData?.messages])
+
   // Transform messages for the table
   const tableMessages: Message[] =
     apiData?.messages.map((msg, idx) => transformToTableMessage(msg, idx)) ?? []
@@ -193,7 +213,7 @@ export default function SMSPage() {
         <SmsStatsCards stats={stats} />
 
         <div className="px-4 lg:px-6">
-          <SmsChartAreaInteractive />
+          <SmsChartAreaInteractive data={chartData} />
         </div>
 
         {isLoading ? (

@@ -24,40 +24,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
-const chartData = [
-  { date: "2025-10-01", sent: 40, delivered: 38 },
-  { date: "2025-10-02", sent: 55, delivered: 52 },
-  { date: "2025-10-03", sent: 30, delivered: 29 },
-  { date: "2025-10-04", sent: 60, delivered: 58 },
-  { date: "2025-10-05", sent: 75, delivered: 70 },
-  { date: "2025-10-06", sent: 45, delivered: 43 },
-  { date: "2025-10-07", sent: 90, delivered: 88 },
-  { date: "2025-10-08", sent: 120, delivered: 115 },
-  { date: "2025-10-09", sent: 100, delivered: 98 },
-  { date: "2025-10-10", sent: 80, delivered: 78 },
-  { date: "2025-10-11", sent: 65, delivered: 62 },
-  { date: "2025-10-12", sent: 40, delivered: 39 },
-  { date: "2025-10-13", sent: 55, delivered: 54 },
-  { date: "2025-10-14", sent: 70, delivered: 68 },
-  { date: "2025-10-15", sent: 95, delivered: 92 },
-  { date: "2025-10-16", sent: 110, delivered: 108 },
-  { date: "2025-10-17", sent: 85, delivered: 82 },
-  { date: "2025-10-18", sent: 60, delivered: 59 },
-  { date: "2025-10-19", sent: 50, delivered: 48 },
-  { date: "2025-10-20", sent: 75, delivered: 72 },
-  { date: "2025-10-21", sent: 90, delivered: 87 },
-  { date: "2025-10-22", sent: 105, delivered: 102 },
-  { date: "2025-10-23", sent: 80, delivered: 78 },
-  { date: "2025-10-24", sent: 65, delivered: 63 },
-  { date: "2025-10-25", sent: 50, delivered: 48 },
-  { date: "2025-10-26", sent: 70, delivered: 68 },
-  { date: "2025-10-27", sent: 95, delivered: 93 },
-  { date: "2025-10-28", sent: 115, delivered: 110 },
-  { date: "2025-10-29", sent: 85, delivered: 83 },
-  { date: "2025-10-30", sent: 60, delivered: 58 },
-]
+export interface SmsChartDataPoint {
+  date: string
+  sent: number
+  delivered: number
+}
+
+interface SmsChartAreaInteractiveProps {
+  data?: SmsChartDataPoint[]
+}
 
 const chartConfig = {
   sent: {
@@ -70,21 +47,26 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function SmsChartAreaInteractive() {
-  const [timeRange, setTimeRange] = useState("90d")
+export function SmsChartAreaInteractive({ data = [] }: SmsChartAreaInteractiveProps) {
+  const [timeRange, setTimeRange] = useState("30d")
 
-  const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date)
+  const filteredData = useMemo(() => {
+    if (data.length === 0) return []
+
     const now = new Date()
-    let daysToSubtract = 90
-    if (timeRange === "30d") {
-      daysToSubtract = 30
+    let daysToSubtract = 30
+    if (timeRange === "90d") {
+      daysToSubtract = 90
     } else if (timeRange === "7d") {
       daysToSubtract = 7
     }
-    const startDate = new Date(now.setDate(now.getDate() - daysToSubtract))
-    return date >= startDate
-  })
+    const startDate = new Date(now)
+    startDate.setDate(startDate.getDate() - daysToSubtract)
+
+    return data.filter((item) => new Date(item.date) >= startDate)
+  }, [data, timeRange])
+
+  if (data.length === 0) return null
 
   return (
     <Card>
@@ -92,7 +74,7 @@ export function SmsChartAreaInteractive() {
         <div className="grid flex-1 gap-1 text-center sm:text-left">
           <CardTitle>SMS Volume</CardTitle>
           <CardDescription>
-            Showing total messages sent vs delivered for the last 3 months
+            Messages sent vs delivered over time
           </CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
@@ -100,7 +82,7 @@ export function SmsChartAreaInteractive() {
             className="w-[160px] rounded-lg sm:ml-auto"
             aria-label="Select a value"
           >
-            <SelectValue placeholder="Last 3 months" />
+            <SelectValue placeholder="Last 30 days" />
           </SelectTrigger>
           <SelectContent className="rounded-xl">
             <SelectItem value="90d" className="rounded-lg">
@@ -162,6 +144,12 @@ export function SmsChartAreaInteractive() {
                 })
               }}
             />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              width={30}
+            />
             <ChartTooltip
               cursor={false}
               content={
@@ -197,5 +185,3 @@ export function SmsChartAreaInteractive() {
     </Card>
   )
 }
-
-

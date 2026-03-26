@@ -197,11 +197,16 @@ export async function sendSms(options: SendSmsOptions): Promise<SendSmsResult> {
       messageOptions.statusCallback = webhookUrl;
     }
 
-    // Use explicit from number (pool), messaging service, or env fallback
-    if (options.from) {
-      messageOptions.from = options.from;
-    } else if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+    // Route through the Messaging Service for A2P compliance when available.
+    // Setting both messagingServiceSid and from tells Twilio to use the
+    // specified sender while still applying Messaging Service compliance rules.
+    if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
       messageOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+      if (options.from) {
+        messageOptions.from = options.from;
+      }
+    } else if (options.from) {
+      messageOptions.from = options.from;
     } else if (process.env.TWILIO_PHONE_NUMBER) {
       messageOptions.from = process.env.TWILIO_PHONE_NUMBER;
     }
