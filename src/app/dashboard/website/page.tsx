@@ -524,7 +524,15 @@ export default function WebsitePage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Show Programs</Label>
+              <div className="flex items-center gap-2">
+                <Label>Show Programs</Label>
+                <Link
+                  href="/dashboard/registrations/programs"
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Manage Programs <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
               <p className="text-sm text-muted-foreground">Allow users to register for programs online.</p>
             </div>
             <Switch 
@@ -562,7 +570,15 @@ export default function WebsitePage() {
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Show Locations</Label>
+              <div className="flex items-center gap-2">
+                <Label>Show Locations</Label>
+                <Link
+                  href="/dashboard/organization/facilities"
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Manage Facilities <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
               <p className="text-sm text-muted-foreground">Display your facility locations with maps and hours.</p>
             </div>
             <Switch 
@@ -596,7 +612,15 @@ export default function WebsitePage() {
               <Separator />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Show Competitions</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Show Competitions</Label>
+                    <Link
+                      href="/dashboard/competitions"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      Manage Competitions <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
                   <p className="text-sm text-muted-foreground">Display the competitions page for event registration.</p>
                 </div>
                 <Switch 
@@ -610,7 +634,15 @@ export default function WebsitePage() {
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Show Store</Label>
+              <div className="flex items-center gap-2">
+                <Label>Show Store</Label>
+                <Link
+                  href="/dashboard/store/products"
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Manage Products <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
               <p className="text-sm text-muted-foreground">Display the product store for online purchases.</p>
             </div>
             <Switch 
