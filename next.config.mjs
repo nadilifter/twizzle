@@ -184,6 +184,25 @@ const nextConfig = {
       "recharts"
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/dashboard/organization/website/team',
+        destination: '/dashboard/website/team',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/organization/website',
+        destination: '/dashboard/website',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/competitions/marketing',
+        destination: '/dashboard/website/competitions',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     // Security headers for all routes
     const securityHeaders = [

@@ -20,7 +20,7 @@ Add the following lines:
 ### 2. Configure a Website
 
 1. Log in to the dashboard at `http://localhost:3000`.
-2. Go to **Organization > Website**.
+2. Go to **Website > General**.
 3. Set the **Subdomain** field (e.g., `test` or `gym`).
 4. Publish the website.
 
@@ -31,7 +31,7 @@ Visit `http://test.localhost:3000` or `http://gym.localhost:3000`.
 ## Architecture
 
 - **Middleware**: `src/middleware.ts` internally rewrites subdomain requests to `/sites/[subdomain]` (see URL rules below).
-- **Admin UI**: `src/app/dashboard/organization/website/page.tsx`
+- **Admin UI**: `src/app/dashboard/website/page.tsx`
 - **Public Site**: `src/app/sites/[slug]/page.tsx`
 
 ## Tenant Site URL Construction Rules

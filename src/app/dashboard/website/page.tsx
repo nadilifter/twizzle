@@ -577,7 +577,7 @@ export default function WebsitePage() {
               <div className="flex items-center gap-2">
                 <Label>Show Team</Label>
                 <Link
-                  href="/dashboard/organization/website/team"
+                  href="/dashboard/website/team"
                   className="text-xs text-primary hover:underline inline-flex items-center gap-1"
                 >
                   Manage Team <ExternalLink className="h-3 w-3" />

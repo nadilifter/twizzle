@@ -45,7 +45,7 @@ export async function getActionItems(organizationId: string): Promise<ActionItem
       id: "customize-website",
       title: "Customize your website",
       description: "Update your public site with content and branding",
-      url: "/dashboard/organization/website",
+      url: "/dashboard/website",
       isComplete: !!websiteConfig?.isPublished,
       icon: "Globe",
     },

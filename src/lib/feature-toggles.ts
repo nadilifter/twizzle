@@ -101,6 +101,12 @@ export const FEATURE_SIDEBAR_MAP: Record<
   },
   competitions: {
     sectionTitle: "Competitions",
+    subItems: [
+      {
+        section: "Website",
+        items: ["Competitions"],
+      },
+    ],
   },
   sms: {
     subItems: [

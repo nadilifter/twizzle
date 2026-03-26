@@ -132,7 +132,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Competition category management with sport presets and custom categories",
     apiRoutes: ["/api/competition-categories"],
   },
-  "/dashboard/competitions/marketing": {
+  "/dashboard/website/competitions": {
     status: "live",
     description: "Marketing site configuration for competitions page visibility and content",
     apiRoutes: ["/api/organization/website"],
@@ -221,7 +221,7 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Order management and fulfillment tracking",
     apiRoutes: ["/api/orders"],
   },
-  "/dashboard/organization/website": {
+  "/dashboard/website": {
     status: "live",
     description: "Website builder with CMS capabilities",
   },

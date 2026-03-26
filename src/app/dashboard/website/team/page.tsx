@@ -248,7 +248,7 @@ export default function TeamHighlightsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/organization/website">
+          <Link href="/dashboard/website">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>

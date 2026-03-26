@@ -258,10 +258,6 @@ const data = {
           title: "Results",
           url: "/dashboard/competitions/results",
         },
-        {
-          title: "Marketing Site",
-          url: "/dashboard/competitions/marketing",
-        },
       ],
     },
     {
@@ -328,9 +324,23 @@ const data = {
           title: "Certifications",
           url: "/dashboard/organization/certifications",
         },
+      ],
+    },
+    {
+      title: "Website",
+      url: "/dashboard/website",
+      items: [
         {
-          title: "Website",
-          url: "/dashboard/organization/website",
+          title: "General",
+          url: "/dashboard/website",
+        },
+        {
+          title: "Competitions",
+          url: "/dashboard/website/competitions",
+        },
+        {
+          title: "Team",
+          url: "/dashboard/website/team",
         },
       ],
     },
