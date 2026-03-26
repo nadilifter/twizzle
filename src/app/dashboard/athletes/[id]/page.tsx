@@ -93,6 +93,8 @@ import type {
   AttendanceWithEvent,
 } from "@/types/athletes"
 import type { EvaluationWithRelations, EvaluationStatus } from "@/types/evaluations"
+import { QUESTION_TYPE_LABELS } from "@/types/custom-information"
+import type { CustomInfoQuestionType } from "@/types/custom-information"
 import { RegistrationFilesSection } from "@/components/registration-files-section"
 
 interface RegistrationItem {
@@ -2674,12 +2676,7 @@ function AthleteCustomInfoTab({ athleteId }: { athleteId: string }) {
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium text-sm">{q.questionText}</p>
                     <Badge variant="secondary" className="text-xs shrink-0">
-                      {q.questionType === "VALUE" ? "Value" :
-                       q.questionType === "BOOLEAN" ? "True/False" :
-                       q.questionType === "SIGNATURE" ? "Signature" :
-                       q.questionType === "SHORT_TEXT" ? "Short Text" :
-                       q.questionType === "LONG_TEXT" ? "Long Text" :
-                       q.questionType === "IMAGE" ? "Image" : q.questionType}
+                      {QUESTION_TYPE_LABELS[q.questionType as CustomInfoQuestionType] ?? q.questionType}
                     </Badge>
                   </div>
                   {q.description && (
@@ -2727,9 +2724,21 @@ function AthleteCustomInfoTab({ athleteId }: { athleteId: string }) {
                     ) : (
                       <div className="mt-1">
                         {q.questionType === "BOOLEAN" ? (
-                          <Badge variant={response.responseValue === "true" ? "default" : "secondary"}>
-                            {response.responseValue === "true" ? "Yes" : "No"}
-                          </Badge>
+                          <div className="space-y-2">
+                            <Badge variant={response.responseValue === "true" ? "default" : "secondary"}>
+                              {response.responseValue === "true" ? "Yes" : "No"}
+                            </Badge>
+                            {q.requireSignatureOnYes && response.signatureData && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Signature</p>
+                                <img
+                                  src={response.signatureData}
+                                  alt="Signature"
+                                  className="max-h-20 border rounded"
+                                />
+                              </div>
+                            )}
+                          </div>
                         ) : q.questionType === "SIGNATURE" && response.signatureData ? (
                           <img
                             src={response.signatureData}

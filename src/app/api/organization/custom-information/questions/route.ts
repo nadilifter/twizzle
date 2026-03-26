@@ -21,6 +21,7 @@ const createQuestionSchema = z.object({
   valueMin: z.number().nullable().optional(),
   valueMax: z.number().nullable().optional(),
   allowDecimals: z.boolean().default(false),
+  requireSignatureOnYes: z.boolean().default(false),
   scopes: z.array(scopeSchema).min(1, "At least one scope is required"),
 }).refine(
   (data) => {
@@ -51,6 +52,7 @@ const updateQuestionSchema = z.object({
   valueMin: z.number().nullable().optional(),
   valueMax: z.number().nullable().optional(),
   allowDecimals: z.boolean().optional(),
+  requireSignatureOnYes: z.boolean().optional(),
   scopes: z.array(scopeSchema).min(1).optional(),
 });
 
@@ -158,6 +160,7 @@ export async function POST(request: NextRequest) {
           valueMin: validatedData.questionType === "VALUE" ? validatedData.valueMin ?? null : null,
           valueMax: validatedData.questionType === "VALUE" ? validatedData.valueMax ?? null : null,
           allowDecimals: validatedData.questionType === "VALUE" ? validatedData.allowDecimals : false,
+          requireSignatureOnYes: validatedData.questionType === "BOOLEAN" ? validatedData.requireSignatureOnYes : false,
         },
       });
 

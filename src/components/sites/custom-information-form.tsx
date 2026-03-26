@@ -103,6 +103,11 @@ export function CustomInformationForm({
           }
           break;
         case "BOOLEAN":
+          if (q.requireSignatureOnYes && val?.responseValue === "true") {
+            if (!val?.signatureData && signatureRefs.current[q.id]?.isEmpty()) {
+              newErrors[q.id] = "Signature is required when answering Yes";
+            }
+          }
           break;
         case "SIGNATURE":
           if (!val?.signatureData && signatureRefs.current[q.id]?.isEmpty()) {
@@ -121,9 +126,11 @@ export function CustomInformationForm({
   };
 
   const handleSubmit = async () => {
-    // Capture signature data before validation
     for (const q of questions) {
-      if (q.questionType === "SIGNATURE" && signatureRefs.current[q.id]) {
+      const needsSignature =
+        q.questionType === "SIGNATURE" ||
+        (q.questionType === "BOOLEAN" && q.requireSignatureOnYes && values[q.id]?.responseValue === "true");
+      if (needsSignature && signatureRefs.current[q.id]) {
         const sigRef = signatureRefs.current[q.id];
         if (sigRef && !sigRef.isEmpty()) {
           updateValue(q.id, "signatureData", sigRef.toDataURL());
@@ -165,7 +172,7 @@ export function CustomInformationForm({
           responseValue: q.questionType === "BOOLEAN"
             ? (values[q.id]?.responseValue ?? "false")
             : (values[q.id]?.responseValue ?? null),
-          signatureData: q.questionType === "SIGNATURE"
+          signatureData: (q.questionType === "SIGNATURE" || (q.questionType === "BOOLEAN" && q.requireSignatureOnYes))
             ? (values[q.id]?.signatureData ?? null)
             : null,
         }));
@@ -286,14 +293,44 @@ function QuestionField({
 
       case "BOOLEAN":
         return (
-          <div className="flex items-center space-x-3">
-            <Switch
-              checked={value?.responseValue === "true"}
-              onCheckedChange={(checked) => onChange("responseValue", checked ? "true" : "false")}
-            />
-            <span className="text-sm text-muted-foreground">
-              {value?.responseValue === "true" ? "Yes" : "No"}
-            </span>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <Switch
+                checked={value?.responseValue === "true"}
+                onCheckedChange={(checked) => {
+                  onChange("responseValue", checked ? "true" : "false");
+                  if (!checked) onChange("signatureData", null);
+                }}
+              />
+              <span className="text-sm text-muted-foreground">
+                {value?.responseValue === "true" ? "Yes" : "No"}
+              </span>
+            </div>
+            {question.requireSignatureOnYes && value?.responseValue === "true" && (
+              <div className="space-y-2 border rounded-md p-3">
+                <p className="text-sm font-medium">Signature required</p>
+                {value?.signatureData ? (
+                  <div className="relative border rounded-md p-2">
+                    <img
+                      src={value.signatureData}
+                      alt="Signature"
+                      className="max-h-32 mx-auto"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-1 right-1"
+                      onClick={() => onChange("signatureData", null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <SignaturePad ref={signatureRef} height={150} />
+                )}
+              </div>
+            )}
           </div>
         );
 

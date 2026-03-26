@@ -20,8 +20,8 @@ export type CustomInfoScopeType =
   | "SEASON";
 
 export const QUESTION_TYPE_LABELS: Record<CustomInfoQuestionType, string> = {
-  VALUE: "Value",
-  BOOLEAN: "True / False",
+  VALUE: "Number",
+  BOOLEAN: "Yes / No",
   SIGNATURE: "Signature",
   SHORT_TEXT: "Short Text",
   LONG_TEXT: "Long Text",
@@ -82,6 +82,7 @@ export interface CustomInfoQuestion {
   valueMin: number | null;
   valueMax: number | null;
   allowDecimals: boolean;
+  requireSignatureOnYes: boolean;
   scopes: CustomInfoQuestionScope[];
   createdAt: string;
   updatedAt: string;
@@ -96,6 +97,7 @@ export interface CreateCustomInfoQuestionPayload {
   valueMin?: number | null;
   valueMax?: number | null;
   allowDecimals?: boolean;
+  requireSignatureOnYes?: boolean;
   scopes: { scopeType: CustomInfoScopeType; targetId?: string | null }[];
 }
 
@@ -109,6 +111,7 @@ export interface UpdateCustomInfoQuestionPayload {
   valueMin?: number | null;
   valueMax?: number | null;
   allowDecimals?: boolean;
+  requireSignatureOnYes?: boolean;
   scopes?: { scopeType: CustomInfoScopeType; targetId?: string | null }[];
 }
 

@@ -653,9 +653,17 @@ function PortalCustomInfoSection({ athleteId }: { athleteId: string }) {
                       <p className="text-sm font-medium">{r.question?.questionText}</p>
                       <div className="mt-1">
                         {r.question?.questionType === "BOOLEAN" ? (
-                          <Badge variant={r.responseValue === "true" ? "default" : "secondary"}>
-                            {r.responseValue === "true" ? "Yes" : "No"}
-                          </Badge>
+                          <div className="space-y-2">
+                            <Badge variant={r.responseValue === "true" ? "default" : "secondary"}>
+                              {r.responseValue === "true" ? "Yes" : "No"}
+                            </Badge>
+                            {r.question?.requireSignatureOnYes && r.signatureData && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Signature</p>
+                                <img src={r.signatureData} alt="Signature" className="max-h-16 border rounded" />
+                              </div>
+                            )}
+                          </div>
                         ) : r.question?.questionType === "SIGNATURE" && r.signatureData ? (
                           <img src={r.signatureData} alt="Signature" className="max-h-16 border rounded" />
                         ) : r.question?.questionType === "IMAGE" && r.fileUrl ? (

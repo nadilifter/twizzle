@@ -185,10 +185,18 @@ function ScopeSelector({
   const [loadingEntities, setLoadingEntities] = useState(false);
   const [entitiesLoaded, setEntitiesLoaded] = useState(false);
 
-  const hasSeasonScopes = scopes.some((s) => s.scopeType === "SEASON");
-  const hasEntityScopes = scopes.some((s) => s.scopeType !== "SEASON");
   const showSeasonOption = seasonsEnabled && seasons.length > 0;
-  const scopeMode: "season" | "manual" | null = hasSeasonScopes ? "season" : hasEntityScopes ? "manual" : null;
+  const [scopeMode, setScopeMode] = useState<"season" | "manual">(
+    scopes.some((s) => s.scopeType === "SEASON") ? "season" : "manual"
+  );
+  const prevScopesRef = React.useRef(scopes);
+
+  useEffect(() => {
+    if (prevScopesRef.current !== scopes && scopes.length > 0) {
+      setScopeMode(scopes.some((s) => s.scopeType === "SEASON") ? "season" : "manual");
+    }
+    prevScopesRef.current = scopes;
+  }, [scopes]);
 
   const loadEntities = useCallback(async () => {
     if (entitiesLoaded) return;
@@ -251,8 +259,8 @@ function ScopeSelector({
     }
   };
 
-  const switchToSeason = () => onChange([]);
-  const switchToManual = () => onChange([]);
+  const switchToSeason = () => { onChange([]); setScopeMode("season"); };
+  const switchToManual = () => { onChange([]); setScopeMode("manual"); };
 
   const allScopeTypes: { all: CustomInfoScopeType; specific: CustomInfoScopeType; label: string; entities: EntityOption[] }[] = [
     { all: "ALL_PROGRAMS", specific: "PROGRAM", label: "Programs", entities: programs },
@@ -365,8 +373,8 @@ function ScopeSelector({
         <Button
           type="button"
           size="sm"
-          variant={scopeMode === "manual" || scopeMode === null ? "default" : "outline"}
-          onClick={() => { if (scopeMode === "season") switchToManual(); }}
+          variant={scopeMode === "manual" ? "default" : "outline"}
+          onClick={() => { if (scopeMode !== "manual") switchToManual(); }}
           className="text-xs"
         >
           Select Manually
@@ -436,6 +444,11 @@ function SortableQuestion({
                 Range: {question.valueMin}–{question.valueMax}{question.allowDecimals ? " (decimals)" : " (whole numbers)"}
               </Badge>
             )}
+            {question.questionType === "BOOLEAN" && question.requireSignatureOnYes && (
+              <Badge variant="secondary" className="text-xs">
+                + Signature on Yes
+              </Badge>
+            )}
             {uniqueBadges.map((badge) => (
               <Badge key={badge} variant="outline" className="text-xs">
                 {badge}
@@ -502,6 +515,7 @@ function QuestionEditor({
   const [valueMin, setValueMin] = useState<string>("");
   const [valueMax, setValueMax] = useState<string>("");
   const [allowDecimals, setAllowDecimals] = useState(false);
+  const [requireSignatureOnYes, setRequireSignatureOnYes] = useState(false);
 
   useEffect(() => {
     if (question) {
@@ -513,6 +527,7 @@ function QuestionEditor({
       setValueMin(question.valueMin != null ? String(question.valueMin) : "");
       setValueMax(question.valueMax != null ? String(question.valueMax) : "");
       setAllowDecimals(question.allowDecimals ?? false);
+      setRequireSignatureOnYes(question.requireSignatureOnYes ?? false);
     } else {
       setQuestionText("");
       setDescription("");
@@ -522,6 +537,7 @@ function QuestionEditor({
       setValueMin("");
       setValueMax("");
       setAllowDecimals(false);
+      setRequireSignatureOnYes(false);
     }
   }, [question, open]);
 
@@ -559,6 +575,7 @@ function QuestionEditor({
         valueMax: null,
         allowDecimals: false,
       }),
+      requireSignatureOnYes: questionType === "BOOLEAN" ? requireSignatureOnYes : false,
     });
   };
 
@@ -600,8 +617,8 @@ function QuestionEditor({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="VALUE">Value (number/text)</SelectItem>
-                  <SelectItem value="BOOLEAN">True / False</SelectItem>
+                  <SelectItem value="VALUE">Number</SelectItem>
+                  <SelectItem value="BOOLEAN">Yes / No</SelectItem>
                   <SelectItem value="SIGNATURE">Signature</SelectItem>
                   <SelectItem value="SHORT_TEXT">Short Text</SelectItem>
                   <SelectItem value="LONG_TEXT">Long Text</SelectItem>
@@ -611,7 +628,7 @@ function QuestionEditor({
             </div>
             {questionType === "VALUE" && (
               <div className="space-y-3 rounded-md border p-3">
-                <p className="text-sm font-medium">Value Settings</p>
+                <p className="text-sm font-medium">Number Settings</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="valueMin" className="text-xs">Minimum</Label>
@@ -645,6 +662,19 @@ function QuestionEditor({
                     onCheckedChange={setAllowDecimals}
                   />
                   <Label htmlFor="allowDecimals" className="text-sm font-normal">Allow decimal values</Label>
+                </div>
+              </div>
+            )}
+            {questionType === "BOOLEAN" && (
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-medium">Yes / No Settings</p>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="requireSignatureOnYes"
+                    checked={requireSignatureOnYes}
+                    onCheckedChange={setRequireSignatureOnYes}
+                  />
+                  <Label htmlFor="requireSignatureOnYes" className="text-sm font-normal">Require signature when answered &ldquo;Yes&rdquo;</Label>
                 </div>
               </div>
             )}

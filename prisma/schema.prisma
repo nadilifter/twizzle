@@ -775,9 +775,10 @@ model CustomInfoQuestion {
   displayOrder  Int     @default(0)
   isActive      Boolean @default(true)
 
-  valueMin      Float?
-  valueMax      Float?
-  allowDecimals Boolean @default(false)
+  valueMin              Float?
+  valueMax              Float?
+  allowDecimals         Boolean @default(false)
+  requireSignatureOnYes Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
