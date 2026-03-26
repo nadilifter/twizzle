@@ -38,6 +38,7 @@ export interface Event {
   } | null;
   programId: string | null;
   coachId: string | null;
+  categoryId?: string | null;
   organizationId: string;
   createdAt: string;
   updatedAt: string;

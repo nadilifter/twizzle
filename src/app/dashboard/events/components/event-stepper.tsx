@@ -53,6 +53,7 @@ import { useMemberships } from "@/hooks/use-memberships"
 import { cn } from "@/lib/utils"
 import { CopySettingsDialog } from "@/components/copy-settings-dialog"
 import { ColorSelector } from "@/components/color-selector"
+import { useCategories } from "@/hooks/use-categories"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -131,6 +132,9 @@ interface EventFormData {
 
   // GL Code
   glCodeId: string | null
+
+  // Category
+  categoryId: string | null
 }
 
 interface EventStepperProps {
@@ -171,6 +175,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
   const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("events")
+  const { categories, isLoading: categoriesLoading } = useCategories()
 
   const [levels, setLevels] = React.useState<Level[]>([])
   const [loadingLevels, setLoadingLevels] = React.useState(true)
@@ -211,6 +216,8 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
     staffAssignments: [],
 
     glCodeId: (event as any)?.glCodeId || null,
+
+    categoryId: event?.categoryId || null,
   }))
 
   const [isSaving, setIsSaving] = React.useState(false)
@@ -450,6 +457,7 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
           role: sa.role,
         })),
         glCodeId: formData.glCodeId,
+        categoryId: formData.categoryId,
       }
 
       const url = isEditing ? `/api/events/${(event as any).id}` : "/api/events"
@@ -614,6 +622,27 @@ export function EventStepper({ event, onSuccess }: EventStepperProps) {
                 value={formData.color}
                 onChange={(color) => setFormData(prev => ({ ...prev, color }))}
               />
+
+              {/* Category */}
+              {!categoriesLoading && categories.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={formData.categoryId || "none"}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val === "none" ? null : val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Category</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Event Type Selection */}
               <div className="space-y-4">

@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     const programId = searchParams.get("programId");
     const facilityId = searchParams.get("facilityId");
     const status = searchParams.get("status");
+    const categoryId = searchParams.get("categoryId");
 
     // Build where clause
     const where: any = {
@@ -48,6 +49,10 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
+    if (categoryId) {
+      where.program = { categoryId };
+    }
+
     const instances = await db.programInstance.findMany({
       where,
       include: {
@@ -59,6 +64,7 @@ export async function GET(request: NextRequest) {
             registrationType: true,
             basePrice: true,
             perSessionPrice: true,
+            categoryId: true,
           },
         },
         facility: {
@@ -89,6 +95,7 @@ export async function GET(request: NextRequest) {
       color: instance.program.color,
       levelName: null,
       registrationType: instance.program.registrationType,
+      categoryId: instance.program.categoryId || null,
       isSoldOut: false,
       isWaitlistAvailable: false,
     }));

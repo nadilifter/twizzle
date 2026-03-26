@@ -6,8 +6,11 @@ import { cn } from "@/lib/utils";
 import { useCalendarContext } from "./calendar-context";
 import {
   getEventPillClasses,
+  getEventPillStyles,
   getEventCardClasses,
+  getEventCardStyles,
   getBadgeColorClasses,
+  getBadgeStyles,
 } from "./color-utils";
 import type { CalendarEvent } from "./types";
 
@@ -66,6 +69,7 @@ export function EventPill({ event, showTime = true, className }: EventPillProps)
         event.isSoldOut && "opacity-60",
         className
       )}
+      style={getEventPillStyles(event.color)}
       title={`${event.title} - ${formatTime12h(event.startTime)} to ${formatTime12h(event.endTime)}${statusLabel ? ` - ${statusLabel}` : ""}`}
     >
       {showTime && (
@@ -98,6 +102,7 @@ export function EventCard({ event, className }: EventCardProps) {
     <div
       onClick={() => onEventClick(event)}
       className={cn(getEventCardClasses(event.color, isCancelled), className)}
+      style={getEventCardStyles(event.color)}
     >
       <div className="flex-1 min-w-0">
         {/* Title and badges row */}
@@ -114,6 +119,7 @@ export function EventCard({ event, className }: EventCardProps) {
             <Badge
               variant="outline"
               className={getBadgeColorClasses(event.color)}
+              style={getBadgeStyles(event.color)}
             >
               {event.levelName}
             </Badge>
@@ -187,6 +193,7 @@ export function EventCompactCard({ event, className }: EventCompactCardProps) {
         "w-full text-left p-2",
         className
       )}
+      style={getEventCardStyles(event.color)}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -213,6 +220,7 @@ export function EventCompactCard({ event, className }: EventCompactCardProps) {
           <Badge
             variant="outline"
             className={cn(getBadgeColorClasses(event.color), "text-[10px] px-1.5 py-0")}
+            style={getBadgeStyles(event.color)}
           >
             {event.levelName}
           </Badge>

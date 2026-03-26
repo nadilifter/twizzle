@@ -70,6 +70,7 @@ import { useStaffCertStatus } from "@/hooks/use-staff-cert-status"
 import { useMemberships } from "@/hooks/use-memberships"
 import { usePasses } from "@/hooks/use-passes"
 import { useSeasons } from "@/hooks/use-seasons"
+import { useCategories } from "@/hooks/use-categories"
 import { SeasonDateWarning } from "@/components/season-date-warning"
 import type { ProgramStaffRole } from "@/types/staff"
 import type { ProgramWithRelations, CreateProgramPayload, UpdateProgramPayload, SpaceWithAvailability } from "@/types/programs"
@@ -127,6 +128,9 @@ interface StaffAssignment {
 interface ProgramFormData {
   // Season (optional first step)
   seasonId: string | null
+
+  // Category
+  categoryId: string | null
 
   // Step 1: General
   name: string
@@ -225,6 +229,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
   const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled })
+  const { categories, isLoading: categoriesLoading } = useCategories()
   const { passes: availablePasses, isLoading: loadingPasses } = usePasses()
   const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("programs")
   
@@ -267,6 +272,9 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const [formData, setFormData] = React.useState<ProgramFormData>(() => ({
     // Season
     seasonId: (program as any)?.seasonId || null,
+
+    // Category
+    categoryId: program?.categoryId || null,
 
     // Step 1: General
     name: program?.name || "",
@@ -843,6 +851,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           isPrimary: sa.isPrimary,
         })),
         seasonId: formData.seasonId,
+        categoryId: formData.categoryId,
         registrationOpen: formData.registrationOpen,
         registrationStartDate: !formData.registrationOpen ? formData.registrationStartDate?.toISOString() : null,
         registrationStartTime: !formData.registrationOpen ? formData.registrationStartTime : null,
@@ -1110,6 +1119,27 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
                 type="program"
               />
+
+              {/* Category */}
+              {!categoriesLoading && categories.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={formData.categoryId || "none"}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val === "none" ? null : val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Category</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               
               {/* Registration Style */}
               <div className="space-y-4 rounded-lg border p-4 bg-muted/20">

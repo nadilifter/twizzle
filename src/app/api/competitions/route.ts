@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthSession } from "@/lib/auth"
 import { checkFeatureGate } from "@/lib/feature-resolver"
-import { db } from "@/lib/db"
+import { db, getScopedDb } from "@/lib/db"
 import { parseDateOnly } from "@/lib/date-utils"
 import { geocodeAddress } from "@/lib/geocode"
 import { z } from "zod"
@@ -166,6 +166,7 @@ const createCompetitionSchema = z.object({
 
   glCodeId: z.string().optional().nullable(),
   seasonId: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
 })
 
 /**
@@ -238,6 +239,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (data.categoryId) {
+      const scopedDb = getScopedDb(organizationId);
+      const cat = await scopedDb.category.findUnique({ where: { id: data.categoryId }, select: { id: true } });
+      if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    }
+
     const coords = data.facilityId
       ? null
       : await geocodeAddress({
@@ -293,6 +300,7 @@ export async function POST(request: NextRequest) {
 
         glCodeId: data.glCodeId ?? undefined,
         seasonId: data.seasonId ?? undefined,
+        categoryId: data.categoryId ?? undefined,
 
         // Pricing
         pricingMode: data.pricingMode,

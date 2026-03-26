@@ -72,6 +72,7 @@ const createProgramSchema = z.object({
   })).optional(),
   glCodeId: z.string().optional().nullable(),
   seasonId: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
   // Registration window
   registrationStartDate: z.string().optional().nullable(),
   registrationStartTime: z.string().optional().nullable(),
@@ -266,6 +267,10 @@ export async function POST(request: NextRequest) {
       });
       if (valid.length !== validatedData.spaceIds.length) return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
     }
+    if (validatedData.categoryId) {
+      const cat = await scopedDb.category.findUnique({ where: { id: validatedData.categoryId }, select: { id: true } });
+      if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    }
 
     const program = await db.$transaction(async (tx) => {
       const newProgram = await tx.program.create({
@@ -313,6 +318,7 @@ export async function POST(request: NextRequest) {
           registrationOpen: validatedData.registrationOpen,
           earlyAccessCode: validatedData.earlyAccessCode,
           seasonId: validatedData.seasonId ?? undefined,
+          categoryId: validatedData.categoryId ?? undefined,
           organizationId: session.user.organizationId,
           ...(validatedData.membershipRequirementIds?.length && {
             requiredMemberships: {

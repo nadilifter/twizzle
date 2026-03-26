@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarDays, Clock, Users, Award, UserCircle, CalendarRange, X } from "lucide-react";
+import { CalendarDays, Clock, Users, Award, UserCircle, CalendarRange, Layers, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,11 @@ export interface SeasonFilter {
   color: string;
 }
 
+export interface CategoryFilter {
+  id: string;
+  name: string;
+}
+
 export interface ProgramFilterState {
   ageRange: [number, number];
   dateRange: DateRange | undefined;
@@ -45,6 +50,7 @@ export interface ProgramFilterState {
   selectedLevels: string[];
   selectedCoaches: string[];
   selectedSeason: string;
+  selectedCategory: string;
 }
 
 export const DEFAULT_FILTERS: ProgramFilterState = {
@@ -54,6 +60,7 @@ export const DEFAULT_FILTERS: ProgramFilterState = {
   selectedLevels: [],
   selectedCoaches: [],
   selectedSeason: "",
+  selectedCategory: "",
 };
 
 // Generate hour options: 12 AM (midnight) through 11 PM
@@ -76,6 +83,7 @@ export function countActiveFilters(
   if (filters.selectedLevels.length > 0) count++;
   if (filters.selectedCoaches.length > 0) count++;
   if (filters.selectedSeason) count++;
+  if (filters.selectedCategory) count++;
   return count;
 }
 
@@ -83,6 +91,7 @@ interface ProgramFiltersProps {
   levels: Level[];
   coaches: Coach[];
   seasons?: SeasonFilter[];
+  categories?: CategoryFilter[];
   filters: ProgramFilterState;
   onFiltersChange: (filters: ProgramFilterState) => void;
   activeFilterCount: number;
@@ -93,6 +102,7 @@ export function ProgramFiltersContent({
   levels,
   coaches,
   seasons = [],
+  categories = [],
   filters,
   onFiltersChange,
   activeFilterCount,
@@ -174,6 +184,35 @@ export function ProgramFiltersContent({
                       {s.name}
                     </div>
                   </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator />
+        </>
+      )}
+
+      {/* Category */}
+      {categories.length > 0 && (
+        <>
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <Layers className="h-3.5 w-3.5" />
+              Category
+            </Label>
+            <Select
+              value={filters.selectedCategory || "__all__"}
+              onValueChange={(v) =>
+                onFiltersChange({ ...filters, selectedCategory: v === "__all__" ? "" : v })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Categories</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

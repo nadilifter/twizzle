@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, MapPin, Trophy } from "lucide-react";
 import { FilterableProgramList } from "@/components/sites/filterable-program-list";
+import { CategoryTiles } from "@/components/sites/category-tiles";
 import { InfoSection } from "@/components/sites/info-section";
 import { getHeroContrastStyles } from "@/lib/color-utils";
 
@@ -113,6 +114,26 @@ const getCachedSeasons = unstable_cache(
   { revalidate: 30 }
 );
 
+const getCachedCategories = unstable_cache(
+  async (organizationId: string) => {
+    return db.category.findMany({
+      where: { organizationId },
+      include: {
+        _count: {
+          select: {
+            programs: { where: { status: "ACTIVE" } },
+            events: true,
+            competitions: true,
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+  },
+  ["site-categories-home"],
+  { revalidate: 30 }
+);
+
 export default async function SitePage({ params }: { params: { slug: string } }) {
   const config = await getCachedSiteConfig(params.slug);
 
@@ -121,15 +142,18 @@ export default async function SitePage({ params }: { params: { slug: string } })
   const primaryColor = config.primaryColor || "#000000";
   const hero = getHeroContrastStyles(primaryColor);
 
-  const [{ programs, levels, waitlistedCounts }, seasonsEnabled] = await Promise.all([
+  const [{ programs, levels, waitlistedCounts }, seasonsEnabled, siteCategories] = await Promise.all([
     getCachedHomePrograms(config.organizationId),
     isFeatureEnabled(config.organizationId, "seasons"),
+    getCachedCategories(config.organizationId),
   ]);
 
   const seasons = seasonsEnabled
     ? await getCachedSeasons(config.organizationId)
     : [];
   const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
+  const hasUncategorizedPrograms = programs.some(p => !p.categoryId);
+  const hasCategories = siteCategories.length > 0;
 
   const enrichedPrograms = programs.map(p => ({
     ...p,
@@ -273,47 +297,56 @@ export default async function SitePage({ params }: { params: { slug: string } })
         <section id="programs" className="mx-auto w-full max-w-6xl px-4 py-16 md:px-8">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold tracking-tight">
-              Programs & Registration
+              {hasCategories ? "Explore Our Programs" : "Programs & Registration"}
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              Select a program below to begin your registration. Membership includes access to 
-              facilities, equipment, and participation in all scheduled activities.
+              {hasCategories
+                ? "Browse our program categories to find what's right for you."
+                : "Select a program below to begin your registration. Membership includes access to facilities, equipment, and participation in all scheduled activities."}
             </p>
           </div>
 
-          <FilterableProgramList
-            programs={enrichedPrograms.map(program => ({
-              ...program,
-              basePrice: program.basePrice ? Number(program.basePrice) : null,
-              perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
-              staffAssignments: program.staffAssignments.map(sa => ({
-                id: sa.id,
-                role: sa.role,
-                isPrimary: sa.isPrimary,
-                member: {
-                  id: sa.member.id,
-                  title: sa.member.title,
-                  user: sa.member.user,
-                },
-              })),
-              requiredMemberships: program.requiredMemberships.map(m => ({
-                ...m,
-                price: Number(m.price),
-              })),
-              requiredPasses: (program.requiredPasses || []).map(p => ({
-                ...p,
-                price: Number(p.price),
-              })),
-              bulkDiscounts: (program as any).bulkDiscounts?.map((d: any) => ({
-                ...d,
-                discountValue: Number(d.discountValue),
-              })) || [],
-            }))}
-            levels={levels}
-            seasons={seasons}
-            slug={params.slug}
-            primaryColor={primaryColor}
-          />
+          {hasCategories ? (
+            <CategoryTiles
+              categories={siteCategories}
+              hasUncategorizedPrograms={hasUncategorizedPrograms}
+              primaryColor={primaryColor}
+            />
+          ) : (
+            <FilterableProgramList
+              programs={enrichedPrograms.map(program => ({
+                ...program,
+                basePrice: program.basePrice ? Number(program.basePrice) : null,
+                perSessionPrice: program.perSessionPrice ? Number(program.perSessionPrice) : null,
+                staffAssignments: program.staffAssignments.map(sa => ({
+                  id: sa.id,
+                  role: sa.role,
+                  isPrimary: sa.isPrimary,
+                  member: {
+                    id: sa.member.id,
+                    title: sa.member.title,
+                    user: sa.member.user,
+                  },
+                })),
+                requiredMemberships: program.requiredMemberships.map(m => ({
+                  ...m,
+                  price: Number(m.price),
+                })),
+                requiredPasses: (program.requiredPasses || []).map(p => ({
+                  ...p,
+                  price: Number(p.price),
+                })),
+                bulkDiscounts: (program as any).bulkDiscounts?.map((d: any) => ({
+                  ...d,
+                  discountValue: Number(d.discountValue),
+                })) || [],
+              }))}
+              levels={levels}
+              seasons={seasons}
+              slug={params.slug}
+              primaryColor={primaryColor}
+            />
+          )}
         </section>
       )}
 

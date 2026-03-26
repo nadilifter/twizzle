@@ -1,6 +1,7 @@
 // Color mapping utilities for the calendar
 // Maps hex colors to Tailwind color classes for consistent theming
 
+import type React from "react";
 import { cn } from "@/lib/utils";
 
 // Predefined color palette that works with both light and dark modes
@@ -279,50 +280,62 @@ export function getEventColorClasses(hexColor: string): {
   };
 }
 
-/**
- * Get a CSS class string for an event pill/badge
- */
+function hexToRgba(hex: string, alpha: number): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return hex;
+  const r = parseInt(result[1], 16);
+  const g = parseInt(result[2], 16);
+  const b = parseInt(result[3], 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function getEventPillStyles(hexColor: string): React.CSSProperties {
+  return {
+    backgroundColor: hexToRgba(hexColor, 0.15),
+    borderLeftColor: hexColor,
+    color: hexColor,
+  };
+}
+
 export function getEventPillClasses(
-  hexColor: string,
+  _hexColor: string,
   isCancelled: boolean = false
 ): string {
-  const colors = getEventColorClasses(hexColor);
   return cn(
     "rounded px-1.5 py-0.5 text-xs font-medium transition-all",
     "border-l-3",
-    colors.bg,
-    colors.text,
-    colors.hover,
-    colors.border,
+    "hover:brightness-95 dark:hover:brightness-110",
     isCancelled && "opacity-50 line-through"
   );
 }
 
-/**
- * Get a CSS class string for an event card
- */
+export function getEventCardStyles(hexColor: string): React.CSSProperties {
+  return {
+    borderLeftColor: hexColor,
+  };
+}
+
 export function getEventCardClasses(
-  hexColor: string,
+  _hexColor: string,
   isCancelled: boolean = false
 ): string {
-  const colors = getEventColorClasses(hexColor);
   return cn(
     "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
     "border-l-4",
-    colors.border,
     "hover:bg-muted/50",
     isCancelled && "opacity-50"
   );
 }
 
-/**
- * Get badge color classes
- */
-export function getBadgeColorClasses(hexColor: string): string {
-  const colors = getEventColorClasses(hexColor);
+export function getBadgeStyles(hexColor: string): React.CSSProperties {
+  return {
+    color: hexColor,
+    borderColor: hexColor,
+  };
+}
+
+export function getBadgeColorClasses(_hexColor: string): string {
   return cn(
     "text-xs shrink-0",
-    colors.text,
-    colors.border
   );
 }

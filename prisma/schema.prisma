@@ -169,6 +169,9 @@ model Organization {
 
   // Team Member Highlights (marketing site)
   teamMemberHighlights TeamMemberHighlight[]
+
+  // Categories (persistent grouping for programs, events, competitions)
+  categories Category[]
 }
 
 model OrganizationMember {
@@ -965,11 +968,15 @@ model Program {
   // Season
   seasonId String?
 
+  // Category
+  categoryId String?
+
   // Relations
   organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   facility            Facility?                   @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   glCode              GLCode?                     @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   season              Season?                     @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  category            Category?                   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   events              Event[]
   lessonPlans         LessonPlan[]
   enrollments         Enrollment[]
@@ -994,6 +1001,7 @@ model Program {
   @@index([facilityId])
   @@index([glCodeId])
   @@index([seasonId])
+  @@index([categoryId])
 }
 
 enum ProgramStatus {
@@ -1425,6 +1433,7 @@ model Event {
   hasFileRequirement  Boolean              @default(false)
   fileRequirementConfig Json?
   glCodeId            String?
+  categoryId          String?
   organizationId      String
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -1435,6 +1444,7 @@ model Event {
   coach             User?        @relation("EventCoach", fields: [coachId], references: [id])
   facility          Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   glCode            GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
+  category          Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   attendances       Attendance[]
   lineItems         LineItem[]
   media             Media[]
@@ -1442,6 +1452,7 @@ model Event {
   registrationFiles RegistrationFile[]
 
   @@index([glCodeId])
+  @@index([categoryId])
 }
 
 enum EventType {
@@ -4390,6 +4401,9 @@ model Competition {
   // Season
   seasonId String?
 
+  // Category
+  categoryId String?
+
   // Publishing
   publishStatus       String? // LIVE, DRAFT, SCHEDULED
   scheduledGoLiveDate DateTime?
@@ -4403,6 +4417,7 @@ model Competition {
   facility     Facility?    @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   glCode       GLCode?      @relation(fields: [glCodeId], references: [id], onDelete: SetNull)
   season       Season?      @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  programCategory  Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   categories        CompetitionCategory[]
   entries           CompetitionEntry[]
@@ -4416,6 +4431,7 @@ model Competition {
   @@index([status])
   @@index([glCodeId])
   @@index([seasonId])
+  @@index([categoryId])
 }
 
 // Links a competition to a specific category entry with result and seed mark configuration
@@ -4974,4 +4990,27 @@ model SubscriptionPaymentAttempt {
 
   @@index([subscriptionInvoiceId])
   @@index([paymentMethodId])
+}
+
+// ============================================================================
+// CATEGORIES
+// Persistent grouping for Programs, Events, and Competitions
+// ============================================================================
+
+model Category {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  imageUrl       String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  programs     Program[]
+  events       Event[]
+  competitions Competition[]
+
+  @@index([organizationId])
 }

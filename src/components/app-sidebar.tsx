@@ -233,6 +233,10 @@ const data = {
           url: "/dashboard/registrations/programs",
         },
         {
+          title: "Categories",
+          url: "/dashboard/registrations/categories",
+        },
+        {
           title: "Seasons",
           url: "/dashboard/registrations/seasons",
         },

@@ -128,6 +128,13 @@ export interface Program {
     startDate: string;
     endDate: string;
   } | null;
+
+  // Category
+  categoryId?: string | null;
+  category?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 // Program Instance - individual occurrences of a program
@@ -297,6 +304,7 @@ export interface CreateProgramPayload {
   waiverRequirementIds?: string[];
   spaceIds?: string[];
   seasonId?: string | null;
+  categoryId?: string | null;
   registrationStartDate?: string | null;
   registrationStartTime?: string | null;
   registrationEndDate?: string | null;
@@ -358,6 +366,7 @@ export interface UpdateProgramPayload {
   // For space assignments
   spaceIds?: string[];
   seasonId?: string | null;
+  categoryId?: string | null;
   registrationStartDate?: string | null;
   registrationStartTime?: string | null;
   registrationEndDate?: string | null;

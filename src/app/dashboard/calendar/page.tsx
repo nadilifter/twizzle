@@ -54,8 +54,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   getEventPillClasses,
+  getEventPillStyles,
   getEventCardClasses,
+  getEventCardStyles,
   getBadgeColorClasses,
+  getBadgeStyles,
 } from "@/components/program-calendar/color-utils";
 
 /**
@@ -113,14 +116,17 @@ export default function CalendarPage() {
   const [selectedFacility, setSelectedFacility] = useState<string>("");
   const [selectedProgram, setSelectedProgram] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
   // Fetch filter options on mount
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const [facilitiesRes, programsRes] = await Promise.all([
+        const [facilitiesRes, programsRes, categoriesRes] = await Promise.all([
           fetch("/api/organization/facilities"),
           fetch("/api/programs?limit=100"),
+          fetch("/api/categories"),
         ]);
 
         if (facilitiesRes.ok) {
@@ -129,6 +135,10 @@ export default function CalendarPage() {
         if (programsRes.ok) {
           const data = await programsRes.json();
           setPrograms(data.data || []);
+        }
+        if (categoriesRes.ok) {
+          const data = await categoriesRes.json();
+          setCategories(data.data || []);
         }
       } catch (error) {
         console.error("Failed to fetch filters:", error);
@@ -164,6 +174,7 @@ export default function CalendarPage() {
       if (selectedFacility) params.append("facilityId", selectedFacility);
       if (selectedProgram) params.append("programId", selectedProgram);
       if (selectedStatus) params.append("status", selectedStatus);
+      if (selectedCategory) params.append("categoryId", selectedCategory);
 
       const response = await fetch(`/api/calendar/instances?${params}`);
 
@@ -177,7 +188,7 @@ export default function CalendarPage() {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [currentDate, viewMode, selectedFacility, selectedProgram, selectedStatus]);
+  }, [currentDate, viewMode, selectedFacility, selectedProgram, selectedStatus, selectedCategory]);
 
   useEffect(() => {
     fetchEvents();
@@ -215,9 +226,10 @@ export default function CalendarPage() {
     setSelectedFacility("");
     setSelectedProgram("");
     setSelectedStatus("");
+    setSelectedCategory("");
   };
 
-  const hasActiveFilters = selectedFacility || selectedProgram || selectedStatus;
+  const hasActiveFilters = selectedFacility || selectedProgram || selectedStatus || selectedCategory;
 
   // Generate calendar days for month view
   const calendarDays = useMemo(() => {
@@ -298,6 +310,7 @@ export default function CalendarPage() {
           "w-full text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
           !compact && "flex flex-col"
         )}
+        style={getEventPillStyles(event.color)}
         title={`${event.title} - ${formatTime12h(event.startTime)} to ${formatTime12h(event.endTime)}`}
       >
         {compact ? (
@@ -320,6 +333,7 @@ export default function CalendarPage() {
         key={event.id}
         onClick={() => handleEventClick(event)}
         className={getEventCardClasses(event.color, isCancelled)}
+        style={getEventCardStyles(event.color)}
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -332,6 +346,7 @@ export default function CalendarPage() {
               <Badge
                 variant="outline"
                 className={getBadgeColorClasses(event.color)}
+                style={getBadgeStyles(event.color)}
               >
                 {event.levelName}
               </Badge>
@@ -428,7 +443,7 @@ export default function CalendarPage() {
                 <span className="hidden sm:inline">Filters</span>
                 {hasActiveFilters && (
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-                    {[selectedFacility, selectedProgram, selectedStatus].filter(Boolean).length}
+                    {[selectedFacility, selectedProgram, selectedStatus, selectedCategory].filter(Boolean).length}
                   </Badge>
                 )}
               </Button>
@@ -496,6 +511,27 @@ export default function CalendarPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {categories.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Category</label>
+                    <Select
+                      value={selectedCategory || "__all__"}
+                      onValueChange={(v) => setSelectedCategory(v === "__all__" ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All categories</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {hasActiveFilters && (
                   <Button variant="outline" onClick={clearFilters} className="w-full gap-2">
                     <X className="h-4 w-4" />

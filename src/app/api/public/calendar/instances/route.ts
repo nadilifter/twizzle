@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
       ? new Date(endParam)
       : endOfMonth(addMonths(now, 1));
 
+    const categoryId = searchParams.get("categoryId");
+
     const instances = await db.programInstance.findMany({
       where: {
         organizationId: config.organizationId,
@@ -53,6 +55,7 @@ export async function GET(request: NextRequest) {
         status: "SCHEDULED",
         program: {
           status: "ACTIVE",
+          ...(categoryId && { categoryId }),
         },
       },
       include: {
@@ -71,6 +74,7 @@ export async function GET(request: NextRequest) {
             maxAge: true,
             hasLevelRestriction: true,
             seasonId: true,
+            categoryId: true,
             levelRequirements: {
               select: { levelId: true },
             },
@@ -176,6 +180,7 @@ export async function GET(request: NextRequest) {
         levelIds: prog.levelRequirements.map((lr) => lr.levelId),
         coachIds: prog.staffAssignments.map((sa) => sa.member.user.id),
         seasonId: prog.seasonId,
+        categoryId: prog.categoryId || null,
       };
     });
 

@@ -7,7 +7,6 @@ import { Filter, X, Palette, Layers } from "lucide-react";
 
 import { ProgramCalendar } from "@/components/program-calendar";
 import type { CalendarEvent } from "@/components/program-calendar";
-import { getEventColorClasses } from "@/components/program-calendar/color-utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,7 +28,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ProgramFiltersContent,
@@ -38,6 +36,7 @@ import {
   type Level,
   type Coach,
   type SeasonFilter,
+  type CategoryFilter,
   type ProgramFilterState,
 } from "@/components/sites/program-filters";
 
@@ -48,6 +47,7 @@ interface SiteCalendarProps {
   levels: Level[];
   coaches: Coach[];
   seasons?: SeasonFilter[];
+  categories?: CategoryFilter[];
 }
 
 function getAdminProgramUrl(
@@ -81,6 +81,7 @@ export function SiteCalendar({
   levels,
   coaches,
   seasons = [],
+  categories = [],
 }: SiteCalendarProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -177,6 +178,12 @@ export function SiteCalendar({
         }
       }
 
+      if (filters.selectedCategory) {
+        if (event.categoryId !== filters.selectedCategory) {
+          return false;
+        }
+      }
+
       return true;
     },
     [filters]
@@ -201,6 +208,7 @@ export function SiteCalendar({
       levels={levels}
       coaches={coaches}
       seasons={seasons}
+      categories={categories}
       filters={filters}
       onFiltersChange={setFilters}
       activeFilterCount={activeFilterCount}
@@ -283,22 +291,20 @@ export function SiteCalendar({
 
       {colorBy === "level" && levels.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
-          {levels.map((level) => {
-            const color = level.color ? getEventColorClasses(level.color) : null;
-            return (
-              <span key={level.id} className="flex items-center gap-1.5">
-                <span
-                  className={cn(
-                    "inline-block h-2.5 w-2.5 rounded-full shrink-0",
-                    color ? color.bgSolid : "bg-muted-foreground/40"
-                  )}
-                />
-                {level.name}
-              </span>
-            );
-          })}
+          {levels.map((level) => (
+            <span key={level.id} className="flex items-center gap-1.5">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                style={level.color ? { backgroundColor: level.color } : undefined}
+              />
+              {level.name}
+            </span>
+          ))}
           <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2.5 w-2.5 rounded-full shrink-0", getEventColorClasses(NO_LEVEL_COLOR).bgSolid)} />
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: NO_LEVEL_COLOR }}
+            />
             No Level
           </span>
         </div>

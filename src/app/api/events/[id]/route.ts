@@ -29,6 +29,7 @@ const updateEventSchema = z.object({
   hasFileRequirement: z.boolean().optional(),
   fileRequirementConfig: z.any().optional().nullable(),
   glCodeId: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
 });
 
 // GET /api/events/[id]
@@ -200,6 +201,10 @@ export async function PATCH(
         return NextResponse.json({ error: "GL code not found" }, { status: 404 });
       }
     }
+    if (validatedData.categoryId) {
+      const cat = await scopedDb.category.findUnique({ where: { id: validatedData.categoryId }, select: { id: true } });
+      if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    }
 
     const event = await scopedDb.event.update({
       where: { id },
@@ -218,6 +223,7 @@ export async function PATCH(
         date: validatedData.date ? parseDateOnly(validatedData.date) ?? undefined : undefined,
         ...(validatedData.hasFileRequirement !== undefined && { hasFileRequirement: validatedData.hasFileRequirement }),
         ...(validatedData.fileRequirementConfig !== undefined && { fileRequirementConfig: validatedData.fileRequirementConfig }),
+        ...(validatedData.categoryId !== undefined && { categoryId: validatedData.categoryId }),
       },
       include: {
         program: true,

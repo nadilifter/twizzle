@@ -190,6 +190,7 @@ const updateCompetitionSchema = z.object({
   earlyAccessCode: z.string().optional().nullable(),
 
   glCodeId: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
 })
 
 /**
@@ -250,6 +251,10 @@ export async function PATCH(
     if (data.waiverRequirementIds?.length) {
       const valid = await scopedDb.waiver.findMany({ where: { id: { in: data.waiverRequirementIds } }, select: { id: true } })
       if (valid.length !== data.waiverRequirementIds.length) return NextResponse.json({ error: "One or more waivers not found" }, { status: 404 })
+    }
+    if (data.categoryId) {
+      const cat = await scopedDb.category.findUnique({ where: { id: data.categoryId }, select: { id: true } });
+      if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
     const updateData: Record<string, unknown> = {}
@@ -312,6 +317,7 @@ export async function PATCH(
     if (data.registrationEndTime !== undefined) updateData.registrationEndTime = data.registrationEndTime
     if (data.registrationOpen !== undefined) updateData.registrationOpen = data.registrationOpen
     if (data.earlyAccessCode !== undefined) updateData.earlyAccessCode = data.earlyAccessCode
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId
 
     const addressChanged = !data.facilityId && hasAddressChanged(
       {

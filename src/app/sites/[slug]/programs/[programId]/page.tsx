@@ -80,6 +80,9 @@ const getCachedProgramDetail = unstable_cache(
                 waiverRequirements: {
                     select: { id: true, waiverId: true },
                 },
+                category: {
+                    select: { id: true, name: true },
+                },
                 instances: {
                     where: { date: { gte: new Date() }, status: "SCHEDULED" },
                     include: {
@@ -249,9 +252,18 @@ export default async function ProgramDetailPage({
                     <div className="flex items-start justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3">
                             <ClipboardList className="h-8 w-8" />
-                            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                                {program.name}
-                            </h1>
+                            <div>
+                                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                                    {program.name}
+                                </h1>
+                                {program.category && (
+                                    <Link href={`/register?category=${program.category.id}`}>
+                                        <Badge variant="secondary" className="mt-1">
+                                            {program.category.name}
+                                        </Badge>
+                                    </Link>
+                                )}
+                            </div>
                         </div>
                         {registrationStatus === "closed" ? (
                             <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-gray-500 text-white border-gray-500 shadow-lg">

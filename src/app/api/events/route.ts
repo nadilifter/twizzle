@@ -43,6 +43,7 @@ const createEventSchema = z.object({
   fileRequirementConfig: z.any().optional().nullable(),
   staffAssignments: z.array(staffAssignmentSchema).optional(),
   glCodeId: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
 }).refine((data) => {
   const dateTimeString = `${data.date}T${data.startTime}`;
   const eventDate = new Date(dateTimeString);
@@ -273,6 +274,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "GL code not found" }, { status: 404 });
       }
     }
+    if (validatedData.categoryId) {
+      const cat = await scopedDb.category.findUnique({ where: { id: validatedData.categoryId }, select: { id: true } });
+      if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    }
 
     if (validatedData.requiredMembershipInstanceIds && validatedData.requiredMembershipInstanceIds.length > 0) {
       const validInstances = await db.membershipInstance.findMany({
@@ -306,6 +311,7 @@ export async function POST(request: NextRequest) {
         hasFileRequirement: validatedData.hasFileRequirement ?? false,
         fileRequirementConfig: validatedData.fileRequirementConfig ?? undefined,
         glCodeId: validatedData.glCodeId ?? undefined,
+        categoryId: validatedData.categoryId ?? undefined,
         organizationId: session.user.organizationId,
     };
 

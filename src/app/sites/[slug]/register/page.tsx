@@ -5,6 +5,18 @@ import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { QueueGateWrapper } from "@/components/sites/queue-gate-wrapper";
 import { FilterableProgramList } from "@/components/sites/filterable-program-list";
 
+const getCachedRegisterCategories = unstable_cache(
+    async (organizationId: string) => {
+        return db.category.findMany({
+            where: { organizationId },
+            select: { id: true, name: true, description: true },
+            orderBy: { name: "asc" },
+        });
+    },
+    ["site-categories-register"],
+    { revalidate: 30 }
+);
+
 const getCachedRegisterConfig = unstable_cache(
     async (subdomain: string) => {
         return db.websiteConfig.findUnique({
@@ -93,16 +105,17 @@ const getCachedSeasons = unstable_cache(
     { revalidate: 30 }
 );
 
-export default async function RegisterPage({ params, searchParams }: { params: { slug: string }; searchParams: { coach?: string } }) {
+export default async function RegisterPage({ params, searchParams }: { params: { slug: string }; searchParams: { coach?: string; category?: string } }) {
     const subdomain = params.slug;
 
     const config = await getCachedRegisterConfig(subdomain);
 
     if (!config) return notFound();
 
-    const [{ programs, levels, waitlistedCounts }, seasonsEnabled] = await Promise.all([
+    const [{ programs, levels, waitlistedCounts }, seasonsEnabled, registerCategories] = await Promise.all([
         getCachedRegisterPrograms(config.organizationId),
         isFeatureEnabled(config.organizationId, "seasons"),
+        getCachedRegisterCategories(config.organizationId),
     ]);
 
     const seasons = seasonsEnabled
@@ -157,6 +170,8 @@ export default async function RegisterPage({ params, searchParams }: { params: {
                     slug={subdomain}
                     primaryColor={config.primaryColor || undefined}
                     initialCoachId={searchParams.coach}
+                    categories={registerCategories}
+                    initialCategoryId={searchParams.category}
                 />
             </div>
         </QueueGateWrapper>

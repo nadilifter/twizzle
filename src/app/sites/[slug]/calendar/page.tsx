@@ -71,6 +71,18 @@ const getCachedSeasons = unstable_cache(
     { revalidate: 30 }
 );
 
+const getCachedCalendarCategories = unstable_cache(
+    async (organizationId: string) => {
+        return db.category.findMany({
+            where: { organizationId },
+            select: { id: true, name: true },
+            orderBy: { name: "asc" },
+        });
+    },
+    ["site-calendar-categories"],
+    { revalidate: 30 }
+);
+
 export default async function CalendarPage({ params }: { params: { slug: string } }) {
     const subdomain = params.slug;
 
@@ -84,9 +96,10 @@ export default async function CalendarPage({ params }: { params: { slug: string 
         isFeatureEnabled(config.organizationId, "seasons"),
     ]);
 
-    const seasons = seasonsEnabled
-        ? await getCachedSeasons(config.organizationId)
-        : [];
+    const [seasons, calendarCategories] = await Promise.all([
+        seasonsEnabled ? getCachedSeasons(config.organizationId) : Promise.resolve([]),
+        getCachedCalendarCategories(config.organizationId),
+    ]);
 
     return (
         <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-12">
@@ -98,6 +111,7 @@ export default async function CalendarPage({ params }: { params: { slug: string 
                 levels={trainingEnabled ? levels : []}
                 coaches={coaches}
                 seasons={seasons}
+                categories={calendarCategories}
             />
         </div>
     );

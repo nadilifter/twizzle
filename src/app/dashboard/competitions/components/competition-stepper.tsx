@@ -58,6 +58,7 @@ import { SeasonDateWarning } from "@/components/season-date-warning"
 import { cn } from "@/lib/utils"
 import { CopySettingsDialog } from "@/components/copy-settings-dialog"
 import { ColorSelector } from "@/components/color-selector"
+import { useCategories } from "@/hooks/use-categories"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -169,6 +170,9 @@ interface CompetitionFormData {
   // Season (optional first step)
   seasonId: string | null
 
+  // Category
+  categoryId: string | null
+
   // Step 1: General
   name: string
   color: string
@@ -259,6 +263,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
 
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
   const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled })
+  const { categories, isLoading: categoriesLoading } = useCategories()
 
   // Levels state
   const [levels, setLevels] = React.useState<Level[]>([])
@@ -293,6 +298,9 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
   const [formData, setFormData] = React.useState<CompetitionFormData>({
     // Season
     seasonId: null,
+
+    // Category
+    categoryId: null,
 
     // Step 1: General
     name: "",
@@ -585,6 +593,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
           scheduledGoLiveDate: data.scheduledGoLiveDate ? new Date(data.scheduledGoLiveDate) : null,
           scheduledGoLiveTime: data.scheduledGoLiveTime || "09:00",
           glCodeId: data.glCodeId || null,
+          categoryId: data.categoryId || null,
         })
       } catch (error) {
         console.error("Failed to load competition:", error)
@@ -1033,6 +1042,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
         earlyAccessCode: formData.earlyAccessCode,
         glCodeId: formData.glCodeId,
         seasonId: formData.seasonId,
+        categoryId: formData.categoryId,
       }
 
       const url = isEditing ? `/api/competitions/${competitionId}` : "/api/competitions"
@@ -1236,6 +1246,27 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
                 value={formData.color}
                 onChange={(color) => setFormData(prev => ({ ...prev, color }))}
               />
+
+              {/* Category */}
+              {!categoriesLoading && categories.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={formData.categoryId || "none"}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val === "none" ? null : val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Category</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Competition Type */}
               {(() => {

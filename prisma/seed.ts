@@ -1135,6 +1135,53 @@ async function main() {
   console.log(`  ✓ Created ${levelData.length} levels`);
 
   // ============================================
+  // CATEGORIES
+  // ============================================
+  console.log("\n🏷️ Creating categories...");
+  await Promise.all([
+    prisma.category.upsert({ where: { id: `${ORG1_ID}-cat-recreational` }, update: {}, create: {
+      id: `${ORG1_ID}-cat-recreational`, name: "Recreational Gymnastics",
+      description: "Fun, fitness-focused programs for all ages and skill levels",
+      organizationId: ORG1_ID,
+    }}),
+    prisma.category.upsert({ where: { id: `${ORG1_ID}-cat-competitive` }, update: {}, create: {
+      id: `${ORG1_ID}-cat-competitive`, name: "Competitive Team",
+      description: "Structured training programs for competitive athletes",
+      organizationId: ORG1_ID,
+    }}),
+    prisma.category.upsert({ where: { id: `${ORG1_ID}-cat-camps` }, update: {}, create: {
+      id: `${ORG1_ID}-cat-camps`, name: "Camps & Clinics",
+      description: "Short-term intensive programs and seasonal camps",
+      organizationId: ORG1_ID,
+    }}),
+    prisma.category.upsert({ where: { id: `${ORG1_ID}-cat-preschool` }, update: {}, create: {
+      id: `${ORG1_ID}-cat-preschool`, name: "Preschool & Toddler",
+      description: "Age-appropriate movement classes for our youngest athletes",
+      organizationId: ORG1_ID,
+    }}),
+    prisma.category.upsert({ where: { id: `${ORG2_ID}-cat-fitness` }, update: {}, create: {
+      id: `${ORG2_ID}-cat-fitness`, name: "Group Fitness",
+      description: "High-energy group fitness classes for all levels",
+      organizationId: ORG2_ID,
+    }}),
+    prisma.category.upsert({ where: { id: `${ORG2_ID}-cat-training` }, update: {}, create: {
+      id: `${ORG2_ID}-cat-training`, name: "Personal Training",
+      description: "One-on-one and small group training sessions",
+      organizationId: ORG2_ID,
+    }}),
+    prisma.category.upsert({ where: { id: `${ORG2_ID}-cat-youth` }, update: {}, create: {
+      id: `${ORG2_ID}-cat-youth`, name: "Youth Sports",
+      description: "Sports programs designed for kids and teens",
+      organizationId: ORG2_ID,
+    }}),
+    prisma.category.upsert({ where: { id: `${ORG2_ID}-cat-aquatics` }, update: {}, create: {
+      id: `${ORG2_ID}-cat-aquatics`, name: "Aquatics",
+      description: "Swimming and water sports programs",
+      organizationId: ORG2_ID,
+    }}),
+  ]);
+
+  // ============================================
   // PROGRAMS
   // ============================================
   console.log("\n📚 Creating programs...");
@@ -1142,7 +1189,7 @@ async function main() {
     // Recurring program with all-instance registration (traditional subscription)
     prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-bronze` }, update: {}, create: { 
       id: `${ORG1_ID}-prog-rec-bronze`, name: "Recreational Bronze", description: "Introduction to gymnastics for beginners ages 5-7", 
-      status: "ACTIVE", organizationId: ORG1_ID, color: "#cd7f32",
+      status: "ACTIVE", organizationId: ORG1_ID, color: "#cd7f32", categoryId: `${ORG1_ID}-cat-recreational`,
       pricingModel: "FLAT_RATE", basePrice: 85,
       showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
@@ -1154,9 +1201,9 @@ async function main() {
       hasAgeRestriction: true, minAge: 5, maxAge: 7,
       hasLevelRestriction: true, hasCapacityRestriction: false, hasMembershipRestriction: false,
     }}),
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-silver` }, update: {}, create: { 
-      id: `${ORG1_ID}-prog-rec-silver`, name: "Recreational Silver", description: "Intermediate recreational program for ages 7-10", 
-      status: "ACTIVE", organizationId: ORG1_ID, color: "#64748b",
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-silver` }, update: {}, create: {
+      id: `${ORG1_ID}-prog-rec-silver`, name: "Recreational Silver", description: "Intermediate recreational program for ages 7-10",
+      status: "ACTIVE", organizationId: ORG1_ID, color: "#64748b", categoryId: `${ORG1_ID}-cat-recreational`,
       pricingModel: "FLAT_RATE", basePrice: 115,
       showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
@@ -1168,9 +1215,9 @@ async function main() {
       hasAgeRestriction: true, minAge: 7, maxAge: 10,
       hasLevelRestriction: true, hasCapacityRestriction: false, hasMembershipRestriction: false,
     }}),
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-gold` }, update: {}, create: { 
-      id: `${ORG1_ID}-prog-rec-gold`, name: "Recreational Gold", description: "Advanced recreational program for ages 10+", 
-      status: "ACTIVE", organizationId: ORG1_ID, color: "#f59e0b",
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-rec-gold` }, update: {}, create: {
+      id: `${ORG1_ID}-prog-rec-gold`, name: "Recreational Gold", description: "Advanced recreational program for ages 10+",
+      status: "ACTIVE", organizationId: ORG1_ID, color: "#f59e0b", categoryId: `${ORG1_ID}-cat-recreational`,
       pricingModel: "FLAT_RATE", basePrice: 145,
       showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(335),
@@ -1179,9 +1226,9 @@ async function main() {
       facilityId: `${ORG1_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=TU,TH,SA",
     }}),
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-jo` }, update: {}, create: { 
-      id: `${ORG1_ID}-prog-jo`, name: "Junior Olympics Team", description: "Competitive gymnastics program - Levels 4-10", 
-      status: "ACTIVE", organizationId: ORG1_ID, color: "#8b5cf6",
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-jo` }, update: {}, create: {
+      id: `${ORG1_ID}-prog-jo`, name: "Junior Olympics Team", description: "Competitive gymnastics program - Levels 4-10",
+      status: "ACTIVE", organizationId: ORG1_ID, color: "#8b5cf6", categoryId: `${ORG1_ID}-cat-competitive`,
       pricingModel: "FLAT_RATE", basePrice: 2400,
       showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 30,
@@ -1194,9 +1241,9 @@ async function main() {
       hasLevelRestriction: true, hasCapacityRestriction: true, hasMembershipRestriction: true,
     }}),
     // Drop-in program with per-instance registration
-    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-preschool` }, update: {}, create: { 
-      id: `${ORG1_ID}-prog-preschool`, name: "Tiny Tumblers", description: "Parent-child gymnastics for ages 2-4", 
-      status: "ACTIVE", organizationId: ORG1_ID, color: "#ec4899",
+    prisma.program.upsert({ where: { id: `${ORG1_ID}-prog-preschool` }, update: {}, create: {
+      id: `${ORG1_ID}-prog-preschool`, name: "Tiny Tumblers", description: "Parent-child gymnastics for ages 2-4",
+      status: "ACTIVE", organizationId: ORG1_ID, color: "#ec4899", categoryId: `${ORG1_ID}-cat-preschool`,
       pricingModel: "PER_SESSION", perSessionPrice: 25,
       showCoachOnSite: false,
       capacity: 12,
@@ -1207,9 +1254,9 @@ async function main() {
       rrule: "FREQ=WEEKLY;BYDAY=SA",
     }}),
     // Metro Sports programs
-    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-soccer` }, update: {}, create: { 
-      id: `${ORG2_ID}-prog-soccer`, name: "Youth Soccer League", description: "Recreational soccer for ages 6-14", 
-      status: "ACTIVE", organizationId: ORG2_ID, color: "#22c55e",
+    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-soccer` }, update: {}, create: {
+      id: `${ORG2_ID}-prog-soccer`, name: "Youth Soccer League", description: "Recreational soccer for ages 6-14",
+      status: "ACTIVE", organizationId: ORG2_ID, color: "#22c55e", categoryId: `${ORG2_ID}-cat-youth`,
       pricingModel: "FLAT_RATE", basePrice: 175,
       showCoachOnSite: true,
       startDate: daysAgo(15), endDate: daysFromNow(90),
@@ -1218,9 +1265,9 @@ async function main() {
       facilityId: `${ORG2_ID}-facility-main`,
       rrule: "FREQ=WEEKLY;BYDAY=SA",
     }}),
-    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-basketball` }, update: {}, create: { 
-      id: `${ORG2_ID}-prog-basketball`, name: "Teen Basketball", description: "Basketball skills and games for ages 12-18", 
-      status: "ACTIVE", organizationId: ORG2_ID, color: "#f97316",
+    prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-basketball` }, update: {}, create: {
+      id: `${ORG2_ID}-prog-basketball`, name: "Teen Basketball", description: "Basketball skills and games for ages 12-18",
+      status: "ACTIVE", organizationId: ORG2_ID, color: "#f97316", categoryId: `${ORG2_ID}-cat-youth`,
       pricingModel: "FLAT_RATE", basePrice: 95,
       showCoachOnSite: true,
       startDate: daysAgo(30), endDate: daysFromNow(60),
@@ -1231,7 +1278,7 @@ async function main() {
     }}),
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-swim` }, update: {}, create: { 
       id: `${ORG2_ID}-prog-swim`, name: "Swim Team", description: "Competitive swimming for all ages", 
-      status: "ACTIVE", organizationId: ORG2_ID, color: "#06b6d4",
+      status: "ACTIVE", organizationId: ORG2_ID, color: "#06b6d4", categoryId: `${ORG2_ID}-cat-aquatics`,
       pricingModel: "FLAT_RATE", basePrice: 1200,
       showCoachOnSite: true,
       startDate: daysAgo(60), endDate: daysFromNow(305), capacity: 40,
@@ -1242,8 +1289,8 @@ async function main() {
     }}),
     // Drop-in fitness with per-instance registration
     prisma.program.upsert({ where: { id: `${ORG2_ID}-prog-fitness` }, update: {}, create: { 
-      id: `${ORG2_ID}-prog-fitness`, name: "Kids Fitness", description: "General fitness and movement for ages 5-10", 
-      status: "ACTIVE", organizationId: ORG2_ID, color: "#ef4444",
+      id: `${ORG2_ID}-prog-fitness`, name: "Kids Fitness", description: "General fitness and movement for ages 5-10",
+      status: "ACTIVE", organizationId: ORG2_ID, color: "#ef4444", categoryId: `${ORG2_ID}-cat-fitness`,
       pricingModel: "PER_SESSION", perSessionPrice: 15,
       showCoachOnSite: false,
       capacity: 20,
@@ -1600,7 +1647,7 @@ async function main() {
     prisma.event.upsert({ where: { id: `${ORG1_ID}-evt-2` }, update: {}, create: { id: `${ORG1_ID}-evt-2`, title: "Silver Class - Monday", color: "#64748b", date: today, startTime: "17:00", endTime: "18:30", type: "CLASS", programId: `${ORG1_ID}-prog-rec-silver`, coachId: org1Coach1.id, organizationId: ORG1_ID, capacity: 10 } }),
     prisma.event.upsert({ where: { id: `${ORG1_ID}-evt-3` }, update: {}, create: { id: `${ORG1_ID}-evt-3`, title: "JO Team Practice", color: "#8b5cf6", date: today, startTime: "18:30", endTime: "21:00", type: "CLASS", programId: `${ORG1_ID}-prog-jo`, coachId: org1Coach2.id, organizationId: ORG1_ID, capacity: 20 } }),
     prisma.event.upsert({ where: { id: `${ORG1_ID}-evt-4` }, update: {}, create: { id: `${ORG1_ID}-evt-4`, title: "JO Team Tryouts", color: "#d946ef", date: daysFromNow(45), startTime: "08:00", endTime: "12:00", type: "TRYOUT", description: "Open tryouts for the JO competitive team", programId: `${ORG1_ID}-prog-jo`, organizationId: ORG1_ID, capacity: 100 } }),
-    prisma.event.upsert({ where: { id: `${ORG1_ID}-evt-5` }, update: {}, create: { id: `${ORG1_ID}-evt-5`, title: "Tumbling Skills Clinic", color: "#14b8a6", date: daysFromNow(30), startTime: "09:00", endTime: "12:00", type: "CLINIC", description: "One-day tumbling and floor skills clinic", organizationId: ORG1_ID, capacity: 40 } }),
+    prisma.event.upsert({ where: { id: `${ORG1_ID}-evt-5` }, update: {}, create: { id: `${ORG1_ID}-evt-5`, title: "Tumbling Skills Clinic", color: "#14b8a6", date: daysFromNow(30), startTime: "09:00", endTime: "12:00", type: "CLINIC", description: "One-day tumbling and floor skills clinic", organizationId: ORG1_ID, capacity: 40, categoryId: `${ORG1_ID}-cat-camps` } }),
     prisma.event.upsert({ where: { id: `${ORG2_ID}-evt-1` }, update: {}, create: { id: `${ORG2_ID}-evt-1`, title: "Youth Soccer Practice", color: "#22c55e", date: today, startTime: "16:00", endTime: "17:30", type: "CLASS", programId: `${ORG2_ID}-prog-soccer`, coachId: org2Coach.id, organizationId: ORG2_ID, capacity: 24 } }),
     prisma.event.upsert({ where: { id: `${ORG2_ID}-evt-2` }, update: {}, create: { id: `${ORG2_ID}-evt-2`, title: "Basketball Game Night", color: "#f97316", date: daysFromNow(2), startTime: "18:00", endTime: "20:00", type: "CLASS", programId: `${ORG2_ID}-prog-basketball`, organizationId: ORG2_ID, capacity: 20 } }),
     prisma.event.upsert({ where: { id: `${ORG2_ID}-evt-3` }, update: {}, create: { id: `${ORG2_ID}-evt-3`, title: "Swim Team Tryouts", color: "#06b6d4", date: daysFromNow(14), startTime: "07:00", endTime: "11:00", type: "TRYOUT", programId: `${ORG2_ID}-prog-swim`, organizationId: ORG2_ID, capacity: 50 } }),
@@ -4834,6 +4881,7 @@ See you at Metro Sports!
       name: "Spring Invitational 2026",
       color: "#d946ef",
       competitionType: "GYMNASTICS",
+      categoryId: `${ORG1_ID}-cat-competitive`,
       status: "REGISTRATION_OPEN",
       facilityId: `${ORG1_ID}-facility-main`,
       country: "US",
@@ -4958,6 +5006,7 @@ See you at Metro Sports!
       name: "Regional Athletics Meet 2026",
       color: "#6366f1",
       competitionType: "ATHLETICS",
+      categoryId: `${ORG2_ID}-cat-youth`,
       status: "COMPLETED",
       facilityId: `${ORG2_ID}-facility-main`,
       country: "US",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { parseISO, isAfter, isBefore, startOfDay } from "date-fns";
 import { Filter, SearchX, X } from "lucide-react";
 
@@ -34,6 +34,7 @@ import {
   type Level,
   type Coach,
   type SeasonFilter,
+  type CategoryFilter,
   type ProgramFilterState,
 } from "./program-filters";
 
@@ -97,7 +98,14 @@ interface Program {
   waitlistCapacity?: number | null;
   allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
   seasonId?: string | null;
+  categoryId?: string | null;
   _count?: { instances?: number; enrollments?: number; waitlistedEnrollments?: number };
+}
+
+interface CategoryInfo {
+  id: string;
+  name: string;
+  description?: string | null;
 }
 
 interface FilterableProgramListProps {
@@ -107,6 +115,8 @@ interface FilterableProgramListProps {
   slug: string;
   primaryColor?: string;
   initialCoachId?: string;
+  categories?: CategoryInfo[];
+  initialCategoryId?: string;
 }
 
 function toDate(value: string | Date | null | undefined): Date | null {
@@ -126,11 +136,14 @@ export function FilterableProgramList({
   slug,
   primaryColor,
   initialCoachId,
+  categories = [],
+  initialCategoryId,
 }: FilterableProgramListProps) {
   const isMobile = useIsMobile();
   const [filters, setFilters] = useState<ProgramFilterState>(() => ({
     ...DEFAULT_FILTERS,
     selectedCoaches: initialCoachId ? [initialCoachId] : [],
+    selectedCategory: initialCategoryId || "",
   }));
   const [open, setOpen] = useState(false);
 
@@ -234,9 +247,63 @@ export function FilterableProgramList({
         }
       }
 
+      // Category filter
+      if (filters.selectedCategory) {
+        if (program.categoryId !== filters.selectedCategory) {
+          return false;
+        }
+      }
+
       return true;
     });
   }, [programs, filters]);
+
+  const hasCategories = categories.length > 0;
+
+  // Group filtered programs by category
+  const groupedPrograms = useMemo(() => {
+    if (!hasCategories) return null;
+
+    const groups: { category: CategoryInfo | null; programs: Program[] }[] = [];
+    const categoryMap = new Map<string, Program[]>();
+    const uncategorized: Program[] = [];
+
+    for (const program of filteredPrograms) {
+      if (program.categoryId) {
+        const existing = categoryMap.get(program.categoryId) || [];
+        existing.push(program);
+        categoryMap.set(program.categoryId, existing);
+      } else {
+        uncategorized.push(program);
+      }
+    }
+
+    for (const cat of categories) {
+      const progs = categoryMap.get(cat.id);
+      if (progs && progs.length > 0) {
+        groups.push({ category: cat, programs: progs });
+      }
+    }
+
+    if (uncategorized.length > 0) {
+      groups.push({ category: null, programs: uncategorized });
+    }
+
+    return groups;
+  }, [filteredPrograms, categories, hasCategories]);
+
+  // Scroll to category section if initialCategoryId is provided
+  const scrolledRef = useRef(false);
+  useEffect(() => {
+    if (initialCategoryId && !scrolledRef.current) {
+      scrolledRef.current = true;
+      const sectionId = initialCategoryId === "other" ? "category-other" : `category-${initialCategoryId}`;
+      const el = document.getElementById(sectionId);
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+      }
+    }
+  }, [initialCategoryId]);
 
   // Shared trigger button
   const triggerButton = (
@@ -257,6 +324,7 @@ export function FilterableProgramList({
       levels={levels}
       coaches={coaches}
       seasons={seasons}
+      categories={categories}
       filters={filters}
       onFiltersChange={setFilters}
       activeFilterCount={activeFilterCount}
@@ -317,15 +385,46 @@ export function FilterableProgramList({
 
       {/* Program Grid */}
       {filteredPrograms.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredPrograms.map((program) => (
-            <ProgramCard
-              key={program.id}
-              program={program}
-              primaryColor={primaryColor}
-            />
-          ))}
-        </div>
+        hasCategories && groupedPrograms ? (
+          <div className="space-y-12">
+            {groupedPrograms.map((group) => (
+              <section
+                key={group.category?.id || "other"}
+                id={group.category ? `category-${group.category.id}` : "category-other"}
+              >
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold tracking-tight">
+                    {group.category?.name || "Other Programs"}
+                  </h2>
+                  {group.category?.description && (
+                    <p className="mt-1 text-muted-foreground">
+                      {group.category.description}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.programs.map((program) => (
+                    <ProgramCard
+                      key={program.id}
+                      program={program}
+                      primaryColor={primaryColor}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredPrograms.map((program) => (
+              <ProgramCard
+                key={program.id}
+                program={program}
+                primaryColor={primaryColor}
+              />
+            ))}
+          </div>
+        )
       ) : programs.length > 0 ? (
         /* No results from filtering */
         <div className="text-center py-16 rounded-xl border bg-muted/30">

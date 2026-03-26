@@ -61,6 +61,7 @@ const updateProgramSchema = z.object({
     isPrimary: z.boolean().default(false),
   })).optional(),
   glCodeId: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
   // Registration window
   registrationStartDate: z.string().optional().nullable(),
   registrationStartTime: z.string().optional().nullable(),
@@ -274,6 +275,10 @@ export async function PATCH(
       const glCode = await scopedDb.gLCode.findUnique({ where: { id: validatedData.glCodeId } });
       if (!glCode) return NextResponse.json({ error: "GL code not found" }, { status: 404 });
     }
+    if (validatedData.categoryId) {
+      const cat = await scopedDb.category.findUnique({ where: { id: validatedData.categoryId }, select: { id: true } });
+      if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    }
     if (validatedData.levelRequirementIds?.length) {
       const valid = await scopedDb.level.findMany({ where: { id: { in: validatedData.levelRequirementIds } }, select: { id: true } });
       if (valid.length !== validatedData.levelRequirementIds.length) return NextResponse.json({ error: "One or more levels not found" }, { status: 404 });
@@ -347,6 +352,7 @@ export async function PATCH(
       if (validatedData.waitlistAutoPromote !== undefined) updateData.waitlistAutoPromote = validatedData.waitlistAutoPromote;
       if (validatedData.waitlistCapacity !== undefined) updateData.waitlistCapacity = validatedData.waitlistCapacity;
       if (validatedData.glCodeId !== undefined) updateData.glCodeId = validatedData.glCodeId;
+      if (validatedData.categoryId !== undefined) updateData.categoryId = validatedData.categoryId;
       if (validatedData.registrationStartDate !== undefined) updateData.registrationStartDate = validatedData.registrationStartDate ? parseDateOnly(validatedData.registrationStartDate) : null;
       if (validatedData.registrationStartTime !== undefined) updateData.registrationStartTime = validatedData.registrationStartTime;
       if (validatedData.registrationEndDate !== undefined) updateData.registrationEndDate = validatedData.registrationEndDate ? parseDateOnly(validatedData.registrationEndDate) : null;
