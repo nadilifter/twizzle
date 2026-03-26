@@ -4,8 +4,7 @@ import { db, getScopedDb } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
 import { checkMemberCertifications } from "@/lib/services/certification-check";
 import { z } from "zod";
-import { RRule } from "rrule";
-import { format, addMinutes } from "date-fns";
+import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 
 const updateProgramSchema = z.object({
   name: z.string().min(1).optional(),
@@ -72,47 +71,6 @@ const updateProgramSchema = z.object({
   // Flag to regenerate instances
   regenerateInstances: z.boolean().optional(),
 });
-
-/**
- * Generate program instances from an RRULE and date range
- */
-function formatDtstartUTC(date: Date): string {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  return `${y}${m}${d}T120000Z`;
-}
-
-function generateInstanceDates(
-  startDate: Date,
-  endDate: Date,
-  rruleString: string | null
-): Date[] {
-  if (!rruleString) {
-    return [startDate];
-  }
-  
-  try {
-    const rruleWithDtstart = `DTSTART:${formatDtstartUTC(startDate)}\nRRULE:${rruleString}`;
-    const rule = RRule.fromString(rruleWithDtstart);
-    const startBound = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0, 0, 0));
-    const endBound = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999));
-    return rule.between(startBound, endBound, true);
-  } catch (error) {
-    console.error("Error parsing RRULE:", error);
-    return [startDate];
-  }
-}
-
-/**
- * Calculate end time from start time and duration
- */
-function calculateEndTime(startTime: string, durationMinutes: number): string {
-  const [hours, minutes] = startTime.split(":").map(Number);
-  const startDateObj = new Date(2000, 0, 1, hours, minutes);
-  const endDateObj = addMinutes(startDateObj, durationMinutes);
-  return format(endDateObj, "HH:mm");
-}
 
 // GET /api/programs/[id]
 export async function GET(

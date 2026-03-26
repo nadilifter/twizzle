@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Calendar as CalendarIcon, Repeat, Pencil } from "lucide-react"
+import Link from "next/link"
+import { Plus, MoreHorizontal, Trash2, Loader2, AlertCircle, Calendar as CalendarIcon, Repeat, Eye } from "lucide-react"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -26,13 +27,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -56,7 +50,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useSeasons } from "@/hooks/use-seasons"
 import { DashboardPageHeader } from "@/components/dashboard-page-header"
 import { toast } from "sonner"
-import type { Season, UpdateSeasonPayload } from "@/hooks/use-seasons"
+import type { Season } from "@/hooks/use-seasons"
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   ACTIVE: "default",
@@ -68,7 +62,6 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "des
 
 export default function SeasonsPage() {
   const { seasons, isLoading, error, deleteSeason, createSeason, isCreating, refresh } = useSeasons()
-  const [selectedSeasonId, setSelectedSeasonId] = React.useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false)
 
   const handleDelete = async (id: string) => {
@@ -76,7 +69,6 @@ export default function SeasonsPage() {
       const success = await deleteSeason(id)
       if (success) {
         toast.success("Season deleted")
-        if (selectedSeasonId === id) setSelectedSeasonId(null)
       }
     }
   }
@@ -128,9 +120,11 @@ export default function SeasonsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => setSelectedSeasonId(season.id)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Manage
+                      <DropdownMenuItem asChild>
+                        <Link href={`/dashboard/registrations/seasons/${season.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -179,8 +173,10 @@ export default function SeasonsPage() {
                 </div>
               </CardContent>
               <CardFooter className="border-t pt-4">
-                <Button variant="outline" className="w-full" onClick={() => setSelectedSeasonId(season.id)}>
-                  Manage
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href={`/dashboard/registrations/seasons/${season.id}`}>
+                    View Season
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -192,12 +188,6 @@ export default function SeasonsPage() {
           )}
         </div>
       )}
-
-      <Sheet open={!!selectedSeasonId} onOpenChange={(open) => !open && setSelectedSeasonId(null)}>
-        <SheetContent className="sm:max-w-[540px] overflow-y-auto">
-          {selectedSeasonId && <SeasonManager seasonId={selectedSeasonId} />}
-        </SheetContent>
-      </Sheet>
 
       <CreateSeasonDialog
         open={createDialogOpen}
@@ -433,230 +423,5 @@ function CreateSeasonDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function SeasonManager({ seasonId }: { seasonId: string }) {
-  const { seasons, updateSeason } = useSeasons({ autoFetch: false })
-  const [season, setSeason] = React.useState<Season | null>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined)
-  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined)
-
-  React.useEffect(() => {
-    const fetchSeason = async () => {
-      setIsLoading(true)
-      try {
-        const res = await fetch(`/api/seasons/${seasonId}`)
-        if (res.ok) {
-          const data = await res.json()
-          setSeason(data)
-          setStartDate(new Date(data.startDate))
-          setEndDate(new Date(data.endDate))
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    fetchSeason()
-  }, [seasonId])
-
-  const handleUpdate = async (data: UpdateSeasonPayload) => {
-    const result = await updateSeason(seasonId, data)
-    if (result) {
-      setSeason(result)
-      toast.success("Season updated")
-    }
-  }
-
-  if (isLoading || !season) {
-    return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
-  }
-
-  return (
-    <div className="flex flex-col gap-6">
-      <SheetHeader>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: season.color }} />
-          <SheetTitle>{season.name}</SheetTitle>
-        </div>
-        <SheetDescription>
-          {format(new Date(season.startDate), "MMM d, yyyy")} – {format(new Date(season.endDate), "MMM d, yyyy")}
-        </SheetDescription>
-      </SheetHeader>
-
-      <div className="space-y-6">
-        {/* Name */}
-        <div className="space-y-2">
-          <Label>Name</Label>
-          <Input
-            defaultValue={season.name}
-            onBlur={(e) => {
-              if (e.target.value !== season.name) {
-                handleUpdate({ name: e.target.value })
-              }
-            }}
-          />
-        </div>
-
-        {/* Description */}
-        <div className="space-y-2">
-          <Label>Description</Label>
-          <Textarea
-            defaultValue={season.description || ""}
-            placeholder="Optional description"
-            onBlur={(e) => {
-              const val = e.target.value || null
-              if (val !== season.description) {
-                handleUpdate({ description: val })
-              }
-            }}
-          />
-        </div>
-
-        {/* Color */}
-        <ColorSelector
-          value={season.color}
-          onChange={(color) => {
-            setSeason({ ...season, color })
-            handleUpdate({ color })
-          }}
-        />
-
-        <Separator />
-
-        {/* Dates */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Start Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                <Calendar
-                  mode="single"
-                  fixedWeeks
-                  captionLayout="dropdown"
-                  fromYear={new Date().getFullYear() - 1}
-                  toYear={new Date().getFullYear() + 5}
-                  selected={startDate}
-                  onSelect={(date) => {
-                    setStartDate(date)
-                    if (date) handleUpdate({ startDate: format(date, "yyyy-MM-dd") })
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="space-y-2">
-            <Label>End Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                <Calendar
-                  mode="single"
-                  fixedWeeks
-                  captionLayout="dropdown"
-                  fromYear={new Date().getFullYear() - 1}
-                  toYear={new Date().getFullYear() + 5}
-                  selected={endDate}
-                  onSelect={(date) => {
-                    setEndDate(date)
-                    if (date) handleUpdate({ endDate: format(date, "yyyy-MM-dd") })
-                  }}
-                  disabled={(date) => startDate ? date < startDate : false}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Status */}
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select
-            value={season.status}
-            onValueChange={(val) => handleUpdate({ status: val as any })}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="DRAFT">Draft</SelectItem>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="CLOSED">Closed</SelectItem>
-              <SelectItem value="EXPIRED">Expired</SelectItem>
-              <SelectItem value="CANCELLED">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Separator />
-
-        {/* Recurrence */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Recurring Season</Label>
-            <Switch
-              checked={season.isRecurring}
-              onCheckedChange={(val) => handleUpdate({ isRecurring: val })}
-            />
-          </div>
-          {season.isRecurring && (
-            <div className="space-y-2">
-              <Label htmlFor="renewalLeadDays">Renewal Lead Days</Label>
-              <Input
-                id="renewalLeadDays"
-                type="number"
-                min={1}
-                value={season.renewalLeadDays}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value) || 30
-                  setSeason({ ...season, renewalLeadDays: val })
-                }}
-                onBlur={() => handleUpdate({ renewalLeadDays: season.renewalLeadDays })}
-                className="max-w-[200px]"
-              />
-              <p className="text-sm text-muted-foreground">
-                Days before this season ends to auto-generate the next season as a draft
-              </p>
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Linked items summary */}
-        {season._count && (
-          <div className="space-y-2">
-            <Label>Linked Items</Label>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{season._count.programs} Programs</Badge>
-              <Badge variant="outline">{season._count.memberships} Memberships</Badge>
-              <Badge variant="outline">{season._count.competitions} Competitions</Badge>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
   )
 }

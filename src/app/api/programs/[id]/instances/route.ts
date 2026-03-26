@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { RRule } from "rrule";
-import { format, addMinutes } from "date-fns";
+import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 
 const createInstanceSchema = z.object({
   date: z.string(),
@@ -24,43 +23,6 @@ const bulkGenerateSchema = z.object({
   facilityId: z.string().optional().nullable(),
   capacity: z.number().int().min(1).optional().nullable(),
 });
-
-/**
- * Calculate end time from start time and duration
- */
-function calculateEndTime(startTime: string, durationMinutes: number): string {
-  const [hours, minutes] = startTime.split(":").map(Number);
-  const startDateObj = new Date(2000, 0, 1, hours, minutes);
-  const endDateObj = addMinutes(startDateObj, durationMinutes);
-  return format(endDateObj, "HH:mm");
-}
-
-/**
- * Generate instance dates from RRULE
- */
-function formatDtstartUTC(date: Date): string {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  return `${y}${m}${d}T120000Z`;
-}
-
-function generateInstanceDates(
-  startDate: Date,
-  endDate: Date,
-  rruleString: string
-): Date[] {
-  try {
-    const rruleWithDtstart = `DTSTART:${formatDtstartUTC(startDate)}\nRRULE:${rruleString}`;
-    const rule = RRule.fromString(rruleWithDtstart);
-    const startBound = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0, 0, 0));
-    const endBound = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999));
-    return rule.between(startBound, endBound, true);
-  } catch (error) {
-    console.error("Error parsing RRULE:", error);
-    return [];
-  }
-}
 
 // GET /api/programs/[id]/instances
 export async function GET(
