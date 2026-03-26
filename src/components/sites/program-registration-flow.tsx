@@ -154,6 +154,7 @@ interface ProgramRegistrationFlowProps {
   instances: Instance[]
   slug: string
   primaryColor?: string
+  earlyAccessCode?: string | null
 }
 
 // ---------- Stepper definition ----------
@@ -194,6 +195,7 @@ export function ProgramRegistrationFlow({
   program,
   instances,
   slug,
+  earlyAccessCode,
 }: ProgramRegistrationFlowProps) {
   const { data: session } = useSession()
   const { addItem, setIsOpen, items: cartItems } = useCart()
@@ -787,6 +789,7 @@ export function ProgramRegistrationFlow({
             waitlist: instanceIsFull && program.waitlistEnabled,
             endTime: instance.endTime,
             ...(uploadedFileId && { fileUploadId: uploadedFileId }),
+            ...(earlyAccessCode && { earlyAccessCode }),
           },
         })
       }
@@ -806,6 +809,7 @@ export function ProgramRegistrationFlow({
           requiredMemberships: program.requiredMemberships.map(m => m.id),
           waitlist: isWaitlistMode,
           ...(uploadedFileId && { fileUploadId: uploadedFileId }),
+          ...(earlyAccessCode && { earlyAccessCode }),
         },
       })
     }

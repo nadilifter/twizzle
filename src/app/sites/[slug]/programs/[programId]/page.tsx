@@ -404,6 +404,7 @@ export default async function ProgramDetailPage({
                         instances={serializedInstances}
                         slug={subdomain}
                         primaryColor={primaryColor}
+                        earlyAccessCode={earlyAccessCode}
                     />
                 ) : registrationStatus === "closed" ? (
                     <div className="rounded-lg border bg-muted/30 p-8 text-center">

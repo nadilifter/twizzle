@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { admitNextInQueue, lockQueueConfig } from "@/lib/queue-utils"
+import { getRegistrationStatus } from "@/lib/registration-utils"
 import { v4 as uuidv4 } from "uuid"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { programId, organizationSlug, sessionToken: existingToken } = body
+    const { programId, organizationSlug, sessionToken: existingToken, earlyAccessCode } = body
 
     if (!organizationSlug) {
       return NextResponse.json(
@@ -25,6 +26,36 @@ export async function POST(request: NextRequest) {
         { error: "Organization not found" },
         { status: 404 }
       )
+    }
+
+    // Check registration window if a specific program is targeted
+    if (programId) {
+      const program = await db.program.findFirst({
+        where: { id: programId, organizationId: organization.id },
+        select: {
+          name: true,
+          registrationOpen: true,
+          registrationStartDate: true,
+          registrationStartTime: true,
+          registrationEndDate: true,
+          registrationEndTime: true,
+          earlyAccessCode: true,
+        },
+      })
+
+      if (program) {
+        const status = getRegistrationStatus(program)
+        if (status !== "open") {
+          const hasValidCode = earlyAccessCode && program.earlyAccessCode && earlyAccessCode === program.earlyAccessCode
+          if (!hasValidCode) {
+            const reason = status === "closed" ? "Registration has closed" : "Registration is not yet open"
+            return NextResponse.json(
+              { error: `${reason} for "${program.name}".` },
+              { status: 400 }
+            )
+          }
+        }
+      }
     }
 
     // Find the queue config (program-specific first, then global fallback)

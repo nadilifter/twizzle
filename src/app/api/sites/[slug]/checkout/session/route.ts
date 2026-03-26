@@ -8,6 +8,7 @@ import { processInvoiceRegistrations } from "@/lib/invoice-processing";
 import { sendTemplatedEmail } from "@/lib/email";
 import { getAuthSession } from "@/lib/auth";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getRegistrationStatus } from "@/lib/registration-utils";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
@@ -37,6 +38,7 @@ const cartItemSchema = z.object({
     entryFee: z.number().nullable().optional(),
     seedMarks: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
     waitlist: z.boolean().optional(),
+    earlyAccessCode: z.string().optional(),
     variantId: z.string().optional(),
     variantLabel: z.string().optional(),
     typeName: z.string().optional(),
@@ -88,6 +90,7 @@ interface CartItem {
     entryFee?: number | null;
     seedMarks?: Record<string, Record<string, unknown>>;
     waitlist?: boolean;
+    earlyAccessCode?: string;
     variantId?: string;
     variantLabel?: string;
     typeName?: string;
@@ -304,6 +307,41 @@ export async function POST(
                 { status: 400 }
               );
             }
+          }
+        }
+      }
+
+      // Registration window check — reject if registration is closed or not yet open
+      const programsForRegCheck = await db.program.findMany({
+        where: { id: { in: programIds }, organizationId },
+        select: {
+          id: true,
+          name: true,
+          registrationOpen: true,
+          registrationStartDate: true,
+          registrationStartTime: true,
+          registrationEndDate: true,
+          registrationEndTime: true,
+          earlyAccessCode: true,
+        },
+      });
+
+      for (const prog of programsForRegCheck) {
+        const status = getRegistrationStatus(prog);
+        if (status === "open") continue;
+
+        const cartItemsForProgram = programItems.filter(
+          (item: CartItem) => (item.details?.programId || item.referenceId) === prog.id
+        );
+        for (const item of cartItemsForProgram) {
+          const code = item.details?.earlyAccessCode;
+          const hasValidCode = code && prog.earlyAccessCode && code === prog.earlyAccessCode;
+          if (!hasValidCode) {
+            const reason = status === "closed" ? "Registration has closed" : "Registration is not yet open";
+            return NextResponse.json(
+              { error: `${reason} for "${prog.name}".` },
+              { status: 400 }
+            );
           }
         }
       }
