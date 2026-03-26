@@ -225,6 +225,11 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     status: "live",
     description: "Website builder with CMS capabilities",
   },
+  "/dashboard/website/pages": {
+    status: "live",
+    description: "Page visibility controls for public website sections",
+    apiRoutes: ["/api/organization/website"],
+  },
   "/dashboard/organization/features": {
     status: "live",
     description: "Feature toggle management with plan defaults and superadmin overrides",

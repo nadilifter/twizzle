@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Check, Globe, Palette, Image, Eye, LayoutGrid, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { Loader2, AlertCircle, Check, Globe, Palette, Image, LayoutGrid } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { getBaseDomainSuffix, getBaseDomainFromHostname } from "@/lib/client-domains";
@@ -20,7 +18,6 @@ import { useFeatures } from "@/components/feature-context";
 export default function WebsitePage() {
   const { isFeatureEnabled } = useFeatures();
   const customDomainsEnabled = isFeatureEnabled("customDomains");
-  const competitionsEnabled = isFeatureEnabled("competitions");
   const [config, setConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -512,146 +509,6 @@ export default function WebsitePage() {
         </CardContent>
       </Card>
 
-      {/* Page Visibility */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Eye className="h-5 w-5 text-primary" />
-            <CardTitle>Page Visibility</CardTitle>
-          </div>
-          <CardDescription>Choose which pages are visible to the public.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Label>Show Programs</Label>
-                <Link
-                  href="/dashboard/registrations/programs"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  Manage Programs <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">Allow users to register for programs online.</p>
-            </div>
-            <Switch 
-              checked={config.showRegistration !== false} 
-              onCheckedChange={(c) => updateConfig("showRegistration", c)} 
-            />
-          </div>
-          
-          <Separator />
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Show Calendar</Label>
-              <p className="text-sm text-muted-foreground">Display your class schedule.</p>
-            </div>
-            <Switch 
-              checked={config.showCalendar !== false} 
-              onCheckedChange={(c) => updateConfig("showCalendar", c)} 
-            />
-          </div>
-          
-          <Separator />
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Show Contact</Label>
-              <p className="text-sm text-muted-foreground">Display contact information page.</p>
-            </div>
-            <Switch 
-              checked={config.showContact !== false} 
-              onCheckedChange={(c) => updateConfig("showContact", c)} 
-            />
-          </div>
-          
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Label>Show Locations</Label>
-                <Link
-                  href="/dashboard/organization/facilities"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  Manage Facilities <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">Display your facility locations with maps and hours.</p>
-            </div>
-            <Switch 
-              checked={config.showLocations === true} 
-              onCheckedChange={(c) => updateConfig("showLocations", c)} 
-            />
-          </div>
-
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Label>Show Team</Label>
-                <Link
-                  href="/dashboard/website/team"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  Manage Team <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">Display your team members on the public site.</p>
-            </div>
-            <Switch 
-              checked={config.showTeam === true} 
-              onCheckedChange={(c) => updateConfig("showTeam", c)} 
-            />
-          </div>
-
-          {competitionsEnabled && (
-            <>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <Label>Show Competitions</Label>
-                    <Link
-                      href="/dashboard/competitions"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                    >
-                      Manage Competitions <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Display the competitions page for event registration.</p>
-                </div>
-                <Switch 
-                  checked={config.showCompetitions === true} 
-                  onCheckedChange={(c) => updateConfig("showCompetitions", c)} 
-                />
-              </div>
-            </>
-          )}
-
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Label>Show Store</Label>
-                <Link
-                  href="/dashboard/store/products"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  Manage Products <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">Display the product store for online purchases.</p>
-            </div>
-            <Switch 
-              checked={config.showStore === true} 
-              onCheckedChange={(c) => updateConfig("showStore", c)} 
-            />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

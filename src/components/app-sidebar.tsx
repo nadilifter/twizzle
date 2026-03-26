@@ -335,6 +335,10 @@ const data = {
           url: "/dashboard/website",
         },
         {
+          title: "Pages",
+          url: "/dashboard/website/pages",
+        },
+        {
           title: "Competitions",
           url: "/dashboard/website/competitions",
         },
