@@ -172,6 +172,9 @@ model Organization {
 
   // Categories (persistent grouping for programs, events, competitions)
   categories Category[]
+
+  // Organization Holidays
+  holidays OrganizationHoliday[]
 }
 
 model OrganizationMember {
@@ -2181,8 +2184,9 @@ model Announcement {
   updatedAt       DateTime             @updatedAt
 
   // Relations
-  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   readBy       AnnouncementRead[]
+  holidays     OrganizationHoliday[]
 
   @@index([organizationId])
   @@index([organizationId, status])
@@ -5014,4 +5018,36 @@ model Category {
   competitions Competition[]
 
   @@index([organizationId])
+}
+
+// ============================================
+// Organization Holidays
+// ============================================
+
+enum HolidayType {
+  NATIONAL
+  CUSTOM
+}
+
+model OrganizationHoliday {
+  id             String      @id @default(cuid())
+  organizationId String
+  date           DateTime
+  name           String
+  type           HolidayType
+  isEnabled      Boolean     @default(true)
+  year           Int
+  countryCode    String?
+  stateCode      String?
+  announcementId String?
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  announcement Announcement? @relation(fields: [announcementId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, date, name])
+  @@index([organizationId, year])
+  @@index([organizationId, date])
 }

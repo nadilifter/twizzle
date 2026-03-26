@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ClipboardList, Users, ArrowRight } from "lucide-react"
+import { ClipboardList, Users, CalendarOff, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
 export default function RegistrationsPage() {
@@ -15,7 +15,7 @@ export default function RegistrationsPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -36,6 +36,32 @@ export default function RegistrationsPage() {
             <Button asChild variant="outline" className="w-full">
               <Link href="/dashboard/registrations/programs">
                 Manage Programs
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <CalendarOff className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Holidays</CardTitle>
+                <CardDescription>Organization closures and holidays</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Manage national holidays and custom closures. Programs will not create sessions
+              on enabled holiday dates.
+            </p>
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/dashboard/registrations/holidays">
+                Manage Holidays
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

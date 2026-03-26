@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
+import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
 
 const createInstanceSchema = z.object({
   date: z.string(),
@@ -162,7 +163,9 @@ export async function POST(
       const endDate = new Date(validated.endDate);
       const endTime = calculateEndTime(validated.startTime, validated.duration);
 
-      const dates = generateInstanceDates(startDate, endDate, validated.rrule);
+      const allDates = generateInstanceDates(startDate, endDate, validated.rrule);
+      const holidayDates = await getEnabledHolidayDates(session.user.organizationId!, startDate, endDate);
+      const dates = filterOutHolidayDates(allDates, holidayDates);
 
       if (dates.length === 0) {
         return NextResponse.json(

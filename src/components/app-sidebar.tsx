@@ -245,6 +245,10 @@ const data = {
           url: "/dashboard/registrations/passes",
         },
         {
+          title: "Holidays",
+          url: "/dashboard/registrations/holidays",
+        },
+        {
           title: "Queues",
           url: "/dashboard/registrations/queues",
         },

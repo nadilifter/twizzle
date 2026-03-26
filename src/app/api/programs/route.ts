@@ -5,6 +5,7 @@ import { parseDateOnly } from "@/lib/date-utils";
 import { checkMemberCertifications, type CertCheckFailure } from "@/lib/services/certification-check";
 import { z } from "zod";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
+import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
 
 class CertificationError extends Error {
   memberId: string;
@@ -272,6 +273,14 @@ export async function POST(request: NextRequest) {
       if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
+    // Pre-compute holiday dates outside the transaction so the read uses `db` properly
+    let holidayDates = new Set<string>();
+    if (validatedData.startDate && validatedData.startTime && validatedData.duration) {
+      const sd = parseDateOnly(validatedData.startDate)!;
+      const ed = validatedData.endDate ? parseDateOnly(validatedData.endDate)! : sd;
+      holidayDates = await getEnabledHolidayDates(session.user.organizationId!, sd, ed);
+    }
+
     const program = await db.$transaction(async (tx) => {
       const newProgram = await tx.program.create({
         data: {
@@ -392,9 +401,11 @@ export async function POST(request: NextRequest) {
         const endDate = validatedData.endDate ? parseDateOnly(validatedData.endDate)! : startDate;
         const endTime = calculateEndTime(validatedData.startTime, validatedData.duration);
         
-        const instanceDates = validatedData.rrule
+        const allDates = validatedData.rrule
           ? generateInstanceDates(startDate, endDate, validatedData.rrule)
           : [startDate];
+
+        const instanceDates = filterOutHolidayDates(allDates, holidayDates);
         
         // Create program instances
         if (instanceDates.length > 0) {

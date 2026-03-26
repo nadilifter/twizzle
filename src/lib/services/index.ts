@@ -12,3 +12,6 @@ export * from "./template-sync";
 
 // Achievement tracking and awarding
 export * from "./achievement";
+
+// Holiday announcement auto-generation and cleanup
+export * from "./holiday-announcements";

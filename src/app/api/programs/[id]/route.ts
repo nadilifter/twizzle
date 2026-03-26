@@ -5,6 +5,7 @@ import { parseDateOnly } from "@/lib/date-utils";
 import { checkMemberCertifications } from "@/lib/services/certification-check";
 import { z } from "zod";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
+import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
 
 const updateProgramSchema = z.object({
   name: z.string().min(1).optional(),
@@ -306,6 +307,17 @@ export async function PATCH(
       if (valid.length !== validatedData.spaceIds.length) return NextResponse.json({ error: "One or more spaces not found" }, { status: 404 });
     }
 
+    // Pre-compute holiday dates outside the transaction
+    const holidayStartDate = validatedData.startDate
+      ? parseDateOnly(validatedData.startDate)
+      : existing.startDate;
+    const holidayEndDate = validatedData.endDate
+      ? parseDateOnly(validatedData.endDate)
+      : existing.endDate;
+    const holidayDates = holidayStartDate
+      ? await getEnabledHolidayDates(session.user.organizationId!, holidayStartDate, holidayEndDate || holidayStartDate)
+      : new Set<string>();
+
     const program = await db.$transaction(async (tx) => {
       const verified = await tx.program.findFirst({
         where: { id, organizationId: session.user.organizationId },
@@ -399,12 +411,13 @@ export async function PATCH(
 
         if (startDate && startTime && duration) {
           const endTime = calculateEndTime(startTime, duration);
-          const instanceDates = rrule
+          const allDates = rrule
             ? generateInstanceDates(startDate, endDate || startDate, rrule)
             : [startDate];
 
-          // Filter to only future dates
-          const futureDates = instanceDates.filter(d => d >= new Date());
+          // Filter to only future dates, then exclude holidays
+          const futureDatesUnfiltered = allDates.filter(d => d >= new Date());
+          const futureDates = filterOutHolidayDates(futureDatesUnfiltered, holidayDates);
           
           if (futureDates.length > 0) {
             await tx.programInstance.createMany({

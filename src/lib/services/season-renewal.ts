@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { addYears, subDays } from "date-fns";
 import { generateInstanceDates, calculateEndTime } from "@/lib/program-instance-utils";
 import { normalizeToNoonUTC } from "@/lib/date-utils";
+import { getEnabledHolidayDates, filterOutHolidayDates } from "@/lib/holiday-utils";
 
 /**
  * Advance a date-only value by one calendar year, keeping noon UTC.
@@ -35,7 +36,8 @@ async function rolloverPrograms(
   tx: TransactionClient,
   oldSeasonId: string,
   newSeasonId: string,
-  organizationId: string
+  organizationId: string,
+  holidayDates: Set<string>
 ) {
   const programs = await tx.program.findMany({
     where: { seasonId: oldSeasonId, organizationId },
@@ -97,7 +99,8 @@ async function rolloverPrograms(
     });
 
     if (newStartDate && newEndDate && program.startTime && program.duration) {
-      const instanceDates = generateInstanceDates(newStartDate, newEndDate, program.rrule);
+      const allDates = generateInstanceDates(newStartDate, newEndDate, program.rrule);
+      const instanceDates = filterOutHolidayDates(allDates, holidayDates);
       const endTime = calculateEndTime(program.startTime, program.duration);
 
       if (instanceDates.length > 0) {
@@ -328,6 +331,7 @@ export async function rolloverSingleSeason(
 
   const { nextStartDate, nextEndDate } = calculateNextSeasonDates(season);
   const nextName = incrementName(season.name);
+  const holidayDates = await getEnabledHolidayDates(organizationId, nextStartDate, nextEndDate);
 
   const newSeason = await db.$transaction(async (tx) => {
     const created = await tx.season.create({
@@ -345,7 +349,7 @@ export async function rolloverSingleSeason(
       },
     });
 
-    await rolloverPrograms(tx, season.id, created.id, season.organizationId);
+    await rolloverPrograms(tx, season.id, created.id, season.organizationId, holidayDates);
     await rolloverMemberships(tx, season.id, created.id, season.organizationId);
     await rolloverCompetitions(tx, season.id, created.id, season.organizationId);
 
@@ -387,6 +391,7 @@ export async function generateUpcomingSeasons() {
 
     const { nextStartDate, nextEndDate } = calculateNextSeasonDates(season);
     const nextName = incrementName(season.name);
+    const holidayDates = await getEnabledHolidayDates(season.organizationId, nextStartDate, nextEndDate);
 
     const newSeason = await db.$transaction(async (tx) => {
       const futureExists = await tx.season.findFirst({
@@ -414,7 +419,7 @@ export async function generateUpcomingSeasons() {
         },
       });
 
-      await rolloverPrograms(tx, season.id, created.id, season.organizationId);
+      await rolloverPrograms(tx, season.id, created.id, season.organizationId, holidayDates);
       await rolloverMemberships(tx, season.id, created.id, season.organizationId);
       await rolloverCompetitions(tx, season.id, created.id, season.organizationId);
 
