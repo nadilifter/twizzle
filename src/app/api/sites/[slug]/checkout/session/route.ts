@@ -469,7 +469,7 @@ export async function POST(
           );
         }
 
-        // Registration window check (new fields take precedence over legacy purchase window)
+        // Registration window check (additional gate alongside legacy purchase window)
         if (instance.registrationStartDate || instance.registrationEndDate || !instance.registrationOpen) {
           const memRegStatus = getRegistrationStatus(instance);
           if (memRegStatus !== "open") {

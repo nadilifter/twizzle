@@ -88,13 +88,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Find the queue config (program-specific first, then global fallback)
-    const entityId = programId || competitionId
-    let queueConfig = entityId
+    // Find the queue config (program-specific first, then global fallback).
+    // Note: RegistrationQueueConfig.programId references the Program model,
+    // so competition-specific configs aren't supported yet — competitions
+    // use the org-wide fallback config only.
+    let queueConfig = programId
       ? await db.registrationQueueConfig.findFirst({
           where: {
             organizationId: organization.id,
-            programId: entityId,
+            programId,
             isEnabled: true,
           },
         })

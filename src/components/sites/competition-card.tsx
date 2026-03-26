@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -111,6 +111,7 @@ function getPricingSummary(competition: CompetitionCardProps["competition"]): st
 }
 
 export function CompetitionCard({ competition, primaryColor }: CompetitionCardProps) {
+  const router = useRouter();
   const startDate = new Date(competition.startDate);
   const endDate = new Date(competition.endDate);
   const sameDay = format(startDate, "yyyy-MM-dd") === format(endDate, "yyyy-MM-dd");
@@ -231,30 +232,20 @@ export function CompetitionCard({ competition, primaryColor }: CompetitionCardPr
           <span className="text-sm font-medium">{pricingSummary}</span>
         </div>
 
-        {registrationStatus === "closed" || registrationStatus === "scheduled" ? (
-          <Button
-            disabled
-            className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
-          >
-            <Trophy className="h-4 w-4" />
-            {registrationStatus === "closed"
-              ? "Registration Closed"
-              : competition.registrationStartDate
-              ? `Opens ${format(new Date(competition.registrationStartDate), "MMM d")}`
-              : "Coming Soon"}
-          </Button>
-        ) : (
-          <Button
-            asChild
-            disabled={spotsAvailable === 0}
-            className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
-          >
-            <Link href={`/competitions/${competition.id}`}>
-              <Trophy className="h-4 w-4" />
-              {spotsAvailable === 0 ? "Currently Full" : "Register"}
-            </Link>
-          </Button>
-        )}
+        <Button
+          onClick={() => router.push(`/competitions/${competition.id}`)}
+          disabled={spotsAvailable === 0 || registrationStatus === "closed"}
+          className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
+        >
+          <Trophy className="h-4 w-4" />
+          {registrationStatus === "closed"
+            ? "Registration Closed"
+            : registrationStatus === "scheduled" && competition.registrationStartDate
+            ? `Opens ${format(new Date(competition.registrationStartDate), "MMM d")}`
+            : spotsAvailable === 0
+            ? "Currently Full"
+            : "Register"}
+        </Button>
       </CardFooter>
     </Card>
   );

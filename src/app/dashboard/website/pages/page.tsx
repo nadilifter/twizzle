@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useFeatures } from "@/components/feature-context";
+import type { FeatureKey } from "@/lib/feature-toggles";
 
 interface PageToggle {
   key: string;
@@ -28,7 +29,7 @@ interface PageToggle {
   icon: React.ReactNode;
   defaultValue: boolean;
   manageLink?: { href: string; label: string };
-  featureGated?: string;
+  featureGated?: FeatureKey;
 }
 
 export default function PageVisibilityPage() {
