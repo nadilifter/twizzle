@@ -78,6 +78,10 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
 
   const isOutOfStock = effectiveInventory !== null && effectiveInventory <= 0
   const isLowStock = effectiveInventory !== null && effectiveInventory > 0 && effectiveInventory <= 5
+  const allVariantsOutOfStock = hasVariants && product.variants.every(
+    v => v.currentInventory !== null && v.currentInventory <= 0
+  )
+  const productUnavailable = isOutOfStock || allVariantsOutOfStock
 
   const maxQuantity = React.useMemo(() => {
     if (effectiveInventory === null) return 99
@@ -155,10 +159,24 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 priority
               />
+              {productUnavailable && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                  <Badge variant="destructive" className="text-lg px-4 py-1.5 font-semibold">
+                    Sold Out
+                  </Badge>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-2xl border bg-muted/30">
+            <div className="relative flex aspect-square w-full items-center justify-center rounded-2xl border bg-muted/30">
               <Package className="h-24 w-24 text-muted-foreground/20" />
+              {productUnavailable && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center rounded-2xl">
+                  <Badge variant="destructive" className="text-lg px-4 py-1.5 font-semibold">
+                    Sold Out
+                  </Badge>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -257,6 +275,15 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
             </div>
           )}
 
+          {allVariantsOutOfStock && (
+            <div className="mb-6 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+              <p className="text-sm text-destructive">
+                This product is currently sold out in all {product.typeName?.toLowerCase() || "type"}s. Check back later for availability.
+              </p>
+            </div>
+          )}
+
           {/* Stock status for non-variant products */}
           {!hasVariants && effectiveInventory !== null && (
             <div className="mb-6">
@@ -282,48 +309,53 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
           <Separator className="mb-6" />
 
           {/* Quantity selector + Add to cart */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-center rounded-lg border">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 rounded-r-none"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1 || isOutOfStock}
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="flex h-10 w-12 items-center justify-center text-sm font-medium tabular-nums">
-                {quantity}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 rounded-l-none"
-                onClick={() => setQuantity(Math.min(quantity + 1, maxQuantity))}
-                disabled={quantity >= maxQuantity || isOutOfStock}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Button
-              onClick={handleAddToCart}
-              disabled={isOutOfStock || (hasVariants && !selectedVariantId)}
-              size="lg"
-              className="flex-1 gap-2 transition-transform active:scale-[0.98]"
-              style={{
-                backgroundColor: !isOutOfStock && (!hasVariants || selectedVariantId) ? primaryColor : undefined,
-              }}
-            >
+          {productUnavailable ? (
+            <Button disabled size="lg" className="w-full gap-2">
               <ShoppingCart className="h-4 w-4" />
-              {isOutOfStock
-                ? "Sold Out"
-                : hasVariants && !selectedVariantId
+              Sold Out
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex items-center rounded-lg border">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-r-none"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <span className="flex h-10 w-12 items-center justify-center text-sm font-medium tabular-nums">
+                  {quantity}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-l-none"
+                  onClick={() => setQuantity(Math.min(quantity + 1, maxQuantity))}
+                  disabled={quantity >= maxQuantity}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <Button
+                onClick={handleAddToCart}
+                disabled={hasVariants && !selectedVariantId}
+                size="lg"
+                className="flex-1 gap-2 transition-transform active:scale-[0.98]"
+                style={{
+                  backgroundColor: (!hasVariants || selectedVariantId) ? primaryColor : undefined,
+                }}
+              >
+                <ShoppingCart className="h-4 w-4" />
+                {hasVariants && !selectedVariantId
                   ? `Select ${product.typeName || "Type"}`
                   : `Add to Cart — ${formatPrice(effectivePrice * quantity)}`}
-            </Button>
-          </div>
+              </Button>
+            </div>
+          )}
 
           {/* All variants price range summary */}
           {hasVariants && product.variants.length > 1 && (

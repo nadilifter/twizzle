@@ -309,6 +309,13 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         loading="lazy"
                       />
+                      {outOfStock && (
+                        <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                          <Badge variant="destructive" className="text-sm px-3 py-1 font-semibold">
+                            Sold Out
+                          </Badge>
+                        </div>
+                      )}
                     </div>
                   </Link>
                 )}
@@ -346,8 +353,15 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                   )}
 
                   {!product.imageUrl && (
-                    <div className="flex items-center justify-center h-24 rounded-md bg-muted/50 mt-2">
+                    <div className="relative flex items-center justify-center h-24 rounded-md bg-muted/50 mt-2">
                       <Package className="h-10 w-10 text-muted-foreground/30" />
+                      {outOfStock && (
+                        <div className="absolute inset-0 bg-background/60 flex items-center justify-center rounded-md">
+                          <Badge variant="destructive" className="text-xs px-2.5 py-0.5 font-semibold">
+                            Sold Out
+                          </Badge>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -364,8 +378,9 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                               key={variant.id}
                               variant={isSelected ? "default" : "outline"}
                               size="sm"
-                              className={`h-7 text-xs px-2.5 ${variantOutOfStock ? "opacity-40 line-through" : ""}`}
+                              className={`h-7 text-xs px-2.5 gap-1 ${variantOutOfStock ? "opacity-50 cursor-not-allowed" : ""}`}
                               disabled={variantOutOfStock}
+                              title={variantOutOfStock ? `${variant.label} is sold out` : undefined}
                               onClick={() =>
                                 setSelectedVariants((prev) => ({
                                   ...prev,
@@ -373,7 +388,10 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                                 }))
                               }
                             >
-                              {variant.label}
+                              <span className={variantOutOfStock ? "line-through" : ""}>{variant.label}</span>
+                              {variantOutOfStock && (
+                                <span className="text-[10px] text-destructive font-normal no-underline">(Sold out)</span>
+                              )}
                             </Button>
                           )
                         })}
