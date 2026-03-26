@@ -2437,7 +2437,7 @@ async function main() {
 
   for (const assignment of programTemplateAssignments) {
     await prisma.programEvaluationTemplate.upsert({
-      where: { id: assignment.id },
+      where: { programId_templateId: { programId: assignment.programId, templateId: assignment.templateId } },
       update: {},
       create: assignment,
     });
