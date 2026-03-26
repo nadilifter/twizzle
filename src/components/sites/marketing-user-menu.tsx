@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboardIcon, LogOutIcon, UserIcon, UsersIcon } from "lucide-react"
+import { LogOutIcon, ShieldAlertIcon, ShieldIcon, UserIcon, UsersIcon } from "lucide-react"
 
 import {
   Avatar,
@@ -17,12 +17,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { getLogoutUrl } from "@/lib/logout"
+import { getClientSubdomainUrl } from "@/lib/client-domains"
 
 interface MarketingUserMenuProps {
   user: { name: string; email: string; image?: string | null }
   isAdmin: boolean
-  adminUrl: string
-  athleteUrl: string
+  isSuperAdmin: boolean
   siteUrl: string
 }
 
@@ -38,12 +38,10 @@ function getInitials(name: string) {
 export function MarketingUserMenu({
   user,
   isAdmin,
-  adminUrl,
-  athleteUrl,
+  isSuperAdmin,
   siteUrl,
 }: MarketingUserMenuProps) {
   const handleLogout = () => {
-    // Redirect back to this marketing site's home page after logout
     const logoutUrl = `${getLogoutUrl()}?redirectUrl=${encodeURIComponent(siteUrl)}`
     window.location.href = logoutUrl
   }
@@ -78,20 +76,34 @@ export function MarketingUserMenu({
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {isAdmin && (
-          <DropdownMenuItem asChild>
-            <a href={adminUrl}>
-              <LayoutDashboardIcon />
-              Admin Dashboard
-            </a>
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem asChild>
-          <a href={athleteUrl}>
+          <a href={`${getClientSubdomainUrl("athletes")}/account`}>
+            <UserIcon />
+            Account
+          </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <a href={getClientSubdomainUrl("athletes")}>
             <UsersIcon />
             Athletes
           </a>
         </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <a href={getClientSubdomainUrl("admin")}>
+              <ShieldIcon />
+              Admin
+            </a>
+          </DropdownMenuItem>
+        )}
+        {isSuperAdmin && (
+          <DropdownMenuItem asChild>
+            <a href={getClientSubdomainUrl("superadmin")}>
+              <ShieldAlertIcon />
+              Superadmin
+            </a>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOutIcon />
