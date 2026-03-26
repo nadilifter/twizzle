@@ -33,6 +33,7 @@ import {
   countActiveFilters,
   type Level,
   type Coach,
+  type SeasonFilter,
   type ProgramFilterState,
 } from "./program-filters";
 
@@ -95,12 +96,14 @@ interface Program {
   waitlistEnabled?: boolean;
   waitlistCapacity?: number | null;
   allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
+  seasonId?: string | null;
   _count?: { instances?: number; enrollments?: number; waitlistedEnrollments?: number };
 }
 
 interface FilterableProgramListProps {
   programs: Program[];
   levels: Level[];
+  seasons?: SeasonFilter[];
   slug: string;
   primaryColor?: string;
   initialCoachId?: string;
@@ -119,6 +122,7 @@ function toDate(value: string | Date | null | undefined): Date | null {
 export function FilterableProgramList({
   programs,
   levels,
+  seasons = [],
   slug,
   primaryColor,
   initialCoachId,
@@ -223,6 +227,13 @@ export function FilterableProgramList({
         }
       }
 
+      // Season filter
+      if (filters.selectedSeason) {
+        if (program.seasonId !== filters.selectedSeason) {
+          return false;
+        }
+      }
+
       return true;
     });
   }, [programs, filters]);
@@ -245,6 +256,7 @@ export function FilterableProgramList({
     <ProgramFiltersContent
       levels={levels}
       coaches={coaches}
+      seasons={seasons}
       filters={filters}
       onFiltersChange={setFilters}
       activeFilterCount={activeFilterCount}

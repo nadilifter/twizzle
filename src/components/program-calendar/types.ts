@@ -25,6 +25,7 @@ export interface CalendarEvent {
   hasLevelRestriction?: boolean;
   levelIds?: string[];
   coachIds?: string[];
+  seasonId?: string | null;
 }
 
 export type ViewMode = "month" | "week" | "day";

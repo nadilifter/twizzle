@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { QueueGateWrapper } from "@/components/sites/queue-gate-wrapper";
 import { FilterableProgramList } from "@/components/sites/filterable-program-list";
 
@@ -80,6 +81,18 @@ const getCachedRegisterPrograms = unstable_cache(
     { revalidate: 30 }
 );
 
+const getCachedSeasons = unstable_cache(
+    async (organizationId: string) => {
+        return db.season.findMany({
+            where: { organizationId, status: { in: ["ACTIVE", "DRAFT"] } },
+            select: { id: true, name: true, color: true },
+            orderBy: { startDate: "desc" },
+        });
+    },
+    ["site-seasons-register"],
+    { revalidate: 30 }
+);
+
 export default async function RegisterPage({ params, searchParams }: { params: { slug: string }; searchParams: { coach?: string } }) {
     const subdomain = params.slug;
 
@@ -87,7 +100,14 @@ export default async function RegisterPage({ params, searchParams }: { params: {
 
     if (!config) return notFound();
 
-    const { programs, levels, waitlistedCounts } = await getCachedRegisterPrograms(config.organizationId);
+    const [{ programs, levels, waitlistedCounts }, seasonsEnabled] = await Promise.all([
+        getCachedRegisterPrograms(config.organizationId),
+        isFeatureEnabled(config.organizationId, "seasons"),
+    ]);
+
+    const seasons = seasonsEnabled
+        ? await getCachedSeasons(config.organizationId)
+        : [];
     const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
 
     const serializedPrograms = programs.map(program => ({
@@ -133,6 +153,7 @@ export default async function RegisterPage({ params, searchParams }: { params: {
                 <FilterableProgramList
                     programs={serializedPrograms}
                     levels={levels}
+                    seasons={seasons}
                     slug={subdomain}
                     primaryColor={config.primaryColor || undefined}
                     initialCoachId={searchParams.coach}

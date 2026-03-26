@@ -37,6 +37,7 @@ import {
   countActiveFilters,
   type Level,
   type Coach,
+  type SeasonFilter,
   type ProgramFilterState,
 } from "@/components/sites/program-filters";
 
@@ -46,6 +47,7 @@ interface SiteCalendarProps {
   organizationName: string;
   levels: Level[];
   coaches: Coach[];
+  seasons?: SeasonFilter[];
 }
 
 function getAdminProgramUrl(
@@ -78,6 +80,7 @@ export function SiteCalendar({
   organizationName,
   levels,
   coaches,
+  seasons = [],
 }: SiteCalendarProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -168,6 +171,12 @@ export function SiteCalendar({
         if (!hasMatch) return false;
       }
 
+      if (filters.selectedSeason) {
+        if (event.seasonId !== filters.selectedSeason) {
+          return false;
+        }
+      }
+
       return true;
     },
     [filters]
@@ -191,6 +200,7 @@ export function SiteCalendar({
     <ProgramFiltersContent
       levels={levels}
       coaches={coaches}
+      seasons={seasons}
       filters={filters}
       onFiltersChange={setFilters}
       activeFilterCount={activeFilterCount}

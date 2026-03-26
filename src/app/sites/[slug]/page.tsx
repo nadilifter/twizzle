@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, MapPin, Trophy } from "lucide-react";
@@ -100,6 +101,18 @@ const getCachedHomePrograms = unstable_cache(
   { revalidate: 30 }
 );
 
+const getCachedSeasons = unstable_cache(
+  async (organizationId: string) => {
+    return db.season.findMany({
+      where: { organizationId, status: { in: ["ACTIVE", "DRAFT"] } },
+      select: { id: true, name: true, color: true },
+      orderBy: { startDate: "desc" },
+    });
+  },
+  ["site-seasons-home"],
+  { revalidate: 30 }
+);
+
 export default async function SitePage({ params }: { params: { slug: string } }) {
   const config = await getCachedSiteConfig(params.slug);
 
@@ -108,7 +121,14 @@ export default async function SitePage({ params }: { params: { slug: string } })
   const primaryColor = config.primaryColor || "#000000";
   const hero = getHeroContrastStyles(primaryColor);
 
-  const { programs, levels, waitlistedCounts } = await getCachedHomePrograms(config.organizationId);
+  const [{ programs, levels, waitlistedCounts }, seasonsEnabled] = await Promise.all([
+    getCachedHomePrograms(config.organizationId),
+    isFeatureEnabled(config.organizationId, "seasons"),
+  ]);
+
+  const seasons = seasonsEnabled
+    ? await getCachedSeasons(config.organizationId)
+    : [];
   const waitlistCountMap = new Map(waitlistedCounts.map(w => [w.programId, w._count]));
 
   const enrichedPrograms = programs.map(p => ({
@@ -290,6 +310,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
               })) || [],
             }))}
             levels={levels}
+            seasons={seasons}
             slug={params.slug}
             primaryColor={primaryColor}
           />

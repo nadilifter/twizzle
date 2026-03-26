@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
             minAge: true,
             maxAge: true,
             hasLevelRestriction: true,
+            seasonId: true,
             levelRequirements: {
               select: { levelId: true },
             },
@@ -174,6 +175,7 @@ export async function GET(request: NextRequest) {
         hasLevelRestriction: prog.hasLevelRestriction,
         levelIds: prog.levelRequirements.map((lr) => lr.levelId),
         coachIds: prog.staffAssignments.map((sa) => sa.member.user.id),
+        seasonId: prog.seasonId,
       };
     });
 
