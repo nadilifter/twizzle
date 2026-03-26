@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarDays, User, Star, Clock, MapPin, Repeat, Users, UserCheck, Shield, ClipboardList, CalendarClock } from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatRRuleDays } from "@/lib/rrule-utils";
+import { getRegistrationStatus } from "@/lib/registration-utils";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -93,6 +94,11 @@ interface ProgramCardProps {
     hasMembershipRestriction?: boolean;
     waitlistEnabled?: boolean;
     waitlistCapacity?: number | null;
+    registrationOpen?: boolean;
+    registrationStartDate?: string | Date | null;
+    registrationStartTime?: string | null;
+    registrationEndDate?: string | Date | null;
+    registrationEndTime?: string | null;
     _count?: {
       instances?: number;
       enrollments?: number;
@@ -141,6 +147,8 @@ export function ProgramCard({ program }: ProgramCardProps) {
   );
   const canJoinWaitlist = isFull && waitlistHasRoom;
   const isSoldOut = isFull && !canJoinWaitlist && !isDropIn;
+
+  const registrationStatus = getRegistrationStatus(program);
 
   const daysLabel = program.rrule ? formatRRuleDays(program.rrule) : null;
 
@@ -363,11 +371,15 @@ export function ProgramCard({ program }: ProgramCardProps) {
 
         <Button
           onClick={() => router.push(`/programs/${program.id}`)}
-          disabled={isSoldOut}
+          disabled={isSoldOut || registrationStatus === "closed"}
           className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
         >
           <ClipboardList className="h-4 w-4" />
-          {isFull && canJoinWaitlist
+          {registrationStatus === "closed"
+            ? "Registration Closed"
+            : registrationStatus === "scheduled" && program.registrationStartDate
+            ? `Opens ${format(new Date(program.registrationStartDate), "MMM d")}`
+            : isFull && canJoinWaitlist
             ? "Join Waitlist"
             : isSoldOut
             ? "Sold Out"

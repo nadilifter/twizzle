@@ -87,7 +87,7 @@ export function useSeasons(options: UseSeasonsOptions = {}): UseSeasonsReturn {
 
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(autoFetch);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);

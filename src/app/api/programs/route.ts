@@ -73,6 +73,13 @@ const createProgramSchema = z.object({
   })).optional(),
   glCodeId: z.string().optional().nullable(),
   seasonId: z.string().optional().nullable(),
+  // Registration window
+  registrationStartDate: z.string().optional().nullable(),
+  registrationStartTime: z.string().optional().nullable(),
+  registrationEndDate: z.string().optional().nullable(),
+  registrationEndTime: z.string().optional().nullable(),
+  registrationOpen: z.boolean().default(true),
+  earlyAccessCode: z.string().optional().nullable(),
 });
 
 /**
@@ -341,6 +348,12 @@ export async function POST(request: NextRequest) {
           waitlistAutoPromote: validatedData.waitlistAutoPromote,
           waitlistCapacity: validatedData.waitlistCapacity,
           glCodeId: validatedData.glCodeId ?? undefined,
+          registrationStartDate: validatedData.registrationStartDate ? parseDateOnly(validatedData.registrationStartDate) : null,
+          registrationStartTime: validatedData.registrationStartTime,
+          registrationEndDate: validatedData.registrationEndDate ? parseDateOnly(validatedData.registrationEndDate) : null,
+          registrationEndTime: validatedData.registrationEndTime,
+          registrationOpen: validatedData.registrationOpen,
+          earlyAccessCode: validatedData.earlyAccessCode,
           seasonId: validatedData.seasonId ?? undefined,
           organizationId: session.user.organizationId,
           ...(validatedData.membershipRequirementIds?.length && {

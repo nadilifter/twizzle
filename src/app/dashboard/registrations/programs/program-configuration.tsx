@@ -43,6 +43,11 @@ import {
   AlertTriangle,
   ShieldAlert,
   Ticket,
+  CalendarDays,
+  KeyRound,
+  RefreshCw,
+  Link2,
+  Copy,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -211,6 +216,14 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
 
     // GL Code
     glCodeId: (program.glCodeId || null) as string | null,
+
+    // Registration
+    registrationOpen: program.registrationOpen ?? true,
+    registrationStartDate: program.registrationStartDate ? new Date(program.registrationStartDate).toISOString().split("T")[0] : (program.startDate ? new Date(program.startDate).toISOString().split("T")[0] : ""),
+    registrationStartTime: program.registrationStartTime || "09:00",
+    registrationEndDate: program.registrationEndDate ? new Date(program.registrationEndDate).toISOString().split("T")[0] : (program.endDate ? new Date(program.endDate).toISOString().split("T")[0] : ""),
+    registrationEndTime: program.registrationEndTime || "23:59",
+    earlyAccessCode: (program.earlyAccessCode || null) as string | null,
   }))
 
   // Fetch levels
@@ -536,6 +549,12 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
         })),
         showCoachOnSite: formData.showCoachOnSite,
         glCodeId: formData.glCodeId,
+        registrationOpen: formData.registrationOpen,
+        registrationStartDate: !formData.registrationOpen && formData.registrationStartDate ? formData.registrationStartDate : null,
+        registrationStartTime: !formData.registrationOpen ? formData.registrationStartTime : null,
+        registrationEndDate: formData.registrationEndDate || null,
+        registrationEndTime: formData.registrationEndTime || null,
+        earlyAccessCode: formData.earlyAccessCode,
       } as any)
       toast.success("Program saved")
       if (onUpdated) await onUpdated()
@@ -573,6 +592,7 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
             <TabsTrigger value="requirements">Requirements</TabsTrigger>
             {waitlistsEnabled && <TabsTrigger value="waitlist">Waitlist</TabsTrigger>}
             <TabsTrigger value="staff">Staff</TabsTrigger>
+            <TabsTrigger value="registration">Registration</TabsTrigger>
           </ResponsiveTabsList>
         </div>
 
@@ -2041,6 +2061,182 @@ export function ProgramConfiguration({ program, onClose, onUpdated }: ProgramCon
               </div>
             </div>
 
+          </TabsContent>
+
+          {/* ============================================= */}
+          {/* REGISTRATION TAB                              */}
+          {/* ============================================= */}
+          <TabsContent value="registration" className="mt-0 space-y-6 max-w-2xl">
+            {/* Registration Availability */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                Registration Availability
+              </Label>
+              <RadioGroup
+                value={formData.registrationOpen ? "now" : "scheduled"}
+                onValueChange={(value) => {
+                  const isNow = value === "now"
+                  setFormData(prev => ({
+                    ...prev,
+                    registrationOpen: isNow,
+                    registrationStartDate: isNow ? "" : prev.registrationStartDate,
+                  }))
+                }}
+                className="space-y-3"
+              >
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    formData.registrationOpen
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="now" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Open Registration Now</span>
+                    <p className="text-sm text-muted-foreground">
+                      Registration is immediately available for athletes
+                    </p>
+                  </div>
+                </label>
+
+                <label
+                  className={cn(
+                    "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                    !formData.registrationOpen
+                      ? "border-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <RadioGroupItem value="scheduled" className="mt-1" />
+                  <div className="flex-1 space-y-1">
+                    <span className="font-medium">Schedule Registration</span>
+                    <p className="text-sm text-muted-foreground">
+                      Set a specific date and time for registration to open
+                    </p>
+                  </div>
+                </label>
+              </RadioGroup>
+
+            </div>
+
+            {/* Registration Opens */}
+            {!formData.registrationOpen && (
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Registration Opens</Label>
+              <p className="text-sm text-muted-foreground">
+                Set when registration becomes available. Must be on or before the first day of the program{formData.startDate ? ` (${format(new Date(formData.startDate + "T12:00:00Z"), "PPP")})` : ""}.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Open Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.registrationStartDate}
+                    max={formData.startDate || undefined}
+                    onChange={e => setFormData(prev => ({ ...prev, registrationStartDate: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Open Time</Label>
+                  <Input
+                    type="time"
+                    value={formData.registrationStartTime}
+                    onChange={e => setFormData(prev => ({ ...prev, registrationStartTime: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+            )}
+
+            {/* Registration End Date */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Registration Closes</Label>
+              <p className="text-sm text-muted-foreground">
+                Set when registration closes. Defaults to the program end date if not specified.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Close Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.registrationEndDate}
+                    min={!formData.registrationOpen && formData.registrationStartDate ? formData.registrationStartDate : new Date().toISOString().split("T")[0]}
+                    onChange={e => setFormData(prev => ({ ...prev, registrationEndDate: e.target.value }))}
+                    placeholder={formData.endDate || ""}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Close Time</Label>
+                  <Input
+                    type="time"
+                    value={formData.registrationEndTime}
+                    onChange={e => setFormData(prev => ({ ...prev, registrationEndTime: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Early Access Code */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                Early Access Code
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Generate or enter a code that allows registration before the registration window opens
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Enter or generate a code"
+                  value={formData.earlyAccessCode || ""}
+                  onChange={e => setFormData(prev => ({ ...prev, earlyAccessCode: e.target.value || null }))}
+                  className="max-w-[300px]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const code = crypto.randomUUID().slice(0, 8).toUpperCase()
+                    setFormData(prev => ({ ...prev, earlyAccessCode: code }))
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Generate
+                </Button>
+              </div>
+
+              {formData.earlyAccessCode && (
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Early Access Link
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
+                      {typeof window !== "undefined" ? `${window.location.origin}` : ""}/programs/{program.id}?code={formData.earlyAccessCode}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = `${window.location.origin}/programs/${program.id}?code=${formData.earlyAccessCode}`
+                        navigator.clipboard.writeText(url)
+                        toast.success("Link copied to clipboard")
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Share this link with athletes who should have early access to registration
+                  </p>
+                </div>
+              )}
+            </div>
           </TabsContent>
         </div>
       </Tabs>

@@ -123,7 +123,7 @@ export function MembershipStepper() {
   const trainingEnabled = isFeatureEnabled("training")
   const seasonsEnabled = isFeatureEnabled("seasons")
 
-  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
+  const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled })
 
   const [levels, setLevels] = React.useState<Level[]>([])
   const [loadingLevels, setLoadingLevels] = React.useState(true)
@@ -159,7 +159,7 @@ export function MembershipStepper() {
     waiverRequirementIds: [],
   })
 
-  const showSeasonStep = seasonsEnabled && seasons.length > 0
+  const showSeasonStep = seasonsEnabled && (seasons.length > 0 || seasonsLoading)
   const selectedSeason = React.useMemo(() => {
     if (!formData.seasonId) return null
     return seasons.find((s) => s.id === formData.seasonId) ?? null

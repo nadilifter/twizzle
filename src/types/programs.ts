@@ -111,6 +111,14 @@ export interface Program {
   // Gender restriction values
   allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
   
+  // Registration Window
+  registrationStartDate: string | null;
+  registrationStartTime: string | null;
+  registrationEndDate: string | null;
+  registrationEndTime: string | null;
+  registrationOpen: boolean;
+  earlyAccessCode: string | null;
+
   // Season
   seasonId?: string | null;
   season?: {
@@ -289,6 +297,12 @@ export interface CreateProgramPayload {
   waiverRequirementIds?: string[];
   spaceIds?: string[];
   seasonId?: string | null;
+  registrationStartDate?: string | null;
+  registrationStartTime?: string | null;
+  registrationEndDate?: string | null;
+  registrationEndTime?: string | null;
+  registrationOpen?: boolean;
+  earlyAccessCode?: string | null;
 }
 
 export interface UpdateProgramPayload {
@@ -344,6 +358,12 @@ export interface UpdateProgramPayload {
   // For space assignments
   spaceIds?: string[];
   seasonId?: string | null;
+  registrationStartDate?: string | null;
+  registrationStartTime?: string | null;
+  registrationEndDate?: string | null;
+  registrationEndTime?: string | null;
+  registrationOpen?: boolean;
+  earlyAccessCode?: string | null;
 }
 
 export interface ProgramsQueryParams {

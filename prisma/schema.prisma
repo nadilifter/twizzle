@@ -836,6 +836,14 @@ model Program {
   // GL Code
   glCodeId String?
 
+  // Registration Window
+  registrationStartDate DateTime?
+  registrationStartTime String?
+  registrationEndDate   DateTime?
+  registrationEndTime   String?
+  registrationOpen      Boolean @default(true)
+  earlyAccessCode       String?
+
   // Season
   seasonId String?
 

@@ -246,7 +246,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
   const seasonsEnabled = isFeatureEnabled("seasons")
 
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
-  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
+  const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled })
 
   // Levels state
   const [levels, setLevels] = React.useState<Level[]>([])
@@ -335,7 +335,7 @@ export function CompetitionStepper({ competitionId, embedded = false, onSaved, o
     glCodeId: null,
   })
 
-  const showSeasonStep = seasonsEnabled && seasons.length > 0
+  const showSeasonStep = seasonsEnabled && (seasons.length > 0 || seasonsLoading)
   const selectedSeason = React.useMemo(() => {
     if (!formData.seasonId) return null
     return seasons.find((s) => s.id === formData.seasonId) ?? null

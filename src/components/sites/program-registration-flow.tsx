@@ -142,6 +142,11 @@ interface ProgramData {
   requiredMemberships: RequiredMembership[]
   requiredPasses?: RequiredPass[]
   waiverRequirements: WaiverRequirement[]
+  registrationOpen?: boolean
+  registrationStartDate?: string | null
+  registrationStartTime?: string | null
+  registrationEndDate?: string | null
+  registrationEndTime?: string | null
 }
 
 interface ProgramRegistrationFlowProps {

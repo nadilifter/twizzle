@@ -26,6 +26,7 @@ import { ProgramRegistrationFlow } from "@/components/sites/program-registration
 import type { FileRequirementConfig } from "@/types/file-requirements";
 import { formatRRuleDays } from "@/lib/rrule-utils";
 import { getHeroContrastStyles } from "@/lib/color-utils";
+import { getRegistrationStatus } from "@/lib/registration-utils";
 
 const getCachedProgramConfig = unstable_cache(
     async (subdomain: string) => {
@@ -113,11 +114,14 @@ const getCachedProgramDetail = unstable_cache(
 
 export default async function ProgramDetailPage({ 
     params,
+    searchParams,
 }: { 
     params: { slug: string; programId: string };
+    searchParams: { code?: string };
 }) {
     const subdomain = params.slug;
     const programId = params.programId;
+    const earlyAccessCode = searchParams.code || null;
 
     const config = await getCachedProgramConfig(subdomain);
 
@@ -140,6 +144,11 @@ export default async function ProgramDetailPage({
         program.waitlistCapacity == null || waitlistedCount < program.waitlistCapacity
     );
     const canJoinWaitlist = isFull && waitlistHasRoom;
+
+    const registrationStatus = getRegistrationStatus(program);
+
+    const hasValidEarlyAccess = earlyAccessCode !== null && program.earlyAccessCode !== null && earlyAccessCode === program.earlyAccessCode;
+    const canRegister = registrationStatus === "open" || hasValidEarlyAccess;
 
     const hasAge = program.hasAgeRestriction && (program.minAge !== null || program.maxAge !== null);
     const ageLabel = hasAge
@@ -200,6 +209,11 @@ export default async function ProgramDetailPage({
             limitPeriod: p.limitPeriod,
         })),
         waiverRequirements: program.waiverRequirements,
+        registrationOpen: program.registrationOpen,
+        registrationStartDate: program.registrationStartDate?.toISOString() || null,
+        registrationStartTime: program.registrationStartTime,
+        registrationEndDate: program.registrationEndDate?.toISOString() || null,
+        registrationEndTime: program.registrationEndTime,
     };
 
     const serializedInstances = program.instances.map(i => ({
@@ -239,7 +253,19 @@ export default async function ProgramDetailPage({
                                 {program.name}
                             </h1>
                         </div>
-                        {isFull ? (
+                        {registrationStatus === "closed" ? (
+                            <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-gray-500 text-white border-gray-500 shadow-lg">
+                                <Ban className="h-4 w-4" />
+                                Registration Closed
+                            </Badge>
+                        ) : registrationStatus === "scheduled" && !hasValidEarlyAccess ? (
+                            <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-blue-500 text-white border-blue-500 shadow-lg">
+                                <Hourglass className="h-4 w-4" />
+                                {program.registrationStartDate
+                                    ? `Opens ${format(new Date(program.registrationStartDate), "MMM d")}`
+                                    : "Coming Soon"}
+                            </Badge>
+                        ) : isFull ? (
                             canJoinWaitlist ? (
                                 <Badge variant="outline" className="shrink-0 text-sm px-3 py-1.5 gap-1.5 bg-amber-500 text-white border-amber-500 shadow-lg">
                                     <ListEnd className="h-4 w-4" />
@@ -372,12 +398,32 @@ export default async function ProgramDetailPage({
 
             {/* Registration Flow — full width, just like competition page */}
             <section className="mx-auto w-full max-w-4xl px-4 py-12 md:px-8">
-                <ProgramRegistrationFlow
-                    program={serializedProgramForFlow}
-                    instances={serializedInstances}
-                    slug={subdomain}
-                    primaryColor={primaryColor}
-                />
+                {canRegister ? (
+                    <ProgramRegistrationFlow
+                        program={serializedProgramForFlow}
+                        instances={serializedInstances}
+                        slug={subdomain}
+                        primaryColor={primaryColor}
+                    />
+                ) : registrationStatus === "closed" ? (
+                    <div className="rounded-lg border bg-muted/30 p-8 text-center">
+                        <Ban className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Registration Closed</h3>
+                        <p className="text-muted-foreground">
+                            Registration for this program has closed.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border bg-muted/30 p-8 text-center">
+                        <Hourglass className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Registration Not Yet Open</h3>
+                        <p className="text-muted-foreground">
+                            {program.registrationStartDate
+                                ? `Registration opens on ${format(new Date(program.registrationStartDate), "MMMM d, yyyy")}${program.registrationStartTime ? ` at ${program.registrationStartTime}` : ""}.`
+                                : "Registration will open soon."}
+                        </p>
+                    </div>
+                )}
             </section>
         </div>
     );

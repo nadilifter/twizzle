@@ -62,6 +62,13 @@ const updateProgramSchema = z.object({
     isPrimary: z.boolean().default(false),
   })).optional(),
   glCodeId: z.string().optional().nullable(),
+  // Registration window
+  registrationStartDate: z.string().optional().nullable(),
+  registrationStartTime: z.string().optional().nullable(),
+  registrationEndDate: z.string().optional().nullable(),
+  registrationEndTime: z.string().optional().nullable(),
+  registrationOpen: z.boolean().optional(),
+  earlyAccessCode: z.string().optional().nullable(),
   // Flag to regenerate instances
   regenerateInstances: z.boolean().optional(),
 });
@@ -382,6 +389,12 @@ export async function PATCH(
       if (validatedData.waitlistAutoPromote !== undefined) updateData.waitlistAutoPromote = validatedData.waitlistAutoPromote;
       if (validatedData.waitlistCapacity !== undefined) updateData.waitlistCapacity = validatedData.waitlistCapacity;
       if (validatedData.glCodeId !== undefined) updateData.glCodeId = validatedData.glCodeId;
+      if (validatedData.registrationStartDate !== undefined) updateData.registrationStartDate = validatedData.registrationStartDate ? parseDateOnly(validatedData.registrationStartDate) : null;
+      if (validatedData.registrationStartTime !== undefined) updateData.registrationStartTime = validatedData.registrationStartTime;
+      if (validatedData.registrationEndDate !== undefined) updateData.registrationEndDate = validatedData.registrationEndDate ? parseDateOnly(validatedData.registrationEndDate) : null;
+      if (validatedData.registrationEndTime !== undefined) updateData.registrationEndTime = validatedData.registrationEndTime;
+      if (validatedData.registrationOpen !== undefined) updateData.registrationOpen = validatedData.registrationOpen;
+      if (validatedData.earlyAccessCode !== undefined) updateData.earlyAccessCode = validatedData.earlyAccessCode;
 
       // Update the program
       const updatedProgram = await tx.program.update({

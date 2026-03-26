@@ -57,6 +57,9 @@ import {
   ShieldAlert,
   Copy,
   Ticket,
+  Link2,
+  KeyRound,
+  RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FileRequirementConfigEditor } from "@/components/ui/file-requirement-config"
@@ -176,6 +179,14 @@ interface ProgramFormData {
   // Step 5: Staff
   staffAssignments: StaffAssignment[]
   showCoachOnSite: boolean
+
+  // Step 6: Registration
+  registrationOpen: boolean
+  registrationStartDate: Date | null
+  registrationStartTime: string
+  registrationEndDate: Date | null
+  registrationEndTime: string
+  earlyAccessCode: string | null
 }
 
 interface ProgramStepperProps {
@@ -198,6 +209,7 @@ const { useStepper } = defineStepper(
   { id: "waitlist", title: "Waitlist" },
   { id: "evaluation", title: "Evaluation" },
   { id: "staff", title: "Staff" },
+  { id: "registration", title: "Registration" },
 )
 
 export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
@@ -212,7 +224,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   // Hooks for data
   const { staff: availableStaff, isLoading: loadingStaff } = useStaff()
   const { memberships, isLoading: loadingMemberships } = useMemberships({ initialParams: { include: "instances" } })
-  const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
+  const { seasons, isLoading: seasonsLoading } = useSeasons({ autoFetch: seasonsEnabled })
   const { passes: availablePasses, isLoading: loadingPasses } = usePasses()
   const { requiredCertNames, hasRequirements: hasCertRequirements, getMemberStatus } = useStaffCertStatus("programs")
   
@@ -249,7 +261,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
   const [loadingEvalTemplates, setLoadingEvalTemplates] = React.useState(false)
   const [existingTemplateAssignment, setExistingTemplateAssignment] = React.useState<string | null>(null)
   
-  const showSeasonStep = seasonsEnabled && seasons.length > 0
+  const showSeasonStep = seasonsEnabled && (seasons.length > 0 || seasonsLoading)
   
   // Form state
   const [formData, setFormData] = React.useState<ProgramFormData>(() => ({
@@ -317,6 +329,14 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       member: sa.member,
     })) || [],
     showCoachOnSite: program?.showCoachOnSite ?? true,
+
+    // Step 6: Registration
+    registrationOpen: program?.registrationOpen ?? true,
+    registrationStartDate: program?.registrationStartDate ? new Date(program.registrationStartDate) : null,
+    registrationStartTime: program?.registrationStartTime || "09:00",
+    registrationEndDate: program?.registrationEndDate ? new Date(program.registrationEndDate) : null,
+    registrationEndTime: program?.registrationEndTime || "23:59",
+    earlyAccessCode: program?.earlyAccessCode || null,
   }))
   
   const selectedSeason = React.useMemo(() => {
@@ -330,7 +350,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     ids.push("general", "schedule", "requirements")
     if (waitlistsEnabled) ids.push("waitlist")
     if (trainingEnabled) ids.push("evaluation")
-    ids.push("staff")
+    ids.push("staff", "registration")
     return ids
   }, [trainingEnabled, waitlistsEnabled, showSeasonStep])
 
@@ -343,6 +363,22 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
       stepper.navigation.goTo(visibleStepIds[0] as "general")
     }
   }, [visibleStepIds, stepper.state.current.data.id, stepper.navigation])
+
+  React.useEffect(() => {
+    if (stepper.state.current.data.id === "registration") {
+      setFormData(prev => {
+        const updates: Partial<ProgramFormData> = {}
+        if (!prev.registrationStartDate && prev.startDate) {
+          updates.registrationStartDate = prev.startDate
+        }
+        if (!prev.registrationEndDate && prev.endDate) {
+          updates.registrationEndDate = prev.endDate
+        }
+        if (Object.keys(updates).length === 0) return prev
+        return { ...prev, ...updates }
+      })
+    }
+  }, [stepper.state.current.data.id])
 
   const handleCopyFromProgram = React.useCallback(async (sourceId: string) => {
     try {
@@ -698,12 +734,30 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         return true
       case "staff":
         return true
+      case "registration":
+        if (!formData.registrationOpen) {
+          if (!formData.registrationStartDate) {
+            toast.error("Please select a registration start date")
+            return false
+          }
+          if (formData.startDate && formData.registrationStartDate > formData.startDate) {
+            toast.error("Registration start date cannot be later than the first day of the program")
+            return false
+          }
+        }
+        if (formData.registrationEndDate && formData.registrationStartDate && !formData.registrationOpen) {
+          if (formData.registrationEndDate < formData.registrationStartDate) {
+            toast.error("Registration end date cannot be before registration start date")
+            return false
+          }
+        }
+        return true
       default:
         return true
     }
   }
   
-  type StepId = "general" | "schedule" | "requirements" | "evaluation" | "staff"
+  type StepId = "general" | "schedule" | "requirements" | "evaluation" | "staff" | "registration"
   
   const getNextVisibleStepId = (currentId: string): StepId | null => {
     const idx = visibleStepIds.indexOf(currentId)
@@ -789,6 +843,12 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
           isPrimary: sa.isPrimary,
         })),
         seasonId: formData.seasonId,
+        registrationOpen: formData.registrationOpen,
+        registrationStartDate: !formData.registrationOpen ? formData.registrationStartDate?.toISOString() : null,
+        registrationStartTime: !formData.registrationOpen ? formData.registrationStartTime : null,
+        registrationEndDate: formData.registrationEndDate?.toISOString() ?? null,
+        registrationEndTime: formData.registrationEndTime || null,
+        earlyAccessCode: formData.earlyAccessCode,
       }
       
       const url = isEditing ? `/api/programs/${program.id}` : "/api/programs"
@@ -2589,6 +2649,250 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                     }))}
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Registration Step */}
+        {stepper.state.current.data.id === "registration" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Registration Window
+              </CardTitle>
+              <CardDescription>
+                Configure when registration opens and closes for this program
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Registration Open / Schedule */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Registration Availability</Label>
+                <RadioGroup
+                  value={formData.registrationOpen ? "now" : "scheduled"}
+                  onValueChange={(value) => {
+                    const isNow = value === "now"
+                    setFormData(prev => ({
+                      ...prev,
+                      registrationOpen: isNow,
+                      registrationStartDate: isNow ? null : prev.registrationStartDate,
+                    }))
+                  }}
+                  className="space-y-3"
+                >
+                  <label
+                    className={cn(
+                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                      formData.registrationOpen
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <RadioGroupItem value="now" className="mt-1" />
+                    <div className="flex-1 space-y-1">
+                      <span className="font-medium">Open Registration Now</span>
+                      <p className="text-sm text-muted-foreground">
+                        Registration is immediately available for athletes
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    className={cn(
+                      "flex items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors",
+                      !formData.registrationOpen
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <RadioGroupItem value="scheduled" className="mt-1" />
+                    <div className="flex-1 space-y-1">
+                      <span className="font-medium">Schedule Registration</span>
+                      <p className="text-sm text-muted-foreground">
+                        Set a specific date and time for registration to open
+                      </p>
+                    </div>
+                  </label>
+                </RadioGroup>
+
+              </div>
+
+              {/* Registration Opens */}
+              {!formData.registrationOpen && (
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Registration Opens</Label>
+                <p className="text-sm text-muted-foreground">
+                  Set when registration becomes available. Must be on or before the first day of the program{formData.startDate ? ` (${format(formData.startDate, "PPP")})` : ""}.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Open Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.registrationStartDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {formData.registrationStartDate
+                            ? format(formData.registrationStartDate, "PPP")
+                            : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={formData.registrationStartDate || undefined}
+                          onSelect={(date) =>
+                            setFormData(prev => ({ ...prev, registrationStartDate: date || null }))
+                          }
+                          disabled={(date) => {
+                            if (formData.startDate && date > formData.startDate) return true
+                            return false
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Open Time</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="time"
+                        value={formData.registrationStartTime}
+                        onChange={e => setFormData(prev => ({ ...prev, registrationStartTime: e.target.value }))}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              )}
+
+              {/* Registration End Date */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Registration Closes</Label>
+                <p className="text-sm text-muted-foreground">
+                  Set when registration closes. Defaults to the program end date if not specified.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Close Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !formData.registrationEndDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {formData.registrationEndDate
+                            ? format(formData.registrationEndDate, "PPP")
+                            : formData.endDate
+                            ? `Program end: ${format(formData.endDate, "PPP")}`
+                            : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={formData.registrationEndDate || undefined}
+                          onSelect={(date) =>
+                            setFormData(prev => ({ ...prev, registrationEndDate: date || null }))
+                          }
+                          disabled={(date) => {
+                            const earliest = !formData.registrationOpen && formData.registrationStartDate
+                              ? formData.registrationStartDate
+                              : new Date()
+                            if (date < earliest) return true
+                            return false
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Close Time</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="time"
+                        value={formData.registrationEndTime}
+                        onChange={e => setFormData(prev => ({ ...prev, registrationEndTime: e.target.value }))}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Early Access Code */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-muted-foreground" />
+                  Early Access Code
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Generate or enter a code that allows registration before the registration window opens
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Enter or generate a code"
+                    value={formData.earlyAccessCode || ""}
+                    onChange={e => setFormData(prev => ({ ...prev, earlyAccessCode: e.target.value || null }))}
+                    className="max-w-[300px]"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const code = crypto.randomUUID().slice(0, 8).toUpperCase()
+                      setFormData(prev => ({ ...prev, earlyAccessCode: code }))
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Generate
+                  </Button>
+                </div>
+
+                {formData.earlyAccessCode && isEditing && program && (
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Link2 className="h-4 w-4" />
+                      Early Access Link
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm bg-background px-3 py-2 rounded border break-all">
+                        {typeof window !== "undefined" ? `${window.location.origin}` : ""}/programs/{program.id}?code={formData.earlyAccessCode}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const url = `${window.location.origin}/programs/${program.id}?code=${formData.earlyAccessCode}`
+                          navigator.clipboard.writeText(url)
+                          toast.success("Link copied to clipboard")
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Share this link with athletes who should have early access to registration
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
