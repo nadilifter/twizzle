@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOutIcon, MoreVerticalIcon, ShieldAlertIcon, ShieldIcon, UserIcon } from "lucide-react"
+import { LogOutIcon, MoreVerticalIcon, ShieldAlertIcon, ShieldIcon, UserIcon, UsersIcon } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 import {
@@ -106,6 +106,12 @@ export function NavUser({
                 </a>
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem asChild>
+              <a href={getClientSubdomainUrl("athletes")}>
+                <UsersIcon />
+                Athletes
+              </a>
+            </DropdownMenuItem>
             {showAdminLink && (
               <DropdownMenuItem asChild>
                 <a href={getClientSubdomainUrl("admin")}>

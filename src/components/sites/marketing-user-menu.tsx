@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOutIcon, LayoutDashboardIcon, UserIcon } from "lucide-react"
+import { LayoutDashboardIcon, LogOutIcon, UserIcon, UsersIcon } from "lucide-react"
 
 import {
   Avatar,
@@ -88,8 +88,8 @@ export function MarketingUserMenu({
         )}
         <DropdownMenuItem asChild>
           <a href={athleteUrl}>
-            <UserIcon />
-            Athlete Portal
+            <UsersIcon />
+            Athletes
           </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
