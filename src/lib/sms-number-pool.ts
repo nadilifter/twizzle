@@ -1,5 +1,9 @@
 import { db } from "@/lib/db";
-import { normalizePhoneNumber } from "@/lib/twilio";
+import {
+  normalizePhoneNumber,
+  fetchVerifiedTollFreeNumbers,
+  isTwilioConfigured,
+} from "@/lib/twilio";
 
 /**
  * SMS Number Pool Manager
@@ -7,29 +11,85 @@ import { normalizePhoneNumber } from "@/lib/twilio";
  * Manages a pool of Twilio phone numbers to enable deterministic inbound
  * routing across multiple organizations. Each (guardian phone, org) pair
  * is assigned a sticky pool number so replies can be unambiguously routed.
+ *
+ * Only toll-free numbers with TWILIO_APPROVED verification status are
+ * included in the active pool. The verified set is cached and refreshed
+ * every hour so newly-verified numbers are picked up automatically.
  */
 
-let _cachedPool: string[] | null = null;
+const POOL_REFRESH_MS = 60 * 60 * 1000; // 1 hour
+
+let _rawPool: string[] | null = null;
+let _verifiedPool: string[] | null = null;
+let _verifiedPoolAt = 0;
 
 /**
  * Parse the SMS_PHONE_POOL env var into an array of E.164 numbers.
  * Falls back to [TWILIO_PHONE_NUMBER] if unset.
  */
 export function getPhonePool(): string[] {
-  if (_cachedPool) return _cachedPool;
+  if (_rawPool) return _rawPool;
 
   const poolEnv = process.env.SMS_PHONE_POOL;
   if (poolEnv) {
-    _cachedPool = poolEnv
+    _rawPool = poolEnv
       .split(",")
       .map((n) => n.trim())
       .filter(Boolean);
-    if (_cachedPool.length > 0) return _cachedPool;
+    if (_rawPool.length > 0) return _rawPool;
   }
 
   const fallback = process.env.TWILIO_PHONE_NUMBER;
-  _cachedPool = fallback ? [fallback] : [];
-  return _cachedPool;
+  _rawPool = fallback ? [fallback] : [];
+  return _rawPool;
+}
+
+/**
+ * Return the subset of pool numbers whose toll-free verification is approved.
+ * Falls back to the full pool if Twilio is unreachable or unconfigured.
+ */
+async function getVerifiedPool(): Promise<string[]> {
+  const raw = getPhonePool();
+  if (raw.length === 0) return raw;
+
+  const now = Date.now();
+  if (_verifiedPool && now - _verifiedPoolAt < POOL_REFRESH_MS) {
+    return _verifiedPool;
+  }
+
+  if (!isTwilioConfigured()) {
+    _verifiedPool = raw;
+    _verifiedPoolAt = now;
+    return raw;
+  }
+
+  try {
+    const approved = await fetchVerifiedTollFreeNumbers();
+    const filtered = raw.filter((n) => approved.has(n));
+
+    if (filtered.length === 0) {
+      console.warn(
+        "[SMS POOL] No verified toll-free numbers found in pool. Using full pool as fallback."
+      );
+      _verifiedPool = raw;
+    } else {
+      if (filtered.length < raw.length) {
+        const pending = raw.filter((n) => !approved.has(n));
+        console.info(
+          `[SMS POOL] Active pool: ${filtered.join(", ")} | Pending verification: ${pending.join(", ")}`
+        );
+      }
+      _verifiedPool = filtered;
+    }
+
+    _verifiedPoolAt = now;
+    return _verifiedPool;
+  } catch (err) {
+    console.error("[SMS POOL] Failed to check toll-free verification status:", err);
+    _verifiedPool = _verifiedPool ?? raw;
+    _verifiedPoolAt = now;
+    return _verifiedPool;
+  }
 }
 
 /**
@@ -60,7 +120,7 @@ export async function getPoolNumberForSend(
   phone: string,
   organizationId: string
 ): Promise<string> {
-  const pool = getPhonePool();
+  const pool = await getVerifiedPool();
   if (pool.length === 0) {
     return process.env.TWILIO_PHONE_NUMBER || "";
   }
@@ -70,7 +130,9 @@ export async function getPoolNumberForSend(
   const existing = await db.smsNumberAssignment.findUnique({
     where: { phone_organizationId: { phone: normalized, organizationId } },
   });
-  if (existing) return existing.twilioNumber;
+  if (existing && pool.includes(existing.twilioNumber)) {
+    return existing.twilioNumber;
+  }
 
   const takenAssignments = await db.smsNumberAssignment.findMany({
     where: { phone: normalized },

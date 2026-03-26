@@ -66,6 +66,23 @@ function getClient(): twilio.Twilio {
 }
 
 /**
+ * Fetch the set of toll-free numbers that have been verified (TWILIO_APPROVED).
+ * Used by the number pool to avoid routing through unverified numbers.
+ */
+export async function fetchVerifiedTollFreeNumbers(): Promise<Set<string>> {
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+    return new Set();
+  }
+  const client = getClient();
+  const verifications = await client.messaging.v1.tollfreeVerifications.list();
+  return new Set(
+    verifications
+      .filter((v) => v.status === "TWILIO_APPROVED")
+      .map((v) => v.tollfreePhoneNumber)
+  );
+}
+
+/**
  * Check if Twilio is properly configured
  */
 export function isTwilioConfigured(): boolean {
