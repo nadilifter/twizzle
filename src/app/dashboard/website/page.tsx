@@ -203,15 +203,33 @@ export default function WebsitePage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-          <Button 
-            variant={config.isPublished ? "outline" : "default"}
-            onClick={handlePublishToggle}
-            disabled={saving || !config.subdomain}
-          >
-            {config.isPublished ? "Unpublish" : "Go Live"}
+          {config.isPublished ? (
+            <Button 
+              variant="outline"
+              className="border-destructive text-destructive hover:bg-destructive/10"
+              onClick={handlePublishToggle}
+              disabled={saving}
+            >
+              Unpublish
+            </Button>
+          ) : (
+            <Button 
+              variant="outline"
+              onClick={handlePublishToggle}
+              disabled={saving || !config.subdomain}
+            >
+              Go Live
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </div>
