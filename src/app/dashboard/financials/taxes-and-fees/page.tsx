@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import Link from "next/link"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Loader2, DollarSign, Receipt, TrendingUp } from "lucide-react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -235,164 +236,171 @@ export default function TaxesAndFeesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Taxes & Fees</h1>
-        <p className="text-muted-foreground">
-          Configure how taxes and processing fees are handled for your organization.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Taxes & Fees</h1>
+          <p className="text-muted-foreground">
+            Configure how taxes and processing fees are handled for your organization.
+          </p>
+        </div>
+        <Button onClick={handleSave} disabled={saving || !hasConfigChanges}>
+          {saving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
       </div>
 
-      {/* Processing Fee Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Processing Fee
-          </CardTitle>
-          <CardDescription>
-            Your processing fee rate is determined by your subscription plan.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {config?.plan ? (
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Plan</span>
-                <span className="font-medium">{config.plan.name}</span>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Processing Fee Card */}
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Processing Fee
+            </CardTitle>
+            <CardDescription>
+              Your processing fee rate is determined by your <Link href="/dashboard/usage/billing" className="underline hover:text-foreground">subscription plan</Link>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 space-y-4">
+            {config?.plan ? (
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Plan</span>
+                  <span className="font-medium">{config.plan.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Transaction Fee</span>
+                  <span className="font-medium">
+                    {(config.plan.transactionFee * 100).toFixed(1)}% + ${config.plan.perTransactionFee.toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Transaction Fee</span>
-                <span className="font-medium">
-                  {(config.plan.transactionFee * 100).toFixed(1)}% + ${config.plan.perTransactionFee.toFixed(2)}
-                </span>
-              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No subscription plan found. Processing fees require an active plan.
+              </p>
+            )}
+
+            <Separator />
+
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Who pays the processing fee?</Label>
+              <RadioGroup
+                value={processingFeePaidBy}
+                onValueChange={(v) => setProcessingFeePaidBy(v as "CUSTOMER" | "ORGANIZATION")}
+                className="space-y-2"
+              >
+                <div className="flex items-start space-x-3">
+                  <RadioGroupItem value="CUSTOMER" id="fee-customer" className="mt-0.5" />
+                  <Label htmlFor="fee-customer" className="flex flex-col gap-0.5 cursor-pointer">
+                    <span>Customer pays</span>
+                    <span className="font-normal text-xs text-muted-foreground">
+                      Fee appears as a separate line item at checkout.
+                    </span>
+                  </Label>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <RadioGroupItem value="ORGANIZATION" id="fee-org" className="mt-0.5" />
+                  <Label htmlFor="fee-org" className="flex flex-col gap-0.5 cursor-pointer">
+                    <span>Organization pays</span>
+                    <span className="font-normal text-xs text-muted-foreground">
+                      Fee is deducted from your payouts. Customers do not see the fee.
+                    </span>
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No subscription plan found. Processing fees require an active plan.
-            </p>
-          )}
+          </CardContent>
+        </Card>
 
-          <Separator />
+        {/* Sales Tax Card */}
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Sales Tax Configuration
+            </CardTitle>
+            <CardDescription>
+              Configure whether your organization collects sales tax and at what rate.
+              The rate was defaulted from your state when you signed up.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="tax-toggle" className="flex flex-col gap-1">
+                <span>Collect sales tax</span>
+                <span className="font-normal text-muted-foreground text-xs">
+                  When disabled, no tax will be applied at checkout.
+                </span>
+              </Label>
+              <Switch
+                id="tax-toggle"
+                checked={taxEnabled}
+                onCheckedChange={setTaxEnabled}
+              />
+            </div>
 
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Who pays the processing fee?</Label>
-            <RadioGroup
-              value={processingFeePaidBy}
-              onValueChange={(v) => setProcessingFeePaidBy(v as "CUSTOMER" | "ORGANIZATION")}
-              className="space-y-2"
-            >
-              <div className="flex items-start space-x-3">
-                <RadioGroupItem value="CUSTOMER" id="fee-customer" className="mt-0.5" />
-                <Label htmlFor="fee-customer" className="flex flex-col gap-0.5 cursor-pointer">
-                  <span>Customer pays</span>
-                  <span className="font-normal text-xs text-muted-foreground">
-                    Fee appears as a separate line item at checkout.
-                  </span>
-                </Label>
-              </div>
-              <div className="flex items-start space-x-3">
-                <RadioGroupItem value="ORGANIZATION" id="fee-org" className="mt-0.5" />
-                <Label htmlFor="fee-org" className="flex flex-col gap-0.5 cursor-pointer">
-                  <span>Organization pays</span>
-                  <span className="font-normal text-xs text-muted-foreground">
-                    Fee is deducted from your payouts. Customers do not see the fee.
-                  </span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-        </CardContent>
-      </Card>
+            {taxEnabled && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="tax-rate">Tax rate (%)</Label>
+                  <Input
+                    id="tax-rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={ratePercent}
+                    onChange={(e) => setRatePercent(e.target.value)}
+                    className="max-w-[200px]"
+                    placeholder="e.g. 6.25"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the combined state + local sales tax rate for your location.
+                  </p>
+                </div>
 
-      {/* Sales Tax Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
-            Sales Tax Configuration
-          </CardTitle>
-          <CardDescription>
-            Configure whether your organization collects sales tax and at what rate.
-            The rate was defaulted from your state when you signed up.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="tax-toggle" className="flex flex-col gap-1">
-              <span>Collect sales tax</span>
-              <span className="font-normal text-muted-foreground text-xs">
-                When disabled, no tax will be applied at checkout.
-              </span>
-            </Label>
-            <Switch
-              id="tax-toggle"
-              checked={taxEnabled}
-              onCheckedChange={setTaxEnabled}
-            />
-          </div>
+                <Separator />
 
-          {taxEnabled && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="tax-rate">Tax rate (%)</Label>
-                <Input
-                  id="tax-rate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  value={ratePercent}
-                  onChange={(e) => setRatePercent(e.target.value)}
-                  className="max-w-[200px]"
-                  placeholder="e.g. 6.25"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter the combined state + local sales tax rate for your location.
-                </p>
-              </div>
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Who pays the sales tax?</Label>
+                  <RadioGroup
+                    value={taxPaidBy}
+                    onValueChange={(v) => setTaxPaidBy(v as "CUSTOMER" | "ORGANIZATION")}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <RadioGroupItem value="CUSTOMER" id="tax-customer" className="mt-0.5" />
+                      <Label htmlFor="tax-customer" className="flex flex-col gap-0.5 cursor-pointer">
+                        <span>Customer pays</span>
+                        <span className="font-normal text-xs text-muted-foreground">
+                          Tax appears as a separate line item at checkout.
+                        </span>
+                      </Label>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <RadioGroupItem value="ORGANIZATION" id="tax-org" className="mt-0.5" />
+                      <Label htmlFor="tax-org" className="flex flex-col gap-0.5 cursor-pointer">
+                        <span>Organization pays (tax-inclusive pricing)</span>
+                        <span className="font-normal text-xs text-muted-foreground">
+                          Prices include tax. Tax does not appear at checkout, but you still owe it.
+                        </span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-              <Separator />
-
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Who pays the sales tax?</Label>
-                <RadioGroup
-                  value={taxPaidBy}
-                  onValueChange={(v) => setTaxPaidBy(v as "CUSTOMER" | "ORGANIZATION")}
-                  className="space-y-2"
-                >
-                  <div className="flex items-start space-x-3">
-                    <RadioGroupItem value="CUSTOMER" id="tax-customer" className="mt-0.5" />
-                    <Label htmlFor="tax-customer" className="flex flex-col gap-0.5 cursor-pointer">
-                      <span>Customer pays</span>
-                      <span className="font-normal text-xs text-muted-foreground">
-                        Tax appears as a separate line item at checkout.
-                      </span>
-                    </Label>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <RadioGroupItem value="ORGANIZATION" id="tax-org" className="mt-0.5" />
-                    <Label htmlFor="tax-org" className="flex flex-col gap-0.5 cursor-pointer">
-                      <span>Organization pays (tax-inclusive pricing)</span>
-                      <span className="font-normal text-xs text-muted-foreground">
-                        Prices include tax. Tax does not appear at checkout, but you still owe it.
-                      </span>
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </>
-          )}
-        </CardContent>
-        {hasConfigChanges && (
-          <CardFooter>
-            <Button onClick={handleSave} disabled={saving} size="sm">
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save Settings
-            </Button>
-          </CardFooter>
-        )}
-      </Card>
 
       {/* Report Section */}
       <Separator className="my-2" />
