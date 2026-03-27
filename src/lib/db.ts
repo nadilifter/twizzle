@@ -73,6 +73,9 @@ export const db = (
 // OrganizationPaymentMethod, AdyenPlatformAccount, OrganizationStatusLog,
 // SubscriptionInvoice, SubscriptionPaymentAttempt) are intentionally excluded
 // -- they are managed by superadmins and system cron jobs.
+// SmsNumberAssignment is excluded because the number pool service requires
+// cross-org visibility to prevent routing collisions (same phone number must
+// map to different Twilio numbers per org).
 const TENANT_MODELS = [
   "Program",
   "Event",
@@ -104,7 +107,6 @@ const TENANT_MODELS = [
   "SmsCampaign",
   "Conversation",
   "SmsUsage",
-  "SmsNumberAssignment",
   "EmailMessage",
   "EmailCampaign",
   "EmailUsage",
