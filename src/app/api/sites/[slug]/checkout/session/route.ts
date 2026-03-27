@@ -245,7 +245,7 @@ export async function POST(
         .map((item: CartItem) => item.details?.programId || item.referenceId)
         .filter(Boolean);
 
-      const [programsWithMedical, programsWithFiles, programsWithMembership, programsForRegCheck] = await Promise.all([
+      const [programsWithMedical, programsWithFiles, programsWithMembership, programsForRegCheck, programsWithGender] = await Promise.all([
         db.program.findMany({
           where: { id: { in: programIds }, organizationId, hasMedicalRequirement: true },
           select: { id: true },
@@ -271,6 +271,10 @@ export async function POST(
             earlyAccessCode: true,
           },
         }),
+        db.program.findMany({
+          where: { id: { in: programIds }, organizationId, hasGenderRestriction: true },
+          select: { id: true, name: true, allowedGenders: true },
+        }),
       ]);
 
       // Registration window check — fail fast before validating requirements
@@ -290,6 +294,42 @@ export async function POST(
               { error: `${reason} for "${prog.name}".` },
               { status: 400 }
             );
+          }
+        }
+      }
+
+      // Gender restriction check
+      if (programsWithGender.length > 0) {
+        const genderProgramMap = new Map(
+          programsWithGender.map((p) => [p.id, p])
+        );
+
+        const genderCheckPairs: { athleteId: string; programId: string; athleteLabel: string }[] = [];
+        for (const item of programItems) {
+          const pid = item.details?.programId || item.referenceId;
+          const athleteId = item.athleteId || item.details?.athleteId;
+          if (!pid || !athleteId || !genderProgramMap.has(pid)) continue;
+          genderCheckPairs.push({ athleteId, programId: pid, athleteLabel: item.athleteName || athleteId });
+        }
+
+        if (genderCheckPairs.length > 0) {
+          const uniqueAthleteIds = [...new Set(genderCheckPairs.map((p) => p.athleteId))];
+          const athletes = await db.athlete.findMany({
+            where: { id: { in: uniqueAthleteIds } },
+            select: { id: true, gender: true },
+          });
+          const athleteGenderMap = new Map(athletes.map((a) => [a.id, a.gender]));
+
+          for (const { athleteId, programId, athleteLabel } of genderCheckPairs) {
+            const prog = genderProgramMap.get(programId)!;
+            if (prog.allowedGenders.length === 0) continue;
+            const athleteGender = athleteGenderMap.get(athleteId);
+            if (!athleteGender || !prog.allowedGenders.includes(athleteGender)) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${prog.name}".` },
+                { status: 400 }
+              );
+            }
           }
         }
       }

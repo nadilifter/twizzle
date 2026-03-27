@@ -162,6 +162,8 @@ interface ProgramFormData {
   hasAgeRestriction: boolean
   minAge: number | null
   maxAge: number | null
+  hasGenderRestriction: boolean
+  allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[]
   hasMembershipRestriction: boolean
   membershipRequirementIds: string[]
   hasPassRestriction: boolean
@@ -311,6 +313,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
     hasAgeRestriction: program?.hasAgeRestriction || false,
     minAge: program?.minAge || null,
     maxAge: program?.maxAge || null,
+    hasGenderRestriction: (program as any)?.hasGenderRestriction || false,
+    allowedGenders: (program as any)?.allowedGenders || [],
     hasMembershipRestriction: program?.hasMembershipRestriction || false,
     membershipRequirementIds: program?.requiredMemberships?.map(m => m.id) || [],
     hasPassRestriction: (program as any)?.hasPassRestriction || false,
@@ -433,6 +437,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         hasAgeRestriction: data.hasAgeRestriction || false,
         minAge: data.minAge || null,
         maxAge: data.maxAge || null,
+        hasGenderRestriction: data.hasGenderRestriction || false,
+        allowedGenders: data.allowedGenders || [],
         hasMembershipRestriction: data.hasMembershipRestriction || false,
         membershipRequirementIds: data.requiredMemberships?.map((m: any) => m.id) || [],
         hasPassRestriction: data.hasPassRestriction || false,
@@ -710,6 +716,10 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
             return false
           }
         }
+        if (formData.hasGenderRestriction && formData.allowedGenders.length === 0) {
+          toast.error("Select at least one gender when gender restriction is enabled")
+          return false
+        }
         if (formData.hasLevelRestriction && formData.levelRequirementIds.length === 0) {
           toast.error("Select at least one level when level restriction is enabled")
           return false
@@ -824,6 +834,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
         hasLevelRestriction: formData.hasLevelRestriction,
         hasCapacityRestriction: formData.hasCapacityRestriction,
         hasAgeRestriction: formData.hasAgeRestriction,
+        hasGenderRestriction: formData.hasGenderRestriction,
+        allowedGenders: formData.hasGenderRestriction ? formData.allowedGenders : [],
         hasMembershipRestriction: formData.hasMembershipRestriction,
         hasPassRestriction: formData.hasPassRestriction,
         hasWaiverRestriction: formData.hasWaiverRestriction,
@@ -2051,6 +2063,53 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 )}
               </div>
               
+              {/* Gender Restriction */}
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Gender Restriction</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Restrict registration by gender
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.hasGenderRestriction}
+                    onCheckedChange={checked => setFormData(prev => ({
+                      ...prev,
+                      hasGenderRestriction: checked,
+                      allowedGenders: checked ? prev.allowedGenders : [],
+                    }))}
+                  />
+                </div>
+
+                {formData.hasGenderRestriction && (
+                  <div className="pt-2 border-t">
+                    <div className="flex flex-wrap gap-2">
+                      {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map(gender => {
+                        const selected = formData.allowedGenders.includes(gender)
+                        return (
+                          <Badge
+                            key={gender}
+                            variant={selected ? "default" : "outline"}
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                allowedGenders: selected
+                                  ? prev.allowedGenders.filter(g => g !== gender)
+                                  : [...prev.allowedGenders, gender],
+                              }))
+                            }}
+                          >
+                            {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {membershipsEnabled && (
                 <div className="rounded-lg border p-4 space-y-4">
                   <div className="flex items-center justify-between">

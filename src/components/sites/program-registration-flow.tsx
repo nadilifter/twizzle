@@ -128,6 +128,8 @@ interface ProgramData {
   hasAgeRestriction: boolean
   minAge: number | null
   maxAge: number | null
+  hasGenderRestriction: boolean
+  allowedGenders: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[]
   hasWaiverRestriction: boolean
   hasMedicalRequirement: boolean
   hasFileRequirement: boolean
@@ -383,21 +385,29 @@ export function ProgramRegistrationFlow({
   }
 
   const { eligibleAthletes, ineligibleAthletes } = useMemo(() => {
-    if (!program.hasAgeRestriction) {
+    const hasRestrictions = program.hasAgeRestriction || program.hasGenderRestriction
+    if (!hasRestrictions) {
       return { eligibleAthletes: athletes, ineligibleAthletes: [] as AthleteOption[] }
     }
     const eligible: AthleteOption[] = []
     const ineligible: AthleteOption[] = []
     for (const athlete of athletes) {
-      const age = calculateAge(athlete.birthDate)
-      if (isAgeEligible(age, program.minAge, program.maxAge)) {
+      let isEligible = true
+      if (program.hasAgeRestriction) {
+        const age = calculateAge(athlete.birthDate)
+        if (!isAgeEligible(age, program.minAge, program.maxAge)) isEligible = false
+      }
+      if (program.hasGenderRestriction && program.allowedGenders.length > 0) {
+        if (!athlete.gender || !program.allowedGenders.includes(athlete.gender as any)) isEligible = false
+      }
+      if (isEligible) {
         eligible.push(athlete)
       } else {
         ineligible.push(athlete)
       }
     }
     return { eligibleAthletes: eligible, ineligibleAthletes: ineligible }
-  }, [athletes, program.hasAgeRestriction, program.minAge, program.maxAge])
+  }, [athletes, program.hasAgeRestriction, program.minAge, program.maxAge, program.hasGenderRestriction, program.allowedGenders])
 
   const ageLabel = program.hasAgeRestriction && (program.minAge != null || program.maxAge != null)
     ? program.minAge != null && program.maxAge != null
@@ -1140,6 +1150,16 @@ export function ProgramRegistrationFlow({
                             {ineligibleAthletes.map(athlete => {
                               const displayName = `${athlete.firstName} ${athlete.lastName}`.trim()
                               const age = calculateAge(athlete.birthDate)
+                              const reasons: string[] = []
+                              if (program.hasAgeRestriction && !isAgeEligible(age, program.minAge, program.maxAge)) {
+                                reasons.push(`Age ${age} — requires ${ageLabel?.toLowerCase()}`)
+                              }
+                              if (program.hasGenderRestriction && program.allowedGenders.length > 0) {
+                                if (!athlete.gender || !program.allowedGenders.includes(athlete.gender as any)) {
+                                  const allowed = program.allowedGenders.map(g => GENDER_LABELS[g] || g).join(", ")
+                                  reasons.push(`Gender — restricted to ${allowed}`)
+                                }
+                              }
                               return (
                                 <div
                                   key={athlete.id}
@@ -1151,7 +1171,7 @@ export function ProgramRegistrationFlow({
                                   <div className="flex-1 min-w-0">
                                     <div className="font-medium text-sm truncate">{displayName}</div>
                                     <div className="text-xs text-destructive mt-1">
-                                      Age {age} — requires {ageLabel?.toLowerCase()}
+                                      {reasons.join(" · ")}
                                     </div>
                                   </div>
                                 </div>

@@ -183,6 +183,8 @@ export default async function ProgramDetailPage({
         hasAgeRestriction: program.hasAgeRestriction,
         minAge: program.minAge,
         maxAge: program.maxAge,
+        hasGenderRestriction: program.hasGenderRestriction,
+        allowedGenders: program.allowedGenders,
         hasWaiverRestriction: program.hasWaiverRestriction,
         hasMedicalRequirement: program.hasMedicalRequirement,
         hasFileRequirement: program.hasFileRequirement,
