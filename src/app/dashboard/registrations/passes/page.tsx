@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { usePasses, usePass } from "@/hooks/use-passes"
@@ -100,6 +101,8 @@ export default function PassesPage() {
   const [createScopeMode, setCreateScopeMode] = React.useState<"all" | "specific">("all")
   const [createProgramIds, setCreateProgramIds] = React.useState<Set<string>>(new Set())
   const [createGlCodeId, setCreateGlCodeId] = React.useState<string | null>(null)
+  const [createHasGenderRestriction, setCreateHasGenderRestriction] = React.useState(false)
+  const [createAllowedGenders, setCreateAllowedGenders] = React.useState<string[]>([])
 
   const resetCreateForm = () => {
     setCreateName("")
@@ -111,6 +114,8 @@ export default function PassesPage() {
     setCreateScopeMode("all")
     setCreateProgramIds(new Set())
     setCreateGlCodeId(null)
+    setCreateHasGenderRestriction(false)
+    setCreateAllowedGenders([])
   }
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -131,6 +136,10 @@ export default function PassesPage() {
       toast.error("Select at least one program or choose 'All programs'")
       return
     }
+    if (createHasGenderRestriction && createAllowedGenders.length === 0) {
+      toast.error("Select at least one gender when gender restriction is enabled")
+      return
+    }
 
     const result = await createPass({
       name: createName,
@@ -142,6 +151,8 @@ export default function PassesPage() {
       coversAllPrograms: createScopeMode === "all",
       programIds: createScopeMode === "specific" ? Array.from(createProgramIds) : undefined,
       glCodeId: createGlCodeId,
+      hasGenderRestriction: createHasGenderRestriction,
+      allowedGenders: createHasGenderRestriction ? createAllowedGenders : [],
     } as any)
 
     if (result) {
@@ -401,6 +412,47 @@ export default function PassesPage() {
               )}
             </div>
 
+            <Separator />
+
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Gender Restriction</Label>
+                  <p className="text-sm text-muted-foreground">Restrict this pass by gender</p>
+                </div>
+                <Switch
+                  checked={createHasGenderRestriction}
+                  onCheckedChange={(checked) => {
+                    setCreateHasGenderRestriction(checked)
+                    if (!checked) setCreateAllowedGenders([])
+                  }}
+                />
+              </div>
+              {createHasGenderRestriction && (
+                <div className="pt-2 border-t">
+                  <div className="flex flex-wrap gap-2">
+                    {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map(gender => {
+                      const selected = createAllowedGenders.includes(gender)
+                      return (
+                        <Badge
+                          key={gender}
+                          variant={selected ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            setCreateAllowedGenders(prev =>
+                              selected ? prev.filter(g => g !== gender) : [...prev, gender]
+                            )
+                          }}
+                        >
+                          {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <GLCodeSelector
               value={createGlCodeId}
               onChange={setCreateGlCodeId}
@@ -444,6 +496,8 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
   const [editScopeMode, setEditScopeMode] = React.useState<"all" | "specific">("all")
   const [editProgramIds, setEditProgramIds] = React.useState<Set<string>>(new Set())
   const [scopeDirty, setScopeDirty] = React.useState(false)
+  const [editHasGenderRestriction, setEditHasGenderRestriction] = React.useState(false)
+  const [editAllowedGenders, setEditAllowedGenders] = React.useState<string[]>([])
 
   React.useEffect(() => {
     if (pass) {
@@ -456,6 +510,8 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
       setEditScopeMode(pass.coversAllPrograms ? "all" : "specific")
       setEditProgramIds(new Set(pass.coveredPrograms?.map((p) => p.id) || []))
       setScopeDirty(false)
+      setEditHasGenderRestriction((pass as any).hasGenderRestriction || false)
+      setEditAllowedGenders((pass as any).allowedGenders || [])
     }
   }, [pass])
 
@@ -477,6 +533,10 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
       toast.error("Select at least one program or choose 'All programs'")
       return
     }
+    if (editHasGenderRestriction && editAllowedGenders.length === 0) {
+      toast.error("Select at least one gender when gender restriction is enabled")
+      return
+    }
 
     const result = await updatePass({
       name: editName,
@@ -487,7 +547,9 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
       limitPeriod: editLimitPeriod,
       coversAllPrograms: editScopeMode === "all",
       ...(editScopeMode === "specific" ? { programIds: Array.from(editProgramIds) } : { programIds: [] }),
-    })
+      hasGenderRestriction: editHasGenderRestriction,
+      allowedGenders: editHasGenderRestriction ? editAllowedGenders : [],
+    } as any)
 
     if (result) {
       toast.success("Pass updated")
@@ -643,6 +705,47 @@ function PassManagerSheet({ passId, open, onClose }: { passId: string; open: boo
                           <span className="text-sm truncate">{program.name}</span>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                <div className="rounded-lg border p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Gender Restriction</Label>
+                      <p className="text-sm text-muted-foreground">Restrict this pass by gender</p>
+                    </div>
+                    <Switch
+                      checked={editHasGenderRestriction}
+                      onCheckedChange={(checked) => {
+                        setEditHasGenderRestriction(checked)
+                        if (!checked) setEditAllowedGenders([])
+                      }}
+                    />
+                  </div>
+                  {editHasGenderRestriction && (
+                    <div className="pt-2 border-t">
+                      <div className="flex flex-wrap gap-2">
+                        {(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"] as const).map(gender => {
+                          const selected = editAllowedGenders.includes(gender)
+                          return (
+                            <Badge
+                              key={gender}
+                              variant={selected ? "default" : "outline"}
+                              className="cursor-pointer"
+                              onClick={() => {
+                                setEditAllowedGenders(prev =>
+                                  selected ? prev.filter(g => g !== gender) : [...prev, gender]
+                                )
+                              }}
+                            >
+                              {gender.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                            </Badge>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>

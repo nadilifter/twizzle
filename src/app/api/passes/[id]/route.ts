@@ -12,6 +12,8 @@ const updatePassSchema = z.object({
   sessionLimit: z.number().int().min(1).optional(),
   limitPeriod: z.enum(["WEEKLY", "MONTHLY"]).optional(),
   coversAllPrograms: z.boolean().optional(),
+  hasGenderRestriction: z.boolean().optional(),
+  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional(),
   programIds: z.array(z.string()).optional(),
   status: z.enum(["ACTIVE", "EXPIRED", "CANCELLED", "ARCHIVED"]).optional(),
   glCodeId: z.string().optional().nullable(),
@@ -92,7 +94,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Pass not found" }, { status: 404 });
     }
 
-    const { programIds, ...scalarData } = validatedData;
+    const { programIds, allowedGenders, ...scalarData } = validatedData;
+
+    if (scalarData.hasGenderRestriction !== undefined) {
+      (scalarData as any).allowedGenders = scalarData.hasGenderRestriction ? (allowedGenders ?? []) : [];
+    }
 
     if (programIds && programIds.length > 0) {
       const validPrograms = await scopedDb.program.findMany({

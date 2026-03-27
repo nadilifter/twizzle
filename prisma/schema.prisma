@@ -4798,10 +4798,12 @@ model Pass {
   billingInterval   BillingInterval @default(MONTHLY)
   sessionLimit      Int
   limitPeriod       PassLimitPeriod @default(WEEKLY)
-  coversAllPrograms Boolean         @default(false)
-  status            PassStatus      @default(ACTIVE)
-  glCodeId          String?
-  organizationId    String
+  coversAllPrograms    Boolean              @default(false)
+  hasGenderRestriction Boolean              @default(false)
+  allowedGenders       GenderDeclaration[]
+  status               PassStatus           @default(ACTIVE)
+  glCodeId             String?
+  organizationId       String
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 

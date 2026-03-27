@@ -12,6 +12,8 @@ const createPassSchema = z.object({
   sessionLimit: z.number().int().min(1, "Session limit must be at least 1"),
   limitPeriod: z.enum(["WEEKLY", "MONTHLY"]).default("WEEKLY"),
   coversAllPrograms: z.boolean().default(false),
+  hasGenderRestriction: z.boolean().optional(),
+  allowedGenders: z.array(z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"])).optional(),
   programIds: z.array(z.string()).optional(),
   glCodeId: z.string().optional().nullable(),
 });
@@ -130,6 +132,8 @@ export async function POST(request: NextRequest) {
         sessionLimit: validatedData.sessionLimit,
         limitPeriod: validatedData.limitPeriod,
         coversAllPrograms: validatedData.coversAllPrograms,
+        hasGenderRestriction: validatedData.hasGenderRestriction ?? false,
+        allowedGenders: validatedData.hasGenderRestriction ? (validatedData.allowedGenders ?? []) : [],
         glCodeId: validatedData.glCodeId ?? undefined,
         ...(validatedData.programIds && validatedData.programIds.length > 0 && !validatedData.coversAllPrograms
           ? { coveredPrograms: { connect: validatedData.programIds.map((id) => ({ id })) } }
