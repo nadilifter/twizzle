@@ -6,6 +6,7 @@ import { z } from "zod";
 const variantSchema = z.object({
   label: z.string().min(1, "Variant label is required"),
   price: z.number().min(0).optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
   maxInventory: z.number().int().positive().optional().nullable(),
   currentInventory: z.number().int().min(0).optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
@@ -185,6 +186,7 @@ export async function POST(request: NextRequest) {
             productId: created.id,
             label: v.label,
             price: v.price ?? null,
+            imageUrl: v.imageUrl ?? null,
             maxInventory: v.maxInventory ?? null,
             currentInventory: v.currentInventory ?? v.maxInventory ?? null,
             sortOrder: v.sortOrder ?? i,

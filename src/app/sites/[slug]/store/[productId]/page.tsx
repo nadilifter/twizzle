@@ -36,6 +36,7 @@ const getCachedProduct = unstable_cache(
             id: true,
             label: true,
             price: true,
+            imageUrl: true,
             currentInventory: true,
             maxInventory: true,
           },

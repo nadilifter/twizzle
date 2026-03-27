@@ -2853,6 +2853,7 @@ model ProductVariant {
   productId        String
   label            String
   price            Decimal? @db.Decimal(10, 2)
+  imageUrl         String?
   maxInventory     Int?
   currentInventory Int?
   sortOrder        Int      @default(0)

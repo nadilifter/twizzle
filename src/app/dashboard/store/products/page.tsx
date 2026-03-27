@@ -75,6 +75,7 @@ type ProductVariant = {
   id?: string
   label: string
   price: number | null
+  imageUrl: string | null
   maxInventory: number | null
   currentInventory: number | null
   sortOrder: number
@@ -102,6 +103,7 @@ type VariantFormData = {
   id?: string
   label: string
   price: string
+  imageUrl: string
   maxInventory: string
   currentInventory: string
   isUnlimited: boolean
@@ -127,6 +129,7 @@ type ProductFormData = {
 const defaultVariant: VariantFormData = {
   label: "",
   price: "",
+  imageUrl: "",
   maxInventory: "10",
   currentInventory: "10",
   isUnlimited: false,
@@ -232,6 +235,7 @@ export default function StorePage() {
             id: v.id,
             label: v.label,
             price: v.price ? parseFloat(v.price) : null,
+            imageUrl: v.imageUrl || null,
             maxInventory: v.isUnlimited ? null : (parseInt(v.maxInventory) || null),
             currentInventory: v.isUnlimited ? null : (parseInt(v.currentInventory) || null),
             sortOrder: i,
@@ -361,6 +365,7 @@ export default function StorePage() {
             id: v.id,
             label: v.label,
             price: v.price !== null ? String(v.price) : "",
+            imageUrl: v.imageUrl || "",
             maxInventory: v.maxInventory !== null ? String(v.maxInventory) : "",
             currentInventory: v.currentInventory !== null ? String(v.currentInventory) : "",
             isUnlimited: v.maxInventory === null && v.currentInventory === null,
@@ -818,6 +823,12 @@ export default function StorePage() {
                               </>
                             )}
                           </div>
+                          <ImageUpload
+                            label="Variant Image"
+                            value={variant.imageUrl || null}
+                            onChange={(url) => updateVariant(index, { imageUrl: url || "" })}
+                            type="product"
+                          />
                         </div>
                       ))}
                       <Button

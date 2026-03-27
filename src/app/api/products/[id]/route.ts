@@ -7,6 +7,7 @@ const variantSchema = z.object({
   id: z.string().optional(), // present = update, absent = create
   label: z.string().min(1, "Variant label is required"),
   price: z.number().min(0).optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
   maxInventory: z.number().int().positive().optional().nullable(),
   currentInventory: z.number().int().min(0).optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
@@ -214,6 +215,7 @@ export async function PUT(
                 data: {
                   label: v.label,
                   price: v.price ?? null,
+                  imageUrl: v.imageUrl ?? null,
                   maxInventory: v.maxInventory ?? null,
                   currentInventory: v.currentInventory ?? null,
                   sortOrder: v.sortOrder ?? i,
@@ -226,6 +228,7 @@ export async function PUT(
                   productId: id,
                   label: v.label,
                   price: v.price ?? null,
+                  imageUrl: v.imageUrl ?? null,
                   maxInventory: v.maxInventory ?? null,
                   currentInventory: v.currentInventory ?? v.maxInventory ?? null,
                   sortOrder: v.sortOrder ?? i,

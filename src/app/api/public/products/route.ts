@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
             id: true,
             label: true,
             price: true,
+            imageUrl: true,
             currentInventory: true,
             maxInventory: true,
           },

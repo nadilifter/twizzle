@@ -22,6 +22,7 @@ type ProductVariant = {
   id: string
   label: string
   price: number | null
+  imageUrl: string | null
   currentInventory: number | null
   maxInventory: number | null
 }
@@ -57,12 +58,36 @@ function formatPrice(price: number): string {
 export function StoreProductDetail({ product, primaryColor }: StoreProductDetailProps) {
   const [selectedVariantId, setSelectedVariantId] = React.useState<string>("")
   const [quantity, setQuantity] = React.useState(1)
+  const [activeImageUrl, setActiveImageUrl] = React.useState<string | null>(product.imageUrl)
   const { items, addItem } = useCart()
 
   const hasVariants = !!(product.typeName && product.variants.length > 0)
   const selectedVariant = hasVariants
     ? product.variants.find((v) => v.id === selectedVariantId)
     : undefined
+
+  const allImages = React.useMemo(() => {
+    const images: { url: string; label: string }[] = []
+    if (product.imageUrl) {
+      images.push({ url: product.imageUrl, label: product.name })
+    }
+    for (const variant of product.variants) {
+      if (variant.imageUrl) {
+        images.push({ url: variant.imageUrl, label: variant.label })
+      }
+    }
+    return images
+  }, [product.imageUrl, product.variants, product.name])
+
+  const showThumbnails = allImages.length > 1
+
+  React.useEffect(() => {
+    if (selectedVariant?.imageUrl) {
+      setActiveImageUrl(selectedVariant.imageUrl)
+    } else if (selectedVariantId === "") {
+      setActiveImageUrl(product.imageUrl)
+    }
+  }, [selectedVariantId, selectedVariant, product.imageUrl])
 
   const effectivePrice = React.useMemo(() => {
     if (selectedVariant?.price !== null && selectedVariant?.price !== undefined) {
@@ -147,15 +172,16 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
       </Link>
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-        {/* Left: Product Image */}
-        <div className="relative">
-          {product.imageUrl ? (
+        {/* Left: Product Image + Thumbnails */}
+        <div className="relative space-y-3">
+          {activeImageUrl ? (
             <div className="relative aspect-square w-full overflow-hidden rounded-2xl border bg-muted/20">
               <Image
-                src={product.imageUrl}
+                key={activeImageUrl}
+                src={activeImageUrl}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-cover animate-in fade-in duration-300"
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 priority
               />
@@ -177,6 +203,37 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
                   </Badge>
                 </div>
               )}
+            </div>
+          )}
+
+          {showThumbnails && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {allImages.map((img) => {
+                const isActive = activeImageUrl === img.url
+                return (
+                  <button
+                    key={img.url}
+                    onClick={() => setActiveImageUrl(img.url)}
+                    className={`
+                      relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all
+                      ${isActive
+                        ? "ring-2 ring-offset-2"
+                        : "border-border hover:border-foreground/30 opacity-70 hover:opacity-100"
+                      }
+                    `}
+                    style={isActive ? { borderColor: primaryColor, "--tw-ring-color": primaryColor } as React.CSSProperties : undefined}
+                    title={img.label}
+                  >
+                    <Image
+                      src={img.url}
+                      alt={img.label}
+                      fill
+                      className="object-cover"
+                      sizes="64px"
+                    />
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>

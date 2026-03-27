@@ -23,6 +23,7 @@ type ProductVariant = {
   id: string
   label: string
   price: number | null
+  imageUrl: string | null
   currentInventory: number | null
   maxInventory: number | null
 }
@@ -290,6 +291,10 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
             const hasVariants = product.typeName && product.variants.length > 0
             const currentVariantId = selectedVariants[product.id]
             const effectivePrice = getEffectivePrice(product, currentVariantId)
+            const selectedVariantImage = currentVariantId
+              ? product.variants.find((v) => v.id === currentVariantId)?.imageUrl
+              : null
+            const displayImageUrl = selectedVariantImage || product.imageUrl
 
             return (
               <Card
@@ -298,11 +303,11 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                   outOfStock ? "opacity-60" : ""
                 }`}
               >
-                {product.imageUrl && (
+                {displayImageUrl && (
                   <Link href={`/store/${product.id}`} className="block">
                     <div className="relative aspect-square w-full overflow-hidden">
                       <Image
-                        src={product.imageUrl}
+                        src={displayImageUrl}
                         alt={product.name}
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -352,7 +357,7 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                     </p>
                   )}
 
-                  {!product.imageUrl && (
+                  {!displayImageUrl && (
                     <div className="relative flex items-center justify-center h-24 rounded-md bg-muted/50 mt-2">
                       <Package className="h-10 w-10 text-muted-foreground/30" />
                       {outOfStock && (
