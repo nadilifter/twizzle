@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { api, ApiError } from "@/lib/api-client";
 import type {
@@ -50,12 +50,11 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentParams, setCurrentParams] = useState<MembershipsQueryParams>(initialParams);
+  const currentParamsRef = useRef<MembershipsQueryParams>(initialParams);
 
-  // Fetch memberships list
   const fetchMemberships = useCallback(async (params?: MembershipsQueryParams) => {
-    const queryParams = params ?? currentParams;
-    setCurrentParams(queryParams);
+    const queryParams = params ?? currentParamsRef.current;
+    currentParamsRef.current = queryParams;
     setIsLoading(true);
     setError(null);
 
@@ -70,7 +69,7 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
     } finally {
       setIsLoading(false);
     }
-  }, [currentParams]);
+  }, []);
 
   // Create membership group
   const createMembershipGroup = useCallback(async (data: CreateMembershipGroupPayload): Promise<MembershipGroup | null> => {
@@ -114,10 +113,9 @@ export function useMemberships(options: UseMembershipsOptions = {}): UseMembersh
     }
   }, []);
 
-  // Refresh current data
   const refresh = useCallback(async () => {
-    await fetchMemberships(currentParams);
-  }, [fetchMemberships, currentParams]);
+    await fetchMemberships(currentParamsRef.current);
+  }, [fetchMemberships]);
 
   // Clear error
   const clearError = useCallback(() => {
