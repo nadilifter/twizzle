@@ -60,6 +60,7 @@ export function ImageUpload({ label, value, onChange, type, required = false }: 
                 alt={label} 
                 fill 
                 className="object-contain"
+                sizes="128px"
               />
             </div>
             <Button
