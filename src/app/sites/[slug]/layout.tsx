@@ -424,10 +424,10 @@ export default async function SiteLayout({
                     )}
                     {config.showLocations && (
                         <Link 
-                            href="/locations" 
+                            href="/facilities" 
                             className="text-sm text-muted-foreground transition-colors hover:text-primary"
                         >
-                            Locations
+                            Facilities
                         </Link>
                     )}
                     {config.showTeam && (
