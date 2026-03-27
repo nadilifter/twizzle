@@ -2,8 +2,8 @@ import { unstable_cache } from "next/cache"
 import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { Users, User, ArrowRight } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
+import { ProgressiveImage } from "@/components/ui/progressive-image"
 import { getHeroContrastStyles } from "@/lib/color-utils"
 
 const getCachedSiteConfig = unstable_cache(
@@ -131,7 +131,7 @@ export default async function TeamPage({
                     >
                       {imageUrl ? (
                         <div className="relative w-full aspect-[4/5] md:aspect-auto md:h-full min-h-[280px] md:min-h-[360px] max-h-[32rem]">
-                          <Image
+                          <ProgressiveImage
                             src={imageUrl}
                             alt={member.name}
                             fill

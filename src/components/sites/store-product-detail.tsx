@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Image from "next/image"
+import { ProgressiveImage } from "@/components/ui/progressive-image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -176,14 +177,13 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
         <div className="relative space-y-3">
           {activeImageUrl ? (
             <div className="relative aspect-square w-full overflow-hidden rounded-2xl border bg-muted/20">
-              <Image
+              <ProgressiveImage
                 key={activeImageUrl}
                 src={activeImageUrl}
                 alt={product.name}
                 fill
-                className="object-cover animate-in fade-in duration-300"
+                className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
-                quality={90}
                 priority
               />
               {productUnavailable && (

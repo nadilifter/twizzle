@@ -2,8 +2,8 @@ import React from "react";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -266,11 +266,12 @@ export default async function SitePage({ params }: { params: { slug: string } })
           <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
             <div className="relative w-full aspect-video rounded-xl border bg-card/50 backdrop-blur shadow-2xl overflow-hidden ring-1 ring-black/5 group">
               <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent z-10 pointer-events-none" />
-              <Image 
+              <ProgressiveImage 
                 src={config.heroImage} 
                 alt={`${config.organization.name} featured image`}
                 fill 
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
+                sizes="(max-width: 1280px) 100vw, 1280px"
                 priority
               />
             </div>

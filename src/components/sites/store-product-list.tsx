@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
+import { ProgressiveImage } from "@/components/ui/progressive-image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -306,13 +306,12 @@ export function StoreProductList({ organizationId }: StoreProductListProps) {
                 {displayImageUrl && (
                   <Link href={`/store/${product.id}`} className="block">
                     <div className="relative aspect-square w-full overflow-hidden">
-                      <Image
+                      <ProgressiveImage
                         src={displayImageUrl}
                         alt={product.name}
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        quality={90}
                         loading="lazy"
                       />
                       {outOfStock && (

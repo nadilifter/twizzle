@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
+import { ProgressiveImage } from "@/components/ui/progressive-image"
 import { ArrowRight } from "lucide-react"
 
 interface CategoryTile {
@@ -40,11 +40,12 @@ export function CategoryTiles({ categories, hasUncategorizedPrograms, primaryCol
         >
           <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
             {category.imageUrl ? (
-              <Image
+              <ProgressiveImage
                 src={category.imageUrl}
                 alt={category.name}
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               />
             ) : (
               <div

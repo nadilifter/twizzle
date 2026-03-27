@@ -10,7 +10,7 @@ import { formatRRuleDays } from "@/lib/rrule-utils";
 import { getRegistrationStatus } from "@/lib/registration-utils";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
-import Image from "next/image";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
 
 interface StaffAssignment {
   id: string;
@@ -164,7 +164,7 @@ export function ProgramCard({ program }: ProgramCardProps) {
     <Card className="group relative flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
       {program.imageUrl && (
         <div className="relative aspect-video w-full overflow-hidden">
-          <Image
+          <ProgressiveImage
             src={program.imageUrl}
             alt={program.name}
             fill
