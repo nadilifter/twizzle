@@ -15,7 +15,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Search, Users, MoreHorizontal, KeyRound, Pencil } from "lucide-react"
+import { Search, Users, MoreHorizontal, Pencil } from "lucide-react"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
@@ -399,7 +399,6 @@ export function SuperadminUsersTable({ users, organizations }: SuperadminUsersTa
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleSendPasswordReset(user)}>
-                <KeyRound className="mr-2 h-4 w-4" />
                 Send Password Reset
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -11,7 +11,6 @@ import {
   Mail,
   Check,
   Loader2,
-  KeyRound
 } from "lucide-react"
 
 import {
@@ -449,11 +448,13 @@ export default function UsersPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleViewUser(user)}>
+                              Edit User
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEditUser(user)}>
                               Edit Permissions
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleSendPasswordReset(user)}>
-                              <KeyRound className="mr-2 h-4 w-4" />
                               Send Password Reset
                             </DropdownMenuItem>
                             <DropdownMenuItem 
