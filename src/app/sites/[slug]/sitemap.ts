@@ -117,10 +117,10 @@ export default async function sitemap({
     });
   }
 
-  // Add locations page if enabled
+  // Add facilities page if enabled
   if (config.showLocations) {
     routes.push({
-      url: `${baseUrl}/locations`,
+      url: `${baseUrl}/facilities`,
       lastModified: config.updatedAt || now,
       changeFrequency: 'monthly',
       priority: 0.7,

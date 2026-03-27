@@ -53,7 +53,7 @@ const getCachedFacilities = unstable_cache(
       })),
     }))
   },
-  ["site-locations"],
+  ["site-facilities"],
   { revalidate: 30 }
 )
 
@@ -140,7 +140,7 @@ function formatAddress(facility: {
   return { line1, cityState, country: facility.country }
 }
 
-export default async function LocationsPage({
+export default async function FacilitiesPage({
   params,
 }: {
   params: { slug: string }
@@ -169,11 +169,11 @@ export default async function LocationsPage({
         <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
           <div className="flex items-center gap-3 mb-4">
             <MapPin className="h-8 w-8" />
-            <h1 className="text-4xl font-bold tracking-tight">Our Locations</h1>
+            <h1 className="text-4xl font-bold tracking-tight">Our Facilities</h1>
           </div>
           <p className={`text-lg ${hero.textMuted} max-w-2xl`}>
             {facilities.length > 1
-              ? `Visit us at any of our ${facilities.length} locations. We look forward to seeing you!`
+              ? `Visit us at any of our ${facilities.length} facilities. We look forward to seeing you!`
               : "Come visit us! We look forward to seeing you."}
           </p>
         </div>
@@ -374,7 +374,7 @@ export default async function LocationsPage({
           <div className="rounded-lg border border-dashed p-12 text-center">
             <MapPin className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
             <h2 className="text-xl font-semibold text-muted-foreground mb-2">
-              No Locations Available
+              No Facilities Available
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
               Location information is not available at this time. Please check

@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { MultiLocationMap } from "@/components/location-map"
-import type { FacilityListItem } from "@/types/locations"
+import type { FacilityListItem } from "@/types/facilities"
 
 function getStatusBadgeVariant(status: string) {
   switch (status) {

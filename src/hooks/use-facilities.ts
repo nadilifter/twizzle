@@ -11,9 +11,9 @@ import type {
   FacilityActivityPage,
   FacilityActivitySort,
   FacilityActivityType,
-} from "@/types/locations";
+} from "@/types/facilities";
 
-const BASE = "/api/organization/locations";
+const BASE = "/api/organization/facilities";
 
 // ---------------------------------------------------------------------------
 // useFacilities — list hook

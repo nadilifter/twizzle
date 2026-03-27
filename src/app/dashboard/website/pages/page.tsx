@@ -117,8 +117,8 @@ export default function PageVisibilityPage() {
     },
     {
       key: "showLocations",
-      label: "Locations",
-      description: "Display your facility locations with interactive maps, addresses, operating hours, and directions to help visitors find you.",
+      label: "Facilities",
+      description: "Display your facilities with interactive maps, addresses, operating hours, and directions to help visitors find you.",
       icon: <MapPin className="h-5 w-5" />,
       defaultValue: false,
       manageLink: { href: "/dashboard/organization/facilities", label: "Manage Facilities" },

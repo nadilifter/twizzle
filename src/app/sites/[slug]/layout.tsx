@@ -347,7 +347,7 @@ export default async function SiteLayout({
                     {config.showCalendar && <Link href="/calendar" className="text-foreground/80 hover:text-primary transition-colors">Calendar</Link>}
                     {config.showCompetitions && <Link href="/competitions" className="text-foreground/80 hover:text-primary transition-colors">Competitions</Link>}
                     {config.showStore && hasProducts && <Link href="/store" className="text-foreground/80 hover:text-primary transition-colors">Store</Link>}
-                    {config.showLocations && <Link href="/locations" className="text-foreground/80 hover:text-primary transition-colors">Locations</Link>}
+                    {config.showLocations && <Link href="/facilities" className="text-foreground/80 hover:text-primary transition-colors">Facilities</Link>}
                     {config.showTeam && <Link href="/team" className="text-foreground/80 hover:text-primary transition-colors">Our Team</Link>}
                     {config.showContact && <Link href="/contact" className="text-foreground/80 hover:text-primary transition-colors">Contact</Link>}
                 </nav>
