@@ -16,7 +16,7 @@ const bulkUpdateSchema = z.object({
         z.object({
           skillId: z.string().min(1),
           attemptStatus: z.enum(["NOT_ATTEMPTED", "ATTEMPTED", "SUCCEEDED"]).optional(),
-          pointScore: z.number().int().optional(),
+          pointScore: z.number().int().optional().nullable(),
           passed: z.boolean().optional(),
         })
       ).optional(),

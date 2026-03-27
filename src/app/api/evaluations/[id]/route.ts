@@ -297,7 +297,7 @@ export async function PUT(
         where: { id },
         data: {
           ...evaluationData,
-          ...(evaluationData.date && { date: new Date(evaluationData.date) }),
+          ...(evaluationData.date && { date: parseDateOnly(evaluationData.date)! }),
         },
       });
 
