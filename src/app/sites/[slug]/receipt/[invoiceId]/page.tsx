@@ -76,10 +76,18 @@ export default async function ReceiptPage({
                         <span className="text-muted-foreground">Subtotal</span>
                         <span>${Number(invoice.subtotal).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tax</span>
-                        <span>${Number(invoice.tax).toFixed(2)}</span>
-                    </div>
+                    {Number(invoice.tax) > 0 && (
+                      <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tax</span>
+                          <span>${Number(invoice.tax).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {Number(invoice.processingFee) > 0 && (
+                      <div className="flex justify-between">
+                          <span className="text-muted-foreground">Processing Fee</span>
+                          <span>${Number(invoice.processingFee).toFixed(2)}</span>
+                      </div>
+                    )}
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>

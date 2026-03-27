@@ -599,6 +599,12 @@ function renderTemplate(
             </thead>
             <tbody>{{lineItemsHtml}}</tbody>
             <tfoot>
+              <tr style="border-top: 1px solid #e5e7eb;">
+                <td style="padding: 4px 0;">Subtotal</td>
+                <td style="padding: 4px 0; text-align: right;">{{subtotal}}</td>
+              </tr>
+              {{taxHtml}}
+              {{processingFeeHtml}}
               <tr style="border-top: 2px solid #e5e7eb;">
                 <td style="padding: 8px 0; font-weight: bold;">Total</td>
                 <td style="padding: 8px 0; text-align: right; font-weight: bold;">{{total}}</td>
@@ -620,6 +626,9 @@ function renderTemplate(
 
         {{lineItemsText}}
 
+        Subtotal: {{subtotal}}
+        {{taxText}}
+        {{processingFeeText}}
         Total: {{total}}
 
         View your receipt: {{receiptUrl}}

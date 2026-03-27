@@ -197,13 +197,14 @@ export async function GET(request: NextRequest) {
 
           // Fire success notification
           try {
+            const actualAmount = result.chargedTotal ?? Number(charge.amount)
             await executeNotificationByTrigger({
               organizationId: charge.organizationId,
               triggerType: "RECURRING_CHARGE_SUCCEEDED",
               userId: charge.userId ?? undefined,
               context: {
                 chargeDescription: charge.description,
-                chargeAmount: Number(charge.amount).toFixed(2),
+                chargeAmount: actualAmount.toFixed(2),
                 nextChargeDate: nextDate.toISOString().split("T")[0],
                 cardLast4: charge.paymentMethod?.last4 ?? "****",
               },

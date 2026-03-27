@@ -132,7 +132,22 @@ export async function POST(
     // 1. Get Organization
     const config = await db.websiteConfig.findUnique({
       where: { subdomain },
-      include: { organization: true },
+      include: {
+        organization: {
+          include: {
+            subscription: {
+              select: {
+                plan: {
+                  select: {
+                    transactionFee: true,
+                    perTransactionFee: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!config) {
@@ -1096,7 +1111,22 @@ export async function POST(
 
     const discountedSubtotal = Math.max(subtotal - discountLineAmount, 0);
     const tax = Math.round(discountedSubtotal * taxRate * 100) / 100;
-    const total = Math.round((discountedSubtotal + tax) * 100) / 100;
+
+    const taxPaidBy = config.organization.taxPaidBy;
+    const processingFeePaidBy = config.organization.processingFeePaidBy;
+    const plan = config.organization.subscription?.plan;
+    const planTransactionFee = plan ? Number(plan.transactionFee) : 0;
+    const planPerTransactionFee = plan ? Number(plan.perTransactionFee) : 0;
+
+    // Calculate processing fee based on the amount the customer is paying
+    const feeBase = taxPaidBy === "CUSTOMER" ? discountedSubtotal + tax : discountedSubtotal;
+    const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
+    const processingFee = Math.round(processingFeeRaw * 100) / 100;
+
+    let total = discountedSubtotal;
+    if (taxPaidBy === "CUSTOMER") total += tax;
+    if (processingFeePaidBy === "CUSTOMER") total += processingFee;
+    total = Math.round(total * 100) / 100;
 
     // 4. Resolve User Contact and Billing Address
     // Use saved contact if contactId provided, else use form data
@@ -1279,6 +1309,7 @@ export async function POST(
             organizationId,
             subtotal: discountedSubtotal,
             tax,
+            processingFee,
             total,
             status: "DRAFT",
             dueDate: new Date(),
@@ -1393,6 +1424,19 @@ export async function POST(
       });
     }
 
+    // 7b2. Add processing fee line item (only when customer pays)
+    if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
+      await db.lineItem.create({
+        data: {
+          invoiceId: invoice.id,
+          description: "Processing Fee",
+          quantity: 1,
+          unitPrice: processingFee,
+          total: processingFee,
+        },
+      });
+    }
+
     // 7c. Create Order record if cart contains store products
     const productItems = items.filter((i: CartItem) => i.type === "item");
     if (productItems.length > 0) {
@@ -1435,6 +1479,8 @@ export async function POST(
           method: "comp",
           description: `Free checkout – ${invoice.reference}`,
           settledAt: new Date(),
+          feeRate: plan ? planTransactionFee : null,
+          feeFixed: plan ? planPerTransactionFee : null,
         },
       });
 
@@ -1530,12 +1576,26 @@ export async function POST(
         .map((item: CartItem) => `${item.name} — $${(Number(item.price) * item.quantity).toFixed(2)}`)
         .join("\n");
 
+      const taxHtml = tax > 0 && taxPaidBy === "CUSTOMER"
+        ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${tax.toFixed(2)}</td></tr>`
+        : "";
+      const processingFeeHtml = processingFee > 0 && processingFeePaidBy === "CUSTOMER"
+        ? `<tr><td style="padding: 4px 0;">Processing Fee</td><td style="padding: 4px 0; text-align: right;">$${processingFee.toFixed(2)}</td></tr>`
+        : "";
+      const taxText = tax > 0 && taxPaidBy === "CUSTOMER" ? `Tax: $${tax.toFixed(2)}` : "";
+      const processingFeeText = processingFee > 0 && processingFeePaidBy === "CUSTOMER" ? `Processing Fee: $${processingFee.toFixed(2)}` : "";
+
       sendTemplatedEmail("checkout-receipt", [resolvedContact.email], {
         name: resolvedContact.firstName,
         reference: invoice.reference,
+        subtotal: `$${discountedSubtotal.toFixed(2)}`,
         total: `$${total.toFixed(2)}`,
         lineItemsHtml,
         lineItemsText,
+        taxHtml,
+        processingFeeHtml,
+        taxText,
+        processingFeeText,
         receiptUrl,
       }).catch((err) => console.error("Failed to send receipt email:", err));
 
@@ -1550,10 +1610,11 @@ export async function POST(
     }
 
     // Build Adyen line items with per-item tax breakdown (all amounts in minor units / cents)
-    const taxPct = Math.round(taxRate * 10000); // Adyen wants percentage × 100 (e.g. 6.25% = 625)
+    const customerTaxRate = taxPaidBy === "CUSTOMER" ? taxRate : 0;
+    const taxPct = Math.round(customerTaxRate * 10000); // Adyen wants percentage × 100 (e.g. 6.25% = 625)
     const totalMinor = Math.round(total * 100);
-    const taxMinor = Math.round(tax * 100);
-    const subtotalMinor = totalMinor - taxMinor;
+    const customerTaxMinor = taxPaidBy === "CUSTOMER" ? Math.round(tax * 100) : 0;
+    const subtotalMinor = totalMinor - customerTaxMinor - (processingFeePaidBy === "CUSTOMER" ? Math.round(processingFee * 100) : 0);
 
     const adyenLineItems: AdyenLineItem[] = items.map((item: CartItem, index: number) => {
       const itemTotal = serverPrices.has(index)
@@ -1563,7 +1624,7 @@ export async function POST(
       const itemDiscount = Math.round(discountLineAmount * itemShare * 100) / 100;
       const itemAfterDiscount = Math.max(itemTotal - itemDiscount, 0);
       const excl = Math.round(itemAfterDiscount * 100);
-      const itemTaxMinor = Math.round(itemAfterDiscount * taxRate * 100);
+      const itemTaxMinor = Math.round(itemAfterDiscount * customerTaxRate * 100);
 
       const product = item.type === "item" ? productMap.get(item.referenceId) : undefined;
 
@@ -1581,13 +1642,12 @@ export async function POST(
     });
 
     // Correct rounding residuals so line item sums exactly equal the session amount
-    // (required by payment methods like Klarna/AfterPay)
     if (adyenLineItems.length > 0) {
       const sumExcl = adyenLineItems.reduce((s, li) => s + li.amountExcludingTax, 0);
       const sumTax = adyenLineItems.reduce((s, li) => s + li.taxAmount, 0);
       const last = adyenLineItems[adyenLineItems.length - 1];
       last.amountExcludingTax += subtotalMinor - sumExcl;
-      last.taxAmount += taxMinor - sumTax;
+      last.taxAmount += customerTaxMinor - sumTax;
       last.amountIncludingTax = last.amountExcludingTax + last.taxAmount;
     }
 
@@ -1599,6 +1659,19 @@ export async function POST(
         amountExcludingTax: 0,
         taxAmount: 0,
         amountIncludingTax: 0,
+        taxPercentage: 0,
+      });
+    }
+
+    if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
+      const feeMinor = Math.round(processingFee * 100);
+      adyenLineItems.push({
+        id: "processing-fee",
+        description: "Processing Fee",
+        quantity: 1,
+        amountExcludingTax: feeMinor,
+        taxAmount: 0,
+        amountIncludingTax: feeMinor,
         taxPercentage: 0,
       });
     }

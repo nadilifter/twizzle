@@ -22,6 +22,18 @@ export async function GET(request: NextRequest) {
             name: true,
             taxRate: true,
             taxEnabled: true,
+            taxPaidBy: true,
+            processingFeePaidBy: true,
+            subscription: {
+              select: {
+                plan: {
+                  select: {
+                    transactionFee: true,
+                    perTransactionFee: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -31,6 +43,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Site not found" }, { status: 404 });
     }
 
+    const plan = config.organization.subscription?.plan;
+
     return NextResponse.json({
       organizationId: config.organizationId,
       organizationName: config.organization.name,
@@ -38,6 +52,10 @@ export async function GET(request: NextRequest) {
         ? Number(config.organization.taxRate ?? 0)
         : 0,
       taxEnabled: config.organization.taxEnabled,
+      taxPaidBy: config.organization.taxPaidBy,
+      processingFeePaidBy: config.organization.processingFeePaidBy,
+      transactionFee: plan ? Number(plan.transactionFee) : 0,
+      perTransactionFee: plan ? Number(plan.perTransactionFee) : 0,
     });
   } catch (error) {
     console.error("Error fetching site config:", error);

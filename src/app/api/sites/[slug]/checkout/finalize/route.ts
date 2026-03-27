@@ -41,7 +41,19 @@ export async function POST(
       include: {
         lineItems: true,
         user: { select: { id: true, email: true, name: true } },
-        organization: { select: { id: true, name: true } },
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            subscription: {
+              select: {
+                plan: {
+                  select: { transactionFee: true, perTransactionFee: true },
+                },
+              },
+            },
+          },
+        },
       },
     })
 
@@ -79,6 +91,7 @@ export async function POST(
           },
         })
 
+        const finPlan = invoice.organization.subscription?.plan
         await tx.transaction.create({
           data: {
             organizationId: config.organizationId,
@@ -92,6 +105,8 @@ export async function POST(
             method: "card",
             description: `Online payment – ${inv.reference}`,
             settledAt: new Date(),
+            feeRate: finPlan ? Number(finPlan.transactionFee) : null,
+            feeFixed: finPlan ? Number(finPlan.perTransactionFee) : null,
           },
         })
 
@@ -238,12 +253,28 @@ export async function POST(
           .map((li) => `${li.description} — $${Number(li.total).toFixed(2)}`)
           .join("\n")
 
+        const invoiceTax = Number(invoice.tax)
+        const invoiceFee = Number(invoice.processingFee)
+        const taxHtml = invoiceTax > 0
+          ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${invoiceTax.toFixed(2)}</td></tr>`
+          : ""
+        const processingFeeHtml = invoiceFee > 0
+          ? `<tr><td style="padding: 4px 0;">Processing Fee</td><td style="padding: 4px 0; text-align: right;">$${invoiceFee.toFixed(2)}</td></tr>`
+          : ""
+        const taxText = invoiceTax > 0 ? `Tax: $${invoiceTax.toFixed(2)}` : ""
+        const processingFeeText = invoiceFee > 0 ? `Processing Fee: $${invoiceFee.toFixed(2)}` : ""
+
         sendTemplatedEmail("checkout-receipt", [recipientEmail], {
           name: recipientName || "Customer",
           reference: invoice.reference,
+          subtotal: `$${Number(invoice.subtotal).toFixed(2)}`,
           total: `$${Number(invoice.total).toFixed(2)}`,
           lineItemsHtml,
           lineItemsText,
+          taxHtml,
+          processingFeeHtml,
+          taxText,
+          processingFeeText,
           receiptUrl,
         }).catch((err) => console.error("Finalize: failed to send receipt email:", err))
       }

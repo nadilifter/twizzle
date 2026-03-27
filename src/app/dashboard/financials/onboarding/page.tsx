@@ -13,9 +13,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import {
   CheckCircle2Icon,
   AlertCircleIcon,
@@ -222,12 +219,6 @@ export default function OnboardingPage() {
         <RejectedState account={account} onGetLink={handleGetLink} loading={actionLoading} />
       )}
 
-      {organization && (
-        <TaxConfigurationCard
-          organization={organization}
-          onUpdate={(org) => setOrganization(org)}
-        />
-      )}
     </div>
   )
 }
@@ -584,114 +575,6 @@ function RejectedState({
           <ExternalLinkIcon className="h-4 w-4 ml-2" />
         </Button>
       </CardFooter>
-    </Card>
-  )
-}
-
-function TaxConfigurationCard({
-  organization,
-  onUpdate,
-}: {
-  organization: OrganizationDetails
-  onUpdate: (org: OrganizationDetails) => void
-}) {
-  const currentRate = organization.taxRate != null ? Number(organization.taxRate) : 0
-  const [taxEnabled, setTaxEnabled] = useState(organization.taxEnabled)
-  const [ratePercent, setRatePercent] = useState(
-    (currentRate * 100).toFixed(2).replace(/\.?0+$/, "")
-  )
-  const [saving, setSaving] = useState(false)
-
-  const hasChanges =
-    taxEnabled !== organization.taxEnabled ||
-    ratePercent !== (currentRate * 100).toFixed(2).replace(/\.?0+$/, "")
-
-  const handleSave = async () => {
-    const parsed = parseFloat(ratePercent)
-    if (taxEnabled && (isNaN(parsed) || parsed < 0 || parsed > 100)) {
-      toast.error("Tax rate must be between 0 and 100")
-      return
-    }
-    setSaving(true)
-    try {
-      const res = await fetch("/api/organization/details", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          taxEnabled,
-          taxRate: taxEnabled ? parsed / 100 : Number(organization.taxRate ?? 0),
-        }),
-      })
-      if (res.ok) {
-        const updated = await res.json()
-        onUpdate({
-          ...organization,
-          taxRate: updated.taxRate,
-          taxEnabled: updated.taxEnabled,
-        })
-        toast.success("Tax settings saved")
-      } else {
-        const err = await res.json()
-        toast.error(err.error || "Failed to save tax settings")
-      }
-    } catch {
-      toast.error("Failed to save tax settings")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sales Tax Configuration</CardTitle>
-        <CardDescription>
-          Configure whether your organization collects sales tax and at what rate.
-          The rate was defaulted from your state when you signed up.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="tax-toggle" className="flex flex-col gap-1">
-            <span>Collect sales tax</span>
-            <span className="font-normal text-muted-foreground text-xs">
-              When disabled, no tax will be applied at checkout.
-            </span>
-          </Label>
-          <Switch
-            id="tax-toggle"
-            checked={taxEnabled}
-            onCheckedChange={setTaxEnabled}
-          />
-        </div>
-        {taxEnabled && (
-          <div className="space-y-2">
-            <Label htmlFor="tax-rate">Tax rate (%)</Label>
-            <Input
-              id="tax-rate"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              value={ratePercent}
-              onChange={(e) => setRatePercent(e.target.value)}
-              className="max-w-[200px]"
-              placeholder="e.g. 6.25"
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter the combined state + local sales tax rate for your location.
-            </p>
-          </div>
-        )}
-      </CardContent>
-      {hasChanges && (
-        <CardFooter>
-          <Button onClick={handleSave} disabled={saving} size="sm">
-            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Tax Settings
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   )
 }

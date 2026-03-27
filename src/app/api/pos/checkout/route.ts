@@ -72,11 +72,30 @@ export async function POST(request: NextRequest) {
 
     const org = await db.organization.findUnique({
       where: { id: session.user.organizationId },
-      select: { taxRate: true, taxEnabled: true },
+      select: {
+        taxRate: true,
+        taxEnabled: true,
+        taxPaidBy: true,
+        processingFeePaidBy: true,
+        subscription: {
+          select: {
+            plan: {
+              select: {
+                transactionFee: true,
+                perTransactionFee: true,
+              },
+            },
+          },
+        },
+      },
     });
     const taxRate = org?.taxEnabled !== false
       ? Number(org?.taxRate ?? 0)
       : 0;
+    const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER";
+    const processingFeePaidBy = org?.processingFeePaidBy ?? "CUSTOMER";
+    const planTransactionFee = org?.subscription?.plan ? Number(org.subscription.plan.transactionFee) : 0;
+    const planPerTransactionFee = org?.subscription?.plan ? Number(org.subscription.plan.perTransactionFee) : 0;
 
     const reference = `POS-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -151,7 +170,15 @@ export async function POST(request: NextRequest) {
         return sum + unitPrice * item.quantity;
       }, 0);
       const tax = Math.round(subtotal * taxRate * 100) / 100;
-      const total = Math.round((subtotal + tax) * 100) / 100;
+
+      const feeBase = taxPaidBy === "CUSTOMER" ? subtotal + tax : subtotal;
+      const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0;
+      const processingFee = Math.round(processingFeeRaw * 100) / 100;
+
+      let total = subtotal;
+      if (taxPaidBy === "CUSTOMER") total += tax;
+      if (processingFeePaidBy === "CUSTOMER") total += processingFee;
+      total = Math.round(total * 100) / 100;
 
       const invoice = await tx.invoice.create({
         data: {
@@ -162,6 +189,7 @@ export async function POST(request: NextRequest) {
           dueDate: new Date(),
           subtotal,
           tax,
+          processingFee,
           total,
           notes: `POS Sale - ${validatedData.paymentMethod}`,
         },
@@ -197,6 +225,18 @@ export async function POST(request: NextRequest) {
           });
         })
       );
+
+      if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
+        await tx.lineItem.create({
+          data: {
+            invoiceId: invoice.id,
+            description: "Processing Fee",
+            quantity: 1,
+            unitPrice: processingFee,
+            total: processingFee,
+          },
+        });
+      }
 
       await tx.order.create({
         data: {

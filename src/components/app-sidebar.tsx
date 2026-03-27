@@ -449,6 +449,10 @@ const data = {
           url: "/dashboard/financials/recurring",
         },
         {
+          title: "Taxes & Fees",
+          url: "/dashboard/financials/taxes-and-fees",
+        },
+        {
           title: "Transactions",
           url: "/dashboard/financials/transactions",
         },

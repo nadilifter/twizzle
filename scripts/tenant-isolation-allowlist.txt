@@ -278,3 +278,6 @@ src/app/api/superadmin/subscription-invoices/[id]/action/route.ts
 src/app/api/superadmin/organizations/[id]/grace-period/route.ts
 src/app/api/organization/subscription/cancel/route.ts
 src/app/api/organization/reactivate/route.ts
+# Taxes & Fees: queries Organization/Invoice/Transaction directly by session.user.organizationId
+src/app/api/organization/taxes-and-fees/route.ts
+src/app/api/organization/taxes-and-fees/report/route.ts

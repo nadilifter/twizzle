@@ -123,7 +123,19 @@ async function handleAuthorisation(
       include: {
         lineItems: true,
         user: { select: { id: true, email: true, name: true } },
-        organization: { select: { id: true, name: true } },
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            subscription: {
+              select: {
+                plan: {
+                  select: { transactionFee: true, perTransactionFee: true },
+                },
+              },
+            },
+          },
+        },
       },
     })
 
@@ -162,6 +174,7 @@ async function handleAuthorisation(
       },
     })
 
+    const invPlan = inv.organization.subscription?.plan
     await tx.transaction.create({
       data: {
         organizationId: inv.organizationId,
@@ -175,6 +188,8 @@ async function handleAuthorisation(
         method: paymentMethodType || "card",
         description: `Online payment – ${inv.reference}`,
         settledAt: new Date(),
+        feeRate: invPlan ? Number(invPlan.transactionFee) : null,
+        feeFixed: invPlan ? Number(invPlan.perTransactionFee) : null,
       },
     })
 
@@ -327,12 +342,28 @@ async function handleAuthorisation(
         .map((li) => `${li.description} — $${Number(li.total).toFixed(2)}`)
         .join("\n")
 
+      const invoiceTax = Number(invoice.tax)
+      const invoiceFee = Number(invoice.processingFee)
+      const taxHtml = invoiceTax > 0
+        ? `<tr><td style="padding: 4px 0;">Tax</td><td style="padding: 4px 0; text-align: right;">$${invoiceTax.toFixed(2)}</td></tr>`
+        : ""
+      const processingFeeHtml = invoiceFee > 0
+        ? `<tr><td style="padding: 4px 0;">Processing Fee</td><td style="padding: 4px 0; text-align: right;">$${invoiceFee.toFixed(2)}</td></tr>`
+        : ""
+      const taxText = invoiceTax > 0 ? `Tax: $${invoiceTax.toFixed(2)}` : ""
+      const processingFeeText = invoiceFee > 0 ? `Processing Fee: $${invoiceFee.toFixed(2)}` : ""
+
       sendTemplatedEmail("checkout-receipt", [recipientEmail], {
         name: recipientName || "Customer",
         reference: invoice.reference,
+        subtotal: `$${Number(invoice.subtotal).toFixed(2)}`,
         total: `$${Number(invoice.total).toFixed(2)}`,
         lineItemsHtml,
         lineItemsText,
+        taxHtml,
+        processingFeeHtml,
+        taxText,
+        processingFeeText,
         receiptUrl,
       }).catch((err) => console.error("Failed to send receipt email:", err))
     }

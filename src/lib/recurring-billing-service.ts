@@ -33,6 +33,7 @@ export interface ChargeResult {
   error?: string
   invoiceId?: string
   transactionId?: string
+  chargedTotal?: number
 }
 
 export async function executeRecurringCharge(
@@ -48,17 +49,54 @@ export async function executeRecurringCharge(
     return { success: false, error: "Payment method missing Adyen token" }
   }
 
-  const amountDollars = Number(charge.amount)
+  const baseAmount = Number(charge.amount)
   // Deterministic reference per billing period prevents double-charging
   // if the cron fires twice on the same day.
   const chargeDateStr = charge.nextChargeDate.toISOString().split("T")[0]
   const reference = `recurring-${charge.id}-${chargeDateStr}`
 
+  // Fetch org tax/fee settings
+  const org = await db.organization.findUnique({
+    where: { id: organizationId },
+    select: {
+      taxEnabled: true,
+      taxRate: true,
+      taxPaidBy: true,
+      processingFeePaidBy: true,
+      subscription: {
+        select: {
+          plan: {
+            select: {
+              transactionFee: true,
+              perTransactionFee: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  const taxRate = org?.taxEnabled !== false ? Number(org?.taxRate ?? 0) : 0
+  const taxPaidBy = org?.taxPaidBy ?? "CUSTOMER"
+  const processingFeePaidBy = org?.processingFeePaidBy ?? "CUSTOMER"
+  const planTransactionFee = org?.subscription?.plan ? Number(org.subscription.plan.transactionFee) : 0
+  const planPerTransactionFee = org?.subscription?.plan ? Number(org.subscription.plan.perTransactionFee) : 0
+
+  const tax = Math.round(baseAmount * taxRate * 100) / 100
+  const feeBase = taxPaidBy === "CUSTOMER" ? baseAmount + tax : baseAmount
+  const processingFeeRaw = feeBase > 0 ? feeBase * planTransactionFee + planPerTransactionFee : 0
+  const processingFee = Math.round(processingFeeRaw * 100) / 100
+
+  let chargeTotal = baseAmount
+  if (taxPaidBy === "CUSTOMER") chargeTotal += tax
+  if (processingFeePaidBy === "CUSTOMER") chargeTotal += processingFee
+  chargeTotal = Math.round(chargeTotal * 100) / 100
+
   try {
     const response = await chargeSubscription(
       shopperReference,
       adyenTokenId,
-      amountDollars,
+      chargeTotal,
       reference,
       charge.description
     )
@@ -72,7 +110,7 @@ export async function executeRecurringCharge(
 
     const pspReference: string = response.pspReference
 
-    // Create invoice, line item, payment, and transaction in a single transaction
+    // Create invoice, line items, payment, and transaction in a single transaction
     const result = await db.$transaction(async (tx) => {
       const invoice = await tx.invoice.create({
         data: {
@@ -81,8 +119,10 @@ export async function executeRecurringCharge(
           reference: `REC-${charge.id.slice(-8)}-${Date.now()}`,
           status: "PAID",
           dueDate: getTodayNoonUTC(),
-          subtotal: amountDollars,
-          total: amountDollars,
+          subtotal: baseAmount,
+          tax,
+          processingFee,
+          total: chargeTotal,
           notes: JSON.stringify({ recurringChargeId: charge.id }),
         },
       })
@@ -92,16 +132,28 @@ export async function executeRecurringCharge(
           invoiceId: invoice.id,
           description: charge.description,
           quantity: 1,
-          unitPrice: amountDollars,
-          total: amountDollars,
+          unitPrice: baseAmount,
+          total: baseAmount,
         },
       })
+
+      if (processingFeePaidBy === "CUSTOMER" && processingFee > 0) {
+        await tx.lineItem.create({
+          data: {
+            invoiceId: invoice.id,
+            description: "Processing Fee",
+            quantity: 1,
+            unitPrice: processingFee,
+            total: processingFee,
+          },
+        })
+      }
 
       const payment = await tx.payment.create({
         data: {
           invoiceId: invoice.id,
           userId: charge.userId || undefined,
-          amount: amountDollars,
+          amount: chargeTotal,
           method: "CARD",
           status: "COMPLETED",
           processedAt: new Date(),
@@ -115,16 +167,24 @@ export async function executeRecurringCharge(
           pspReference,
           merchantRef: invoice.reference,
           type: "PAYMENT",
-          amount: amountDollars,
+          amount: chargeTotal,
           currency: "USD",
           status: "SETTLED",
           method: charge.paymentMethod!.brand || "card",
           description: `Recurring charge – ${charge.description}`,
           settledAt: new Date(),
+          feeRate: org?.subscription?.plan ? planTransactionFee : null,
+          feeFixed: org?.subscription?.plan ? planPerTransactionFee : null,
         },
       })
 
-      return { invoiceId: invoice.id, transactionId: transaction.id }
+      return {
+        invoiceId: invoice.id,
+        transactionId: transaction.id,
+        tax,
+        processingFee,
+        chargeTotal,
+      }
     })
 
     return {
@@ -132,6 +192,7 @@ export async function executeRecurringCharge(
       pspReference,
       invoiceId: result.invoiceId,
       transactionId: result.transactionId,
+      chargedTotal: result.chargeTotal,
     }
   } catch (error: any) {
     console.error(`executeRecurringCharge failed for charge ${charge.id}:`, error)

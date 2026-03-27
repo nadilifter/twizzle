@@ -64,6 +64,8 @@ model Organization {
   // Tax configuration
   taxRate    Decimal?  @db.Decimal(5, 4) // e.g. 0.0600 = 6%; null = 0 (no tax)
   taxEnabled Boolean   @default(true)
+  taxPaidBy           FeePayer @default(CUSTOMER)
+  processingFeePaidBy FeePayer @default(CUSTOMER)
 
   // Financials
   discounts        Discount[]
@@ -1508,6 +1510,7 @@ model Invoice {
   dueDate        DateTime
   subtotal       Decimal       @db.Decimal(10, 2)
   tax            Decimal       @default(0) @db.Decimal(10, 2)
+  processingFee  Decimal       @default(0) @db.Decimal(10, 2)
   total          Decimal       @db.Decimal(10, 2)
   notes                    String?
   organizationId           String
@@ -1588,6 +1591,11 @@ model Payment {
   transaction Transaction? // Linked Adyen transaction
 
   @@index([userId])
+}
+
+enum FeePayer {
+  CUSTOMER
+  ORGANIZATION
 }
 
 enum PaymentType {
@@ -1742,6 +1750,8 @@ model Transaction {
   metadata       Json?
   settledAt      DateTime?
   payoutId       String?
+  feeRate        Decimal?          @db.Decimal(5, 4) // Plan transactionFee at time of charge
+  feeFixed       Decimal?          @db.Decimal(10, 2) // Plan perTransactionFee at time of charge
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
