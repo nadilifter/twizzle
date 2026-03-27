@@ -69,11 +69,21 @@ export function parseConversationIdFromEmail(toAddress: string): string | null {
   return conversationId;
 }
 
+type SenderRole = "admin" | "coach";
+
+const CHAT_PATHS: Record<SenderRole, string> = {
+  admin: "/dashboard/communication/chat",
+  coach: "/coach/chat",
+};
+
+const GUARDIAN_CHAT_PATH = "/athletes/chat";
+
 interface SendChatEmailOptions {
   to: string;
   body: string;
   conversationId: string;
   organizationId: string;
+  senderRole?: SenderRole;
 }
 
 interface SendChatEmailResult {
@@ -87,7 +97,7 @@ interface SendChatEmailResult {
 export async function sendChatEmail(
   options: SendChatEmailOptions
 ): Promise<SendChatEmailResult> {
-  const { to, body, conversationId, organizationId } = options;
+  const { to, body, conversationId, organizationId, senderRole = "admin" } = options;
 
   const org = await db.organization.findUnique({
     where: { id: organizationId },
@@ -100,20 +110,25 @@ export async function sendChatEmail(
   const sesConfig = getSESConfig();
   const fromAddress = `${orgName} <${sesConfig.fromEmail}>`;
 
+  const baseUrl = process.env.NEXTAUTH_URL || "";
+  const portalUrl = `${baseUrl}${GUARDIAN_CHAT_PATH}`;
+
   const escapedBody = escapeHtml(body).replace(/\n/g, "<br>");
 
   const html = buildChatEmailHtml({
     body: escapedBody,
     orgName: escapeHtml(orgName),
-    portalUrl: escapeHtml(process.env.NEXTAUTH_URL || ""),
+    portalUrl: escapeHtml(portalUrl),
+    senderRole,
   });
 
-  const text = `${body}\n\n---\nReply to this email to respond, or view in the portal.`;
+  const text = `${body}\n\n---\nReply to this email to respond, or view in the portal: ${portalUrl}`;
 
   logger.info("[CHAT EMAIL] Sending chat email", {
     to,
     conversationId,
     organizationId,
+    senderRole,
   });
 
   const result = await sendEmail({
@@ -132,12 +147,22 @@ export async function sendChatEmail(
   return { messageId: result.messageId };
 }
 
+/**
+ * Get the chat portal path for a given sender role.
+ * Useful for building links in notification emails sent TO admins/coaches.
+ */
+export function getChatPath(role: SenderRole): string {
+  return CHAT_PATHS[role];
+}
+
 function buildChatEmailHtml(opts: {
   body: string;
   orgName: string;
   portalUrl: string;
+  senderRole: SenderRole;
 }): string {
   const year = new Date().getFullYear();
+  const senderLabel = opts.senderRole === "coach" ? "a coach" : "an admin";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -166,7 +191,7 @@ function buildChatEmailHtml(opts: {
       </div>
     </div>
     <div class="footer">
-      &copy; ${year} ${opts.orgName}. You are receiving this because an admin sent you a message.
+      &copy; ${year} ${opts.orgName}. You are receiving this because ${senderLabel} sent you a message.
     </div>
   </div>
 </body>

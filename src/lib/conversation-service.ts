@@ -491,6 +491,7 @@ async function sendViaEmail(
     id: string;
     organizationId: string;
     userId: string | null;
+    coachId: string | null;
     email: string | null;
     user: { smsOptOut: boolean; email: string | null } | null;
   },
@@ -524,6 +525,7 @@ async function sendViaEmail(
       body,
       conversationId: conversation.id,
       organizationId: conversation.organizationId,
+      senderRole: conversation.coachId ? "coach" : "admin",
     });
 
     await db.message.update({
