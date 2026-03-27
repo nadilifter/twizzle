@@ -39,6 +39,8 @@ import {
   CreditCard,
   Landmark,
   FileText,
+  Wallet,
+  BadgeDollarSign,
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
@@ -83,15 +85,31 @@ const paymentMethodConfig: Record<string, { label: string; icon: React.ElementTy
   CHECK: { label: "Check", icon: FileText, variant: "outline" },
 }
 
-const walletLabels: Record<string, string> = {
-  applepay: "Apple Pay",
-  googlepay: "Google Pay",
+const transactionMethodLabels: Record<string, { label: string; icon: React.ElementType }> = {
+  applepay: { label: "Apple Pay", icon: Wallet },
+  googlepay: { label: "Google Pay", icon: Wallet },
+  paypal: { label: "PayPal", icon: Wallet },
+  cashapp: { label: "Cash App Pay", icon: Wallet },
+  klarna: { label: "Klarna", icon: BadgeDollarSign },
+  klarna_account: { label: "Klarna", icon: BadgeDollarSign },
+  klarna_paynow: { label: "Klarna", icon: BadgeDollarSign },
+  affirm: { label: "Affirm", icon: BadgeDollarSign },
+  afterpay_default: { label: "Afterpay", icon: BadgeDollarSign },
+  afterpaytouch: { label: "Afterpay", icon: BadgeDollarSign },
+  clearpay: { label: "Clearpay", icon: BadgeDollarSign },
+  amazonpay: { label: "Amazon Pay", icon: Wallet },
+  ach: { label: "ACH", icon: Landmark },
+  paybybank_us: { label: "Pay by Bank", icon: Landmark },
+  venmo: { label: "Venmo", icon: Wallet },
 }
 
 function getPaymentLabel(payment: { method: string; transaction: { method: string | null } | null }): { label: string; icon: React.ElementType; variant: "default" | "outline" | "secondary" } {
   const txMethod = payment.transaction?.method?.toLowerCase()
-  if (txMethod && walletLabels[txMethod]) {
-    return { label: walletLabels[txMethod], icon: CreditCard, variant: "outline" }
+  if (txMethod) {
+    const txConfig = transactionMethodLabels[txMethod]
+    if (txConfig) {
+      return { ...txConfig, variant: "outline" }
+    }
   }
   const config = paymentMethodConfig[payment.method]
   if (config) {

@@ -101,6 +101,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
+const BANK_PAYMENT_METHODS = new Set([
+  "ach",
+  "paybybank_us",
+  "sepadirectdebit",
+  "ideal",
+  "banktransfer",
+])
+
+function resolvePaymentType(adyenMethod: string | undefined): "CARD" | "BANK" {
+  if (!adyenMethod) return "CARD"
+  return BANK_PAYMENT_METHODS.has(adyenMethod.toLowerCase()) ? "BANK" : "CARD"
+}
+
 async function handleAuthorisation(
   invoiceId: string,
   pspReference: string,
@@ -145,9 +158,6 @@ async function handleAuthorisation(
     }
 
     if (existingTransaction) {
-      // Payment already recorded. If registrations weren't processed
-      // (e.g. crash on a previous attempt), return the invoice so the
-      // registration step below can retry.
       if (!inv.registrationsProcessed) {
         logger.info("Transaction exists but registrations not yet processed, retrying", { pspReference })
         return inv
@@ -168,7 +178,7 @@ async function handleAuthorisation(
         invoiceId: inv.id,
         userId: inv.userId || undefined,
         amount: paymentAmount,
-        method: "CARD",
+        method: resolvePaymentType(paymentMethodType),
         status: "COMPLETED",
         processedAt: new Date(),
       },

@@ -1,7 +1,21 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import { AdyenCheckout, Dropin, Card, GooglePay, ApplePay, Ach } from "@adyen/adyen-web"
+import {
+  AdyenCheckout,
+  Dropin,
+  Card,
+  GooglePay,
+  ApplePay,
+  Ach,
+  PayPal,
+  CashAppPay,
+  Klarna,
+  Affirm,
+  AfterPay,
+  AmazonPay,
+  PayByBankUS,
+} from "@adyen/adyen-web"
 import type { CoreConfiguration } from "@adyen/adyen-web/auto"
 import "@adyen/adyen-web/styles/adyen.css"
 import { Loader2 } from "lucide-react"
@@ -84,7 +98,21 @@ export function AdyenCheckoutComponent({
 
         const ComponentClass = componentType === "card" ? Card : Dropin
         const component = new ComponentClass(checkout, {
-          ...(componentType !== "card" && { paymentMethodComponents: [Card, GooglePay, ApplePay, Ach] }),
+          ...(componentType !== "card" && {
+            paymentMethodComponents: [
+              Card,
+              GooglePay,
+              ApplePay,
+              PayPal,
+              CashAppPay,
+              Ach,
+              Klarna,
+              Affirm,
+              AfterPay,
+              AmazonPay,
+              PayByBankUS,
+            ],
+          }),
         })
         component.mount(containerRef.current)
         mountedComponentRef.current = component as any
