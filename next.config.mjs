@@ -68,7 +68,10 @@ const getConnectSrcCsp = () => {
   const cdnSrc = envConfig.cdnDomain ? ` https://${envConfig.cdnDomain}` : '';
   
   // Add S3 for cloud environments
-  const s3Src = !isLocal ? ' https://*.s3.amazonaws.com https://*.s3.*.amazonaws.com' : '';
+  // Only *.s3.amazonaws.com (global endpoint) is valid CSP; *.s3.*.amazonaws.com has a
+  // wildcard in a non-leftmost label which violates the CSP spec. Use *.amazonaws.com
+  // to also cover regional endpoints like bucket.s3.us-east-1.amazonaws.com.
+  const s3Src = !isLocal ? ' https://*.s3.amazonaws.com https://*.amazonaws.com' : '';
   
   // Add MinIO for local environment
   const minioSrc = isLocal ? ' http://localhost:9000' : '';
