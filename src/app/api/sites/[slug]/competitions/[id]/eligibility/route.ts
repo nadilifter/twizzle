@@ -46,7 +46,7 @@ export async function POST(
       return NextResponse.json({ error: "Site not found" }, { status: 404 });
     }
 
-    // Fetch the competition with categories and their age category data
+    // Fetch the competition with categories and their age category + gender restriction data
     const competition = await db.competition.findUnique({
       where: { id: competitionId },
       include: {
@@ -55,6 +55,14 @@ export async function POST(
           include: {
             sportEvent: { select: { id: true, name: true, code: true } },
             ageCategory: { select: { id: true, name: true, code: true, minAge: true, maxAge: true } },
+            individualEntry: { select: { hasGenderRestriction: true, allowedGenders: true } },
+            combinationEntry: {
+              select: {
+                rowValue: { select: { allowedGenders: true } },
+                colValue: { select: { allowedGenders: true } },
+                template: { select: { restrictionAxis: true } },
+              },
+            },
           },
         },
       },
@@ -202,7 +210,7 @@ export async function POST(
       });
     }
 
-    // 4. Filter categories by athlete eligibility (age category match)
+    // 4. Filter categories by athlete eligibility (age + gender)
     const eligibleCategoryIds: string[] = [];
 
     for (const category of competition.categories) {
@@ -211,6 +219,25 @@ export async function POST(
           continue;
         }
       }
+
+      // Gender check from individual entry template
+      if (category.individualEntry?.hasGenderRestriction && category.individualEntry.allowedGenders.length > 0) {
+        if (!athlete.gender || !category.individualEntry.allowedGenders.includes(athlete.gender)) {
+          continue;
+        }
+      }
+
+      // Gender check from combination entry template (restriction axis)
+      if (category.combinationEntry) {
+        const axis = category.combinationEntry.template?.restrictionAxis;
+        const restrictionValue = axis === "ROW" ? category.combinationEntry.rowValue : axis === "COLUMN" ? category.combinationEntry.colValue : null;
+        if (restrictionValue && restrictionValue.allowedGenders.length > 0) {
+          if (!athlete.gender || !restrictionValue.allowedGenders.includes(athlete.gender)) {
+            continue;
+          }
+        }
+      }
+
       eligibleCategoryIds.push(category.id);
     }
 

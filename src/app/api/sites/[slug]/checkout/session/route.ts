@@ -689,6 +689,14 @@ export async function POST(
               where: { id: { in: categoryIds }, isActive: true },
               include: {
                 ageCategory: { select: { minAge: true, maxAge: true } },
+                individualEntry: { select: { hasGenderRestriction: true, allowedGenders: true } },
+                combinationEntry: {
+                  select: {
+                    rowValue: { select: { allowedGenders: true } },
+                    colValue: { select: { allowedGenders: true } },
+                    template: { select: { restrictionAxis: true } },
+                  },
+                },
               },
             },
             pricingTiers: { orderBy: { minEvents: "asc" } },
@@ -878,7 +886,7 @@ export async function POST(
           }
         }
 
-        // Category-level age eligibility
+        // Category-level age + gender eligibility
         for (const cat of competition.categories) {
           if (cat.ageCategory) {
             if (!isAgeEligible(age, cat.ageCategory.minAge, cat.ageCategory.maxAge)) {
@@ -886,6 +894,30 @@ export async function POST(
                 { error: `Athlete "${athleteLabel}" is not eligible for one of the selected events in "${competition.name}".` },
                 { status: 400 }
               );
+            }
+          }
+
+          // Gender check from individual entry template
+          if (cat.individualEntry?.hasGenderRestriction && cat.individualEntry.allowedGenders.length > 0) {
+            if (!athlete.gender || !cat.individualEntry.allowedGenders.includes(athlete.gender)) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for one of the selected events in "${competition.name}".` },
+                { status: 400 }
+              );
+            }
+          }
+
+          // Gender check from combination entry template (restriction axis)
+          if (cat.combinationEntry) {
+            const axis = cat.combinationEntry.template?.restrictionAxis;
+            const restrictionValue = axis === "ROW" ? cat.combinationEntry.rowValue : axis === "COLUMN" ? cat.combinationEntry.colValue : null;
+            if (restrictionValue && restrictionValue.allowedGenders.length > 0) {
+              if (!athlete.gender || !restrictionValue.allowedGenders.includes(athlete.gender)) {
+                return NextResponse.json(
+                  { error: `Athlete "${athleteLabel}" does not meet the gender requirement for one of the selected events in "${competition.name}".` },
+                  { status: 400 }
+                );
+              }
             }
           }
         }
