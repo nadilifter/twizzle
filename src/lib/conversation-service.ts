@@ -329,7 +329,10 @@ export async function sendConversationMessage(
 ): Promise<SendConversationMessageResult> {
   const conversation = await db.conversation.findFirst({
     where: { id: conversationId, organizationId },
-    include: { user: { select: { smsOptOut: true, email: true } } },
+    include: {
+      user: { select: { smsOptOut: true, email: true } },
+      coach: { select: { name: true } },
+    },
   });
 
   if (!conversation) {
@@ -494,6 +497,7 @@ async function sendViaEmail(
     coachId: string | null;
     email: string | null;
     user: { smsOptOut: boolean; email: string | null } | null;
+    coach: { name: string | null } | null;
   },
   body: string
 ): Promise<SendConversationMessageResult> {
@@ -526,6 +530,7 @@ async function sendViaEmail(
       conversationId: conversation.id,
       organizationId: conversation.organizationId,
       senderRole: conversation.coachId ? "coach" : "admin",
+      coachName: conversation.coach?.name || undefined,
     });
 
     await db.message.update({

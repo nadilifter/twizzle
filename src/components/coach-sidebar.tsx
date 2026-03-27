@@ -16,6 +16,8 @@ import {
 import { useSession } from "next-auth/react"
 
 import { NavUser } from "@/components/nav-user"
+import { useFeatures } from "@/components/feature-context"
+import type { FeatureKey } from "@/lib/feature-toggles"
 import {
   Sidebar,
   SidebarContent,
@@ -67,7 +69,12 @@ function CoachChatUnreadBadge() {
 }
 
 // Coach navigation data
-const navItems = [
+const navItems: {
+  title: string
+  url: string
+  icon: React.ComponentType<{ className?: string }>
+  requiredFeature?: FeatureKey
+}[] = [
   {
     title: "Overview",
     url: "/coach",
@@ -92,6 +99,7 @@ const navItems = [
     title: "Evaluations",
     url: "/coach/evaluations",
     icon: Star,
+    requiredFeature: "training",
   },
   {
     title: "Schedule",
@@ -116,8 +124,13 @@ const superadminItems = [
 export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
+  const { isFeatureEnabled } = useFeatures()
 
   const isSuperAdmin = session?.user?.isSuperAdmin === true
+
+  const filteredNavItems = navItems.filter(
+    (item) => !item.requiredFeature || isFeatureEnabled(item.requiredFeature)
+  )
 
   // Get user data from session
   const user = session?.user ? {
@@ -146,7 +159,7 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
+              {filteredNavItems.map((item) => {
                 const isActive = item.url === "/coach" 
                   ? pathname === "/coach"
                   : pathname.startsWith(item.url)

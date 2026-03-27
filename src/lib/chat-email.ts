@@ -84,6 +84,7 @@ interface SendChatEmailOptions {
   conversationId: string;
   organizationId: string;
   senderRole?: SenderRole;
+  coachName?: string;
 }
 
 interface SendChatEmailResult {
@@ -97,7 +98,7 @@ interface SendChatEmailResult {
 export async function sendChatEmail(
   options: SendChatEmailOptions
 ): Promise<SendChatEmailResult> {
-  const { to, body, conversationId, organizationId, senderRole = "admin" } = options;
+  const { to, body, conversationId, organizationId, senderRole = "admin", coachName } = options;
 
   const org = await db.organization.findUnique({
     where: { id: organizationId },
@@ -108,7 +109,15 @@ export async function sendChatEmail(
   const orgName = sanitizeHeaderValue(rawOrgName);
   const replyTo = getChatReplyToAddress(conversationId);
   const sesConfig = getSESConfig();
-  const fromAddress = `${orgName} <${sesConfig.fromEmail}>`;
+
+  const isCoach = senderRole === "coach" && coachName;
+  const displayName = isCoach
+    ? sanitizeHeaderValue(coachName)
+    : orgName;
+  const fromAddress = `${displayName} <${sesConfig.fromEmail}>`;
+  const subject = isCoach
+    ? `New message from ${displayName} at ${orgName}`
+    : `New message from ${orgName}`;
 
   const baseUrl = process.env.NEXTAUTH_URL || "";
   const portalUrl = `${baseUrl}${GUARDIAN_CHAT_PATH}`;
@@ -118,6 +127,7 @@ export async function sendChatEmail(
   const html = buildChatEmailHtml({
     body: escapedBody,
     orgName: escapeHtml(orgName),
+    senderName: isCoach ? escapeHtml(displayName) : null,
     portalUrl: escapeHtml(portalUrl),
     senderRole,
   });
@@ -133,7 +143,7 @@ export async function sendChatEmail(
 
   const result = await sendEmail({
     to: [to],
-    subject: sanitizeHeaderValue(`New message from ${orgName}`),
+    subject: sanitizeHeaderValue(subject),
     html,
     text,
     from: fromAddress,
@@ -158,22 +168,28 @@ export function getChatPath(role: SenderRole): string {
 function buildChatEmailHtml(opts: {
   body: string;
   orgName: string;
+  senderName: string | null;
   portalUrl: string;
   senderRole: SenderRole;
 }): string {
   const year = new Date().getFullYear();
-  const senderLabel = opts.senderRole === "coach" ? "a coach" : "an admin";
+  const headerLine = opts.senderName
+    ? `${opts.senderName} <span style="color:#a1a1aa;font-weight:400;">via ${opts.orgName}</span>`
+    : opts.orgName;
+  const footerAttribution = opts.senderName
+    ? `${opts.senderName}, a coach at ${opts.orgName},`
+    : `An admin at ${opts.orgName}`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Message from ${opts.orgName}</title>
+  <title>Message from ${opts.senderName || opts.orgName}</title>
   <style>
     body { margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .container { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
     .card { background: #ffffff; border-radius: 8px; padding: 24px; border: 1px solid #e4e4e7; }
-    .org-name { font-size: 14px; font-weight: 600; color: #71717a; margin-bottom: 16px; }
+    .sender { font-size: 14px; font-weight: 600; color: #71717a; margin-bottom: 16px; }
     .message-body { font-size: 15px; line-height: 1.6; color: #18181b; }
     .divider { border: none; border-top: 1px solid #e4e4e7; margin: 20px 0; }
     .footer { font-size: 12px; color: #a1a1aa; text-align: center; margin-top: 16px; }
@@ -183,7 +199,7 @@ function buildChatEmailHtml(opts: {
 <body>
   <div class="container">
     <div class="card">
-      <div class="org-name">${opts.orgName}</div>
+      <div class="sender">${headerLine}</div>
       <div class="message-body">${opts.body}</div>
       <hr class="divider">
       <div style="font-size: 13px; color: #71717a;">
@@ -191,7 +207,7 @@ function buildChatEmailHtml(opts: {
       </div>
     </div>
     <div class="footer">
-      &copy; ${year} ${opts.orgName}. You are receiving this because ${senderLabel} sent you a message.
+      &copy; ${year} ${opts.orgName}. ${footerAttribution} sent you this message.
     </div>
   </div>
 </body>
