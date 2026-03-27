@@ -69,6 +69,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { toast } from "sonner"
 import { useFeatures } from "@/components/feature-context"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 import {
   PERMISSION_GROUPS,
   PERMISSION_FEATURE_MAP,
@@ -208,6 +209,11 @@ export default function UserDetailPage() {
   const [availability, setAvailability] = React.useState<
     Array<{ dayOfWeek: number; startTime: string; endTime: string; isAvailable: boolean }>
   >([])
+
+  useBreadcrumbOverride(
+    member ? `/dashboard/organization/users/${memberId}` : undefined,
+    member?.user.name,
+  )
 
   const fetchCertStatuses = React.useCallback(async () => {
     try {

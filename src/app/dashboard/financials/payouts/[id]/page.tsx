@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 
 interface Transaction {
   id: string
@@ -73,6 +74,11 @@ export default function PayoutDetailPage() {
   const router = useRouter()
   const [payout, setPayout] = React.useState<PayoutDetail | null>(null)
   const [loading, setLoading] = React.useState(true)
+
+  useBreadcrumbOverride(
+    payout ? `/dashboard/financials/payouts/${params.id}` : undefined,
+    payout?.reference,
+  )
 
   React.useEffect(() => {
     async function fetchPayout() {

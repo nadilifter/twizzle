@@ -37,6 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 
 interface GuardianAthlete {
   id: string
@@ -110,6 +111,11 @@ export default function GuardianDetailPage() {
   const [guardian, setGuardian] = React.useState<GuardianDetail | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+
+  useBreadcrumbOverride(
+    guardian ? `/dashboard/athletes/guardians/${guardianId}` : undefined,
+    guardian?.name ?? undefined,
+  )
 
   React.useEffect(() => {
     if (!guardianId) return

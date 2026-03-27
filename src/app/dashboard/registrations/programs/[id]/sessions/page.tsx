@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 
 interface Program {
   id: string
@@ -46,6 +47,11 @@ export default function ProgramSessionsPage() {
   const [program, setProgram] = useState<Program | null>(null)
   const [instances, setInstances] = useState<Instance[]>([])
   const [loading, setLoading] = useState(true)
+
+  useBreadcrumbOverride(
+    program ? `/dashboard/registrations/programs/${programId}` : undefined,
+    program?.name,
+  )
 
   useEffect(() => {
     const fetchData = async () => {

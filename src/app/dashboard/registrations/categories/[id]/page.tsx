@@ -12,6 +12,7 @@ import { ImageUpload } from "@/components/ui/image-upload"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { api, ApiError } from "@/lib/api-client"
 import { toast } from "sonner"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 import type { Category } from "@/hooks/use-categories"
 
 export default function EditCategoryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,6 +25,11 @@ export default function EditCategoryPage({ params }: { params: Promise<{ id: str
     description: "",
     imageUrl: null as string | null,
   })
+
+  useBreadcrumbOverride(
+    category ? `/dashboard/registrations/categories/${category.id}` : undefined,
+    category?.name,
+  )
 
   React.useEffect(() => {
     async function load() {

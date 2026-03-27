@@ -5,12 +5,18 @@ import { useParams } from "next/navigation"
 import { WaiverBuilder } from "../waiver-builder"
 import { Loader2 } from "lucide-react"
 import { DashboardPageHeader } from "@/components/dashboard-page-header"
+import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
 import type { Waiver } from "@/types/waivers"
 
 export default function EditWaiverPage() {
   const params = useParams()
   const [waiver, setWaiver] = useState<Waiver | null>(null)
   const [loading, setLoading] = useState(true)
+
+  useBreadcrumbOverride(
+    waiver ? `/dashboard/athletes/waivers/${params.id}` : undefined,
+    waiver?.title,
+  )
 
   useEffect(() => {
     const fetchWaiver = async () => {
