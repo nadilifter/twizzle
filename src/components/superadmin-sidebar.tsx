@@ -3,6 +3,7 @@
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import { 
+  Activity,
   Bell,
   Building2, 
   CreditCard,
@@ -188,6 +189,11 @@ const navItems = [
     title: "Feedback",
     url: "/superadmin/feedback",
     icon: MessageSquare,
+  },
+  {
+    title: "Usage",
+    url: "/superadmin/usage",
+    icon: Activity,
   },
 ]
 
