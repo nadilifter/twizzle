@@ -31,6 +31,19 @@ const getCachedTeamMembers = unstable_cache(
               },
               select: { programId: true },
             },
+            memberCertifications: {
+              where: {
+                passed: true,
+                certification: { isActive: true },
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gt: new Date() } },
+                ],
+              },
+              include: {
+                certification: { select: { name: true } },
+              },
+            },
           },
         },
       },
@@ -47,6 +60,9 @@ const getCachedTeamMembers = unstable_cache(
       name: h.member.user.name,
       avatar: h.member.user.avatar,
       programCount: h.member.programAssignments.length,
+      certifications: h.member.memberCertifications.map(
+        (mc) => mc.certification.name
+      ),
     }))
   },
   ["site-team"],
@@ -64,6 +80,7 @@ export default async function TeamPage({
 
   const primaryColor = config.primaryColor || "#000000"
   const hero = getHeroContrastStyles(primaryColor)
+  const showCertifications = config.showTeamCertifications ?? false
   const teamMembers = await getCachedTeamMembers(config.organizationId)
 
   return (
@@ -140,6 +157,23 @@ export default async function TeamPage({
                         <h2 className="text-2xl font-bold tracking-tight">
                           {member.name}
                         </h2>
+                        {showCertifications &&
+                          member.certifications.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {member.certifications.map((cert) => (
+                                <span
+                                  key={cert}
+                                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                  style={{
+                                    backgroundColor: `${primaryColor}15`,
+                                    color: primaryColor,
+                                  }}
+                                >
+                                  {cert}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                       </div>
 
                       {member.bio && (

@@ -20,6 +20,7 @@ import {
   Camera,
   X,
   Upload,
+  Award,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -65,6 +66,7 @@ interface TeamHighlightWithMember extends TeamHighlight {
 export default function TeamHighlightsPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [highlights, setHighlights] = useState<TeamHighlight[]>([]);
+  const [showTeamCertifications, setShowTeamCertifications] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cropState, setCropState] = useState<{
@@ -78,15 +80,21 @@ export default function TeamHighlightsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [staffRes, highlightsRes] = await Promise.all([
+      const [staffRes, highlightsRes, configRes] = await Promise.all([
         fetch("/api/organization/staff"),
         fetch("/api/organization/team-highlights"),
+        fetch("/api/organization/website"),
       ]);
 
       let staffData: StaffMember[] = [];
       if (staffRes.ok) {
         staffData = await staffRes.json();
         setStaff(staffData);
+      }
+
+      if (configRes.ok) {
+        const configData = await configRes.json();
+        setShowTeamCertifications(configData.showTeamCertifications ?? false);
       }
 
       let existingHighlights: TeamHighlight[] = [];
@@ -143,12 +151,19 @@ export default function TeamHighlightsPage() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/organization/team-highlights", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ highlights }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
+      const [highlightsRes, configRes] = await Promise.all([
+        fetch("/api/organization/team-highlights", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ highlights }),
+        }),
+        fetch("/api/organization/website", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ showTeamCertifications }),
+        }),
+      ]);
+      if (!highlightsRes.ok || !configRes.ok) throw new Error("Failed to save");
       toast.success("Team highlights saved");
     } catch {
       toast.error("Failed to save team highlights");
@@ -272,6 +287,31 @@ export default function TeamHighlightsPage() {
           {saving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
+
+      {/* Display Settings */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg p-2 bg-muted">
+                <Award className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium">Show Certifications</p>
+                <p className="text-sm text-muted-foreground">
+                  Display earned certifications as badges beneath each team
+                  member&apos;s name on the public team page.
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="show-team-certifications"
+              checked={showTeamCertifications}
+              onCheckedChange={setShowTeamCertifications}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Team Member List */}
       {highlights.length === 0 ? (

@@ -2761,7 +2761,8 @@ model WebsiteConfig {
   showCompetitions Boolean @default(false)
   showStore        Boolean @default(true)
   showLocations    Boolean @default(false)
-  showTeam         Boolean @default(false)
+  showTeam               Boolean @default(false)
+  showTeamCertifications Boolean @default(false)
 
   // Competitions marketing content
   competitionsHeading     String?
