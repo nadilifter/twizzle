@@ -146,7 +146,7 @@ export default async function TeamPage({
 
                     {/* Info Panel */}
                     <div
-                      className={`p-6 md:p-8 lg:p-10 flex flex-col justify-center ${
+                      className={`p-6 md:p-8 lg:p-10 flex flex-col justify-start ${
                         isReversed ? "[direction:ltr]" : ""
                       }`}
                     >
