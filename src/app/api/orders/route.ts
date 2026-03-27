@@ -72,6 +72,17 @@ export async function GET(request: NextRequest) {
                   },
                 },
               },
+              payments: {
+                select: {
+                  method: true,
+                  status: true,
+                  transaction: {
+                    select: { method: true },
+                  },
+                },
+                orderBy: { createdAt: "desc" as const },
+                take: 1,
+              },
             },
           },
         },

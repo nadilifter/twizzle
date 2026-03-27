@@ -35,6 +35,10 @@ import {
   XCircle,
   ChevronDown,
   ChevronRight,
+  Banknote,
+  CreditCard,
+  Landmark,
+  FileText,
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
@@ -68,7 +72,36 @@ interface Order {
     total: number
     status: string
     lineItems: OrderLineItem[]
+    payments: { method: string; status: string; transaction: { method: string | null } | null }[]
   }
+}
+
+const paymentMethodConfig: Record<string, { label: string; icon: React.ElementType; variant: "default" | "outline" | "secondary" }> = {
+  CASH: { label: "Cash", icon: Banknote, variant: "secondary" },
+  CARD: { label: "Card", icon: CreditCard, variant: "outline" },
+  BANK: { label: "Bank", icon: Landmark, variant: "outline" },
+  CHECK: { label: "Check", icon: FileText, variant: "outline" },
+}
+
+const walletLabels: Record<string, string> = {
+  applepay: "Apple Pay",
+  googlepay: "Google Pay",
+}
+
+function getPaymentLabel(payment: { method: string; transaction: { method: string | null } | null }): { label: string; icon: React.ElementType; variant: "default" | "outline" | "secondary" } {
+  const txMethod = payment.transaction?.method?.toLowerCase()
+  if (txMethod && walletLabels[txMethod]) {
+    return { label: walletLabels[txMethod], icon: CreditCard, variant: "outline" }
+  }
+  const config = paymentMethodConfig[payment.method]
+  if (config) {
+    if (txMethod && payment.method === "CARD") {
+      const network = txMethod.charAt(0).toUpperCase() + txMethod.slice(1)
+      return { ...config, label: network }
+    }
+    return config
+  }
+  return { label: payment.method, icon: CreditCard, variant: "outline" }
 }
 
 const fulfillmentColors: Record<string, "default" | "outline" | "secondary" | "destructive"> = {
@@ -224,6 +257,7 @@ export default function OrdersPage() {
               <TableHead>Source</TableHead>
               <TableHead>Items</TableHead>
               <TableHead className="text-right">Total</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-12" />
             </TableRow>
@@ -231,13 +265,13 @@ export default function OrdersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center">
+                <TableCell colSpan={10} className="h-24 text-center">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 </TableCell>
               </TableRow>
             ) : orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center">
+                <TableCell colSpan={10} className="h-24 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <Package className="h-8 w-8 text-muted-foreground" />
                     <p className="text-muted-foreground">No orders yet.</p>
@@ -286,6 +320,19 @@ export default function OrdersPage() {
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         ${Number(order.invoice.total).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const payment = order.invoice.payments?.[0]
+                          if (!payment) return <span className="text-xs text-muted-foreground">—</span>
+                          const { label, icon: PaymentIcon, variant } = getPaymentLabel(payment)
+                          return (
+                            <Badge variant={variant}>
+                              <PaymentIcon className="h-3 w-3 mr-1" />
+                              {label}
+                            </Badge>
+                          )
+                        })()}
                       </TableCell>
                       <TableCell>
                         <Badge variant={fulfillmentColors[order.fulfillmentStatus]}>
@@ -345,7 +392,7 @@ export default function OrdersPage() {
                     </TableRow>
                     {isExpanded && (
                       <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableCell colSpan={9} className="p-0">
+                        <TableCell colSpan={10} className="p-0">
                           <div className="px-8 py-4">
                             <h4 className="text-sm font-medium mb-2">Order Items</h4>
                             <Table>
