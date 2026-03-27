@@ -310,6 +310,8 @@ export async function POST(request: NextRequest) {
           hasLevelRestriction: validatedData.hasLevelRestriction,
           hasCapacityRestriction: validatedData.hasCapacityRestriction,
           hasAgeRestriction: validatedData.hasAgeRestriction,
+          hasGenderRestriction: validatedData.hasGenderRestriction,
+          allowedGenders: validatedData.hasGenderRestriction ? validatedData.allowedGenders : [],
           hasMembershipRestriction: validatedData.hasMembershipRestriction,
           hasPassRestriction: validatedData.hasPassRestriction,
           hasWaiverRestriction: validatedData.hasWaiverRestriction,

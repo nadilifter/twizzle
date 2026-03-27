@@ -282,6 +282,8 @@ export interface CreateProgramPayload {
   hasLevelRestriction?: boolean;
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
+  hasGenderRestriction?: boolean;
+  allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
   hasMembershipRestriction?: boolean;
   hasPassRestriction?: boolean;
   hasWaiverRestriction?: boolean;
@@ -338,6 +340,8 @@ export interface UpdateProgramPayload {
   hasLevelRestriction?: boolean;
   hasCapacityRestriction?: boolean;
   hasAgeRestriction?: boolean;
+  hasGenderRestriction?: boolean;
+  allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
   hasMembershipRestriction?: boolean;
   hasPassRestriction?: boolean;
   hasWaiverRestriction?: boolean;

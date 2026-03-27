@@ -110,6 +110,13 @@ interface ProgramCardProps {
   primaryColor?: string;
 }
 
+const CARD_GENDER_LABELS: Record<string, string> = {
+  MALE: "Male",
+  FEMALE: "Female",
+  OTHER: "Other",
+  PREFER_NOT_TO_SAY: "Prefer Not to Say",
+};
+
 function formatPrice(price: number | string): string {
   const numPrice = typeof price === "string" ? parseFloat(price) : price;
   if (numPrice === 0) return "FREE";
@@ -162,15 +169,8 @@ export function ProgramCard({ program }: ProgramCardProps) {
       : `Up to age ${program.maxAge}`
     : null;
 
-  const GENDER_LABELS: Record<string, string> = {
-    MALE: "Male",
-    FEMALE: "Female",
-    OTHER: "Other",
-    PREFER_NOT_TO_SAY: "Prefer Not to Say",
-  };
-
   const genderLabel = program.hasGenderRestriction && program.allowedGenders && program.allowedGenders.length > 0
-    ? program.allowedGenders.map(g => GENDER_LABELS[g] || g).join(", ")
+    ? program.allowedGenders.map(g => CARD_GENDER_LABELS[g] || g).join(", ")
     : null;
 
   return (

@@ -513,6 +513,24 @@ export function ProgramRegistrationFlow({
     setSelectedInstanceIds(new Set(available))
   }
 
+  // ---------- Gender-eligible memberships & passes ----------
+
+  const genderEligibleMemberships = useMemo(() => {
+    if (!selectedAthlete || !needsMembership) return program.requiredMemberships
+    return program.requiredMemberships.filter(m => {
+      if (!m.group.hasGenderRestriction || !m.group.allowedGenders?.length) return true
+      return !!selectedAthlete.gender && m.group.allowedGenders.includes(selectedAthlete.gender as any)
+    })
+  }, [selectedAthlete, needsMembership, program.requiredMemberships])
+
+  const genderEligiblePasses = useMemo(() => {
+    if (!selectedAthlete || !needsPass) return program.requiredPasses ?? []
+    return (program.requiredPasses ?? []).filter(p => {
+      if (!p.hasGenderRestriction || !p.allowedGenders?.length) return true
+      return !!selectedAthlete.gender && p.allowedGenders.includes(selectedAthlete.gender as any)
+    })
+  }, [selectedAthlete, needsPass, program.requiredPasses])
+
   // ---------- Membership helpers ----------
 
   useEffect(() => {
@@ -543,24 +561,6 @@ export function ProgramRegistrationFlow({
       setSelectedMembership(genderEligibleMemberships[0])
     }
   }, [needsMembership, selectedAthlete, session?.user?.email, program.requiredMemberships, genderEligibleMemberships])
-
-  // ---------- Gender-eligible memberships & passes ----------
-
-  const genderEligibleMemberships = useMemo(() => {
-    if (!selectedAthlete || !needsMembership) return program.requiredMemberships
-    return program.requiredMemberships.filter(m => {
-      if (!m.group.hasGenderRestriction || !m.group.allowedGenders?.length) return true
-      return !!selectedAthlete.gender && m.group.allowedGenders.includes(selectedAthlete.gender as any)
-    })
-  }, [selectedAthlete, needsMembership, program.requiredMemberships])
-
-  const genderEligiblePasses = useMemo(() => {
-    if (!selectedAthlete || !needsPass) return program.requiredPasses ?? []
-    return (program.requiredPasses ?? []).filter(p => {
-      if (!p.hasGenderRestriction || !p.allowedGenders?.length) return true
-      return !!selectedAthlete.gender && p.allowedGenders.includes(selectedAthlete.gender as any)
-    })
-  }, [selectedAthlete, needsPass, program.requiredPasses])
 
   // ---------- Pass helpers ----------
 

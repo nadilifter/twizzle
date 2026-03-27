@@ -352,6 +352,14 @@ export async function PATCH(
       if (validatedData.hasLevelRestriction !== undefined) updateData.hasLevelRestriction = validatedData.hasLevelRestriction;
       if (validatedData.hasCapacityRestriction !== undefined) updateData.hasCapacityRestriction = validatedData.hasCapacityRestriction;
       if (validatedData.hasAgeRestriction !== undefined) updateData.hasAgeRestriction = validatedData.hasAgeRestriction;
+      if (validatedData.hasGenderRestriction !== undefined) {
+        updateData.hasGenderRestriction = validatedData.hasGenderRestriction;
+        updateData.allowedGenders = validatedData.hasGenderRestriction
+          ? (validatedData.allowedGenders ?? [])
+          : [];
+      } else if (validatedData.allowedGenders !== undefined) {
+        updateData.allowedGenders = validatedData.allowedGenders;
+      }
       if (validatedData.hasMembershipRestriction !== undefined) updateData.hasMembershipRestriction = validatedData.hasMembershipRestriction;
       if (validatedData.hasPassRestriction !== undefined) updateData.hasPassRestriction = validatedData.hasPassRestriction;
       if (validatedData.hasWaiverRestriction !== undefined) updateData.hasWaiverRestriction = validatedData.hasWaiverRestriction;
