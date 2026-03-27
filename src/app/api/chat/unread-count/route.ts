@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const count = await db.conversation.count({
       where: {
         organizationId: session.user.organizationId,
+        coachId: null,
         unreadCount: { gt: 0 },
       },
     });

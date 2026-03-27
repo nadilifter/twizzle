@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { z } from "zod";
 import {
-  getConversationOwnership,
   getConversationMessages,
   sendAthleteReply,
 } from "@/lib/conversation-service";
+import { db } from "@/lib/db";
 
 // GET /api/athletes/chat/conversations/[id]/messages - Get messages
 export async function GET(
@@ -24,7 +24,10 @@ export async function GET(
         : session.user.id;
 
     const { id } = await params;
-    const conversation = await getConversationOwnership(id);
+    const conversation = await db.conversation.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
+    });
 
     if (!conversation || conversation.userId !== userId) {
       return NextResponse.json(

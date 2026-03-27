@@ -23,9 +23,10 @@ export async function GET(request: NextRequest) {
     };
 
     if (search) {
-      where.organization = {
-        name: { contains: search, mode: "insensitive" },
-      };
+      where.OR = [
+        { organization: { name: { contains: search, mode: "insensitive" } } },
+        { coach: { name: { contains: search, mode: "insensitive" } } },
+      ];
     }
 
     const conversations = await db.conversation.findMany({
@@ -38,6 +39,13 @@ export async function GET(request: NextRequest) {
             logo: true,
           },
         },
+        coach: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+          },
+        },
       },
       orderBy: [{ lastMessageAt: "desc" }],
     });
@@ -48,6 +56,9 @@ export async function GET(request: NextRequest) {
         organizationId: c.organization.id,
         organizationName: c.organization.name,
         organizationLogo: c.organization.logo,
+        coachId: c.coach?.id ?? null,
+        coachName: c.coach?.name ?? null,
+        coachAvatar: c.coach?.avatar ?? null,
         channel: c.channel,
         status: c.status,
         lastMessageAt: c.lastMessageAt,

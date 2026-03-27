@@ -279,6 +279,7 @@ model User {
   // Communication
   userMessages         Message[]         @relation("UserMessages")
   userConversations    Conversation[]    @relation("UserConversations")
+  coachConversations   Conversation[]    @relation("CoachConversation")
   userEmailMessages    EmailMessage[]    @relation("UserEmailMessages")
 
   // Registration
@@ -2467,14 +2468,21 @@ model Conversation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Coach conversation support: when set, this is a coach-specific conversation
+  coachId String?
+
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User?        @relation("UserConversations", fields: [userId], references: [id], onDelete: Cascade)
+  coach        User?        @relation("CoachConversation", fields: [coachId], references: [id], onDelete: SetNull)
   messages     Message[]
 
-  @@unique([organizationId, userId])
+  // Unique constraints handled by partial indexes in migration
+  // Org conversations: unique on (organizationId, userId) where coachId IS NULL
+  // Coach conversations: unique on (userId, coachId) where coachId IS NOT NULL
   @@index([organizationId, lastMessageAt])
   @@index([organizationId, status])
+  @@index([organizationId, coachId])
   @@map("SmsConversation")
 }
 

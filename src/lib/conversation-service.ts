@@ -78,12 +78,11 @@ export async function getOrCreateConversation(
   userId: string,
   channel: ConversationChannel = "WEB_SMS"
 ): Promise<string> {
-  const existing = await db.conversation.findUnique({
+  const existing = await db.conversation.findFirst({
     where: {
-      organizationId_userId: {
-        organizationId,
-        userId,
-      },
+      organizationId,
+      userId,
+      coachId: null,
     },
   });
 
@@ -154,7 +153,7 @@ export async function listConversations(
   const { status, search, page = 1, limit = 50 } = options;
   const skip = (page - 1) * limit;
 
-  const where: any = { organizationId };
+  const where: any = { organizationId, coachId: null };
 
   if (status) {
     where.status = status;
@@ -281,7 +280,7 @@ export async function getConversation(
   conversationId: string,
   organizationId?: string
 ) {
-  const where: any = { id: conversationId };
+  const where: any = { id: conversationId, coachId: null };
   if (organizationId) where.organizationId = organizationId;
 
   return db.conversation.findFirst({
@@ -856,5 +855,355 @@ export async function routeInboundEmail(params: {
       unreadCount: { increment: 1 },
       status: "OPEN",
     },
+  });
+}
+
+// ============================================
+// Coach Conversations
+// ============================================
+
+export interface CoachConversationListItem {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  phoneNumber: string;
+  email: string | null;
+  channel: ConversationChannel;
+  status: ConversationStatus;
+  lastMessageAt: Date | null;
+  lastMessageBody: string | null;
+  unreadCount: number;
+  createdAt: Date;
+  organizationId: string;
+  organizationName: string;
+}
+
+/**
+ * Get or create a coach-specific conversation.
+ * Coach conversations are unique on (userId, coachId) — one thread per pair,
+ * regardless of how many orgs they share. The organizationId is set only on
+ * first creation (for billing).
+ */
+export async function getOrCreateCoachConversation(
+  organizationId: string,
+  userId: string,
+  coachId: string,
+  channel: ConversationChannel = "WEB_ONLY"
+): Promise<string> {
+  const existing = await db.conversation.findFirst({
+    where: { userId, coachId },
+  });
+
+  if (existing) {
+    if (existing.status !== "OPEN") {
+      await db.conversation.update({
+        where: { id: existing.id },
+        data: { status: "OPEN" },
+      });
+    }
+    return existing.id;
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { phone: true, phoneVerified: true, email: true },
+  });
+
+  const data: any = {
+    organizationId,
+    userId,
+    coachId,
+    channel,
+    phoneNumber: "",
+    status: "OPEN",
+  };
+
+  if (channel === "WEB_SMS") {
+    if (!user?.phone) throw new Error("User has no phone number");
+    if (!user.phoneVerified) throw new Error("User phone number is not verified");
+    const normalized = normalizePhoneNumber(user.phone);
+    if (!isValidE164(normalized)) throw new Error("User has invalid phone number");
+    data.phoneNumber = normalized;
+  }
+
+  if (channel === "WEB_EMAIL") {
+    if (!user?.email) throw new Error("User has no email address");
+    data.email = user.email;
+  }
+
+  if (channel === "WEB_ONLY" && user?.email) {
+    data.email = user.email;
+  }
+
+  const conversation = await db.conversation.create({ data });
+  return conversation.id;
+}
+
+/**
+ * List conversations for a coach across their affiliated organizations.
+ */
+export async function listCoachConversations(
+  coachId: string,
+  orgIds: string[],
+  options: {
+    status?: ConversationStatus;
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {}
+): Promise<{ conversations: CoachConversationListItem[]; total: number }> {
+  const { status, search, page = 1, limit = 50 } = options;
+  const skip = (page - 1) * limit;
+
+  const where: any = {
+    coachId,
+    organizationId: { in: orgIds },
+  };
+
+  if (status) where.status = status;
+
+  if (search) {
+    where.OR = [
+      { user: { name: { contains: search, mode: "insensitive" } } },
+      { user: { email: { contains: search, mode: "insensitive" } } },
+      { phoneNumber: { contains: search } },
+    ];
+  }
+
+  const [conversations, total] = await Promise.all([
+    db.conversation.findMany({
+      where,
+      include: {
+        user: { select: { name: true, email: true } },
+        organization: { select: { name: true } },
+      },
+      orderBy: [{ unreadCount: "desc" }, { lastMessageAt: "desc" }],
+      skip,
+      take: limit,
+    }),
+    db.conversation.count({ where }),
+  ]);
+
+  return {
+    conversations: conversations.map((c) => ({
+      id: c.id,
+      userId: c.userId ?? "",
+      userName: c.user?.name ?? "",
+      userEmail: c.user?.email ?? "",
+      phoneNumber: c.phoneNumber,
+      email: c.email,
+      channel: c.channel,
+      status: c.status,
+      lastMessageAt: c.lastMessageAt,
+      lastMessageBody: c.lastMessageBody,
+      unreadCount: c.unreadCount,
+      createdAt: c.createdAt,
+      organizationId: c.organizationId,
+      organizationName: c.organization.name,
+    })),
+    total,
+  };
+}
+
+/**
+ * Get a single coach conversation with user and organization details.
+ */
+export async function getCoachConversation(
+  conversationId: string,
+  coachId: string
+) {
+  return db.conversation.findFirst({
+    where: { id: conversationId, coachId },
+    include: {
+      organization: { select: { name: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          phoneVerified: true,
+          smsOptOut: true,
+          athleteGuardians: {
+            include: {
+              athlete: {
+                select: { id: true, name: true, birthDate: true },
+              },
+            },
+            take: 5,
+          },
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Send a message in a coach conversation.
+ * Validates that the conversation belongs to the coach, then delegates
+ * to the existing channel dispatch (which uses conversation.organizationId
+ * for billing).
+ */
+export async function sendCoachMessage(
+  conversationId: string,
+  body: string,
+  coachId: string,
+  organizationId: string
+): Promise<SendConversationMessageResult> {
+  return sendConversationMessage(
+    conversationId,
+    body,
+    organizationId,
+    coachId
+  );
+}
+
+/**
+ * Mark a coach conversation as read (coach-side unread counter).
+ */
+export async function markCoachConversationRead(
+  conversationId: string,
+  coachId: string
+): Promise<void> {
+  const result = await db.conversation.updateMany({
+    where: { id: conversationId, coachId },
+    data: { unreadCount: 0 },
+  });
+  if (result.count === 0) {
+    throw new Error("Conversation not found or access denied");
+  }
+}
+
+/**
+ * Update status on a coach conversation.
+ */
+export async function updateCoachConversationStatus(
+  conversationId: string,
+  status: ConversationStatus,
+  coachId: string
+): Promise<void> {
+  const result = await db.conversation.updateMany({
+    where: { id: conversationId, coachId },
+    data: { status },
+  });
+  if (result.count === 0) {
+    throw new Error("Conversation not found or access denied");
+  }
+}
+
+/**
+ * Get guardians available for a coach to start conversations with.
+ * Returns guardians whose athletes are enrolled in programs the coach is
+ * assigned to (via ProgramStaff or Event.coachId).
+ */
+export async function getCoachConversationGuardians(
+  coachUserId: string,
+  memberships: Array<{ memberId: string; organizationId: string; organizationName: string }>,
+  search?: string
+): Promise<
+  Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    phoneVerified: boolean;
+    organizationId: string;
+    organizationName: string;
+  }>
+> {
+  const orgIds = memberships.map((m) => m.organizationId);
+  const memberIds = memberships.map((m) => m.memberId);
+  const orgNameMap = Object.fromEntries(memberships.map((m) => [m.organizationId, m.organizationName]));
+
+  const [staffAssignments, coachEvents] = await Promise.all([
+    db.programStaff.findMany({
+      where: { memberId: { in: memberIds } },
+      select: { programId: true, member: { select: { organizationId: true } } },
+    }),
+    db.event.findMany({
+      where: { coachId: coachUserId, organizationId: { in: orgIds } },
+      select: { programId: true, organizationId: true },
+    }),
+  ]);
+
+  const programOrgMap = new Map<string, string>();
+  for (const a of staffAssignments) {
+    programOrgMap.set(a.programId, a.member.organizationId);
+  }
+  for (const e of coachEvents) {
+    if (e.programId) programOrgMap.set(e.programId, e.organizationId);
+  }
+
+  const programIds = Array.from(programOrgMap.keys());
+  if (programIds.length === 0) return [];
+
+  const enrollments = await db.enrollment.findMany({
+    where: {
+      programId: { in: programIds },
+      status: "ACTIVE",
+      athlete: {
+        organizationAthletes: { some: { organizationId: { in: orgIds } } },
+      },
+    },
+    select: {
+      programId: true,
+      athlete: {
+        select: {
+          guardians: {
+            where: { userId: { not: null } },
+            select: { userId: true },
+          },
+        },
+      },
+    },
+  });
+
+  const guardianOrgMap = new Map<string, string>();
+  for (const enrollment of enrollments) {
+    const enrollmentOrgId = programOrgMap.get(enrollment.programId);
+    if (!enrollmentOrgId) continue;
+    for (const g of enrollment.athlete.guardians) {
+      if (g.userId && !guardianOrgMap.has(g.userId)) {
+        guardianOrgMap.set(g.userId, enrollmentOrgId);
+      }
+    }
+  }
+
+  const guardianUserIds = Array.from(guardianOrgMap.keys());
+  if (guardianUserIds.length === 0) return [];
+
+  const userWhere: any = { id: { in: guardianUserIds } };
+  if (search) {
+    userWhere.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const users = await db.user.findMany({
+    where: userWhere,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      phoneVerified: true,
+    },
+    orderBy: { name: "asc" },
+    take: 100,
+  });
+
+  return users.map((u) => {
+    const guardianOrgId = guardianOrgMap.get(u.id)!;
+    return {
+      id: u.id,
+      name: u.name || "",
+      email: u.email || "",
+      phone: u.phone,
+      phoneVerified: u.phoneVerified,
+      organizationId: guardianOrgId,
+      organizationName: orgNameMap[guardianOrgId] || "",
+    };
   });
 }

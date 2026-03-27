@@ -159,6 +159,8 @@ src/app/api/coach/programs/route.ts
 src/app/api/coach/events/route.ts
 src/app/api/coach/overview/route.ts
 src/app/api/coach/athletes/route.ts
+src/app/api/coach/chat/conversations/route.ts
+src/app/api/coach/chat/unread-count/route.ts
 
 # --- Waiver routes (manual organizationId) ---
 src/app/api/waivers/check/route.ts

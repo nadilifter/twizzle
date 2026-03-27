@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Eye,
   LayoutDashboard, 
+  MessageSquare,
   UserCheck,
   Star,
   Camera,
@@ -29,12 +30,53 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
+const CHAT_UNREAD_CACHE_MS = 60_000
+let chatUnreadCache: { count: number; fetchedAt: number } | null = null
+
+function CoachChatUnreadBadge() {
+  const [count, setCount] = React.useState(() =>
+    chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS
+      ? chatUnreadCache.count
+      : 0
+  )
+
+  React.useEffect(() => {
+    if (chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS) {
+      setCount(chatUnreadCache.count)
+      return
+    }
+
+    let cancelled = false
+    fetch("/api/coach/chat/unread-count")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (cancelled || !data) return
+        chatUnreadCache = { count: data.unreadCount, fetchedAt: Date.now() }
+        setCount(data.unreadCount)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  if (count <= 0) return null
+  return (
+    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-destructive-foreground">
+      {count}
+    </span>
+  )
+}
+
 // Coach navigation data
 const navItems = [
   {
     title: "Overview",
     url: "/coach",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Chat",
+    url: "/coach/chat",
+    icon: MessageSquare,
   },
   {
     title: "Programs",
@@ -117,6 +159,7 @@ export function CoachSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                         <span>{item.title}</span>
                       </a>
                     </SidebarMenuButton>
+                    {item.url === "/coach/chat" && <CoachChatUnreadBadge />}
                   </SidebarMenuItem>
                 )
               })}

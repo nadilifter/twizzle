@@ -11,6 +11,7 @@ import {
   MessageSquare,
   CheckCircle2,
   Building2,
+  User,
   Loader2,
   AlertTriangle,
   Globe,
@@ -51,6 +52,9 @@ interface Conversation {
   organizationId: string
   organizationName: string
   organizationLogo: string | null
+  coachId: string | null
+  coachName: string | null
+  coachAvatar: string | null
   channel: ConversationChannel
   status: "OPEN" | "CLOSED" | "ARCHIVED"
   lastMessageAt: string | null
@@ -184,6 +188,9 @@ function ConversationSidebar({
             {conversations.map((conv) => {
               const ChanIcon = channelIcons[conv.channel] || Globe
               const chanColor = channelColors[conv.channel] || "text-muted-foreground"
+              const isCoach = !!conv.coachId
+              const displayName = isCoach ? (conv.coachName || "Coach") : conv.organizationName
+              const AvatarIcon = isCoach ? User : Building2
               return (
                 <button
                   key={conv.id}
@@ -195,12 +202,12 @@ function ConversationSidebar({
                 >
                   <div className="flex items-start gap-2">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <Building2 className="h-4 w-4 text-primary" />
+                      <AvatarIcon className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-sm font-medium truncate">{conv.organizationName}</span>
+                          <span className="text-sm font-medium truncate">{displayName}</span>
                           <ChanIcon className={cn("h-3 w-3 shrink-0", chanColor)} />
                         </div>
                         {conv.unreadCount > 0 && (
@@ -445,13 +452,19 @@ export default function AthleteChatPage() {
                 <ChatHeader className="border-b px-4">
                   <ChatHeaderAddon>
                     <ChatHeaderAvatar
-                      fallback={selectedConversation ? getInitials(selectedConversation.organizationName) : "?"}
+                      fallback={selectedConversation
+                        ? getInitials(selectedConversation.coachId
+                          ? (selectedConversation.coachName || "Coach")
+                          : selectedConversation.organizationName)
+                        : "?"}
                     />
                   </ChatHeaderAddon>
                   <ChatHeaderMain>
                     <div className="flex flex-col">
                       <span className="font-medium text-sm">
-                        {selectedConversation?.organizationName || "Loading..."}
+                        {selectedConversation?.coachId
+                          ? (selectedConversation.coachName || "Coach")
+                          : (selectedConversation?.organizationName || "Loading...")}
                       </span>
                     </div>
                   </ChatHeaderMain>

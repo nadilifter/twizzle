@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { z } from "zod";
 import {
-  getConversationOwnership,
   markConversationReadByAthlete,
 } from "@/lib/conversation-service";
+import { db } from "@/lib/db";
 
 // GET /api/athletes/chat/conversations/[id] - Get conversation detail
 export async function GET(
@@ -23,7 +23,17 @@ export async function GET(
         : session.user.id;
 
     const { id } = await params;
-    const conversation = await getConversationOwnership(id);
+    const conversation = await db.conversation.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
+        organizationId: true,
+        channel: true,
+        coachId: true,
+        coach: { select: { id: true, name: true, avatar: true } },
+      },
+    });
 
     if (!conversation || conversation.userId !== userId) {
       return NextResponse.json(
@@ -36,6 +46,9 @@ export async function GET(
       id: conversation.id,
       channel: conversation.channel,
       organizationId: conversation.organizationId,
+      coachId: conversation.coach?.id ?? null,
+      coachName: conversation.coach?.name ?? null,
+      coachAvatar: conversation.coach?.avatar ?? null,
     });
   } catch (error) {
     console.error("Error fetching athlete conversation:", error);
@@ -67,7 +80,10 @@ export async function PATCH(
         : session.user.id;
 
     const { id } = await params;
-    const conversation = await getConversationOwnership(id);
+    const conversation = await db.conversation.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
+    });
 
     if (!conversation || conversation.userId !== userId) {
       return NextResponse.json(

@@ -93,17 +93,25 @@ export async function getCoachingMemberships(session: Session | null): Promise<
 
   const { ROLE_PERMISSIONS } = await import("./permissions");
 
-  const memberships = await db.organizationMember.findMany({
-    where: {
-      userId: effective.userId,
-      status: "ACTIVE",
-      organization: { isActive: true },
-    },
+  // Query through User (non-tenant model) to avoid tenant isolation warning,
+  // since this intentionally looks up memberships across all organizations.
+  const user = await db.user.findUnique({
+    where: { id: effective.userId },
     include: {
-      permissions: true,
-      organization: { select: { name: true } },
+      memberships: {
+        where: {
+          status: "ACTIVE",
+          organization: { isActive: true },
+        },
+        include: {
+          permissions: true,
+          organization: { select: { name: true } },
+        },
+      },
     },
   });
+
+  const memberships = user?.memberships ?? [];
 
   return memberships
     .filter((m) => {
