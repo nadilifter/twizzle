@@ -3932,6 +3932,7 @@ async function main() {
     { pattern: "feedback", type: "EXACT" as const, reason: "System use - feedback portal" },
     { pattern: "events", type: "EXACT" as const, reason: "System use - events portal" },
     { pattern: "startup", type: "EXACT" as const, reason: "System use - org signup portal" },
+    { pattern: "my", type: "EXACT" as const, reason: "Reserved - future subsite" },
     { pattern: "competition", type: "EXACT" as const, reason: "Reserved - prevents confusion with competitions portal" },
     { pattern: "competitions", type: "EXACT" as const, reason: "System use - competitions portal" },
     { pattern: "result", type: "EXACT" as const, reason: "Reserved - prevents confusion with results portal" },

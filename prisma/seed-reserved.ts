@@ -17,6 +17,7 @@ const RESERVED_DOMAIN_DATA = [
   { pattern: "feedback", type: ReservedDomainType.EXACT, reason: "System use - feedback portal" },
   { pattern: "events", type: ReservedDomainType.EXACT, reason: "System use - events portal" },
   { pattern: "startup", type: ReservedDomainType.EXACT, reason: "System use - org signup portal" },
+  { pattern: "my", type: ReservedDomainType.EXACT, reason: "Reserved - future subsite" },
   { pattern: "competition", type: ReservedDomainType.EXACT, reason: "Reserved - prevents confusion with competitions portal" },
   { pattern: "competitions", type: ReservedDomainType.EXACT, reason: "System use - competitions portal" },
   { pattern: "result", type: ReservedDomainType.EXACT, reason: "Reserved - prevents confusion with results portal" },
