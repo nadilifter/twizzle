@@ -503,11 +503,12 @@ export default function CoachChatPage() {
   const handleUpdateStatus = useCallback(async (status: "OPEN" | "CLOSED" | "ARCHIVED") => {
     if (!selectedConversationId) return
     try {
-      await fetch(`/api/coach/chat/conversations/${selectedConversationId}`, {
+      const response = await fetch(`/api/coach/chat/conversations/${selectedConversationId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       })
+      if (!response.ok) throw new Error("Failed to update")
       fetchConversations()
       fetchConversationDetail(selectedConversationId)
       toast.success(`Conversation ${status.toLowerCase()}`)

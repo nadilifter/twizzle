@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     const search =
-      request.nextUrl.searchParams.get("search") || undefined;
+      request.nextUrl.searchParams.get("search")?.slice(0, 200) || undefined;
 
     const guardians = await getCoachConversationGuardians(
       effectiveUser.userId,

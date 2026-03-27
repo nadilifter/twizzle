@@ -1043,7 +1043,7 @@ export async function getCoachConversation(
           athleteGuardians: {
             include: {
               athlete: {
-                select: { id: true, name: true, birthDate: true },
+                select: { id: true, name: true },
               },
             },
             take: 5,

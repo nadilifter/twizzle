@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       rawStatus && validStatuses.includes(rawStatus as any)
         ? (rawStatus as (typeof validStatuses)[number])
         : undefined;
-    const search = searchParams.get("search") || undefined;
+    const search = searchParams.get("search")?.slice(0, 200) || undefined;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
     const limit = Math.min(
       100,
