@@ -13,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface ProgramStaff {
   id: string;
@@ -156,7 +157,10 @@ export default function CoachProgramsPage() {
                       <p className="text-xs text-muted-foreground">{program.organization.name}</p>
                     )}
                     {program.description && (
-                      <CardDescription>{program.description}</CardDescription>
+                      <div
+                        className="text-sm text-muted-foreground line-clamp-2 [&>p]:m-0"
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(program.description) }}
+                      />
                     )}
                   </div>
                 </div>
