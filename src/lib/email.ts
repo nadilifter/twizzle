@@ -284,7 +284,8 @@ export type EmailTemplate =
   | 'subscription-payment-success'
   | 'subscription-payment-failed'
   | 'subscription-deactivation-warning'
-  | 'subscription-deactivated';
+  | 'subscription-deactivated'
+  | 'holiday-reminder';
 
 /**
  * Wrap email body content in a branded Uplifter layout.
@@ -1025,6 +1026,35 @@ Your public site is now offline and admin dashboard access has been suspended. N
 To reactivate your account, simply add a valid payment method. Your outstanding balance will be charged and your account will be reactivated immediately.
 
 Need help? Contact our support team.`,
+    },
+    'holiday-reminder': {
+      subject: 'Upcoming Holiday Closure: {{holidayName}} on {{holidayDate}}',
+      html: wrapInBrandedLayout({
+        preheaderText: '{{organizationName}} will be closed on {{holidayDate}} for {{holidayName}}. Programs will not have sessions on this date.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1f2937;">Upcoming Holiday Closure</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">One week reminder</p>
+              <p style="margin: 0 0 16px;">This is a reminder that <strong>{{organizationName}}</strong> will be closed on <strong>{{holidayDate}}</strong> for <strong>{{holidayName}}</strong>.</p>
+              <p style="margin: 0 0 16px;">Programs will <strong>not</strong> have sessions scheduled on this date. If you need to override this for specific programs, you can do so from the <strong>Holidays</strong> management page in your dashboard.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">You are receiving this email because you are an administrator of {{organizationName}}.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Upcoming Holiday Closure
+
+This is a reminder that {{organizationName}} will be closed on {{holidayDate}} for {{holidayName}}.
+
+Programs will not have sessions scheduled on this date. If you need to override this for specific programs, you can do so from the Holidays management page in your dashboard.
+
+You are receiving this email because you are an administrator of {{organizationName}}.`,
     },
   };
 

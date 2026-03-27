@@ -5043,7 +5043,8 @@ model OrganizationHoliday {
   year           Int
   countryCode    String?
   stateCode      String?
-  announcementId String?
+  announcementId      String?
+  reminderEmailSentAt DateTime?
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   announcement Announcement? @relation(fields: [announcementId], references: [id], onDelete: SetNull)
