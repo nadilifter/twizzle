@@ -78,7 +78,12 @@ interface RequiredMembership {
   name: string
   price: number
   billingInterval: string
-  group: { id: string; name: string }
+  group: {
+    id: string
+    name: string
+    hasGenderRestriction?: boolean
+    allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[]
+  }
 }
 
 interface RequiredPass {
@@ -88,6 +93,8 @@ interface RequiredPass {
   billingInterval: string
   sessionLimit: number
   limitPeriod: string
+  hasGenderRestriction?: boolean
+  allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[]
 }
 
 interface WaiverRequirement {
@@ -521,21 +528,39 @@ export function ProgramRegistrationFlow({
           const requiredIds = program.requiredMemberships.map((m) => m.id)
           const alreadyHas = requiredIds.some((id) => activeIds.includes(id))
           setAthleteHasMembership(alreadyHas)
-          if (!alreadyHas && program.requiredMemberships.length === 1) {
-            setSelectedMembership(program.requiredMemberships[0])
+          if (!alreadyHas && genderEligibleMemberships.length === 1) {
+            setSelectedMembership(genderEligibleMemberships[0])
           }
         })
         .catch(() => {
           setAthleteHasMembership(false)
-          if (program.requiredMemberships.length === 1) {
-            setSelectedMembership(program.requiredMemberships[0])
+          if (genderEligibleMemberships.length === 1) {
+            setSelectedMembership(genderEligibleMemberships[0])
           }
         })
         .finally(() => setIsCheckingMembership(false))
-    } else if (needsMembership && program.requiredMemberships.length === 1) {
-      setSelectedMembership(program.requiredMemberships[0])
+    } else if (needsMembership && genderEligibleMemberships.length === 1) {
+      setSelectedMembership(genderEligibleMemberships[0])
     }
-  }, [needsMembership, selectedAthlete, session?.user?.email, program.requiredMemberships])
+  }, [needsMembership, selectedAthlete, session?.user?.email, program.requiredMemberships, genderEligibleMemberships])
+
+  // ---------- Gender-eligible memberships & passes ----------
+
+  const genderEligibleMemberships = useMemo(() => {
+    if (!selectedAthlete || !needsMembership) return program.requiredMemberships
+    return program.requiredMemberships.filter(m => {
+      if (!m.group.hasGenderRestriction || !m.group.allowedGenders?.length) return true
+      return !!selectedAthlete.gender && m.group.allowedGenders.includes(selectedAthlete.gender as any)
+    })
+  }, [selectedAthlete, needsMembership, program.requiredMemberships])
+
+  const genderEligiblePasses = useMemo(() => {
+    if (!selectedAthlete || !needsPass) return program.requiredPasses ?? []
+    return (program.requiredPasses ?? []).filter(p => {
+      if (!p.hasGenderRestriction || !p.allowedGenders?.length) return true
+      return !!selectedAthlete.gender && p.allowedGenders.includes(selectedAthlete.gender as any)
+    })
+  }, [selectedAthlete, needsPass, program.requiredPasses])
 
   // ---------- Pass helpers ----------
 
@@ -549,15 +574,15 @@ export function ProgramRegistrationFlow({
           const activePasses = (data.data || []).filter((p: { id: string }) => requiredPassIds.has(p.id))
           if (activePasses.length > 0) {
             setAthleteHasPass(false)
-            if (program.requiredPasses?.length === 1) {
-              setSelectedPass(program.requiredPasses[0])
+            if (genderEligiblePasses.length === 1) {
+              setSelectedPass(genderEligiblePasses[0])
             }
           }
         })
         .catch((err) => console.error("Failed to check athlete passes:", err))
         .finally(() => setIsCheckingPass(false))
     }
-  }, [needsPass, selectedAthlete, program.organizationId, program.requiredPasses])
+  }, [needsPass, selectedAthlete, program.organizationId, program.requiredPasses, genderEligiblePasses])
 
   // ---------- Waiver helpers ----------
 
@@ -1380,18 +1405,28 @@ export function ProgramRegistrationFlow({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {program.requiredMemberships.length === 1 ? (
+              {genderEligibleMemberships.length === 0 ? (
+                <div className="flex items-start gap-3 p-4 rounded-lg border border-destructive/40 bg-destructive/5">
+                  <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">No eligible memberships</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedAthlete?.firstName} does not meet the gender requirements for any of the available membership options.
+                    </p>
+                  </div>
+                </div>
+              ) : genderEligibleMemberships.length === 1 ? (
                 <div className="flex items-center gap-3 p-4 rounded-lg border border-primary/40 bg-primary/5">
                   <CreditCard className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1">
-                    <div className="font-medium text-sm">{program.requiredMemberships[0].name}</div>
-                    <div className="text-xs text-muted-foreground">{program.requiredMemberships[0].group.name}</div>
+                    <div className="font-medium text-sm">{genderEligibleMemberships[0].name}</div>
+                    <div className="text-xs text-muted-foreground">{genderEligibleMemberships[0].group.name}</div>
                   </div>
-                  <span className="font-bold">{formatPrice(program.requiredMemberships[0].price)}</span>
+                  <span className="font-bold">{formatPrice(genderEligibleMemberships[0].price)}</span>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {program.requiredMemberships.map(m => {
+                  {genderEligibleMemberships.map(m => {
                     const isSelected = selectedMembership?.id === m.id
                     return (
                       <button
@@ -1468,20 +1503,30 @@ export function ProgramRegistrationFlow({
                     <p className="text-xs text-green-700 dark:text-green-300">You already have an active pass that covers this program.</p>
                   </div>
                 </div>
-              ) : (program.requiredPasses?.length ?? 0) === 1 ? (
+              ) : genderEligiblePasses.length === 0 ? (
+                <div className="flex items-start gap-3 p-4 rounded-lg border border-destructive/40 bg-destructive/5">
+                  <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">No eligible passes</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedAthlete?.firstName} does not meet the gender requirements for any of the available pass options.
+                    </p>
+                  </div>
+                </div>
+              ) : genderEligiblePasses.length === 1 ? (
                 <div className="flex items-center gap-3 p-4 rounded-lg border border-primary/40 bg-primary/5">
                   <Ticket className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1">
-                    <div className="font-medium text-sm">{program.requiredPasses![0].name}</div>
+                    <div className="font-medium text-sm">{genderEligiblePasses[0].name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {program.requiredPasses![0].sessionLimit} sessions / {program.requiredPasses![0].limitPeriod === "WEEKLY" ? "week" : "month"}
+                      {genderEligiblePasses[0].sessionLimit} sessions / {genderEligiblePasses[0].limitPeriod === "WEEKLY" ? "week" : "month"}
                     </div>
                   </div>
-                  <span className="font-bold">{formatPrice(program.requiredPasses![0].price)}/{program.requiredPasses![0].billingInterval.toLowerCase().replace("_", "-")}</span>
+                  <span className="font-bold">{formatPrice(genderEligiblePasses[0].price)}/{genderEligiblePasses[0].billingInterval.toLowerCase().replace("_", "-")}</span>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {program.requiredPasses?.map(p => {
+                  {genderEligiblePasses.map(p => {
                     const isSelected = selectedPass?.id === p.id
                     return (
                       <button

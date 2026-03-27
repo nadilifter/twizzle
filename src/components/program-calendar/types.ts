@@ -22,6 +22,8 @@ export interface CalendarEvent {
   hasAgeRestriction?: boolean;
   minAge?: number | null;
   maxAge?: number | null;
+  hasGenderRestriction?: boolean;
+  allowedGenders?: string[];
   hasLevelRestriction?: boolean;
   levelIds?: string[];
   coachIds?: string[];

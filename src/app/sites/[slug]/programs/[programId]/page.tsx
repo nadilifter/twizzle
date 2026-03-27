@@ -67,7 +67,7 @@ const getCachedProgramDetail = unstable_cache(
                 },
                 requiredMemberships: {
                     include: {
-                        group: { select: { id: true, name: true } },
+                        group: { select: { id: true, name: true, hasGenderRestriction: true, allowedGenders: true } },
                     },
                 },
                 requiredPasses: {
@@ -75,6 +75,7 @@ const getCachedProgramDetail = unstable_cache(
                     select: {
                         id: true, name: true, price: true,
                         billingInterval: true, sessionLimit: true, limitPeriod: true,
+                        hasGenderRestriction: true, allowedGenders: true,
                     },
                 },
                 waiverRequirements: {
@@ -162,6 +163,17 @@ export default async function ProgramDetailPage({
             : `Up to age ${program.maxAge}`
         : null;
 
+    const GENDER_LABELS: Record<string, string> = {
+        MALE: "Male",
+        FEMALE: "Female",
+        OTHER: "Other",
+        PREFER_NOT_TO_SAY: "Prefer Not to Say",
+    };
+
+    const genderLabel = program.hasGenderRestriction && program.allowedGenders.length > 0
+        ? program.allowedGenders.map(g => GENDER_LABELS[g] || g).join(", ")
+        : null;
+
     const daysLabel = program.rrule ? formatRRuleDays(program.rrule) : null;
 
     const locationLabel = program.facility
@@ -202,7 +214,12 @@ export default async function ProgramDetailPage({
             name: m.name,
             price: Number(m.price),
             billingInterval: m.billingInterval,
-            group: m.group,
+            group: {
+                id: m.group.id,
+                name: m.group.name,
+                hasGenderRestriction: m.group.hasGenderRestriction,
+                allowedGenders: m.group.allowedGenders,
+            },
         })),
         hasPassRestriction: program.hasPassRestriction,
         requiredPasses: (program.requiredPasses || []).map(p => ({
@@ -212,6 +229,8 @@ export default async function ProgramDetailPage({
             billingInterval: p.billingInterval,
             sessionLimit: p.sessionLimit,
             limitPeriod: p.limitPeriod,
+            hasGenderRestriction: p.hasGenderRestriction,
+            allowedGenders: p.allowedGenders,
         })),
         waiverRequirements: program.waiverRequirements,
         registrationOpen: program.registrationOpen,
@@ -376,6 +395,13 @@ export default async function ProgramDetailPage({
                             <div className="flex items-center gap-1.5">
                                 <UserCheck className="h-4 w-4" />
                                 <span>{ageLabel}</span>
+                            </div>
+                        )}
+
+                        {genderLabel && (
+                            <div className="flex items-center gap-1.5">
+                                <UserCheck className="h-4 w-4" />
+                                <span>{genderLabel}</span>
                             </div>
                         )}
 

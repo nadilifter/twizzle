@@ -90,6 +90,8 @@ interface ProgramCardProps {
     hasAgeRestriction?: boolean;
     minAge?: number | null;
     maxAge?: number | null;
+    hasGenderRestriction?: boolean;
+    allowedGenders?: ("MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY")[];
     hasLevelRestriction?: boolean;
     hasMembershipRestriction?: boolean;
     waitlistEnabled?: boolean;
@@ -158,6 +160,17 @@ export function ProgramCard({ program }: ProgramCardProps) {
       : program.minAge
       ? `Ages ${program.minAge}+`
       : `Up to age ${program.maxAge}`
+    : null;
+
+  const GENDER_LABELS: Record<string, string> = {
+    MALE: "Male",
+    FEMALE: "Female",
+    OTHER: "Other",
+    PREFER_NOT_TO_SAY: "Prefer Not to Say",
+  };
+
+  const genderLabel = program.hasGenderRestriction && program.allowedGenders && program.allowedGenders.length > 0
+    ? program.allowedGenders.map(g => GENDER_LABELS[g] || g).join(", ")
     : null;
 
   return (
@@ -286,12 +299,18 @@ export function ProgramCard({ program }: ProgramCardProps) {
           </div>
         )}
 
-        {(ageLabel || (program.hasCapacityRestriction && totalCapacity > 0) || requiredMemberships.length > 0) && (
+        {(ageLabel || genderLabel || (program.hasCapacityRestriction && totalCapacity > 0) || requiredMemberships.length > 0) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {ageLabel && (
               <div className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-full">
                 <UserCheck className="h-3 w-3" />
                 {ageLabel}
+              </div>
+            )}
+            {genderLabel && (
+              <div className="inline-flex items-center gap-1 text-[10px] font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30 px-2 py-0.5 rounded-full">
+                <UserCheck className="h-3 w-3" />
+                {genderLabel}
               </div>
             )}
             {program.hasCapacityRestriction && totalCapacity > 0 && (

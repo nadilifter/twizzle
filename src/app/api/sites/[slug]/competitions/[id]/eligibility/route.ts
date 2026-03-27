@@ -241,6 +241,16 @@ export async function POST(
       eligibleCategoryIds.push(category.id);
     }
 
+    if (eligibleCategoryIds.length === 0) {
+      return NextResponse.json({
+        eligible: false,
+        reasons: ["No eligible events found for this athlete based on age and gender requirements"],
+        eligibleCategoryIds: [],
+        requiresMembershipPurchase: false,
+        availableMemberships: [],
+      });
+    }
+
     return NextResponse.json({
       eligible: true,
       reasons: [],
