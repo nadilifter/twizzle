@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { uploadFile, deleteFile, getPublicUrl, parseStorageUrl } from "@/lib/storage";
 import { getCurrentEnvironment } from "@/lib/env-domains";
 import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { validateFileContent } from "@/lib/file-validation";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { db } from "@/lib/db"; // tenant-isolation-ok: Athlete is not a tenant model; auth checks use org scoping
@@ -81,6 +82,12 @@ export async function POST(
 
     if (buffer.length > maxSize) {
       return NextResponse.json({ error: "Image must be smaller than 5MB" }, { status: 400 });
+    }
+
+    const ext = path.extname(file.name).toLowerCase();
+    const validation = await validateFileContent(buffer, ext, { allowedCategory: "image" });
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     const timestamp = Date.now();

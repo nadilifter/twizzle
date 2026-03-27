@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { uploadFile, getRegistrationFileKey, getPublicUrl, deleteFile } from "@/lib/storage";
 import { getCurrentEnvironment } from "@/lib/env-domains";
+import { validateFileContent } from "@/lib/file-validation";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 import { db } from "@/lib/db";
@@ -110,6 +111,11 @@ export async function POST(request: NextRequest) {
         { error: `File type ${ext} is not accepted. Allowed: ${acceptedExtensions.join(", ")}` },
         { status: 400 }
       );
+    }
+
+    const validation = await validateFileContent(buffer, ext);
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Check org storage limits

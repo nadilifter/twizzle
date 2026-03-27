@@ -11,8 +11,12 @@ import { checkApiRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { db } from "@/lib/db";
+import {
+  validateFileContent,
+  ALLOWED_ASSET_EXTENSIONS,
+  MAX_ASSET_FILE_SIZE,
+} from "@/lib/file-validation";
 
-// Content type mapping for common image types
 const CONTENT_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -41,10 +45,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    const ext = path.extname(file.name).toLowerCase();
+
+    if (!ALLOWED_ASSET_EXTENSIONS.has(ext)) {
+      return NextResponse.json(
+        { error: `File type ${ext} is not allowed. Accepted types: ${[...ALLOWED_ASSET_EXTENSIONS].join(", ")}` },
+        { status: 400 }
+      );
+    }
+
     const bytes = await file.arrayBuffer();
     let buffer = Buffer.from(bytes);
 
-    const ext = path.extname(file.name).toLowerCase();
+    if (buffer.length > MAX_ASSET_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `File exceeds the maximum size of ${MAX_ASSET_FILE_SIZE / (1024 * 1024)} MB` },
+        { status: 400 }
+      );
+    }
+
+    const validation = await validateFileContent(buffer, ext, { allowedCategory: "image" });
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
 
     if (ext === ".svg") {
       const svgText = buffer.toString("utf-8");

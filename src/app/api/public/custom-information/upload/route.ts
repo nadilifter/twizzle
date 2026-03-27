@@ -4,11 +4,15 @@ import { getAuthSession } from "@/lib/auth";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 import { uploadFile, getSignedUrl } from "@/lib/storage";
 import { getCurrentEnvironment } from "@/lib/env-domains";
+import { validateFileContent } from "@/lib/file-validation";
 import path from "path";
 import { writeFile, mkdir } from "fs/promises";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"]);
+const ALLOWED_MIMES = new Set([
+  "image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf",
+]);
 
 /**
  * POST /api/public/custom-information/upload
@@ -65,6 +69,11 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    const validation = await validateFileContent(buffer, ext, { allowedMimes: ALLOWED_MIMES });
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
     const timestamp = Date.now();
     const fileName = `${athleteId}-${timestamp}${ext}`;
     const storageKey = `organizations/${organizationId}/custom-info/${questionId}/${fileName}`;

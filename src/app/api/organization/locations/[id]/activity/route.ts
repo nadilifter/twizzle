@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { getScopedDb } from "@/lib/db";
-import type { FacilityActivityItem, FacilityActivitySort, FacilityActivityType } from "@/types/facilities";
+import type { FacilityActivityItem, FacilityActivitySort, FacilityActivityType } from "@/types/locations";
 
 const ACTIVITY_SORTS: FacilityActivitySort[] = [
   "date_asc",

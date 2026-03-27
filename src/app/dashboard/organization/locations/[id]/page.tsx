@@ -30,7 +30,7 @@ import {
   X,
 } from "lucide-react"
 import { useBreadcrumbOverride } from "@/components/breadcrumb-context"
-import { useFacility, useFacilityNotes, useFacilityActivity } from "@/hooks/use-facilities"
+import { useFacility, useFacilityNotes, useFacilityActivity } from "@/hooks/use-locations"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -95,7 +95,7 @@ import type {
   FacilityActivityType,
   FacilityAssignment,
   FacilityOperatingHours,
-} from "@/types/facilities"
+} from "@/types/locations"
 
 const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
