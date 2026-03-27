@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
           name: true,
           email: true,
           phone: true,
+          phoneVerified: true,
           balance: true,
           status: true,
           athleteGuardians: {
@@ -80,6 +81,7 @@ export async function GET(request: NextRequest) {
       name: u.name,
       email: u.email,
       phone: u.phone,
+      phoneVerified: u.phoneVerified,
       balance: u.balance,
       status: u.status,
       athletes: u.athleteGuardians.map((ag) => ag.athlete),

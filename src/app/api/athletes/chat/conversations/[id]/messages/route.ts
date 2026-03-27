@@ -5,7 +5,7 @@ import {
   getConversationOwnership,
   getConversationMessages,
   sendAthleteReply,
-} from "@/lib/sms-conversation-service";
+} from "@/lib/conversation-service";
 
 // GET /api/athletes/chat/conversations/[id]/messages - Get messages
 export async function GET(
@@ -34,10 +34,10 @@ export async function GET(
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50") || 50));
 
-    const result = await getConversationMessages(id, { page, limit });
+    const result = await getConversationMessages(id, { page, limit, userId });
 
     return NextResponse.json(result);
   } catch (error) {
@@ -52,8 +52,9 @@ export async function GET(
 const sendMessageSchema = z.object({
   body: z
     .string()
+    .trim()
     .min(1, "Message body is required")
-    .max(1600, "Message too long"),
+    .max(5000, "Message too long"),
 });
 
 // POST /api/athletes/chat/conversations/[id]/messages - Send a reply

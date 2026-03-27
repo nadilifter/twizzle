@@ -26,7 +26,7 @@ export async function GET(
 
     const { id } = await params;
 
-    const message = await db.smsMessage.findUnique({
+    const message = await db.message.findUnique({
       where: {
         id,
         organizationId: session.user.organizationId,

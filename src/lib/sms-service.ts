@@ -8,7 +8,7 @@ import {
   isTwilioConfigured,
 } from "@/lib/twilio";
 import { getPoolNumberForSend } from "@/lib/sms-number-pool";
-import type { SmsClassification, SmsStatus, SmsCampaignStatus, AnnouncementScope } from "@prisma/client";
+import type { MessageClassification, MessageStatus, SmsCampaignStatus, AnnouncementScope } from "@prisma/client";
 
 /**
  * SMS Service
@@ -28,7 +28,7 @@ export interface SendSingleSmsParams {
   organizationId: string;
   to: string;
   body: string;
-  classification?: SmsClassification;
+  classification?: MessageClassification;
   userId?: string;
   memberId?: string;
   campaignId?: string;
@@ -46,7 +46,7 @@ export interface SendCampaignParams {
   organizationId: string;
   name: string;
   body: string;
-  classification?: SmsClassification;
+  classification?: MessageClassification;
   targetScope: AnnouncementScope;
   targetProgramId?: string;
   targetEventId?: string;
@@ -390,11 +390,12 @@ export async function sendSingleSms(
   const fromNumber = await getPoolNumberForSend(normalizedPhone, organizationId);
 
   // Create message record first (for tracking)
-  const smsMessage = await db.smsMessage.create({
+  const smsMessage = await db.message.create({
     data: {
       organizationId,
       userId,
       campaignId,
+      channel: "SMS",
       to: normalizedPhone,
       from: fromNumber,
       body,
@@ -416,7 +417,7 @@ export async function sendSingleSms(
 
   if (result.success && result.sid) {
     // Update message with Twilio SID
-    await db.smsMessage.update({
+    await db.message.update({
       where: { id: smsMessage.id },
       data: {
         twilioSid: result.sid,
@@ -435,7 +436,7 @@ export async function sendSingleSms(
     };
   } else {
     // Update message with error
-    await db.smsMessage.update({
+    await db.message.update({
       where: { id: smsMessage.id },
       data: {
         twilioStatus: "FAILED",
@@ -698,7 +699,7 @@ export async function handleStatusCallback(params: {
   const { MessageSid, MessageStatus, ErrorCode, ErrorMessage, Price } = params;
 
   // Find message by Twilio SID
-  const message = await db.smsMessage.findUnique({
+  const message = await db.message.findUnique({
     where: { twilioSid: MessageSid },
   });
 
@@ -729,7 +730,7 @@ export async function handleStatusCallback(params: {
     updateData.cost = cost;
   }
 
-  await db.smsMessage.update({
+  await db.message.update({
     where: { id: message.id },
     data: updateData,
   });
@@ -805,7 +806,7 @@ export async function handleInboundSms(params: {
   }
 
   // Route ALL inbound messages to conversations
-  const { routeInboundMessage } = await import("@/lib/sms-conversation-service");
+  const { routeInboundMessage } = await import("@/lib/conversation-service");
   await routeInboundMessage({
     from: From,
     to: To,

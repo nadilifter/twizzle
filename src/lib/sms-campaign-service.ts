@@ -13,7 +13,7 @@ import {
 } from "@/lib/sms-service";
 import { getPoolNumberForSend } from "@/lib/sms-number-pool";
 import type {
-  SmsClassification,
+  MessageClassification,
   SmsTargetType,
   AnnouncementScope,
 } from "@prisma/client";
@@ -54,7 +54,7 @@ export interface CreateSmsCampaignParams {
   organizationId: string;
   name: string;
   body: string;
-  classification?: SmsClassification;
+  classification?: MessageClassification;
   targetType: SmsTargetType;
   targetProgramId?: string;
   targetEventId?: string;
@@ -835,7 +835,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
     const fromNumber = await getPoolNumberForSend(recipient.phone, campaign.organizationId);
 
     // Create message record
-    const smsMessage = await db.smsMessage.create({
+    const smsMessage = await db.message.create({
       data: {
         organizationId: campaign.organizationId,
         userId: recipient.userId || undefined,
@@ -860,7 +860,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
     });
 
     if (result.success && result.sid) {
-      await db.smsMessage.update({
+      await db.message.update({
         where: { id: smsMessage.id },
         data: {
           twilioSid: result.sid,
@@ -872,7 +872,7 @@ export async function executeSmsCampaign(campaignId: string): Promise<void> {
       await recordUsage(campaign.organizationId, segments);
       sentCount++;
     } else {
-      await db.smsMessage.update({
+      await db.message.update({
         where: { id: smsMessage.id },
         data: {
           twilioStatus: "FAILED",

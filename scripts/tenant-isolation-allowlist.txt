@@ -44,6 +44,8 @@ src/app/api/sms/[id]/route.ts
 src/app/api/sms/sync/route.ts
 src/app/api/sms/campaigns/route.ts
 src/app/api/sms/conversations/route.ts
+src/app/api/chat/conversations/route.ts
+src/app/api/chat/unread-count/route.ts
 src/app/api/email/campaigns/route.ts
 src/app/api/lesson-plans/route.ts
 src/app/api/levels/route.ts

@@ -5,8 +5,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import {
   Search,
   Send,
@@ -15,12 +13,13 @@ import {
   Building2,
   Loader2,
   AlertTriangle,
+  Globe,
   Phone,
-  ArrowRight,
+  Mail,
 } from "lucide-react"
 import { toast } from "sonner"
+import DOMPurify from "dompurify"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
 
 import { Chat } from "@/components/chat/chat"
 import {
@@ -45,11 +44,14 @@ import {
 // Types
 // ============================================
 
+type ConversationChannel = "WEB_ONLY" | "WEB_SMS" | "WEB_EMAIL"
+
 interface Conversation {
   id: string
   organizationId: string
   organizationName: string
   organizationLogo: string | null
+  channel: ConversationChannel
   status: "OPEN" | "CLOSED" | "ARCHIVED"
   lastMessageAt: string | null
   lastMessageBody: string | null
@@ -60,6 +62,7 @@ interface Conversation {
 interface Message {
   id: string
   body: string
+  channel: string
   direction: "INBOUND" | "OUTBOUND"
   twilioStatus: string
   createdAt: string
@@ -67,11 +70,65 @@ interface Message {
   deliveredAt: string | null
   failedAt: string | null
   errorMessage: string | null
+  emailSubject: string | null
+  htmlBody: string | null
 }
 
-interface UserPhoneStatus {
-  phone: string | null
-  phoneVerified: boolean
+// ============================================
+// Channel helpers
+// ============================================
+
+const channelIcons = {
+  WEB_ONLY: Globe,
+  WEB_SMS: Phone,
+  WEB_EMAIL: Mail,
+} as const
+
+const messageChannelIcon = {
+  WEB: Globe,
+  SMS: Phone,
+  EMAIL: Mail,
+} as const
+
+const channelColors = {
+  WEB_ONLY: "text-blue-500",
+  WEB_SMS: "text-green-500",
+  WEB_EMAIL: "text-purple-500",
+} as const
+
+// ============================================
+// Email Message Card
+// ============================================
+
+function EmailMessageCard({ htmlBody, subject }: { htmlBody: string; subject: string | null }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const sanitizedHtml = DOMPurify.sanitize(htmlBody, { USE_PROFILES: { html: true } })
+
+  return (
+    <div className="border rounded-lg overflow-hidden bg-background">
+      {subject && (
+        <div className="px-3 py-1.5 border-b bg-muted/30 flex items-center gap-1">
+          <Mail className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs font-medium truncate">{subject}</span>
+        </div>
+      )}
+      <div
+        className={cn("px-3 py-2 text-sm", !expanded && "max-h-[120px] overflow-hidden relative")}
+      >
+        <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} className="prose prose-sm max-w-none" />
+        {!expanded && (
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
+        )}
+      </div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-center text-xs text-muted-foreground hover:text-foreground py-1 border-t"
+      >
+        {expanded ? "Show less" : "Show more"}
+      </button>
+    </div>
+  )
 }
 
 // ============================================
@@ -124,42 +181,49 @@ function ConversationSidebar({
           </div>
         ) : (
           <div className="divide-y">
-            {conversations.map((conv) => (
-              <button
-                key={conv.id}
-                onClick={() => onSelect(conv.id)}
-                className={cn(
-                  "w-full text-left p-3 hover:bg-muted/50 transition-colors",
-                  selectedId === conv.id && "bg-muted"
-                )}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Building2 className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-sm font-medium truncate">{conv.organizationName}</span>
-                      {conv.unreadCount > 0 && (
-                        <Badge variant="default" className="h-5 min-w-[20px] px-1.5 text-[10px]">
-                          {conv.unreadCount}
-                        </Badge>
+            {conversations.map((conv) => {
+              const ChanIcon = channelIcons[conv.channel] || Globe
+              const chanColor = channelColors[conv.channel] || "text-muted-foreground"
+              return (
+                <button
+                  key={conv.id}
+                  onClick={() => onSelect(conv.id)}
+                  className={cn(
+                    "w-full text-left p-3 hover:bg-muted/50 transition-colors",
+                    selectedId === conv.id && "bg-muted"
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Building2 className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="text-sm font-medium truncate">{conv.organizationName}</span>
+                          <ChanIcon className={cn("h-3 w-3 shrink-0", chanColor)} />
+                        </div>
+                        {conv.unreadCount > 0 && (
+                          <Badge variant="default" className="h-5 min-w-[20px] px-1.5 text-[10px]">
+                            {conv.unreadCount}
+                          </Badge>
+                        )}
+                      </div>
+                      {conv.lastMessageBody && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {conv.lastMessageBody.substring(0, 60)}
+                        </p>
+                      )}
+                      {conv.lastMessageAt && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {formatRelativeTime(new Date(conv.lastMessageAt))}
+                        </p>
                       )}
                     </div>
-                    {conv.lastMessageBody && (
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {conv.lastMessageBody.substring(0, 60)}
-                      </p>
-                    )}
-                    {conv.lastMessageAt && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {formatRelativeTime(new Date(conv.lastMessageAt))}
-                      </p>
-                    )}
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         )}
       </ScrollArea>
@@ -211,31 +275,8 @@ export default function AthleteChatPage() {
   const [newMessage, setNewMessage] = useState("")
   const [isSending, setIsSending] = useState(false)
 
-  const [phoneStatus, setPhoneStatus] = useState<UserPhoneStatus | null>(null)
-  const [isLoadingPhone, setIsLoadingPhone] = useState(true)
-
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const messagesPollRef = useRef<NodeJS.Timeout | null>(null)
-
-  useEffect(() => {
-    async function fetchPhoneStatus() {
-      try {
-        const res = await fetch("/api/user/profile")
-        if (res.ok) {
-          const data = await res.json()
-          setPhoneStatus({
-            phone: data.phone,
-            phoneVerified: data.phoneVerified,
-          })
-        }
-      } catch (error) {
-        console.error("Error fetching phone status:", error)
-      } finally {
-        setIsLoadingPhone(false)
-      }
-    }
-    fetchPhoneStatus()
-  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(conversationSearch), 300)
@@ -368,48 +409,6 @@ export default function AthleteChatPage() {
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId)
 
   // ============================================
-  // Phone prompt check
-  // ============================================
-
-  const needsPhone = phoneStatus && (!phoneStatus.phone || !phoneStatus.phoneVerified)
-
-  if (isLoadingPhone) {
-    return (
-      <div className="flex h-[calc(100vh-3rem)] items-center justify-center p-4 md:p-6">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  if (needsPhone) {
-    return (
-      <div className="flex h-[calc(100vh-3rem)] items-center justify-center p-4 md:p-6">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-              <Phone className="h-7 w-7 text-primary" />
-            </div>
-            <CardTitle>Phone Number Required</CardTitle>
-            <CardDescription>
-              {!phoneStatus?.phone
-                ? "To use SMS messaging, you need to add and verify a phone number on your account."
-                : "Your phone number is not yet verified. Please verify it to use SMS messaging."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <Button asChild>
-              <Link href="/athletes/account">
-                {!phoneStatus?.phone ? "Add Phone Number" : "Verify Phone Number"}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // ============================================
   // Render
   // ============================================
 
@@ -458,7 +457,7 @@ export default function AthleteChatPage() {
                   </ChatHeaderMain>
                 </ChatHeader>
 
-                {/* Messages — direction is flipped relative to admin view */}
+                {/* Messages */}
                 <ChatMessages>
                   {isLoadingMessages ? (
                     <div className="flex items-center justify-center py-12">
@@ -474,6 +473,7 @@ export default function AthleteChatPage() {
                       {messages.map((msg, idx) => {
                         const isFromMe = msg.direction === "INBOUND"
                         const showDateSep = idx === 0 || new Date(msg.createdAt).toDateString() !== new Date(messages[idx - 1].createdAt).toDateString()
+                        const MsgChanIcon = messageChannelIcon[msg.channel as keyof typeof messageChannelIcon] || Globe
 
                         return (
                           <div key={msg.id}>
@@ -491,10 +491,15 @@ export default function AthleteChatPage() {
                             {isFromMe ? (
                               <div className="flex justify-end px-3 py-0.5">
                                 <div className="max-w-[75%]">
-                                  <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3 py-2">
-                                    <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
-                                  </div>
+                                  {msg.htmlBody ? (
+                                    <EmailMessageCard htmlBody={msg.htmlBody} subject={msg.emailSubject} />
+                                  ) : (
+                                    <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3 py-2">
+                                      <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                                    </div>
+                                  )}
                                   <div className="flex items-center justify-end gap-1 mt-0.5">
+                                    <MsgChanIcon className="h-3 w-3 text-muted-foreground" />
                                     <ChatEventTime
                                       timestamp={new Date(msg.createdAt)}
                                       format="time"
@@ -506,10 +511,15 @@ export default function AthleteChatPage() {
                             ) : (
                               <div className="flex justify-start px-3 py-0.5">
                                 <div className="max-w-[75%]">
-                                  <div className="bg-muted rounded-2xl rounded-bl-sm px-3 py-2">
-                                    <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
-                                  </div>
+                                  {msg.htmlBody ? (
+                                    <EmailMessageCard htmlBody={msg.htmlBody} subject={msg.emailSubject} />
+                                  ) : (
+                                    <div className="bg-muted rounded-2xl rounded-bl-sm px-3 py-2">
+                                      <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                                    </div>
+                                  )}
                                   <div className="flex items-center gap-1 mt-0.5">
+                                    <MsgChanIcon className="h-3 w-3 text-muted-foreground" />
                                     <ChatEventTime
                                       timestamp={new Date(msg.createdAt)}
                                       format="time"

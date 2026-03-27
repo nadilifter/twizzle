@@ -172,6 +172,9 @@ importers:
       date-holidays:
         specifier: ^3.26.11
         version: 3.26.11
+      dompurify:
+        specifier: ^3.3.3
+        version: 3.3.3
       dotted-map:
         specifier: ^2.2.3
         version: 2.2.3

@@ -8,7 +8,7 @@ import { isTwilioConfigured } from "@/lib/twilio";
 
 const sendSmsSchema = z.object({
   to: z.string().min(1, "Phone number is required"),
-  body: z.string().min(1, "Message body is required").max(1600, "Message too long"),
+  body: z.string().trim().min(1, "Message body is required").max(1600, "Message too long"),
   classification: z
     .enum(["GENERAL", "REMINDER", "ALERT", "BILLING", "EVENT", "NEWS"])
     .optional()
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [messages, total] = await Promise.all([
-      db.smsMessage.findMany({
+      db.message.findMany({
         where,
         include: {
           campaign: {
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
-      db.smsMessage.count({ where }),
+      db.message.count({ where }),
     ]);
 
     // Get usage stats

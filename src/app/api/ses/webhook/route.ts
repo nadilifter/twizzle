@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import MessageValidator from "sns-validator";
+import { validateSnsMessage, validateSubscribeUrl } from "@/lib/sns";
 import {
   handleEmailDelivery,
   handleEmailBounce,
@@ -27,18 +27,6 @@ import {
  * 3. Configure SES to publish events to the SNS topic
  * 4. Set SNS_TOPIC_ARN env var to restrict accepted topics (optional but recommended)
  */
-
-const snsValidator = new MessageValidator();
-
-function validateSnsMessage(body: Record<string, unknown>): Promise<Record<string, unknown>> {
-  return new Promise((resolve, reject) => {
-    snsValidator.validate(body, (err, message) => {
-      if (err) reject(err);
-      else if (message) resolve(message);
-      else reject(new Error("SNS validation returned no message"));
-    });
-  });
-}
 
 interface SESNotification {
   notificationType: "Delivery" | "Bounce" | "Complaint" | "Open" | "Click";
@@ -121,16 +109,17 @@ export async function POST(request: NextRequest) {
 
     const messageType = snsMessage.Type as string;
 
-    // Handle SNS subscription confirmation (signature already verified above)
     if (messageType === "SubscriptionConfirmation") {
       const subscribeUrl = snsMessage.SubscribeURL as string | undefined;
-      if (subscribeUrl) {
-        try {
-          await fetch(subscribeUrl);
-          console.log("SNS subscription confirmed for topic:", snsMessage.TopicArn);
-        } catch (error) {
-          console.error("Failed to confirm SNS subscription:", error);
-        }
+      if (!subscribeUrl || !validateSubscribeUrl(subscribeUrl)) {
+        console.error("SubscribeURL rejected (SSRF check):", subscribeUrl);
+        return NextResponse.json({ error: "Invalid SubscribeURL" }, { status: 400 });
+      }
+      try {
+        await fetch(subscribeUrl);
+        console.log("SNS subscription confirmed for topic:", snsMessage.TopicArn);
+      } catch (error) {
+        console.error("Failed to confirm SNS subscription:", error);
       }
       return NextResponse.json({ message: "Subscription confirmation received" });
     }

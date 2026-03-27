@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { z } from "zod";
 import {
-  getConversation,
   getConversationOwnership,
   markConversationReadByAthlete,
-} from "@/lib/sms-conversation-service";
+} from "@/lib/conversation-service";
 
 // GET /api/athletes/chat/conversations/[id] - Get conversation detail
 export async function GET(
@@ -24,7 +23,7 @@ export async function GET(
         : session.user.id;
 
     const { id } = await params;
-    const conversation = await getConversation(id);
+    const conversation = await getConversationOwnership(id);
 
     if (!conversation || conversation.userId !== userId) {
       return NextResponse.json(
@@ -33,7 +32,11 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(conversation);
+    return NextResponse.json({
+      id: conversation.id,
+      channel: conversation.channel,
+      organizationId: conversation.organizationId,
+    });
   } catch (error) {
     console.error("Error fetching athlete conversation:", error);
     return NextResponse.json(
@@ -77,7 +80,7 @@ export async function PATCH(
     const data = updateSchema.parse(body);
 
     if (data.markRead) {
-      await markConversationReadByAthlete(id);
+      await markConversationReadByAthlete(id, userId);
     }
 
     return NextResponse.json({ success: true });

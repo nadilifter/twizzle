@@ -11,7 +11,7 @@ import { calculateSegments } from "@/lib/twilio";
 import type { SmsTargetType } from "@prisma/client";
 
 const previewSchema = z.object({
-  body: z.string().min(1, "Message body is required"),
+  body: z.string().trim().min(1, "Message body is required"),
   // Expanded targeting
   targetType: z
     .enum([

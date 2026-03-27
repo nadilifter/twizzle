@@ -93,11 +93,11 @@ model Organization {
   shifts            Shift[]
   scheduleTemplates ScheduleTemplate[]
 
-  // SMS
-  smsMessages          SmsMessage[]
+  // Chat / SMS
+  messages             Message[]
   smsCampaigns         SmsCampaign[]
   smsUsage             SmsUsage[]
-  smsConversations     SmsConversation[]
+  conversations        Conversation[]
   smsNumberAssignments SmsNumberAssignment[]
 
   // Email
@@ -275,8 +275,8 @@ model User {
   userAthletePasses    AthletePass[]    @relation("UserAthletePasses")
 
   // Communication
-  userSmsMessages      SmsMessage[]      @relation("UserSmsMessages")
-  userSmsConversations SmsConversation[] @relation("UserSmsConversations")
+  userMessages         Message[]         @relation("UserMessages")
+  userConversations    Conversation[]    @relation("UserConversations")
   userEmailMessages    EmailMessage[]    @relation("UserEmailMessages")
 
   // Registration
@@ -2268,31 +2268,39 @@ enum AnnouncementPriority {
 }
 
 // ============================================
-// SMS Messaging
+// Chat / Messaging
 // ============================================
 
-model SmsMessage {
+model Message {
   id             String  @id @default(cuid())
   organizationId String
   userId         String? // Recipient user (if outbound)
   campaignId     String? // Part of a campaign
   conversationId String? // Part of a conversation thread
 
-  // Message details
-  to       String // E.164 format phone number
-  from     String // Twilio number used
-  body     String @db.Text
-  segments Int    @default(1) // SMS segment count
+  // Channel this individual message was sent/received on
+  channel MessageChannel @default(SMS)
 
-  // Twilio tracking
-  twilioSid    String?   @unique // Twilio message SID
-  twilioStatus SmsStatus @default(QUEUED)
+  // Message details
+  to       String  @default("") // E.164 phone (SMS) or email address; empty for web-only
+  from     String  @default("") // Twilio number or sender email; empty for web-only
+  body     String  @db.Text
+  segments Int     @default(1) // SMS segment count
+
+  // SMS tracking (Twilio)
+  twilioSid    String?       @unique
+  twilioStatus MessageStatus @default(QUEUED)
+
+  // Email tracking (SES)
+  sesMessageId String? @unique
+  emailSubject String?
+  htmlBody     String? @db.Text
 
   // Direction
-  direction SmsDirection @default(OUTBOUND)
+  direction MessageDirection @default(OUTBOUND)
 
   // Classification
-  classification SmsClassification @default(GENERAL)
+  classification MessageClassification @default(GENERAL)
 
   // Cost tracking (in cents)
   cost Decimal? @db.Decimal(10, 4)
@@ -2310,10 +2318,10 @@ model SmsMessage {
   updatedAt DateTime @updatedAt
 
   // Relations
-  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User?            @relation("UserSmsMessages", fields: [userId], references: [id], onDelete: SetNull)
-  campaign     SmsCampaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  conversation SmsConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?         @relation("UserMessages", fields: [userId], references: [id], onDelete: SetNull)
+  campaign     SmsCampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([userId])
@@ -2322,9 +2330,16 @@ model SmsMessage {
   @@index([twilioSid])
   @@index([twilioStatus])
   @@index([createdAt])
+  @@map("SmsMessage")
 }
 
-enum SmsStatus {
+enum MessageChannel {
+  WEB
+  SMS
+  EMAIL
+}
+
+enum MessageStatus {
   QUEUED
   SENDING
   SENT
@@ -2333,12 +2348,12 @@ enum SmsStatus {
   FAILED
 }
 
-enum SmsDirection {
+enum MessageDirection {
   OUTBOUND
   INBOUND
 }
 
-enum SmsClassification {
+enum MessageClassification {
   GENERAL
   REMINDER
   ALERT
@@ -2347,12 +2362,18 @@ enum SmsClassification {
   NEWS
 }
 
+enum ConversationChannel {
+  WEB_ONLY
+  WEB_SMS
+  WEB_EMAIL
+}
+
 model SmsCampaign {
-  id             String            @id @default(cuid())
+  id             String                @id @default(cuid())
   organizationId String
   name           String
-  body           String            @db.Text
-  classification SmsClassification @default(GENERAL)
+  body           String                @db.Text
+  classification MessageClassification @default(GENERAL)
 
   // Targeting - legacy field kept for backward compatibility
   targetScope              AnnouncementScope @default(ALL)
@@ -2387,7 +2408,7 @@ model SmsCampaign {
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  messages     SmsMessage[]
+  messages     Message[]
 
   @@index([organizationId])
   @@index([status])
@@ -2414,14 +2435,18 @@ enum SmsCampaignStatus {
   CANCELLED
 }
 
-model SmsConversation {
+model Conversation {
   id             String  @id @default(cuid())
   organizationId String
   userId         String? // The guardian user in this conversation
-  phoneNumber    String // User's phone number (E.164)
+  phoneNumber    String  @default("") // User's phone number (E.164); empty for non-SMS
+  email          String? // User's email; used for WEB_EMAIL conversations
+
+  // Channel type for this conversation
+  channel ConversationChannel @default(WEB_SMS)
 
   // Status
-  status SmsConversationStatus @default(OPEN)
+  status ConversationStatus @default(OPEN)
 
   // Tracking
   lastMessageAt      DateTime?
@@ -2434,15 +2459,16 @@ model SmsConversation {
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User?        @relation("UserSmsConversations", fields: [userId], references: [id], onDelete: Cascade)
-  messages     SmsMessage[]
+  user         User?        @relation("UserConversations", fields: [userId], references: [id], onDelete: Cascade)
+  messages     Message[]
 
   @@unique([organizationId, userId])
   @@index([organizationId, lastMessageAt])
   @@index([organizationId, status])
+  @@map("SmsConversation")
 }
 
-enum SmsConversationStatus {
+enum ConversationStatus {
   OPEN
   CLOSED
   ARCHIVED

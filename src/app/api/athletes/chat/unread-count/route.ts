@@ -15,10 +15,9 @@ export async function GET(request: NextRequest) {
         ? session.user.viewingAsUserId
         : session.user.id;
 
-    const result = await db.smsConversation.aggregate({
+    const result = await db.conversation.aggregate({
       where: {
         userId,
-        messages: { some: { direction: "OUTBOUND" } },
       },
       _sum: { athleteUnreadCount: true },
     });

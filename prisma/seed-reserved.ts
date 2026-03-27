@@ -28,6 +28,7 @@ const RESERVED_DOMAIN_DATA = [
   { pattern: "app", type: ReservedDomainType.EXACT, reason: "System use - application" },
   { pattern: "www", type: ReservedDomainType.EXACT, reason: "System use - main website" },
   { pattern: "mail", type: ReservedDomainType.EXACT, reason: "System use - email services" },
+  { pattern: "chat", type: ReservedDomainType.EXACT, reason: "System use - inbound email for chat replies" },
   { pattern: "cdn", type: ReservedDomainType.EXACT, reason: "System use - content delivery" },
   { pattern: "static", type: ReservedDomainType.EXACT, reason: "System use - static assets" },
   { pattern: "assets", type: ReservedDomainType.EXACT, reason: "System use - asset hosting" },

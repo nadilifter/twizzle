@@ -6,7 +6,7 @@ import {
   getConversation,
   markConversationRead,
   updateConversationStatus,
-} from "@/lib/sms-conversation-service";
+} from "@/lib/conversation-service";
 
 // GET /api/sms/conversations/[id] - Get conversation detail
 export async function GET(
@@ -31,9 +31,9 @@ export async function GET(
 
     const { id } = await params;
 
-    const conversation = await getConversation(id);
+    const conversation = await getConversation(id, session.user.organizationId);
 
-    if (!conversation || conversation.organizationId !== session.user.organizationId) {
+    if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
@@ -75,9 +75,8 @@ export async function PATCH(
 
     const { id } = await params;
 
-    // Verify ownership
-    const conversation = await getConversation(id);
-    if (!conversation || conversation.organizationId !== session.user.organizationId) {
+    const conversation = await getConversation(id, session.user.organizationId);
+    if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
@@ -85,11 +84,11 @@ export async function PATCH(
     const data = updateSchema.parse(body);
 
     if (data.markRead) {
-      await markConversationRead(id);
+      await markConversationRead(id, session.user.organizationId);
     }
 
     if (data.status) {
-      await updateConversationStatus(id, data.status);
+      await updateConversationStatus(id, data.status, session.user.organizationId);
     }
 
     return NextResponse.json({ success: true });

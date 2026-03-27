@@ -116,7 +116,7 @@ export const FEATURE_SIDEBAR_MAP: Record<
     subItems: [
       {
         section: "Communication",
-        items: ["SMS Campaigns", "SMS Conversations"],
+        items: ["SMS Campaigns"],
       },
       {
         section: "Usage",

@@ -13,7 +13,7 @@ import type { SmsTargetType } from "@prisma/client";
 
 const createCampaignSchema = z.object({
   name: z.string().min(1, "Campaign name is required"),
-  body: z.string().min(1, "Message body is required").max(1600, "Message too long"),
+  body: z.string().trim().min(1, "Message body is required").max(1600, "Message too long"),
   classification: z
     .enum(["GENERAL", "REMINDER", "ALERT", "BILLING", "EVENT", "NEWS"])
     .optional()

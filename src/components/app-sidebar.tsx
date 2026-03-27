@@ -47,6 +47,44 @@ import type { LucideIcon } from "lucide-react"
 
 type NavSecondaryItem = { title: string; url: string; icon: LucideIcon; external?: boolean }
 
+const CHAT_URL = "/dashboard/communication/chat"
+const CHAT_UNREAD_CACHE_MS = 60_000
+let chatUnreadCache: { count: number; fetchedAt: number } | null = null
+
+function ChatUnreadBadge() {
+  const [count, setCount] = React.useState(() =>
+    chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS
+      ? chatUnreadCache.count
+      : 0
+  )
+
+  React.useEffect(() => {
+    if (chatUnreadCache && Date.now() - chatUnreadCache.fetchedAt < CHAT_UNREAD_CACHE_MS) {
+      setCount(chatUnreadCache.count)
+      return
+    }
+
+    let cancelled = false
+    fetch("/api/chat/unread-count")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (cancelled || !data) return
+        chatUnreadCache = { count: data.unreadCount, fetchedAt: Date.now() }
+        setCount(data.unreadCount)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  if (count <= 0) return null
+
+  return (
+    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-destructive-foreground">
+      {count}
+    </span>
+  )
+}
+
 // Module-level cache survives component remounts during client-side navigation
 let navSecondaryCache: { key: string; items: NavSecondaryItem[] } | null = null
 let actionItemsCache: { count: number; fetchedAt: number } | null = null
@@ -307,7 +345,7 @@ const data = {
           url: "/dashboard/communication/sms",
         },
         {
-          title: "SMS Chat",
+          title: "Chat",
           url: "/dashboard/communication/chat",
         },
         {
@@ -710,6 +748,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 <span>{subItem.title}</span>
                                 {subItem.url === ACTION_ITEMS_URL ? (
                                   <ActionItemsBadge />
+                                ) : subItem.url === CHAT_URL ? (
+                                  <ChatUnreadBadge />
                                 ) : (
                                   <FeatureStatusIndicator url={subItem.url} />
                                 )}

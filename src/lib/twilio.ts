@@ -137,23 +137,41 @@ export function isValidE164(phone: string): boolean {
 }
 
 /**
- * Calculate SMS segment count
- * GSM-7: 160 chars per segment (or 153 for multi-part)
- * UCS-2 (Unicode): 70 chars per segment (or 67 for multi-part)
+ * Calculate SMS segment count.
+ *
+ * GSM-7 basic charset: 160 chars per single segment, 153 per multi-part segment.
+ * GSM-7 extended chars ({, }, [, ], ~, \, ^, |, €): each costs 2 char slots
+ *   because they require an escape byte.
+ * UCS-2 (any non-GSM-7 character): 70 chars per single segment, 67 per multi-part.
  */
 export function calculateSegments(message: string): number {
-  // Check if message contains non-GSM-7 characters
-  const gsm7Chars = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ ÆæßÉ!"#¤%&'()*+,\-.\/0-9:;<=>?¡A-ZÄÖÑܧ¿a-zäöñüà]*$/;
-  const isGsm7 = gsm7Chars.test(message);
+  const gsm7Basic = new Set(
+    "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ ÆæßÉ!\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑܧ¿abcdefghijklmnopqrstuvwxyzäöñüà"
+  );
+  const gsm7Extended = new Set("{}[]~\\^|€");
 
-  const singleLimit = isGsm7 ? 160 : 70;
-  const multiLimit = isGsm7 ? 153 : 67;
+  let isGsm7 = true;
+  let gsm7Length = 0;
 
-  if (message.length <= singleLimit) {
-    return 1;
+  for (const char of message) {
+    if (gsm7Basic.has(char)) {
+      gsm7Length += 1;
+    } else if (gsm7Extended.has(char)) {
+      gsm7Length += 2;
+    } else {
+      isGsm7 = false;
+      break;
+    }
   }
 
-  return Math.ceil(message.length / multiLimit);
+  if (isGsm7) {
+    if (gsm7Length <= 160) return 1;
+    return Math.ceil(gsm7Length / 153);
+  }
+
+  const ucs2Length = message.length;
+  if (ucs2Length <= 70) return 1;
+  return Math.ceil(ucs2Length / 67);
 }
 
 export interface SendSmsOptions {
@@ -185,6 +203,14 @@ export async function sendSms(options: SendSmsOptions): Promise<SendSmsResult> {
       success: false,
       error: "Twilio is not configured",
       errorCode: "NOT_CONFIGURED",
+    };
+  }
+
+  if (body.length > 1600) {
+    return {
+      success: false,
+      error: "SMS body exceeds Twilio's 1600 character limit",
+      errorCode: "BODY_TOO_LONG",
     };
   }
 

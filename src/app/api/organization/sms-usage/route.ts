@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const dailyStats = await db.smsMessage.groupBy({
+    const dailyStats = await db.message.groupBy({
       by: ["twilioStatus"],
       where: {
         organizationId,

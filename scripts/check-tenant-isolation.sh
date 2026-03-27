@@ -29,8 +29,8 @@ TENANT_MODELS=(
   organizationMember membershipGroup pass discount gLCode ledgerEntry
   product waiver organizationInvitation organizationAthlete medicalFormConfig
   customMedicalQuestion level programInstance transaction payout
-  recurringCharge evaluationTemplate achievement smsMessage smsCampaign
-  smsConversation smsUsage emailMessage emailCampaign emailUsage media
+  recurringCharge evaluationTemplate achievement message smsCampaign
+  conversation smsUsage emailMessage emailCampaign emailUsage media
   facility equipment shift scheduleTemplate registrationQueueConfig
   notificationRule notificationLog competition competitionTeam
   registrationFile certification organizationSport organizationCategoryPreference

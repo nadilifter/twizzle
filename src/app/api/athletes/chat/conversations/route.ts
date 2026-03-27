@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
 
     const where: any = {
       userId,
-      messages: { some: { direction: "OUTBOUND" } },
     };
 
     if (search) {
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const conversations = await db.smsConversation.findMany({
+    const conversations = await db.conversation.findMany({
       where,
       include: {
         organization: {
@@ -49,6 +48,7 @@ export async function GET(request: NextRequest) {
         organizationId: c.organization.id,
         organizationName: c.organization.name,
         organizationLogo: c.organization.logo,
+        channel: c.channel,
         status: c.status,
         lastMessageAt: c.lastMessageAt,
         lastMessageBody: c.lastMessageBody,

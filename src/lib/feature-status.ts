@@ -153,8 +153,8 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
   },
   "/dashboard/communication/chat": {
     status: "live",
-    description: "SMS conversations with Twilio two-way messaging",
-    apiRoutes: ["/api/sms/conversations"],
+    description: "Multi-channel chat (Web, SMS, Email)",
+    apiRoutes: ["/api/chat/conversations"],
   },
   "/dashboard/communication/sms": {
     status: "live",

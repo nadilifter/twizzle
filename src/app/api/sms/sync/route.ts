@@ -34,7 +34,7 @@ export async function POST() {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-    const pendingMessages = await db.smsMessage.findMany({
+    const pendingMessages = await db.message.findMany({
       where: {
         organizationId,
         twilioSid: { not: null },
@@ -125,7 +125,7 @@ export async function POST() {
             updateData.errorMessage = twilioMessage.errorMessage || null;
           }
 
-          await scopedDb.smsMessage.update({
+          await scopedDb.message.update({
             where: { id: msg.id },
             data: updateData,
           });

@@ -9,7 +9,7 @@ import {
   markConversationRead,
 } from "@/lib/conversation-service";
 
-// GET /api/sms/conversations/[id]/messages - Get messages for a conversation
+// GET /api/chat/conversations/[id]/messages - Get messages for a conversation
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,9 +19,6 @@ export async function GET(
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
-    if (smsBlocked) return smsBlocked;
 
     if (
       !session.user.permissions?.includes("*") &&
@@ -62,10 +59,10 @@ export async function GET(
 }
 
 const sendMessageSchema = z.object({
-  body: z.string().trim().min(1, "Message body is required").max(1600, "Message too long"),
+  body: z.string().trim().min(1, "Message body is required").max(5000, "Message too long"),
 });
 
-// POST /api/sms/conversations/[id]/messages - Send a message in a conversation
+// POST /api/chat/conversations/[id]/messages - Send a message in a conversation
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -75,9 +72,6 @@ export async function POST(
     if (!session?.user?.organizationId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
-    if (smsBlocked) return smsBlocked;
 
     if (
       !session.user.permissions?.includes("*") &&
@@ -93,13 +87,22 @@ export async function POST(
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
+    // Feature gate: if conversation is WEB_SMS, the sms feature must be enabled
+    if (conversation.channel === "WEB_SMS") {
+      const smsBlocked = await checkFeatureGate(session.user.organizationId, "sms");
+      if (smsBlocked) return smsBlocked;
+    }
+
     const reqBody = await request.json();
     const { body } = sendMessageSchema.parse(reqBody);
 
     const result = await sendConversationMessage(id, body, session.user.organizationId, session.user.id);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+      return NextResponse.json(
+        { error: result.error, code: result.code },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({
