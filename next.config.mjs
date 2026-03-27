@@ -150,7 +150,6 @@ const nextConfig = {
   // Configure allowed remote image sources for Next.js Image component
   images: {
     remotePatterns: getImageRemotePatterns(),
-    quality: 90,
   },
   // Improve local development performance
   onDemandEntries: {

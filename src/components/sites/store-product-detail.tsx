@@ -183,6 +183,7 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
                 fill
                 className="object-cover animate-in fade-in duration-300"
                 sizes="(max-width: 1024px) 100vw, 50vw"
+                quality={90}
                 priority
               />
               {productUnavailable && (
@@ -230,6 +231,7 @@ export function StoreProductDetail({ product, primaryColor }: StoreProductDetail
                       fill
                       className="object-cover"
                       sizes="64px"
+                      quality={90}
                     />
                   </button>
                 )
