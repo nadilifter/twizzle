@@ -1440,6 +1440,8 @@ model Event {
   coachId             String?
   facilityId          String? // Optional - links to a Facility for scheduling
   requiredMemberships MembershipInstance[]
+  hasGenderRestriction Boolean              @default(false)
+  allowedGenders       GenderDeclaration[]
   hasFileRequirement  Boolean              @default(false)
   fileRequirementConfig Json?
   glCodeId            String?

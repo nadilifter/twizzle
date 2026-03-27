@@ -979,6 +979,49 @@ export async function POST(
       }
     }
 
+    // 2e. Server-side event gender restriction validation
+    const eventItems = items.filter((item: CartItem) => item.type === "event");
+    if (eventItems.length > 0) {
+      const eventIds = eventItems.map((item: CartItem) => item.referenceId).filter(Boolean);
+      const eventsWithGender = await db.event.findMany({
+        where: { id: { in: eventIds }, organizationId, hasGenderRestriction: true },
+        select: { id: true, title: true, allowedGenders: true },
+      });
+
+      if (eventsWithGender.length > 0) {
+        const eventGenderMap = new Map(eventsWithGender.map((e) => [e.id, e]));
+        const genderCheckPairs: { athleteId: string; eventId: string; athleteLabel: string }[] = [];
+
+        for (const item of eventItems) {
+          const eventId = item.referenceId;
+          const athleteId = item.athleteId || item.details?.athleteId;
+          if (!eventId || !athleteId || !eventGenderMap.has(eventId)) continue;
+          genderCheckPairs.push({ athleteId, eventId, athleteLabel: item.athleteName || athleteId });
+        }
+
+        if (genderCheckPairs.length > 0) {
+          const uniqueAthleteIds = [...new Set(genderCheckPairs.map((p) => p.athleteId))];
+          const eventAthletes = await db.athlete.findMany({
+            where: { id: { in: uniqueAthleteIds } },
+            select: { id: true, gender: true },
+          });
+          const athleteGenderMap = new Map(eventAthletes.map((a) => [a.id, a.gender]));
+
+          for (const { athleteId, eventId, athleteLabel } of genderCheckPairs) {
+            const evt = eventGenderMap.get(eventId)!;
+            if (evt.allowedGenders.length === 0) continue;
+            const athleteGender = athleteGenderMap.get(athleteId);
+            if (!athleteGender || !evt.allowedGenders.includes(athleteGender)) {
+              return NextResponse.json(
+                { error: `Athlete "${athleteLabel}" does not meet the gender requirement for "${evt.title}".` },
+                { status: 400 }
+              );
+            }
+          }
+        }
+      }
+    }
+
     // 3. Server-side price verification for all item types
     const serverPrices = new Map<number, number>();
 
