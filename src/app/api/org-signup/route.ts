@@ -313,10 +313,15 @@ export async function POST(request: NextRequest) {
       return { organization, userId: resolvedUserId }
     })
 
-    // If a payment method was collected during signup, claim any tokens
-    // that the recurring webhook may have already created under the temporary reference
+    // If a payment method was collected during signup, link it to the new org.
+    // Two strategies: (1) claim any DB rows the webhook already created under
+    // the temporary shopper reference, or (2) fetch directly from Adyen if the
+    // webhook hasn't fired yet (race condition: webhook typically arrives before
+    // the org exists and silently no-ops).
     if (validatedData.adyenShopperReference) {
       const permanentRef = `org-${result.organization.id}`
+      let methodLinked = false
+
       try {
         const orphanedMethods = await db.organizationPaymentMethod.findMany({
           where: { shopperReference: validatedData.adyenShopperReference },
@@ -337,9 +342,62 @@ export async function POST(request: NextRequest) {
             where: { organizationId: result.organization.id },
             data: { adyenRecurringDetailRef: orphanedMethods[0].storedPaymentMethodId },
           })
+          methodLinked = true
         }
       } catch (err) {
         console.error("Failed to claim orphaned payment methods:", err)
+      }
+
+      // Fallback: query Adyen directly using the temp shopper reference.
+      // This covers the common case where the webhook arrived before the org
+      // existed and couldn't create a DB row.
+      if (!methodLinked) {
+        try {
+          const { getStoredPaymentMethods } = await import("@/lib/adyen")
+
+          let adyenMethods = await getStoredPaymentMethods(
+            validatedData.adyenShopperReference
+          )
+
+          // Retry once after a short delay — tokenization may still be processing
+          if (adyenMethods.length === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 2000))
+            adyenMethods = await getStoredPaymentMethods(
+              validatedData.adyenShopperReference
+            )
+          }
+
+          for (const method of adyenMethods) {
+            try {
+              await db.organizationPaymentMethod.create({
+                data: {
+                  organizationId: result.organization.id,
+                  storedPaymentMethodId: method.id,
+                  shopperReference: permanentRef,
+                  type: method.type,
+                  brand: method.brand,
+                  lastFour: method.lastFour || "****",
+                  expiryMonth: method.expiryMonth,
+                  expiryYear: method.expiryYear,
+                  holderName: method.holderName,
+                  isDefault: adyenMethods.indexOf(method) === 0,
+                  isActive: true,
+                },
+              })
+            } catch {
+              // Unique constraint violation = webhook created it concurrently
+            }
+          }
+
+          if (adyenMethods.length > 0) {
+            await db.organizationSubscription.updateMany({
+              where: { organizationId: result.organization.id },
+              data: { adyenRecurringDetailRef: adyenMethods[0].id },
+            })
+          }
+        } catch (err) {
+          console.error("Failed to sync payment methods from Adyen:", err)
+        }
       }
     }
 

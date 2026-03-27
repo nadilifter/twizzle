@@ -241,18 +241,21 @@ export interface StoredPaymentMethod {
  * @param returnUrl - URL to redirect after payment/tokenization
  * @param shopperEmail - Optional shopper email
  * @param amount - Amount in dollars (use 0 for $0 authorization)
+ * @param storeMode - "askForConsent" shows a save-card checkbox (default),
+ *                    "enabled" always stores the card without asking
  */
 export async function createTokenizationSession(
   shopperReference: string,
   returnUrl: string,
   shopperEmail?: string,
-  amount: number = 0
+  amount: number = 0,
+  storeMode: "askForConsent" | "enabled" = "askForConsent"
 ) {
   try {
     const response = await checkoutApi.PaymentsApi.sessions({
       amount: { 
         currency: "USD", 
-        value: Math.round(amount * 100)  // Amount in minor units
+        value: Math.round(amount * 100)
       },
       reference: `token-${shopperReference}-${Date.now()}`,
       returnUrl,
@@ -261,11 +264,9 @@ export async function createTokenizationSession(
       shopperEmail,
       channel: "Web" as any,
       countryCode: "US",
-      // Enable tokenization
       storePaymentMethod: true,
-      storePaymentMethodMode: "askForConsent" as any,  // Shows checkbox to save card
+      storePaymentMethodMode: storeMode as any,
       recurringProcessingModel: "Subscription" as any,
-      // Allow multiple payment methods to be stored
       shopperInteraction: "Ecommerce" as any,
     });
     return response;

@@ -36,13 +36,15 @@ export async function POST(request: NextRequest) {
     // This will be updated to use the actual org ID after signup
     const shopperReference = `signup-${signupReference}`
 
-    // Create an Adyen session for card tokenization
-    // We use $0 authorization to validate the card without charging
+    // Create an Adyen session for card tokenization.
+    // $0 auth validates the card without charging. "enabled" mode ensures the
+    // card is always stored — this is a required-payment signup, not optional.
     const session = await createTokenizationSession(
       shopperReference,
       returnUrl,
       email,
-      0  // $0 authorization
+      0,
+      "enabled"
     )
 
     return NextResponse.json({
