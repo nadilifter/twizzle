@@ -86,6 +86,7 @@ set +a
 
 log_info "Building Docker image (app stays live during build)..."
 sudo DOCKER_BUILDKIT=1 docker build \
+    --build-arg APP_ENVIRONMENT=staging \
     --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
     --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
     -t uplifter:new .
