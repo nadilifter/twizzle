@@ -125,20 +125,22 @@ export default async function TeamPage({
                   >
                     {/* Image Panel */}
                     <div
-                      className={`relative min-h-[280px] md:min-h-[360px] bg-muted ${
+                      className={`bg-muted flex items-center justify-center overflow-hidden ${
                         isReversed ? "[direction:ltr]" : ""
                       }`}
                     >
                       {imageUrl ? (
-                        <Image
-                          src={imageUrl}
-                          alt={member.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                        />
+                        <div className="relative w-full aspect-[4/5] md:aspect-auto md:h-full min-h-[280px] md:min-h-[360px] max-h-[32rem]">
+                          <Image
+                            src={imageUrl}
+                            alt={member.name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                          />
+                        </div>
                       ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground/40">
+                        <div className="flex items-center justify-center min-h-[280px] md:min-h-[360px] w-full text-muted-foreground/40">
                           <User className="h-24 w-24" />
                         </div>
                       )}
