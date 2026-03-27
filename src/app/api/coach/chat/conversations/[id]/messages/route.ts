@@ -55,7 +55,7 @@ export async function GET(
     });
 
     if (conversation.unreadCount > 0) {
-      await markCoachConversationRead(id, effectiveUser.userId);
+      await markCoachConversationRead(id, effectiveUser.userId, conversation.organizationId);
     }
 
     return NextResponse.json(result);

@@ -90,14 +90,15 @@ export async function PATCH(
     const data = updateSchema.parse(body);
 
     if (data.markRead) {
-      await markCoachConversationRead(id, effectiveUser.userId);
+      await markCoachConversationRead(id, effectiveUser.userId, conversation.organizationId);
     }
 
     if (data.status) {
       await updateCoachConversationStatus(
         id,
         data.status,
-        effectiveUser.userId
+        effectiveUser.userId,
+        conversation.organizationId
       );
     }
 

@@ -891,24 +891,32 @@ export async function getOrCreateCoachConversation(
   coachId: string,
   channel: ConversationChannel = "WEB_ONLY"
 ): Promise<string> {
-  const existing = await db.conversation.findFirst({
-    where: { userId, coachId },
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      phone: true,
+      phoneVerified: true,
+      email: true,
+      coachConversations: {
+        where: { coachId },
+        select: { id: true, status: true, organizationId: true },
+        take: 1,
+      },
+    },
   });
 
+  const existing = user?.coachConversations[0];
   if (existing) {
     if (existing.status !== "OPEN") {
-      await db.conversation.update({
-        where: { id: existing.id },
+      await db.conversation.updateMany({
+        where: { id: existing.id, organizationId: existing.organizationId },
         data: { status: "OPEN" },
       });
     }
     return existing.id;
   }
 
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { phone: true, phoneVerified: true, email: true },
-  });
+  if (!user) throw new Error("User not found");
 
   const data: any = {
     organizationId,
@@ -1013,8 +1021,8 @@ export async function getCoachConversation(
   conversationId: string,
   coachId: string
 ) {
-  return db.conversation.findFirst({
-    where: { id: conversationId, coachId },
+  const conversation = await db.conversation.findUnique({
+    where: { id: conversationId },
     include: {
       organization: { select: { name: true } },
       user: {
@@ -1037,6 +1045,9 @@ export async function getCoachConversation(
       },
     },
   });
+
+  if (!conversation || conversation.coachId !== coachId) return null;
+  return conversation;
 }
 
 /**
@@ -1064,10 +1075,11 @@ export async function sendCoachMessage(
  */
 export async function markCoachConversationRead(
   conversationId: string,
-  coachId: string
+  coachId: string,
+  organizationId: string
 ): Promise<void> {
   const result = await db.conversation.updateMany({
-    where: { id: conversationId, coachId },
+    where: { id: conversationId, coachId, organizationId },
     data: { unreadCount: 0 },
   });
   if (result.count === 0) {
@@ -1081,10 +1093,11 @@ export async function markCoachConversationRead(
 export async function updateCoachConversationStatus(
   conversationId: string,
   status: ConversationStatus,
-  coachId: string
+  coachId: string,
+  organizationId: string
 ): Promise<void> {
   const result = await db.conversation.updateMany({
-    where: { id: conversationId, coachId },
+    where: { id: conversationId, coachId, organizationId },
     data: { status },
   });
   if (result.count === 0) {
