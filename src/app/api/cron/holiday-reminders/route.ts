@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendHolidayReminderEmails } from "@/lib/services/holiday-announcements";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 /**
  * Holiday Reminder Emails Cron
  *
  * Daily job that emails org admins about upcoming holidays within 7 days.
+ * Processes holidays in batches; progress is committed per-holiday so the
+ * next run automatically resumes from where a previous run timed out.
  *
  * Schedule: Daily at 12:00 PM UTC ("0 12 * * *")
  *
@@ -40,6 +43,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       sent: result.sent,
+      failed: result.failed,
       orgsProcessed: result.orgsProcessed,
       timestamp: new Date().toISOString(),
     });

@@ -117,82 +117,110 @@ export async function archiveExpiredHolidayAnnouncements(): Promise<{
   return { archived: result.count };
 }
 
+const BATCH_SIZE = 50;
+
 /**
  * Send reminder emails to org admins for upcoming holidays that haven't
- * been emailed about yet. Runs daily at 12:00 UTC; the `reminderEmailSentAt`
- * field on each holiday prevents duplicate sends.
+ * been emailed about yet. Runs daily at 12:00 UTC.
+ *
+ * Processes holidays in batches of {@link BATCH_SIZE}. Each holiday is marked
+ * via `reminderEmailSentAt` immediately after its email succeeds, so progress
+ * is committed per-item. If the function times out mid-batch, the next cron
+ * run re-queries only unmarked holidays and picks up where it left off.
  */
 export async function sendHolidayReminderEmails(): Promise<{
   sent: number;
+  failed: number;
   orgsProcessed: number;
 }> {
   const now = new Date();
   const leadDate = new Date(now);
   leadDate.setUTCDate(leadDate.getUTCDate() + ANNOUNCEMENT_LEAD_DAYS);
 
-  const upcomingHolidays = await db.organizationHoliday.findMany({
-    where: {
-      isEnabled: true,
-      reminderEmailSentAt: null,
-      date: {
-        gte: now,
-        lte: leadDate,
-      },
-      organization: { isActive: true },
-    },
-    include: {
-      organization: { select: { id: true, name: true } },
-    },
-  });
-
   let sent = 0;
+  let failed = 0;
   const orgIds = new Set<string>();
 
-  for (const holiday of upcomingHolidays) {
-    try {
-      const adminEmails = await getOrgAdminEmails(holiday.organizationId);
-      if (adminEmails.length === 0) continue;
+  const baseWhere = {
+    isEnabled: true,
+    reminderEmailSentAt: null,
+    date: { gte: now, lte: leadDate },
+    organization: { isActive: true },
+  };
 
-      orgIds.add(holiday.organizationId);
+  // Re-query each iteration so only unprocessed holidays remain.
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const batch = await db.organizationHoliday.findMany({
+      where: baseWhere,
+      include: {
+        organization: { select: { id: true, name: true } },
+      },
+      take: BATCH_SIZE,
+    });
 
-      const holidayDate = new Date(holiday.date);
-      const formattedDate = format(
-        new Date(holidayDate.toISOString().split("T")[0] + "T12:00:00Z"),
-        "EEEE, MMMM d"
-      );
+    if (batch.length === 0) break;
 
-      await sendTemplatedEmail("holiday-reminder", adminEmails, {
-        holidayName: holiday.name,
-        holidayDate: formattedDate,
-        organizationName: holiday.organization.name,
-      });
+    // Batch-fetch admin emails for all orgs in this chunk (eliminates N+1)
+    const batchOrgIds = [...new Set(batch.map((h) => h.organizationId))];
+    const adminMembers = await db.organizationMember.findMany({
+      where: {
+        organizationId: { in: batchOrgIds },
+        role: { in: ["ADMIN"] },
+        status: "ACTIVE",
+      },
+      include: { user: { select: { email: true } } },
+    });
 
-      await db.organizationHoliday.update({
-        where: { id: holiday.id },
-        data: { reminderEmailSentAt: now },
-      });
+    const adminEmailsByOrg = new Map<string, string[]>();
+    for (const member of adminMembers) {
+      if (!member.user.email) continue;
+      const emails = adminEmailsByOrg.get(member.organizationId) ?? [];
+      emails.push(member.user.email);
+      adminEmailsByOrg.set(member.organizationId, emails);
+    }
 
-      sent++;
-    } catch (err) {
-      console.error(
-        `Failed to send holiday reminder for "${holiday.name}" (org ${holiday.organizationId}):`,
-        err
-      );
+    for (const holiday of batch) {
+      const adminEmails = adminEmailsByOrg.get(holiday.organizationId);
+
+      if (!adminEmails || adminEmails.length === 0) {
+        // No admins — mark so this holiday doesn't block future batches
+        await db.organizationHoliday.update({
+          where: { id: holiday.id },
+          data: { reminderEmailSentAt: now },
+        });
+        continue;
+      }
+
+      try {
+        const holidayDate = new Date(holiday.date);
+        const formattedDate = format(
+          new Date(holidayDate.toISOString().split("T")[0] + "T12:00:00Z"),
+          "EEEE, MMMM d"
+        );
+
+        await sendTemplatedEmail("holiday-reminder", adminEmails, {
+          holidayName: holiday.name,
+          holidayDate: formattedDate,
+          organizationName: holiday.organization.name,
+        });
+
+        await db.organizationHoliday.update({
+          where: { id: holiday.id },
+          data: { reminderEmailSentAt: now },
+        });
+
+        orgIds.add(holiday.organizationId);
+        sent++;
+      } catch (err) {
+        console.error(
+          `Failed to send holiday reminder for "${holiday.name}" (org ${holiday.organizationId}):`,
+          err
+        );
+        failed++;
+      }
     }
   }
 
-  return { sent, orgsProcessed: orgIds.size };
-}
-
-async function getOrgAdminEmails(organizationId: string): Promise<string[]> {
-  const members = await db.organizationMember.findMany({
-    where: {
-      organizationId,
-      role: { in: ["ADMIN"] },
-      status: "ACTIVE",
-    },
-    include: { user: { select: { email: true } } },
-  });
-
-  return members.map((m) => m.user.email).filter(Boolean) as string[];
+  return { sent, failed, orgsProcessed: orgIds.size };
 }
