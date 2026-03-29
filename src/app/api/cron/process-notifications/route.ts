@@ -1,38 +1,34 @@
+import crypto from "crypto"
 import { NextRequest, NextResponse } from "next/server";
 import {
   processAllOrganizations,
   cleanupOldDeduplicationRecords,
 } from "@/lib/notification-scheduler";
+import { logger } from "@/lib/logger"
 
-/**
- * Notification Scheduler Cron Endpoint
- * 
- * This endpoint is called by a cron job (Vercel Cron, AWS EventBridge, etc.)
- * to process all scheduled notifications.
- * 
- * Schedule: Every 5 minutes
- * 
- * Environment-specific trigger methods:
- * - Local: curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/process-notifications
- * - Vercel: Configured in vercel.json
- * - AWS: EventBridge scheduled rule or Lambda
- * - Kubernetes: CronJob resource
- */
+export const dynamic = "force-dynamic"
+export const maxDuration = 300
 
 const CRON_SECRET = process.env.CRON_SECRET;
+
+function verifyCronSecret(authHeader: string | null): boolean {
+  if (!CRON_SECRET || !authHeader) return false
+  const expected = `Bearer ${CRON_SECRET}`
+  if (authHeader.length !== expected.length) return false
+  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))
+}
 
 export async function GET(request: NextRequest) {
   try {
     if (!CRON_SECRET) {
-      console.error("CRON_SECRET is not configured");
+      logger.error("CRON_SECRET is not configured");
       return NextResponse.json(
         { error: "Server misconfiguration" },
         { status: 500 }
       );
     }
 
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    if (!verifyCronSecret(request.headers.get("authorization"))) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -81,7 +77,9 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error in process-notifications cron:", error);
+    logger.error("Error in process-notifications cron", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         success: false,

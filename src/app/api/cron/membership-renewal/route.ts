@@ -42,12 +42,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const [generated, instanceRenewals, athleteRenewals, expired] = await Promise.all([
-      generateUpcomingInstances(),
-      processMembershipInstanceRenewals(),
-      processAthleteRenewals(),
-      expireInstances(),
-    ])
+    // Sequential: generate instances before renewals check for them,
+    // renew athletes before expiring instances they need to find.
+    const generated = await generateUpcomingInstances()
+    const instanceRenewals = await processMembershipInstanceRenewals()
+    const athleteRenewals = await processAthleteRenewals()
+    const expired = await expireInstances()
 
     const summary = {
       generatedInstances: generated.length,
