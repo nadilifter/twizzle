@@ -69,7 +69,7 @@ export default async function AdminDashboardPage() {
               </li>
               <li>
                 <span className="font-medium">Analytics Page</span> (/dashboard/analytics) - 
-                <span className="text-muted-foreground ml-2">Hidden from Dashboard section.</span>
+                <span className="text-muted-foreground ml-2">Gated behind the &quot;Analytics&quot; feature flag (disabled by default on all plans).</span>
               </li>
               <li>
                 <span className="font-medium">Forms Section</span> (/dashboard/forms) - 

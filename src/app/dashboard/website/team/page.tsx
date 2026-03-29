@@ -1,19 +1,43 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { toast } from "sonner";
 import {
   Loader2,
   Users,
-  ChevronUp,
-  ChevronDown,
   User,
   ArrowLeft,
   Save,
@@ -22,8 +46,11 @@ import {
   Upload,
   Award,
   Crop,
+  GripVertical,
+  ArrowUpDown,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 
@@ -64,12 +91,71 @@ interface TeamHighlightWithMember extends TeamHighlight {
   };
 }
 
+function SortableTeamItem({
+  highlight,
+  member,
+}: {
+  highlight: TeamHighlight;
+  member: StaffMember;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: highlight.memberId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 rounded-lg border bg-card p-3 ${
+        isDragging ? "opacity-50 shadow-lg" : ""
+      }`}
+    >
+      <button
+        className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <Avatar className="h-8 w-8">
+        <AvatarImage
+          src={highlight.overrideImage || member.user.avatar || undefined}
+        />
+        <AvatarFallback>
+          <User className="h-4 w-4" />
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{member.user.name}</span>
+          {!highlight.isVisible && (
+            <Badge variant="outline" className="text-xs">
+              Hidden
+            </Badge>
+          )}
+        </div>
+        <span className="text-sm text-muted-foreground">
+          {highlight.title || member.title || member.role}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function TeamHighlightsPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [highlights, setHighlights] = useState<TeamHighlight[]>([]);
   const [showTeamCertifications, setShowTeamCertifications] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
+  const [reorderHighlights, setReorderHighlights] = useState<TeamHighlight[]>(
+    []
+  );
   const [cropState, setCropState] = useState<{
     memberId: string;
     imageSrc: string;
@@ -78,6 +164,12 @@ export default function TeamHighlightsPage() {
     null
   );
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {}),
+    useSensor(TouchSensor, {}),
+    useSensor(KeyboardSensor, {})
+  );
 
   const fetchData = useCallback(async () => {
     try {
@@ -173,22 +265,28 @@ export default function TeamHighlightsPage() {
     }
   };
 
-  const moveUp = (index: number) => {
-    if (index === 0) return;
-    setHighlights((prev) => {
-      const next = [...prev];
-      [next[index - 1], next[index]] = [next[index], next[index - 1]];
-      return next.map((h, i) => ({ ...h, displayOrder: i }));
-    });
+  const handleOpenReorder = () => {
+    setReorderHighlights([...highlights]);
+    setIsReorderDialogOpen(true);
   };
 
-  const moveDown = (index: number) => {
-    if (index >= highlights.length - 1) return;
-    setHighlights((prev) => {
-      const next = [...prev];
-      [next[index], next[index + 1]] = [next[index + 1], next[index]];
-      return next.map((h, i) => ({ ...h, displayOrder: i }));
-    });
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setReorderHighlights((items) => {
+        const oldIndex = items.findIndex((item) => item.memberId === active.id);
+        const newIndex = items.findIndex((item) => item.memberId === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleSaveOrder = () => {
+    setHighlights(
+      reorderHighlights.map((h, i) => ({ ...h, displayOrder: i }))
+    );
+    setIsReorderDialogOpen(false);
+    toast.success("Order updated — click Save Changes to persist");
   };
 
   const updateHighlight = (
@@ -296,14 +394,22 @@ export default function TeamHighlightsPage() {
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
+        <div className="flex gap-2">
+          {highlights.length > 1 && (
+            <Button variant="outline" onClick={handleOpenReorder}>
+              <ArrowUpDown className="mr-2 h-4 w-4" />
+              Set Order
+            </Button>
           )}
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </div>
 
       {/* Display Settings */}
@@ -349,7 +455,7 @@ export default function TeamHighlightsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {highlights.map((highlight, index) => {
+          {highlights.map((highlight) => {
             const member = getStaffMember(highlight.memberId);
             if (!member) return null;
 
@@ -361,34 +467,7 @@ export default function TeamHighlightsPage() {
                 }
               >
                 <CardContent className="pt-6">
-                  <div className="flex gap-6">
-                    {/* Reorder Controls */}
-                    <div className="flex flex-col items-center gap-1 pt-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => moveUp(index)}
-                        disabled={index === 0}
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {index + 1}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => moveDown(index)}
-                        disabled={index >= highlights.length - 1}
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Member Info + Settings */}
-                    <div className="flex-1 space-y-4">
+                  <div className="space-y-4">
                       {/* Header row */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -475,7 +554,7 @@ export default function TeamHighlightsPage() {
                                 <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button
                                     type="button"
-                                    className="p-1 rounded-full bg-black/70 text-white hover:bg-black/90"
+                                    className="p-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                                     title="Re-crop"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -583,8 +662,7 @@ export default function TeamHighlightsPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
+                  </CardContent>
               </Card>
             );
           })}
@@ -606,6 +684,56 @@ export default function TeamHighlightsPage() {
           maxOutputHeight={1600}
         />
       )}
+
+      <Dialog open={isReorderDialogOpen} onOpenChange={setIsReorderDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Team Order</DialogTitle>
+            <DialogDescription>
+              Drag and drop to reorder how team members appear on your public
+              website
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={reorderHighlights.map((h) => h.memberId)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-2">
+                  {reorderHighlights.map((highlight) => {
+                    const member = getStaffMember(highlight.memberId);
+                    if (!member) return null;
+                    return (
+                      <SortableTeamItem
+                        key={highlight.memberId}
+                        highlight={highlight}
+                        member={member}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsReorderDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveOrder}>Save Order</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

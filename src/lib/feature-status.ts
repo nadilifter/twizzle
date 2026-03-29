@@ -60,8 +60,9 @@ export const featureStatusMap: Record<string, FeatureConfig> = {
     description: "Dashboard overview uses sample metrics",
   },
   "/dashboard/analytics": {
-    status: "demo",
-    description: "Analytics charts use sample data",
+    status: "live",
+    description: "Organization analytics with demographics, enrollment trends, and program insights",
+    apiRoutes: ["/api/analytics/overview", "/api/analytics/retention", "/api/analytics/revenue", "/api/analytics/engagement", "/api/analytics/programs"],
   },
 
   // Athletes Section
