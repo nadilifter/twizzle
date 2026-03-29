@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { LocationMap } from "@/components/location-map";
+import { ContactForm } from "./contact-form";
 
 const getCachedContactConfig = unstable_cache(
     async (subdomain: string) => {
@@ -121,41 +122,7 @@ export default async function ContactPage({ params }: { params: { slug: string }
 
                 <div className="bg-card p-8 rounded-xl shadow-sm border border-border">
                     <h2 className="text-xl font-semibold mb-6">Send us a Message</h2>
-                    <form className="space-y-4">
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium mb-1 text-foreground">Name</label>
-                            <input 
-                                type="text" 
-                                id="name" 
-                                className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-muted-foreground"
-                                placeholder="Your name"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium mb-1 text-foreground">Email</label>
-                            <input 
-                                type="email" 
-                                id="email" 
-                                className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-muted-foreground"
-                                placeholder="your@email.com"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="message" className="block text-sm font-medium mb-1 text-foreground">Message</label>
-                            <textarea 
-                                id="message" 
-                                rows={4}
-                                className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-muted-foreground"
-                                placeholder="How can we help you?"
-                            ></textarea>
-                        </div>
-                        <button 
-                            type="button" 
-                            className="w-full bg-primary text-primary-foreground py-3 rounded-md hover:bg-primary/90 transition-colors font-medium"
-                        >
-                            Send Message
-                        </button>
-                    </form>
+                    <ContactForm slug={subdomain} />
                 </div>
             </div>
         </div>

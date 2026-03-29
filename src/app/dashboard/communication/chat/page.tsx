@@ -213,7 +213,7 @@ function ConversationSidebar({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-sm font-medium truncate">{conv.userName}</span>
+                          <span className="text-sm font-medium truncate">{conv.userName || conv.email || "Unknown"}</span>
                           <ChanIcon className={cn("h-3 w-3 shrink-0", chanColor)} />
                         </div>
                         {conv.unreadCount > 0 && (
@@ -565,14 +565,14 @@ export default function ChatConversationsPage() {
                   <ChatHeader className="border-b px-4">
                     <ChatHeaderAddon>
                       <ChatHeaderAvatar
-                        fallback={selectedConversation ? getInitials(selectedConversation.userName) : "?"}
+                        fallback={selectedConversation ? getInitials(selectedConversation.userName || selectedConversation.email || "?") : "?"}
                       />
                     </ChatHeaderAddon>
                     <ChatHeaderMain>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">
-                            {selectedConversation?.userName || "Loading..."}
+                            {selectedConversation?.userName || selectedConversation?.email || "Loading..."}
                           </span>
                           {selectedConversation && (
                             <ChannelBadge channel={selectedConversation.channel} />
