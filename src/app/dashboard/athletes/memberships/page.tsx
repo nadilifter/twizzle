@@ -54,7 +54,7 @@ import { toast } from "sonner"
 import type { BillingInterval, MembershipInstanceStatus } from "@/types/memberships"
 
 export default function MembershipsPage() {
-  const { memberships, isLoading, error, deleteMembershipGroup, fetchMemberships } = useMemberships()
+  const { memberships, isLoading, error, deleteMembershipGroup, fetchMemberships } = useMemberships({ autoFetch: false })
   const { isFeatureEnabled } = useFeatures()
   const trainingEnabled = isFeatureEnabled("training")
   const seasonsEnabled = isFeatureEnabled("seasons")

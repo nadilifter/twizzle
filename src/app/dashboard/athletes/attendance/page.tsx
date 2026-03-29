@@ -51,7 +51,7 @@ export default function AttendancePage() {
   
   // Fetch metrics based on active tab
   const { metrics, isLoading, fetchMetrics } = useAttendanceMetrics({
-    autoFetch: true,
+    autoFetch: false,
     initialFilters: {
       groupBy: "overall",
       startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,

@@ -50,7 +50,7 @@ function formatPrice(price: number | string | null | undefined): string {
 
 export default function ProgramsPage() {
   const router = useRouter()
-  const { programs, isLoading, error, fetchPrograms } = usePrograms()
+  const { programs, isLoading, error, fetchPrograms } = usePrograms({ autoFetch: false })
   const { isFeatureEnabled } = useFeatures()
   const seasonsEnabled = isFeatureEnabled("seasons")
   const { seasons } = useSeasons({ autoFetch: seasonsEnabled })
@@ -59,14 +59,18 @@ export default function ProgramsPage() {
   const [isConfigOpen, setIsConfigOpen] = React.useState(false)
   const [selectedProgram, setSelectedProgram] = React.useState<any>(null)
 
-  // Debounced search + season filter
+  const hasFetched = React.useRef(false)
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchPrograms({
-        search: searchTerm,
-        ...(seasonFilter && seasonFilter !== "all" ? { seasonId: seasonFilter } : {}),
-      })
-    }, 500)
+    const params = {
+      search: searchTerm,
+      ...(seasonFilter && seasonFilter !== "all" ? { seasonId: seasonFilter } : {}),
+    }
+    if (!hasFetched.current) {
+      hasFetched.current = true
+      fetchPrograms(params)
+      return
+    }
+    const timer = setTimeout(() => fetchPrograms(params), 500)
     return () => clearTimeout(timer)
   }, [searchTerm, seasonFilter, fetchPrograms])
 

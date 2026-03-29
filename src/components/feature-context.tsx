@@ -28,15 +28,12 @@ export function FeatureProvider({ children }: { children: React.ReactNode }) {
 
   const organizationId = session?.user?.organizationId
 
-  const [features, setFeatures] = React.useState<FeatureToggles>(() => {
-    if (organizationId && featureCache?.orgId === organizationId) {
-      return featureCache.data
-    }
-    return DEFAULT_FEATURE_TOGGLES
-  })
-  const [isLoaded, setIsLoaded] = React.useState(() => {
-    return !!organizationId && featureCache?.orgId === organizationId
-  })
+  const cacheHit = !!organizationId && featureCache?.orgId === organizationId
+
+  const [features, setFeatures] = React.useState<FeatureToggles>(
+    () => cacheHit ? featureCache!.data : DEFAULT_FEATURE_TOGGLES
+  )
+  const [isLoaded, setIsLoaded] = React.useState(cacheHit)
 
   React.useEffect(() => {
     if (!organizationId) {

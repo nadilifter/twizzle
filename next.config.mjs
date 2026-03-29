@@ -140,6 +140,7 @@ const getImageRemotePatterns = () => {
 const localHostname = isLocal ? envConfig.baseDomain.split(':')[0] : null;
 
 const nextConfig = {
+  reactStrictMode: false,
   output: "standalone",
   allowedDevOrigins: isLocal
     ? [`*.${localHostname}`]

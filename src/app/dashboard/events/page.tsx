@@ -43,13 +43,18 @@ function formatPrice(price: number | string | null | undefined): string {
 }
 
 export default function EventsPage() {
-  const { events, isLoading, error, fetchEvents } = useEvents()
+  const { events, isLoading, error, fetchEvents } = useEvents({ autoFetch: false })
   const [searchTerm, setSearchTerm] = React.useState("")
 
+  const hasFetched = React.useRef(false)
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchEvents({ search: searchTerm })
-    }, 500)
+    const params = { search: searchTerm }
+    if (!hasFetched.current) {
+      hasFetched.current = true
+      fetchEvents(params)
+      return
+    }
+    const timer = setTimeout(() => fetchEvents(params), 500)
     return () => clearTimeout(timer)
   }, [searchTerm, fetchEvents])
 

@@ -110,7 +110,7 @@ function SortableCategoryItem({ category }: { category: Category }) {
 }
 
 export default function CategoriesPage() {
-  const { categories, isLoading, isDeleting, error, fetchCategories, deleteCategory } = useCategories()
+  const { categories, isLoading, isDeleting, error, fetchCategories, deleteCategory } = useCategories({ autoFetch: false })
   const { isFeatureEnabled } = useFeatures()
   const competitionsEnabled = isFeatureEnabled("competitions")
   const [searchTerm, setSearchTerm] = React.useState("")
@@ -125,10 +125,15 @@ export default function CategoriesPage() {
     useSensor(KeyboardSensor, {})
   )
 
+  const hasFetched = React.useRef(false)
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchCategories({ search: searchTerm })
-    }, 500)
+    const params = { search: searchTerm }
+    if (!hasFetched.current) {
+      hasFetched.current = true
+      fetchCategories(params)
+      return
+    }
+    const timer = setTimeout(() => fetchCategories(params), 500)
     return () => clearTimeout(timer)
   }, [searchTerm, fetchCategories])
 
