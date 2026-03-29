@@ -125,12 +125,12 @@ export default async function TeamPage({
                   >
                     {/* Image Panel */}
                     <div
-                      className={`bg-muted flex items-center justify-center overflow-hidden ${
+                      className={`bg-muted flex items-start justify-center overflow-hidden ${
                         isReversed ? "[direction:ltr]" : ""
                       }`}
                     >
                       {imageUrl ? (
-                        <div className="relative w-full aspect-[4/5] md:aspect-auto md:h-full min-h-[280px] md:min-h-[360px] max-h-[32rem]">
+                        <div className="relative w-full aspect-[3/4]">
                           <ProgressiveImage
                             src={imageUrl}
                             alt={member.name}
@@ -140,7 +140,7 @@ export default async function TeamPage({
                           />
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center min-h-[280px] md:min-h-[360px] w-full text-muted-foreground/40">
+                        <div className="flex items-center justify-center w-full aspect-[3/4] text-muted-foreground/40">
                           <User className="h-24 w-24" />
                         </div>
                       )}
