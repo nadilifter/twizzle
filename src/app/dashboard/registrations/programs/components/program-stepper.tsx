@@ -2767,6 +2767,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                       ...prev,
                       registrationOpen: isNow,
                       registrationStartDate: isNow ? null : prev.registrationStartDate,
+                      earlyAccessCode: isNow ? null : prev.earlyAccessCode,
                     }))
                   }}
                   className="space-y-3"
@@ -2925,7 +2926,8 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                 </div>
               </div>
 
-              {/* Early Access Code */}
+              {/* Early Access Code — only relevant when registration is scheduled */}
+              {!formData.registrationOpen && (
               <div className="space-y-4">
                 <Label className="text-base font-medium flex items-center gap-2">
                   <KeyRound className="h-4 w-4 text-muted-foreground" />
@@ -2983,6 +2985,7 @@ export function ProgramStepper({ program, onSuccess }: ProgramStepperProps) {
                   </div>
                 )}
               </div>
+              )}
             </CardContent>
           </Card>
         )}
