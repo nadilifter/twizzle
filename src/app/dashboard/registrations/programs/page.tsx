@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   Plus, Search, Settings, Loader2, AlertCircle, CalendarDays, CalendarClock,
-  Clock, MapPin, Users, UserCheck, Shield, DollarSign, Repeat, Star, User
+  Clock, MapPin, Users, UserCheck, Shield, Repeat, Star, User
 } from "lucide-react"
 import {
   Sheet,
@@ -241,7 +241,6 @@ export default function ProgramsPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-1 text-xs font-medium">
-                        <DollarSign className="h-3 w-3 text-muted-foreground" />
                         <span>{formatPrice(price)}</span>
                         {price && p.pricingModel === "PER_SESSION" && <span className="text-muted-foreground">/session</span>}
                       </div>
