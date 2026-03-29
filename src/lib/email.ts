@@ -285,7 +285,8 @@ export type EmailTemplate =
   | 'subscription-payment-failed'
   | 'subscription-deactivation-warning'
   | 'subscription-deactivated'
-  | 'holiday-reminder';
+  | 'holiday-reminder'
+  | 'payment-method-expiring';
 
 /**
  * Wrap email body content in a branded Uplifter layout.
@@ -1062,6 +1063,35 @@ Need help? Contact our support team.`,
 This is a reminder that {{organizationName}} will be closed on {{holidayDate}} for {{holidayName}}.
 
 Programs will not have sessions scheduled on this date. If you need to override this for specific programs, you can do so from the Holidays management page in your dashboard.
+
+You are receiving this email because you are an administrator of {{organizationName}}.`,
+    },
+    'payment-method-expiring': {
+      subject: 'Action Required: Your payment method is expiring soon',
+      html: wrapInBrandedLayout({
+        preheaderText: 'The payment method on file for {{organizationName}} expires {{expiryDate}}. Update it to avoid billing interruptions.',
+        bodyHtml: `
+              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #b45309;">Payment Method Expiring Soon</h1>
+              <p style="margin: 0 0 20px; color: #6b7280; font-size: 14px;">Update your card to avoid service interruption</p>
+              <p style="margin: 0 0 16px;">The {{cardBrand}} card ending in <strong>{{cardLast4}}</strong> on file for <strong>{{organizationName}}</strong> expires <strong>{{expiryDate}}</strong>.</p>
+              <p style="margin: 0 0 16px;">Please update your payment method before it expires to ensure uninterrupted service. You can do this from the <strong>Billing</strong> section of your dashboard.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="border-top: 1px solid #e5e7eb; padding: 0; height: 1px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 20px 0 0;">
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">You are receiving this email because you are an administrator of {{organizationName}}.</p>
+                  </td>
+                </tr>
+              </table>
+        `,
+      }),
+      text: `Payment Method Expiring Soon
+
+The {{cardBrand}} card ending in {{cardLast4}} on file for {{organizationName}} expires {{expiryDate}}.
+
+Please update your payment method before it expires to ensure uninterrupted service. You can do this from the Billing section of your dashboard.
 
 You are receiving this email because you are an administrator of {{organizationName}}.`,
     },

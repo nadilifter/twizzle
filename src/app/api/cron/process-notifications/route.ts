@@ -56,9 +56,13 @@ export async function GET(request: NextRequest) {
     // Process all organizations' notification rules
     const result = await processAllOrganizations();
 
-    // Optionally cleanup old deduplication records (can be run daily)
+    // Cleanup old deduplication records once per day (on the first run after midnight UTC)
+    // Also runs when explicitly requested via ?cleanup=true
+    const currentHour = new Date().getUTCHours();
+    const currentMinute = new Date().getUTCMinutes();
+    const isFirstRunOfDay = currentHour === 0 && currentMinute < 5;
     let cleanedUp = 0;
-    if (cleanup) {
+    if (cleanup || isFirstRunOfDay) {
       cleanedUp = await cleanupOldDeduplicationRecords();
     }
 
