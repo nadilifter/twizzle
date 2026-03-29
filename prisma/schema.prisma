@@ -3772,8 +3772,6 @@ enum NotificationTriggerType {
 
   // Administrative
   WAITLIST_OPENING // Spot available from waitlist
-  CONTRACT_RENEWAL // Contract up for renewal
-  MAKEUP_CLASS_EXPIRING // Makeup class credit expiring
 
   // Recurring billing
   RECURRING_CHARGE_UPCOMING // Charge coming in N days
@@ -3795,9 +3793,7 @@ enum NotificationActionType {
 
 // Recipient types - who receives the notification
 enum NotificationRecipientType {
-  ALL_GUARDIANS // All guardians in organization
-  ALL_ATHLETES // All athletes (via their guardians)
-  PROGRAM_MEMBERS // Athletes/guardians in specific programs
+  GUARDIANS // Guardians of the relevant athlete(s)
   MEMBERSHIP_HOLDERS // Athletes with specific memberships
   INTERNAL_USERS // Staff, coaches, admins
   CUSTOM // Custom filter combination
@@ -3888,7 +3884,7 @@ model NotificationRecipientConfig {
   notificationRuleId String @unique
 
   // Primary recipient type
-  recipientType NotificationRecipientType @default(ALL_GUARDIANS)
+  recipientType NotificationRecipientType @default(GUARDIANS)
 
   // Filters (JSON for flexibility)
   // Structure: {

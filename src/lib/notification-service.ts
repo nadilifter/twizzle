@@ -112,7 +112,7 @@ const SYSTEM_RULES: Array<{
     timingUnit: "DAYS",
     timingDirection: "BEFORE",
     actionType: "EMAIL",
-    recipientType: "ALL_GUARDIANS",
+    recipientType: "GUARDIANS",
   },
   {
     triggerType: "PAYMENT_OVERDUE",
@@ -122,7 +122,7 @@ const SYSTEM_RULES: Array<{
     timingUnit: "DAYS",
     timingDirection: "AFTER",
     actionType: "EMAIL",
-    recipientType: "ALL_GUARDIANS",
+    recipientType: "GUARDIANS",
   },
   {
     triggerType: "MEMBERSHIP_EXPIRY",
@@ -132,7 +132,7 @@ const SYSTEM_RULES: Array<{
     timingUnit: "DAYS",
     timingDirection: "BEFORE",
     actionType: "EMAIL",
-    recipientType: "MEMBERSHIP_HOLDERS",
+    recipientType: "GUARDIANS",
   },
   {
     triggerType: "MEMBERSHIP_EXPIRED",
@@ -142,7 +142,7 @@ const SYSTEM_RULES: Array<{
     timingUnit: "DAYS",
     timingDirection: "AFTER",
     actionType: "EMAIL",
-    recipientType: "MEMBERSHIP_HOLDERS",
+    recipientType: "GUARDIANS",
   },
   {
     triggerType: "PROGRAM_REMINDER",
@@ -152,7 +152,7 @@ const SYSTEM_RULES: Array<{
     timingUnit: "DAYS",
     timingDirection: "BEFORE",
     actionType: "EMAIL",
-    recipientType: "PROGRAM_MEMBERS",
+    recipientType: "GUARDIANS",
   },
 ];
 
@@ -263,7 +263,7 @@ export async function getRecipients(
   const seenEmails = new Set<string>();
   const seenPhones = new Set<string>();
 
-  // Helper to add a user/guardian recipient
+  // Helper to add a user/guardian recipient (deduplicates by email)
   const addGuardianUser = (user: {
     id: string;
     email: string;
@@ -272,12 +272,10 @@ export async function getRecipients(
     smsOptOut?: boolean;
     emailOptOut?: boolean;
   }) => {
-    if (user.email && !seenEmails.has(user.email.toLowerCase())) {
-      seenEmails.add(user.email.toLowerCase());
-    }
-    if (user.phone && !seenPhones.has(user.phone)) {
-      seenPhones.add(user.phone);
-    }
+    const emailLower = user.email.toLowerCase();
+    if (seenEmails.has(emailLower)) return;
+    seenEmails.add(emailLower);
+    if (user.phone) seenPhones.add(user.phone);
     recipients.push({
       type: "user",
       id: user.id,
@@ -302,70 +300,36 @@ export async function getRecipients(
     }
   };
 
-  switch (recipientType) {
-    case "ALL_GUARDIANS": {
-      // Resolve guardian Users via AthleteGuardian relationships
-      const guardianLinks = await db.athleteGuardian.findMany({
+  const guardianUserSelect = {
+    id: true, email: true, phone: true, name: true, smsOptOut: true, emailOptOut: true,
+  } as const;
+
+  // Shared helper: resolve context-specific guardian(s) with org-scoping
+  const addContextGuardians = async () => {
+    if (contextData?.userId) {
+      // Verify user is a guardian of an athlete in this org
+      const link = await db.athleteGuardian.findFirst({
         where: {
+          userId: contextData.userId,
           athlete: { organizationAthletes: { some: { organizationId } } },
-          userId: { not: null },
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              phone: true,
-              name: true,
-              smsOptOut: true,
-              emailOptOut: true,
-            },
-          },
-        },
+        include: { user: { select: guardianUserSelect } },
       });
-
-      for (const link of guardianLinks) {
-        if (link.user?.email) {
-          addGuardianUser({
-            id: link.user.id,
-            email: link.user.email,
-            phone: link.user.phone,
-            name: link.user.name,
-            smsOptOut: link.user.smsOptOut,
-            emailOptOut: link.user.emailOptOut,
-          });
-        }
+      if (link?.user?.email) {
+        addGuardianUser(link.user);
       }
-      break;
-    }
-
-    case "ALL_ATHLETES": {
-      const athletes = await db.athlete.findMany({
+    } else if (contextData?.athleteId) {
+      // Verify athlete belongs to this org
+      const athlete = await db.athlete.findFirst({
         where: {
+          id: contextData.athleteId,
           organizationAthletes: { some: { organizationId } },
-          ...(filters.athleteStatuses?.length
-            ? { status: { in: filters.athleteStatuses as any } }
-            : {}),
         },
         include: {
-          guardians: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  email: true,
-                  phone: true,
-                  name: true,
-                  smsOptOut: true,
-                  emailOptOut: true,
-                },
-              },
-            },
-          },
+          guardians: { include: { user: { select: guardianUserSelect } } },
         },
       });
-
-      for (const athlete of athletes) {
+      if (athlete) {
         for (const guardian of athlete.guardians) {
           if (guardian.userId && guardian.user?.email) {
             addGuardianUser({
@@ -379,59 +343,12 @@ export async function getRecipients(
           }
         }
       }
-      break;
     }
+  };
 
-    case "PROGRAM_MEMBERS": {
-      // Get families of athletes enrolled in specific programs
-      const programIds = filters.programIds?.length
-        ? filters.programIds
-        : contextData?.programId
-          ? [contextData.programId]
-          : [];
-
-      const enrollmentWhere = programIds.length === 0
-        ? { program: { organizationId }, status: "ACTIVE" as const }
-        : { programId: { in: programIds }, status: "ACTIVE" as const };
-
-      const enrollments = await db.enrollment.findMany({
-        where: enrollmentWhere,
-        include: {
-          athlete: {
-            include: {
-              guardians: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      email: true,
-                      phone: true,
-                      name: true,
-                      smsOptOut: true,
-                      emailOptOut: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      for (const enrollment of enrollments) {
-        for (const guardian of enrollment.athlete.guardians) {
-          if (guardian.userId && guardian.user?.email) {
-            addGuardianUser({
-              id: guardian.user.id,
-              email: guardian.user.email,
-              phone: guardian.user.phone,
-              name: guardian.user.name,
-              smsOptOut: guardian.user.smsOptOut,
-              emailOptOut: guardian.user.emailOptOut,
-            });
-          }
-        }
-      }
+  switch (recipientType) {
+    case "GUARDIANS": {
+      await addContextGuardians();
       break;
     }
 
@@ -518,56 +435,7 @@ export async function getRecipients(
     }
 
     case "CUSTOM": {
-      if (contextData?.userId) {
-        const user = await db.user.findUnique({
-          where: { id: contextData.userId },
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            name: true,
-            smsOptOut: true,
-            emailOptOut: true,
-          },
-        });
-        if (user?.email) {
-          addGuardianUser(user);
-        }
-      } else if (contextData?.athleteId) {
-        const athlete = await db.athlete.findUnique({
-          where: { id: contextData.athleteId },
-          include: {
-            guardians: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    phone: true,
-                    name: true,
-                    smsOptOut: true,
-                    emailOptOut: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-        if (athlete) {
-          for (const guardian of athlete.guardians) {
-            if (guardian.userId && guardian.user?.email) {
-              addGuardianUser({
-                id: guardian.user.id,
-                email: guardian.user.email,
-                phone: guardian.user.phone,
-                name: guardian.user.name,
-                smsOptOut: guardian.user.smsOptOut,
-                emailOptOut: guardian.user.emailOptOut,
-              });
-            }
-          }
-        }
-      }
+      await addContextGuardians();
       break;
     }
   }
@@ -784,7 +652,7 @@ export async function executeNotification(
   // Get recipients
   const recipients = params.recipientOverride || await getRecipients(
     rule.organizationId,
-    rule.recipientConfig?.recipientType || "ALL_GUARDIANS",
+    rule.recipientConfig?.recipientType || "GUARDIANS",
     (rule.recipientConfig?.filters as RecipientFilters) || {},
     {
       athleteId: params.athleteId,
@@ -813,9 +681,46 @@ export async function executeNotification(
     Object.assign(baseContext, params.contextOverride);
   }
 
-  // Execute for each recipient
+  // For ANNOUNCEMENT action, create a single announcement before the recipient loop
+  if (rule.actionType === "ANNOUNCEMENT") {
+    const subjectResult = rule.template.subject
+      ? renderTemplate(rule.template.subject, baseContext)
+      : { rendered: "", missingPlaceholders: [], usedPlaceholders: [] };
+    const bodyResult = renderTemplate(rule.template.body, baseContext);
+
+    const announcement = await db.announcement.create({
+      data: {
+        organizationId: rule.organizationId,
+        title: subjectResult.rendered || "Notification",
+        content: bodyResult.rendered,
+        targetScope: "ALL",
+        status: "PUBLISHED",
+        priority: "NORMAL",
+        publishedAt: new Date(),
+      },
+    });
+
+    const log = await db.notificationLog.create({
+      data: {
+        organizationId: rule.organizationId,
+        notificationRuleId: rule.id,
+        triggerType: rule.triggerType,
+        actionType: rule.actionType,
+        subject: subjectResult.rendered,
+        body: bodyResult.rendered,
+        status: "SENT",
+        announcementId: announcement.id,
+        sentAt: new Date(),
+      },
+    });
+    result.logIds.push(log.id);
+    result.sentCount++;
+    result.success = true;
+    return result;
+  }
+
+  // Execute for each recipient (EMAIL / SMS)
   for (const recipient of recipients) {
-    // Build recipient-specific context
     const context: TemplateContext = { ...baseContext };
     
     if (recipient.userId && !context.guardianName) {
@@ -831,7 +736,6 @@ export async function executeNotification(
       }
     }
 
-    // Render template
     const subjectResult = rule.template.subject
       ? renderTemplate(rule.template.subject, context)
       : { rendered: "", missingPlaceholders: [], usedPlaceholders: [] };
@@ -841,7 +745,6 @@ export async function executeNotification(
       ? renderTemplate(rule.template.smsBody, context)
       : null;
 
-    // Create log entry
     const log = await db.notificationLog.create({
       data: {
         organizationId: rule.organizationId,
@@ -860,7 +763,6 @@ export async function executeNotification(
     });
     result.logIds.push(log.id);
 
-    // Execute action
     try {
       let actionResult: { success: boolean; messageId?: string; error?: string } = {
         success: false,
@@ -915,30 +817,6 @@ export async function executeNotification(
               },
             });
           }
-          break;
-
-        case "ANNOUNCEMENT":
-          // Create an announcement
-          const announcement = await db.announcement.create({
-            data: {
-              organizationId: rule.organizationId,
-              title: subjectResult.rendered || "Notification",
-              content: bodyResult.rendered,
-              targetScope: "ALL",
-              status: "PUBLISHED",
-              priority: "NORMAL",
-              publishedAt: new Date(),
-            },
-          });
-          await db.notificationLog.update({
-            where: { id: log.id },
-            data: {
-              status: "SENT",
-              announcementId: announcement.id,
-              sentAt: new Date(),
-            },
-          });
-          actionResult = { success: true };
           break;
       }
 
@@ -1263,6 +1141,10 @@ export async function executeNotificationByTrigger(params: {
   triggerType: string;
   userId?: string;
   athleteId?: string;
+  membershipId?: string;
+  programId?: string;
+  eventId?: string;
+  invoiceId?: string;
   context?: Record<string, string>;
 }): Promise<void> {
   const rules = await db.notificationRule.findMany({
@@ -1280,6 +1162,10 @@ export async function executeNotificationByTrigger(params: {
         ruleId: rule.id,
         userId: params.userId,
         athleteId: params.athleteId,
+        membershipId: params.membershipId,
+        programId: params.programId,
+        eventId: params.eventId,
+        invoiceId: params.invoiceId,
         contextOverride: params.context,
       });
     } catch (err) {

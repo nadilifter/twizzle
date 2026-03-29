@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { Prisma, type BillingInterval } from "@prisma/client";
 import { addMonths, addYears } from "date-fns";
 import { getTodayNoonUTC, normalizeToNoonUTC } from "@/lib/date-utils";
+import { executeNotificationByTrigger } from "@/lib/notification-service";
 
 export interface InvoiceMetadata {
   membershipPurchases: {
@@ -70,6 +71,8 @@ export async function processInvoiceRegistrations(
   userId?: string | null,
   organizationId?: string | null,
 ) {
+  const enrollmentEvents: { athleteId: string; programName: string; userId?: string }[] = [];
+
   await db.$transaction(async (tx) => {
     // 1. Competition registrations
     for (const reg of metadata.competitionRegistrations) {
@@ -208,6 +211,18 @@ export async function processInvoiceRegistrations(
             status: enrollStatus,
           },
         });
+
+        if (enrollStatus === "ACTIVE") {
+          const prog = await tx.program.findUnique({
+            where: { id: programId },
+            select: { name: true },
+          });
+          enrollmentEvents.push({
+            athleteId,
+            programName: prog?.name ?? "Program",
+            userId: userId ?? undefined,
+          });
+        }
 
         // Auto-create RecurringCharge for recurring program billing
         if (organizationId && enrollStatus === "ACTIVE") {
@@ -455,4 +470,22 @@ export async function processInvoiceRegistrations(
       }
     }
   });
+
+  if (organizationId && enrollmentEvents.length > 0) {
+    for (const evt of enrollmentEvents) {
+      try {
+        await executeNotificationByTrigger({
+          organizationId,
+          triggerType: "PROGRAM_ENROLLMENT",
+          userId: evt.userId,
+          athleteId: evt.athleteId,
+          context: {
+            programName: evt.programName,
+          },
+        });
+      } catch (err) {
+        console.error("Failed to send enrollment notification", err);
+      }
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db, getScopedDb } from "@/lib/db";
+import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { z } from "zod";
 
 const updateInstanceSchema = z.object({
@@ -129,6 +130,8 @@ export async function PATCH(
     if (validated.status !== undefined) updateData.status = validated.status;
     if (validated.notes !== undefined) updateData.notes = validated.notes;
 
+    const wasCancelled = existing.status !== "CANCELLED" && validated.status === "CANCELLED";
+
     const scopedDb = getScopedDb(session.user.organizationId);
     const instance = await scopedDb.programInstance.update({
       where: { id: instanceId },
@@ -145,6 +148,22 @@ export async function PATCH(
         },
       },
     });
+
+    if (wasCancelled) {
+      try {
+        await executeNotificationByTrigger({
+          organizationId: session.user.organizationId,
+          triggerType: "PROGRAM_CANCELLATION",
+          context: {
+            programName: instance.program.name,
+            eventDate: instance.date?.toISOString().split("T")[0] ?? "",
+            eventTime: instance.startTime ?? "",
+          },
+        });
+      } catch (err) {
+        console.error("Failed to send cancellation notification", err);
+      }
+    }
 
     return NextResponse.json(instance);
   } catch (error) {

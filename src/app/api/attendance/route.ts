@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { z } from "zod";
 
 const createAttendanceSchema = z.object({
@@ -184,6 +185,25 @@ export async function POST(request: NextRequest) {
         })
       );
 
+      const absentAthletes = validatedData.attendances.filter((a) => a.status === "ABSENT");
+      if (absentAthletes.length > 0) {
+        for (const att of absentAthletes) {
+          try {
+            await executeNotificationByTrigger({
+              organizationId: session.user.organizationId,
+              triggerType: "ATTENDANCE_MISSED",
+              athleteId: att.athleteId,
+              context: {
+                eventName: event.title ?? "",
+                eventDate: event.date?.toISOString().split("T")[0] ?? "",
+              },
+            });
+          } catch (err) {
+            console.error("Failed to send missed attendance notification", err);
+          }
+        }
+      }
+
       return NextResponse.json({ success: true, count: results.length });
     } else {
       // Single attendance
@@ -239,6 +259,22 @@ export async function POST(request: NextRequest) {
           event: true,
         },
       });
+
+      if (validatedData.status === "ABSENT") {
+        try {
+          await executeNotificationByTrigger({
+            organizationId: session.user.organizationId,
+            triggerType: "ATTENDANCE_MISSED",
+            athleteId: validatedData.athleteId,
+            context: {
+              eventName: event.title ?? "",
+              eventDate: event.date?.toISOString().split("T")[0] ?? "",
+            },
+          });
+        } catch (err) {
+          console.error("Failed to send missed attendance notification", err);
+        }
+      }
 
       return NextResponse.json(attendance);
     }

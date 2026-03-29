@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { z } from "zod";
 
 // AttendanceStatus enum from schema: REGISTERED, PRESENT, ABSENT, LATE, EXCUSED
@@ -142,6 +143,7 @@ export async function POST(
         programId,
         organizationId: session.user.organizationId,
       },
+      include: { program: { select: { name: true } } },
     });
 
     if (!instance) {
@@ -178,6 +180,25 @@ export async function POST(
           });
         })
       );
+
+      const absentAthletes = validated.attendances.filter((a) => a.status === "ABSENT");
+      if (absentAthletes.length > 0) {
+        for (const att of absentAthletes) {
+          try {
+            await executeNotificationByTrigger({
+              organizationId: session.user.organizationId,
+              triggerType: "ATTENDANCE_MISSED",
+              athleteId: att.athleteId,
+              context: {
+                programName: instance.program?.name ?? "",
+                eventDate: instance.date?.toISOString().split("T")[0] ?? "",
+              },
+            });
+          } catch (err) {
+            console.error("Failed to send missed attendance notification", err);
+          }
+        }
+      }
 
       return NextResponse.json({
         message: `Updated ${results.length} attendance records`,
@@ -216,6 +237,22 @@ export async function POST(
           },
         },
       });
+
+      if (validated.status === "ABSENT") {
+        try {
+          await executeNotificationByTrigger({
+            organizationId: session.user.organizationId,
+            triggerType: "ATTENDANCE_MISSED",
+            athleteId: validated.athleteId,
+            context: {
+              programName: instance.program?.name ?? "",
+              eventDate: instance.date?.toISOString().split("T")[0] ?? "",
+            },
+          });
+        } catch (err) {
+          console.error("Failed to send missed attendance notification", err);
+        }
+      }
 
       return NextResponse.json(attendance, { status: 201 });
     }

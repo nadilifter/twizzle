@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { z } from "zod";
 
 const createEnrollmentSchema = z.object({
@@ -162,6 +163,24 @@ export async function POST(request: NextRequest) {
         program: true,
       },
     });
+
+    if (enrollment.status === "ACTIVE") {
+      try {
+        await executeNotificationByTrigger({
+          organizationId: session.user.organizationId,
+          triggerType: "PROGRAM_ENROLLMENT",
+          userId: enrollment.userId ?? undefined,
+          athleteId: enrollment.athleteId,
+          context: {
+            programName: enrollment.program.name,
+            athleteName: enrollment.athlete.name,
+            enrollmentDate: enrollment.startDate.toISOString().split("T")[0],
+          },
+        });
+      } catch (err) {
+        console.error("Failed to send enrollment notification", err);
+      }
+    }
 
     return NextResponse.json(enrollment);
   } catch (error) {

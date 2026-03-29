@@ -4354,7 +4354,7 @@ If you have already made this payment, please disregard this notice.
 Thank you,
 {{organizationName}}`,
       smsBody: `{{organizationName}}: Payment of {{invoiceAmount}} ({{invoiceReference}}) is due {{dueDate}}. Pay now: {{paymentUrl}}`,
-      recipientType: "ALL_GUARDIANS",
+      recipientType: "GUARDIANS",
     },
     {
       id: `${ORG1_ID}-notif-payment-urgent`,
@@ -4383,7 +4383,7 @@ If you need to discuss payment options, please contact us at {{organizationEmail
 Thank you,
 {{organizationName}}`,
       smsBody: `URGENT from {{organizationName}}: Payment of {{invoiceAmount}} is overdue. Please pay now: {{paymentUrl}}`,
-      recipientType: "ALL_GUARDIANS",
+      recipientType: "GUARDIANS",
     },
     {
       id: `${ORG1_ID}-notif-membership-warning`,
@@ -4470,7 +4470,7 @@ Please ensure {{athleteFirstName}} arrives on time and has all necessary equipme
 See you at the gym!
 {{organizationName}}`,
       smsBody: `{{organizationName}}: Reminder - {{athleteFirstName}} has {{programName}} on {{eventDate}} at {{eventTime}}.`,
-      recipientType: "PROGRAM_MEMBERS",
+      recipientType: "GUARDIANS",
     },
     // Custom notification for Sunrise
     {
@@ -4497,7 +4497,7 @@ Best wishes,
 The Sunrise Gymnastics Team
 {{organizationName}}`,
       smsBody: `🎂 Happy Birthday, {{athleteFirstName}}! From your friends at {{organizationName}}!`,
-      recipientType: "ALL_GUARDIANS",
+      recipientType: "GUARDIANS",
     },
   ];
 
@@ -4535,7 +4535,7 @@ Questions? Contact us at {{organizationEmail}}.
 Thanks,
 {{organizationName}}`,
       smsBody: `Metro Sports: Payment of {{invoiceAmount}} due {{dueDate}}. Pay now: {{paymentUrl}}`,
-      recipientType: "ALL_GUARDIANS",
+      recipientType: "GUARDIANS",
     },
     {
       id: `${ORG2_ID}-notif-payment-urgent`,
@@ -4559,7 +4559,7 @@ Contact {{organizationEmail}} for questions.
 
 {{organizationName}}`,
       smsBody: `URGENT Metro Sports: Payment of {{invoiceAmount}} overdue. Pay now to avoid service interruption: {{paymentUrl}}`,
-      recipientType: "ALL_GUARDIANS",
+      recipientType: "GUARDIANS",
     },
     {
       id: `${ORG2_ID}-notif-membership-warning`,
@@ -4630,7 +4630,7 @@ Location: {{eventLocation}}
 See you there!
 {{organizationName}}`,
       smsBody: `Metro Sports: {{athleteFirstName}} has {{programName}} tomorrow at {{eventTime}} - {{eventLocation}}`,
-      recipientType: "PROGRAM_MEMBERS",
+      recipientType: "GUARDIANS",
     },
     // Custom notification for Metro Sports
     {
@@ -4659,7 +4659,7 @@ Visit {{websiteUrl}} to register.
 See you at Metro Sports!
 {{organizationName}}`,
       smsBody: `Metro Sports: {{eventName}} registration opens {{eventDate}}! Register early at {{websiteUrl}}`,
-      recipientType: "ALL_GUARDIANS",
+      recipientType: "GUARDIANS",
     },
   ];
 

@@ -391,14 +391,20 @@ export async function findMatchingEntities(
       return findUpcomingEvents(organizationId, startDate, endDate);
     
     case "BIRTHDAY":
-      return findBirthdays(organizationId);
+      return findBirthdays(organizationId, startDate, endDate);
     
     case "EVALUATION_DUE":
       return findDueEvaluations(organizationId, startDate, endDate);
     
     case "SKILL_ACHIEVED":
       return findRecentSkillAchievements(organizationId, startDate, endDate);
-    
+
+    case "EVENT_REGISTRATION_OPEN":
+      return findRegistrationWindowPrograms(organizationId, startDate, endDate, "open");
+
+    case "EVENT_REGISTRATION_CLOSE":
+      return findRegistrationWindowPrograms(organizationId, startDate, endDate, "close");
+
     default:
       // For unsupported or CUSTOM triggers, return empty
       return [];
@@ -469,9 +475,9 @@ async function findDueInvoices(
     where: {
       organizationId,
       dueDate: overdue
-        ? { lte: now } // Overdue: due date in the past
+        ? { gte: startDate, lte: endDate } // Overdue: due date fell within the offset window (in the past)
         : { gte: startDate, lte: endDate }, // Due: within range
-      status: { in: ["DRAFT", "SENT"] }, // DRAFT = unpaid, SENT = sent but unpaid
+      status: { in: ["DRAFT", "SENT"] },
     },
   });
 
@@ -631,14 +637,14 @@ async function findUpcomingEvents(
 }
 
 /**
- * Find athletes with birthdays today
+ * Find athletes with birthdays falling within the date range.
+ * Compares month/day of each date in [startDate..endDate] against athlete birthDate.
  */
-async function findBirthdays(organizationId: string): Promise<EntityMatch[]> {
-  const today = new Date();
-  const month = today.getMonth() + 1; // JavaScript months are 0-indexed
-  const day = today.getDate();
-
-  // Find athletes whose birth month and day match today
+async function findBirthdays(
+  organizationId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<EntityMatch[]> {
   const athletes = await db.athlete.findMany({
     where: {
       organizationAthletes: { some: { organizationId, status: "ACTIVE" } },
@@ -653,11 +659,18 @@ async function findBirthdays(organizationId: string): Promise<EntityMatch[]> {
     },
   });
 
+  // Build set of month-day pairs in the range for matching
+  const matchDays = new Set<string>();
+  const cursor = new Date(startDate);
+  while (cursor <= endDate) {
+    matchDays.add(`${cursor.getUTCMonth() + 1}-${cursor.getUTCDate()}`);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
   const birthdayAthletes = athletes.filter((athlete) => {
     if (!athlete.birthDate) return false;
-    const birthMonth = athlete.birthDate.getMonth() + 1;
-    const birthDay = athlete.birthDate.getDate();
-    return birthMonth === month && birthDay === day;
+    const key = `${athlete.birthDate.getUTCMonth() + 1}-${athlete.birthDate.getUTCDate()}`;
+    return matchDays.has(key);
   });
 
   const entities: EntityMatch[] = [];
@@ -764,6 +777,61 @@ async function findRecentSkillAchievements(
         entityId: achievement.id,
         userId: guardian.user.id,
         athleteId: achievement.athleteId,
+      });
+    }
+  }
+
+  return entities;
+}
+
+/**
+ * Find programs where registration is opening or closing within the date range.
+ * "open" = registrationStartDate in range; "close" = registrationEndDate in range.
+ * Notifies all guardians in the org so they're aware of the registration window.
+ */
+async function findRegistrationWindowPrograms(
+  organizationId: string,
+  startDate: Date,
+  endDate: Date,
+  mode: "open" | "close"
+): Promise<EntityMatch[]> {
+  const dateField = mode === "open" ? "registrationStartDate" : "registrationEndDate";
+
+  const programs = await db.program.findMany({
+    where: {
+      organizationId,
+      registrationOpen: true,
+      status: "ACTIVE",
+      [dateField]: { gte: startDate, lte: endDate },
+    },
+    select: { id: true, name: true },
+  });
+
+  if (programs.length === 0) return [];
+
+  const guardians = await db.athleteGuardian.findMany({
+    where: {
+      athlete: {
+        organizationAthletes: { some: { organizationId, status: "ACTIVE" } },
+      },
+    },
+    include: {
+      user: { select: { id: true } },
+    },
+  });
+
+  const uniqueUserIds = [...new Set(
+    guardians.filter((g) => g.user?.id).map((g) => g.user!.id)
+  )];
+
+  const entities: EntityMatch[] = [];
+  for (const program of programs) {
+    for (const userId of uniqueUserIds) {
+      entities.push({
+        entityType: `registration_${mode}`,
+        entityId: program.id,
+        userId,
+        programId: program.id,
       });
     }
   }

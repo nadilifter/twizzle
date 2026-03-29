@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseDateOnly } from "@/lib/date-utils";
+import { executeNotificationByTrigger } from "@/lib/notification-service";
 import { z } from "zod";
 import type { SkillAttemptStatus, ScoringType } from "@prisma/client";
 import { checkAndAwardAchievements } from "@/lib/services/achievement";
@@ -429,6 +430,21 @@ export async function PUT(
     const isNowCompleted = completedStatuses.includes(newStatus);
 
     if (wasNotCompleted && isNowCompleted && evaluation) {
+      try {
+        await executeNotificationByTrigger({
+          organizationId: session.user.organizationId,
+          triggerType: "EVALUATION_COMPLETED",
+          athleteId: existingEvaluation.athleteId,
+          context: {
+            evaluationStatus: newStatus,
+            programName: evaluation.program?.name ?? "",
+            athleteName: evaluation.athlete?.name ?? "",
+          },
+        });
+      } catch (err) {
+        console.error("Failed to send evaluation completed notification", err);
+      }
+
       const awardedAchievements = await checkAndAwardAchievements(id);
       if (awardedAchievements.length > 0) {
         // Fetch the updated evaluation with achievements

@@ -28,8 +28,6 @@ const createRuleSchema = z.object({
     "EVALUATION_COMPLETED",
     "BIRTHDAY",
     "WAITLIST_OPENING",
-    "CONTRACT_RENEWAL",
-    "MAKEUP_CLASS_EXPIRING",
     "CUSTOM",
   ]),
   timingValue: z.number().min(0).default(0),
@@ -43,15 +41,12 @@ const createRuleSchema = z.object({
   }),
   recipientConfig: z.object({
     recipientType: z.enum([
-      "ALL_GUARDIANS",
-      "ALL_ATHLETES",
-      "PROGRAM_MEMBERS",
+      "GUARDIANS",
       "MEMBERSHIP_HOLDERS",
       "INTERNAL_USERS",
       "CUSTOM",
-    ]).default("ALL_GUARDIANS"),
+    ]).default("GUARDIANS"),
     filters: z.object({
-      programIds: z.array(z.string()).optional(),
       membershipGroupIds: z.array(z.string()).optional(),
       membershipStatuses: z.array(z.string()).optional(),
       athleteStatuses: z.array(z.string()).optional(),

@@ -469,11 +469,6 @@ export function getPlaceholdersForTrigger(triggerType: NotificationTriggerType):
       additionalCategories.push("athlete", "guardian", "program", "event");
       break;
       
-    case "CONTRACT_RENEWAL":
-    case "MAKEUP_CLASS_EXPIRING":
-      additionalCategories.push("athlete", "guardian", "program");
-      break;
-      
     case "RECURRING_CHARGE_UPCOMING":
     case "RECURRING_CHARGE_SUCCEEDED":
     case "RECURRING_CHARGE_FAILED":

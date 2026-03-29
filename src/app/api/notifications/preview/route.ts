@@ -30,8 +30,6 @@ const previewSchema = z.object({
     "EVALUATION_COMPLETED",
     "BIRTHDAY",
     "WAITLIST_OPENING",
-    "CONTRACT_RENEWAL",
-    "MAKEUP_CLASS_EXPIRING",
     "CUSTOM",
   ]).optional(),
   // Optional context IDs for real data preview

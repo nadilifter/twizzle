@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { executeNotificationByTrigger } from "@/lib/notification-service";
 
 /**
  * Promotes the next waitlisted enrollment to ACTIVE for a program.
@@ -7,7 +8,13 @@ import { Prisma } from "@prisma/client";
  * over-admitting beyond capacity.
  */
 export async function promoteFromWaitlist(programId: string): Promise<{ promoted: boolean; athleteId?: string }> {
-  return db.$transaction(async (tx) => {
+  interface TxResult {
+    promoted: boolean;
+    athleteId?: string;
+    notifyCtx?: { organizationId: string; athleteId: string; programName: string; userId?: string };
+  }
+
+  const txResult: TxResult = await db.$transaction(async (tx) => {
     await tx.$queryRaw(
       Prisma.sql`SELECT id FROM "Program" WHERE id = ${programId} FOR UPDATE`
     );
@@ -15,6 +22,8 @@ export async function promoteFromWaitlist(programId: string): Promise<{ promoted
     const program = await tx.program.findUnique({
       where: { id: programId },
       select: {
+        name: true,
+        organizationId: true,
         waitlistEnabled: true,
         waitlistAutoPromote: true,
         capacity: true,
@@ -72,8 +81,35 @@ export async function promoteFromWaitlist(programId: string): Promise<{ promoted
       });
     }
 
-    return { promoted: true, athleteId: nextWaitlisted.athleteId };
+    return {
+      promoted: true,
+      athleteId: nextWaitlisted.athleteId,
+      notifyCtx: {
+        organizationId: program.organizationId,
+        athleteId: nextWaitlisted.athleteId,
+        programName: program.name,
+        userId: nextWaitlisted.userId ?? undefined,
+      },
+    };
   });
+
+  if (txResult.notifyCtx) {
+    try {
+      await executeNotificationByTrigger({
+        organizationId: txResult.notifyCtx.organizationId,
+        triggerType: "WAITLIST_OPENING",
+        userId: txResult.notifyCtx.userId,
+        athleteId: txResult.notifyCtx.athleteId,
+        context: {
+          programName: txResult.notifyCtx.programName,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send waitlist promotion notification", err);
+    }
+  }
+
+  return { promoted: txResult.promoted, athleteId: txResult.athleteId };
 }
 
 /**

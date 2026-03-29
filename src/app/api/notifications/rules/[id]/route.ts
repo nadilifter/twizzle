@@ -23,15 +23,12 @@ const updateRuleSchema = z.object({
   }).optional(),
   recipientConfig: z.object({
     recipientType: z.enum([
-      "ALL_GUARDIANS",
-      "ALL_ATHLETES",
-      "PROGRAM_MEMBERS",
+      "GUARDIANS",
       "MEMBERSHIP_HOLDERS",
       "INTERNAL_USERS",
       "CUSTOM",
     ]).optional(),
     filters: z.object({
-      programIds: z.array(z.string()).optional(),
       membershipGroupIds: z.array(z.string()).optional(),
       membershipStatuses: z.array(z.string()).optional(),
       athleteStatuses: z.array(z.string()).optional(),
