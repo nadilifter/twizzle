@@ -21,6 +21,7 @@ import { SiteStructuredData } from "@/components/sites/structured-data";
 import { getSubdomainUrl, getLoginUrl as getEnvLoginUrl } from "@/lib/env-domains";
 import { getAuthSession } from "@/lib/auth";
 import { MarketingUserMenu } from "@/components/sites/marketing-user-menu";
+import { MobileNav } from "@/components/sites/mobile-nav";
 import { SiteUnavailablePage } from "@/components/sites/site-unavailable";
 import { isFeatureEnabled } from "@/lib/feature-resolver";
 
@@ -313,6 +314,21 @@ export default async function SiteLayout({
         
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">
+                <div className="flex items-center gap-2">
+                <MobileNav
+                    links={[
+                        { href: "/", label: "Home" },
+                        ...(config.showRegistration ? [{ href: "/register", label: "Programs" }] : []),
+                        ...(config.showCalendar ? [{ href: "/calendar", label: "Calendar" }] : []),
+                        ...(config.showCompetitions ? [{ href: "/competitions", label: "Competitions" }] : []),
+                        ...(config.showStore && hasProducts ? [{ href: "/store", label: "Store" }] : []),
+                        ...(config.showLocations ? [{ href: "/facilities", label: "Facilities" }] : []),
+                        ...(config.showTeam ? [{ href: "/team", label: "Our Team" }] : []),
+                        ...(config.showContact ? [{ href: "/contact", label: "Contact" }] : []),
+                    ]}
+                    loginUrl={loginUrl}
+                    isAuthenticated={!!session?.user}
+                />
                 <Link href="/" className="flex items-center">
                     {config.logo ? (
                         <Image 
@@ -341,6 +357,7 @@ export default async function SiteLayout({
                         </>
                     )}
                 </Link>
+                </div>
                 <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
                     <Link href="/" className="text-foreground/80 hover:text-primary transition-colors">Home</Link>
                     {config.showRegistration && <Link href="/register" className="text-foreground/80 hover:text-primary transition-colors">Programs</Link>}
@@ -366,7 +383,7 @@ export default async function SiteLayout({
                             siteUrl={siteUrl}
                         />
                     ) : (
-                        <>
+                        <div className="hidden md:flex items-center gap-3">
                             <Link 
                                 href="/signup" 
                                 className="text-foreground/80 hover:text-primary transition-colors font-medium"
@@ -376,7 +393,7 @@ export default async function SiteLayout({
                             <Button asChild size="sm" className="text-sm font-medium">
                                 <Link href={loginUrl}>Login</Link>
                             </Button>
-                        </>
+                        </div>
                     )}
                 </div>
             </div>
