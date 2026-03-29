@@ -179,7 +179,7 @@ export default async function TeamPage({
                       </div>
 
                       {member.bio && (
-                        <p className="text-muted-foreground mb-6 leading-relaxed">
+                        <p className="text-muted-foreground mb-6 leading-relaxed whitespace-pre-line">
                           {member.bio}
                         </p>
                       )}
