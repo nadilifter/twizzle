@@ -56,13 +56,31 @@ const LOCAL_DB_URL =
 // These are upserted (ON CONFLICT DO NOTHING) rather than overwritten.
 const UPSERT_TABLES = new Set(["User", "Athlete"]);
 
-// Tables to never copy (global reference data, managed by seeds/migrations).
+// Global reference tables that org-scoped rows may FK into.
+// When a local record already exists (matched by uniqueKey) but has a different
+// ID than staging, we remap the FK in the child table to the local ID rather
+// than inserting a duplicate.
+const GLOBAL_PARENT_TABLES: Array<{
+  table: string;
+  uniqueKey: string;
+  referencedBy: { table: string; fkColumn: string };
+}> = [
+  {
+    table: "SubscriptionPlan",
+    uniqueKey: "slug",
+    referencedBy: { table: "OrganizationSubscription", fkColumn: "planId" },
+  },
+  {
+    table: "Sport",
+    uniqueKey: "slug",
+    referencedBy: { table: "OrganizationSport", fkColumn: "sportId" },
+  },
+];
+
+// Tables to never copy (internal Prisma/seed data, not org-related).
 const SKIP_TABLES = new Set([
-  "Sport",
-  "SubscriptionPlan",
   "_prisma_migrations",
   "ReservedDomain",
-  "CompetitionCategoryTemplate",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -306,22 +324,23 @@ function discoverChildTables(
 }
 
 /**
- * Get all column names for a table.
+ * Get the set of column names that are json or jsonb type for a table.
  */
-async function getColumns(
+async function getJsonColumns(
   client: Client,
   table: string
-): Promise<string[]> {
+): Promise<Set<string>> {
   const res = await client.query(
     `
     SELECT column_name
     FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = $1
-    ORDER BY ordinal_position
+    WHERE table_schema = 'public'
+      AND table_name = $1
+      AND data_type IN ('json', 'jsonb')
   `,
     [table]
   );
-  return res.rows.map((r: { column_name: string }) => r.column_name);
+  return new Set(res.rows.map((r: { column_name: string }) => r.column_name));
 }
 
 /**
@@ -342,6 +361,10 @@ async function copyRows(
   );
 
   if (rows.rows.length === 0) return 0;
+
+  // Identify JSON/JSONB columns so we can re-serialize them.
+  // Native PG arrays (text[], int[]) are left as-is — node-postgres handles them.
+  const jsonCols = await getJsonColumns(staging, table);
 
   const columns = Object.keys(rows.rows[0]);
   const quotedCols = columns.map((c) => `"${c}"`).join(", ");
@@ -364,11 +387,16 @@ async function copyRows(
       valuePlaceholders.push(`(${placeholders.join(", ")})`);
 
       for (const col of columns) {
-        allValues.push(row[col]);
+        const val = row[col];
+        if (val !== null && jsonCols.has(col) && typeof val === "object") {
+          allValues.push(JSON.stringify(val));
+        } else {
+          allValues.push(val);
+        }
       }
     }
 
-    const conflictClause = upsert ? ' ON CONFLICT ("id") DO NOTHING' : "";
+    const conflictClause = upsert ? " ON CONFLICT DO NOTHING" : "";
 
     await local.query(
       `INSERT INTO "${table}" (${quotedCols}) VALUES ${valuePlaceholders.join(
@@ -564,7 +592,75 @@ async function main() {
       summary.push({ table: "Athlete (upsert)", rows: count });
     }
 
-    // Step 11: Copy all org-scoped tables
+    // Step 11: Pre-resolve global reference records (SubscriptionPlan, Sport, etc.)
+    // Build a remap table: staging ID -> local ID for records that already exist
+    // locally with the same unique key but a different ID. Insert missing records.
+    // The actual FK remapping happens AFTER org-scoped tables are copied (step 13).
+    logStep("Resolving referenced global records...");
+    const fkRemaps: Array<{
+      childTable: string;
+      fkColumn: string;
+      stagingId: string;
+      localId: string;
+    }> = [];
+
+    for (const gp of GLOBAL_PARENT_TABLES) {
+      const refResult = await staging.query(
+        `SELECT DISTINCT "${gp.referencedBy.fkColumn}" FROM "${gp.referencedBy.table}" WHERE "organizationId" = $1`,
+        [orgId]
+      );
+      const stagingFkIds: string[] = refResult.rows
+        .map((r: any) => r[gp.referencedBy.fkColumn])
+        .filter(Boolean);
+
+      if (stagingFkIds.length === 0) continue;
+
+      const placeholders = stagingFkIds.map((_, i) => `$${i + 1}`).join(", ");
+      const stagingRecords = await staging.query(
+        `SELECT * FROM "${gp.table}" WHERE "id" IN (${placeholders})`,
+        stagingFkIds
+      );
+
+      for (const stagingRow of stagingRecords.rows) {
+        const uniqueVal = stagingRow[gp.uniqueKey];
+        const localMatch = await local.query(
+          `SELECT "id" FROM "${gp.table}" WHERE "${gp.uniqueKey}" = $1`,
+          [uniqueVal]
+        );
+
+        if (localMatch.rows.length > 0) {
+          const localId = localMatch.rows[0].id;
+          if (localId !== stagingRow.id) {
+            fkRemaps.push({
+              childTable: gp.referencedBy.table,
+              fkColumn: gp.referencedBy.fkColumn,
+              stagingId: stagingRow.id,
+              localId,
+            });
+            logDim(`${gp.table}: will remap "${uniqueVal}" (${stagingRow.id} -> ${localId})`);
+          } else {
+            logDim(`${gp.table}: "${uniqueVal}" already exists with matching ID`);
+          }
+        } else {
+          const cols = Object.keys(stagingRow);
+          const jsonCols = await getJsonColumns(staging, gp.table);
+          const quotedCols = cols.map((c) => `"${c}"`).join(", ");
+          const valPlaceholders = cols.map((_, i) => `$${i + 1}`).join(", ");
+          const values = cols.map((c) => {
+            const v = stagingRow[c];
+            return v !== null && jsonCols.has(c) && typeof v === "object" ? JSON.stringify(v) : v;
+          });
+          await local.query(
+            `INSERT INTO "${gp.table}" (${quotedCols}) VALUES (${valPlaceholders})`,
+            values
+          );
+          summary.push({ table: `${gp.table} (inserted)`, rows: 1 });
+          logDim(`${gp.table}: inserted "${uniqueVal}" (new record)`);
+        }
+      }
+    }
+
+    // Step 12: Copy all org-scoped tables
     logStep("Copying org-scoped tables...");
     const copiedIds = new Map<string, Set<string>>();
 
@@ -596,7 +692,19 @@ async function main() {
       logDim(`${table}: ${count} rows`);
     }
 
-    // Step 12: Copy child tables (no organizationId, linked via FK)
+    // Step 12b: Apply FK remaps for global reference records
+    if (fkRemaps.length > 0) {
+      logStep("Remapping global record FKs...");
+      for (const remap of fkRemaps) {
+        await local.query(
+          `UPDATE "${remap.childTable}" SET "${remap.fkColumn}" = $1 WHERE "${remap.fkColumn}" = $2 AND "organizationId" = $3`,
+          [remap.localId, remap.stagingId, orgId]
+        );
+        logDim(`${remap.childTable}."${remap.fkColumn}": ${remap.stagingId} -> ${remap.localId}`);
+      }
+    }
+
+    // Step 13: Copy child tables (no organizationId, linked via FK)
     if (childTables.length > 0) {
       logStep("Copying child tables (via FK graph)...");
 
