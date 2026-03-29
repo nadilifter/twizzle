@@ -142,6 +142,16 @@ export default function OrganizationFeaturesPage() {
     ? FEATURE_KEYS.filter((k) => features[k]).length
     : 0
 
+  const sortedFeatureKeys = React.useMemo(() => {
+    if (!features) return FEATURE_KEYS
+    return [...FEATURE_KEYS].sort((a, b) => {
+      const aEnabled = features[a]
+      const bEnabled = features[b]
+      if (aEnabled !== bEnabled) return aEnabled ? -1 : 1
+      return FEATURE_LABELS[a].localeCompare(FEATURE_LABELS[b])
+    })
+  }, [features])
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-start justify-between">
@@ -208,7 +218,7 @@ export default function OrganizationFeaturesPage() {
 
           <TooltipProvider>
             <div className="grid gap-4 md:grid-cols-2">
-              {FEATURE_KEYS.map((key) => {
+              {sortedFeatureKeys.map((key) => {
                 const resolvedEnabled = isSuperAdmin ? getResolvedValue(key) : features[key]
                 const planDefault = superadminData?.planDefaults?.[key] ?? false
                 const isOverridden = isSuperAdmin && key in overrideToggles
