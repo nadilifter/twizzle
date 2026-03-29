@@ -21,6 +21,7 @@ import {
   X,
   Upload,
   Award,
+  Crop,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -222,6 +223,23 @@ export default function TeamHighlightsPage() {
       };
       reader.readAsDataURL(file);
       e.target.value = "";
+    },
+    []
+  );
+
+  const handleRecrop = useCallback(
+    async (memberId: string, imageUrl: string) => {
+      try {
+        const res = await fetch(imageUrl);
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onload = () => {
+          setCropState({ memberId, imageSrc: reader.result as string });
+        };
+        reader.readAsDataURL(blob);
+      } catch {
+        toast.error("Failed to load image for re-cropping");
+      }
     },
     []
   );
@@ -454,20 +472,39 @@ export default function TeamHighlightsPage() {
                                     <Camera className="h-5 w-5" />
                                   )}
                                 </div>
-                                <button
-                                  type="button"
-                                  className="absolute top-1.5 right-1.5 p-1 rounded-full bg-destructive text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/90"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateHighlight(
-                                      highlight.memberId,
-                                      "overrideImage",
-                                      null
-                                    );
-                                  }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
+                                <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    type="button"
+                                    className="p-1 rounded-full bg-black/70 text-white hover:bg-black/90"
+                                    title="Re-crop"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (highlight.overrideImage) {
+                                        handleRecrop(
+                                          highlight.memberId,
+                                          highlight.overrideImage
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <Crop className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="p-1 rounded-full bg-destructive text-white hover:bg-destructive/90"
+                                    title="Remove photo"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateHighlight(
+                                        highlight.memberId,
+                                        "overrideImage",
+                                        null
+                                      );
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
                               </>
                             ) : (
                               <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
