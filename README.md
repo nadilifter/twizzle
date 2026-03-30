@@ -466,38 +466,54 @@ See `docs/adyen-platform/README.md` for the full integration spec and phase brea
 
 ## Environment Variables
 
-See `.env.example` for complete documentation. Key variables:
+All secrets are stored in `.env.enc`, encrypted with [SOPS](https://github.com/getsops/sops) + [age](https://github.com/FiloSottile/age). The `.env` file is gitignored and never committed.
+
+See `.env.example` for the full list of variables with documentation and default values.
+
+### First-Time Setup (New Developer)
+
+1. **Install prerequisites:**
 
 ```bash
-# Environment identifier
-APP_ENVIRONMENT=local
-
-# Database
-DATABASE_URL=postgresql://...
-
-# Authentication
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-
-# Payments
-ADYEN_API_KEY=...
-ADYEN_ENVIRONMENT=TEST
-
-# SMS
-TWILIO_ACCOUNT_SID=...
-TWILIO_AUTH_TOKEN=...
-
-# Storage
-USE_S3_STORAGE=false
-AWS_S3_BUCKET=...
-S3_ENDPOINT=http://localhost:9000  # For MinIO
-
-# Email
-AWS_SES_REGION=us-east-1
-SES_ENDPOINT=http://localhost:1025  # For MailHog
+brew install sops age
 ```
+
+2. **Generate your age keypair:**
+
+```bash
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+```
+
+This prints your **public key** (starts with `age1...`). Send it to a team member — the public key is safe to share over Slack, email, etc. Keep the private key file where it is; it never leaves your machine.
+
+3. **A team member adds your key and re-encrypts:**
+
+They add your public key to `AGE_RECIPIENTS` in `scripts/secrets-encrypt.sh` (comma-separated), update `.sops.yaml`, and run:
+
+```bash
+pnpm secrets:encrypt
+```
+
+Then they commit and push the updated `.env.enc`.
+
+4. **Decrypt to get your `.env`:**
+
+```bash
+pnpm secrets:decrypt
+```
+
+This creates `.env` from the encrypted file. You're ready to develop.
+
+### Ongoing Workflow
+
+| Command | What it does |
+|---|---|
+| `pnpm secrets:decrypt` | Decrypt `.env.enc` → `.env` (overwrites local `.env`) |
+| `pnpm secrets:encrypt` | Encrypt `.env` → `.env.enc` (commit this) |
+| `pnpm secrets:edit` | Edit encrypted file in-place |
+
+When you add or change a secret in `.env`, run `pnpm secrets:encrypt` and commit `.env.enc` so the team gets the update.
 
 ---
 
