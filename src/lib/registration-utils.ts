@@ -27,7 +27,7 @@ export function getRegistrationStatus(program: RegistrationFields): Registration
       startDate.setHours(sh, sm, 0, 0);
       if (now < startDate) return "scheduled";
     } else {
-      return "scheduled";
+      return "closed";
     }
   }
 

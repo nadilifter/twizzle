@@ -39,6 +39,7 @@ import { useSeasons } from "@/hooks/use-seasons";
 import { useFeatures } from "@/components/feature-context";
 import { formatRRuleDays } from "@/lib/rrule-utils";
 import { ProgramConfiguration } from "./program-configuration";
+import { getRegistrationStatus } from "@/lib/registration-utils";
 
 function formatPrice(price: number | string | null | undefined): string {
   if (price === null || price === undefined) return "Free";
@@ -173,6 +174,7 @@ export default function ProgramsPage() {
             const enrolled = program._count?.enrollments || 0;
             const hasCapacity = p.hasCapacityRestriction && capacity > 0;
             const spotsLeft = hasCapacity ? Math.max(0, capacity - enrolled) : null;
+            const regStatus = getRegistrationStatus(p);
 
             const daysLabel = p.rrule ? formatRRuleDays(p.rrule) : null;
 
@@ -191,7 +193,14 @@ export default function ProgramsPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1.5 min-w-0">
-                      <CardTitle className="leading-tight">{program.name}</CardTitle>
+                      <CardTitle className="leading-tight">
+                        <Link
+                          href={`/dashboard/registrations/programs/${program.id}`}
+                          className="hover:underline"
+                        >
+                          {program.name}
+                        </Link>
+                      </CardTitle>
                       <div className="flex flex-wrap items-center gap-1">
                         <div
                           className="w-3 h-3 rounded-full shrink-0"
@@ -219,10 +228,20 @@ export default function ProgramsPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <Badge
-                        variant={program.status === "ACTIVE" ? "default" : "secondary"}
-                        className="text-[10px]"
+                        variant="outline"
+                        className={
+                          regStatus === "open"
+                            ? "text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                            : regStatus === "scheduled"
+                              ? "text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800"
+                              : "text-[10px] px-1.5 py-0 bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-950/30 dark:text-gray-400 dark:border-gray-700"
+                        }
                       >
-                        {program.status}
+                        {regStatus === "open"
+                          ? "Open"
+                          : regStatus === "scheduled"
+                            ? "Scheduled"
+                            : "Closed"}
                       </Badge>
                       {program.season && (
                         <Badge
