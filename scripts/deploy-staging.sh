@@ -89,6 +89,8 @@ sudo DOCKER_BUILDKIT=1 docker build \
     --build-arg APP_ENVIRONMENT=staging \
     --build-arg NEXT_PUBLIC_ADYEN_CLIENT_KEY="${NEXT_PUBLIC_ADYEN_CLIENT_KEY}" \
     --build-arg NEXT_PUBLIC_ADYEN_ENVIRONMENT="${NEXT_PUBLIC_ADYEN_ENVIRONMENT}" \
+    --build-arg NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
+    --build-arg NEXT_PUBLIC_APP_ENVIRONMENT="${NEXT_PUBLIC_APP_ENVIRONMENT}" \
     -t uplifter:new .
 
 log_info "Running database migrations..."
