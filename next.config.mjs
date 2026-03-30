@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 
 /**
@@ -63,7 +65,7 @@ const getFormActionCsp = () => {
 
 const getConnectSrcCsp = () => {
   const base =
-    "'self' https://*.adyen.com https://*.upstash.io wss: https://google.com https://pay.google.com https://*.zendesk.com https://*.zopim.com";
+    "'self' https://*.adyen.com https://*.upstash.io wss: https://google.com https://pay.google.com https://*.zendesk.com https://*.zopim.com https://*.ingest.sentry.io";
 
   // Add CDN domain if configured
   const cdnSrc = envConfig.cdnDomain ? ` https://${envConfig.cdnDomain}` : "";
@@ -285,4 +287,8 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  disableLogger: true,
+  telemetry: false,
+});
