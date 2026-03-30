@@ -67,8 +67,8 @@ REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "none")
 if [[ "$REMOTE_URL" == *"https://"* ]] || [[ "$REMOTE_URL" == "none" ]]; then
     log_warn "Git remote is using HTTPS or not configured"
     log_info "Setting up SSH remote..."
-    git remote set-url origin git@github.com:akarzelkc/leapfrog.git || \
-        git remote add origin git@github.com:akarzelkc/leapfrog.git
+    git remote set-url origin git@github.com:uplifter-us/clubs.git || \
+        git remote add origin git@github.com:uplifter-us/clubs.git
 fi
 
 log_info "Pulling latest changes from GitHub..."

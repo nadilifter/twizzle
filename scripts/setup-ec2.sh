@@ -9,8 +9,8 @@ set -e
 # Configuration
 SSH_HOST="uplifter-staging"
 DOMAIN="upliftergymnastics.com"
-REPO_SSH_URL="git@github.com:akarzelkc/leapfrog.git"
-REPO_HTTPS_URL="https://github.com/akarzelkc/leapfrog.git"
+REPO_SSH_URL="git@github.com:uplifter-us/clubs.git"
+REPO_HTTPS_URL="https://github.com/uplifter-us/clubs.git"
 
 # Colors for output
 RED='\033[0;31m'
@@ -137,7 +137,7 @@ EOF
     log_warn "IMPORTANT: Add this deploy key to your GitHub repository"
     log_warn "======================================================"
     echo ""
-    log_info "1. Go to: https://github.com/akarzelkc/leapfrog/settings/keys"
+    log_info "1. Go to: https://github.com/uplifter-us/clubs/settings/keys"
     log_info "2. Click 'Add deploy key'"
     log_info "3. Title: uplifter-staging"
     log_info "4. Paste this key:"
@@ -160,7 +160,7 @@ if ! ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
     echo ""
     cat ~/.ssh/github_deploy_key.pub
     echo ""
-    log_info "Add it at: https://github.com/akarzelkc/leapfrog/settings/keys"
+    log_info "Add it at: https://github.com/uplifter-us/clubs/settings/keys"
     exit 1
 fi
 log_info "GitHub SSH connection successful!"
@@ -169,11 +169,11 @@ log_info "GitHub SSH connection successful!"
 if [ ! -d ~/uplifter ]; then
     log_info "Cloning repository from GitHub..."
     cd ~
-    git clone git@github.com:akarzelkc/leapfrog.git uplifter
+    git clone git@github.com:uplifter-us/clubs.git uplifter
 else
     log_info "Repository already exists, updating remote URL..."
     cd ~/uplifter
-    git remote set-url origin git@github.com:akarzelkc/leapfrog.git
+    git remote set-url origin git@github.com:uplifter-us/clubs.git
 fi
 
 # Set up environment file
@@ -261,7 +261,7 @@ log_info "Setup complete!"
 echo "========================================"
 echo ""
 log_info "GitHub integration: ENABLED (SSH deploy key)"
-log_info "Repository: git@github.com:akarzelkc/leapfrog.git"
+log_info "Repository: git@github.com:uplifter-us/clubs.git"
 echo ""
 log_info "Next steps:"
 echo "  1. Edit ~/.env.uplifter with your credentials (Upstash Redis, etc.)"

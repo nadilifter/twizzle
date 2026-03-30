@@ -13,7 +13,7 @@
 set -e
 
 # Configuration
-GITHUB_REPO="akarzelkc/leapfrog"
+GITHUB_REPO="uplifter-us/clubs"
 KEY_FILE="$HOME/.ssh/github_deploy_key"
 PROJECT_DIR="$HOME/uplifter"
 
