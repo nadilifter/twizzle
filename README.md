@@ -2,22 +2,20 @@
 
 ## Overview
 
-This repository is the the code for vertical SaaS businesses focused on US gymnastics gyms. It is intentionally opinionated, modern by default, and designed to scale from early-stage experimentation to serious production workloads.
-
-This is **not** a public starter template and is **not** intended for general reuse. It exists so we can move quickly today while establishing a durable baseline for the large project we are building.
+This repository is for our app focused on US gymnastics. It is intentionally opinionated, modern by default, and designed to scale from early-stage experimentation to serious production workloads.
 
 ---
 
 ## What This Repo Is
 
 * A long-lived **monorepo foundation** for our vertical SaaS business focused on US gymnastics
-* Designed based on normal B2B software practices
+* Designed based on standard B2B software practices
 * Built to handle high transaction volume, burst traffic, and evolving product needs
 
 ## What This Repo Is Not
 
 * Not an open-source starter
-* Not optimized for one-off experiments
+* Not intended for one-off experiments
 * Not designed to avoid complexity at the cost of future scale
 
 ---
@@ -58,7 +56,7 @@ This is **not** a public starter template and is **not** intended for general re
 * **Storage**: S3 (cloud), MinIO (local)
 * **Authentication**: NextAuth.js with Google OAuth
 * **Containers**: Docker, ECS Fargate, EKS
-* **Infrastructure**: Terraform, Helm, ArgoCD
+* **Infrastructure**: Terraform, Helm, ArgoCD (planned)
 * **Environment**: Linux / WSL-first development
 
 ---
@@ -178,7 +176,7 @@ We use [Prisma Migrate](https://www.prisma.io/docs/orm/prisma-migrate) for all d
 
 ### Drift Detection
 
-Schema drift (changes in `schema.prisma` that have no matching migration) has caused staging deployment failures in the past. Two safeguards are now in place:
+Schema drift (changes in `schema.prisma` that have no matching migration) has caused deployment failures in the past. Two safeguards are now in place:
 
 **Pre-commit hook** — If `prisma/schema.prisma` is staged for commit but no files under `prisma/migrations/` are also staged, the commit is blocked. Bypass for WIP commits with:
 
@@ -214,7 +212,7 @@ The platform is multi-tenant: every organization's data must be isolated from ev
 * **Never trust client-provided `organizationId`** — always use `session.user.organizationId`
 * **Mutations must be scoped**, not just reads — do not check ownership then mutate by `{ id }` alone
 * **Models without a direct `organizationId`** (e.g. `Payment`, `Enrollment`) must be filtered through their relation chain (e.g. `invoice: { organizationId }`)
-* **`AthleteMedicalInfo`** is intentionally shared across organizations for safety
+* **`AthleteMedicalInfo`** is intentionally shared across organizations as athletes often participate in multiple organizations
 * **Platform-level models** (`OrganizationSubscription`, `OrganizationFeatureOverride`, `OrganizationPaymentMethod`, `AdyenPlatformAccount`, `OrganizationStatusLog`) are managed by superadmins and excluded from tenant scoping
 
 See `src/app/api/README.md` for detailed API development conventions and scoping patterns.
